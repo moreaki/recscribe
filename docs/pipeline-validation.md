@@ -17,11 +17,12 @@ commit: `4d695ed`. No cloud worker or separate application worktree was used.
 
 ## Pipeline
 
-27 synthetic unit/integration tests passed. Tests include integer PCM widths,
+29 synthetic unit/integration tests passed. Tests include integer PCM widths,
 channel preservation, silence, damaged input, source mutation, raw-file preservation,
 schema and semantic validation, padding provenance, language modes, two-pass
 disagreement, identical model rejection, subprocess failure/timeout, SIGTERM and
-file-based cancellation, exact exports, whisper.cpp's CLI/JSON contract, benchmark
+file-based cancellation, repetition/automatic-language review markers, exact exports,
+whisper.cpp's CLI/JSON contract, benchmark
 accuracy calculations, corpus readiness and real macOS resource accounting.
 
 Built a Python wheel, installed it in a separate local test environment, verified
@@ -37,9 +38,13 @@ deterministic re-rendering independently checked. Its transcript and audio remai
 in ignored local job directories; no private samples or reference text are added
 to this repository.
 
-The real smoke test found and drove two corrections: allow cold Metal kernel
+The real smoke test found and drove corrections: allow cold Metal kernel
 initialization during version probing, and represent end-of-audio decoder padding
-as an explicit reviewed timing derivation. Failed earlier jobs remain available
+as an explicit reviewed timing derivation, and mark automatic language selection
+and repeated phrases as unverified. Auto-detection on a quiet opening selected
+English for a German recording; an explicitly German later excerpt recognized
+coherent speech. This is a known upstream detection limit, not proof of dialect
+accuracy. Failed earlier jobs remain available
 for inspection and were not reused or overwritten.
 
 The benchmark template correctly reports all five categories as `pending_corpus`.

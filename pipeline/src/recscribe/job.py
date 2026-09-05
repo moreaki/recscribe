@@ -16,6 +16,7 @@ from .audio import inspect_wav, prepare_channel
 from .engines import TranscriptEngine
 from .language import mark_pending
 from .process import Cancellation, Cancelled, run_local
+from .quality import flag_repetition
 from .renderers import render
 from .storage import sha256, write_json, write_text
 
@@ -182,8 +183,13 @@ class Job:
             for i, segment in enumerate(segments, 1):
                 segment["id"] = f"seg-{i:06d}"
             language = mark_pending(segments, self.options["mode"])
+            flag_repetition(segments)
             for segment in segments:
                 segment["needs_review"] = bool(segment["review_reasons"])
+            if passes and self.options["source_language"] == "auto":
+                reasons.append("automatic_language_detection_unverified; a quiet opening can select the wrong language")
+            if any("engine_non_speech_marker" in s["review_reasons"] for s in segments):
+                reasons.append("asr_contains_non_speech_markers; inspect_source_audio")
             if not any(p.get("vad_model_sha256") for p in passes) and passes:
                 reasons.append("learned_vad_not_run; silence guard only detects exact digital silence")
             status = "completed_with_review" if reasons or any(s["needs_review"] for s in segments) else "completed"

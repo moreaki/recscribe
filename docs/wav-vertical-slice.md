@@ -33,6 +33,14 @@ never described as normalized or translated. `verbatim` preserves what the engin
 recognized; Whisper may itself output Standard German for Swiss German, which
 is flagged for dialect review. `translate` is a separate pending operation.
 
+When the source language is known, specify it. whisper.cpp auto-detection can pick
+the wrong language from a quiet/non-speech opening and then decode the rest under
+that choice. Auto-detection is explicitly marked unverified; no automatic switch
+or additional inference is silently performed. Repeated same-channel ASR phrases
+and non-speech markers are review signals, never deleted or treated as confident
+speech. The private full-file test exposed this limit: an explicit German language
+request recognized speech where automatic detection had selected English.
+
 `fast` and `accurate` each use the explicitly supplied model for one pass. They
 do not infer quality from a filename, download a recommended model or guarantee
 accuracy. `verified` requires `--verify-model /path/to/different-model.bin` and

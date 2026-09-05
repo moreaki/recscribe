@@ -23,6 +23,7 @@ from recscribe.audio import inspect_wav
 from recscribe.engines import EngineResult, WhisperCpp
 from recscribe.job import Job, validate
 from recscribe.process import Cancellation, Cancelled, run_local
+from recscribe.quality import flag_repetition
 from recscribe.renderers import render, timestamp
 from recscribe.storage import sha256, write_json
 
@@ -156,6 +157,19 @@ class PipelineTests(unittest.TestCase):
         _, doc = self.run_job(SyntheticEngine(text=" [BLANK_AUDIO]"))
         self.assertEqual(doc["segments"][0]["source_text"], " [BLANK_AUDIO]")
         self.assertIn("engine_non_speech_marker", doc["segments"][0]["review_reasons"])
+
+    def test_repeated_text_is_preserved_and_reviewed_per_channel(self):
+        segments = [{"channel": 0, "source_text": "Repeated phrase", "review_reasons": []}
+                    for _ in range(3)]
+        segments.append({"channel": 1, "source_text": "Repeated phrase", "review_reasons": []})
+        flag_repetition(segments)
+        self.assertTrue(all(s["review_reasons"] for s in segments[:3]))
+        self.assertFalse(segments[-1]["review_reasons"])
+        self.assertTrue(all(s["source_text"] == "Repeated phrase" for s in segments))
+
+    def test_automatic_language_is_not_treated_as_confirmed(self):
+        _, doc = self.run_job(source_language="auto")
+        self.assertTrue(any(r.startswith("automatic_language_detection_unverified") for r in doc["review_reasons"]))
 
     def test_modes_never_fabricate_derived_text(self):
         for mode in ("normalize", "translate"):

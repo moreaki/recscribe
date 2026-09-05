@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "phase": "baseline",
+  "source_commit": "5ad0930",
+  "hardware": "Apple M1, 16 GiB",
+  "os": "macOS 26.6.2 (25G83)",
+  "xcode": "26.6 (17F113)",
+  "configuration": "Release, ENABLE_TESTABILITY=YES",
+  "workload": "10 seconds synthetic stereo 48k Float32, 100 x 4800 frames, burst submission, no waveform observer; three iterations per format in each of two Xcode test runners",
+  "limitations": [
+    "Not live capture latency, not ASR performance",
+    "RSS is test-host process lifetime high-water mark, not encoder allocation",
+    "First AAC iteration includes cold codec startup; do not mix with warm iterations"
+  ],
+  "samples": [
+    {
+      "format": "wav",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.007529708,
+      "process_lifetime_peak_rss_bytes": 119226368
+    },
+    {
+      "format": "wav",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.004612208,
+      "process_lifetime_peak_rss_bytes": 119439360
+    },
+    {
+      "format": "wav",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.005399833,
+      "process_lifetime_peak_rss_bytes": 119455744
+    },
+    {
+      "format": "m4a",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 2.577464458,
+      "process_lifetime_peak_rss_bytes": 121929728
+    },
+    {
+      "format": "m4a",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.092161167,
+      "process_lifetime_peak_rss_bytes": 122290176
+    },
+    {
+      "format": "m4a",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.122969,
+      "process_lifetime_peak_rss_bytes": 122601472
+    },
+    {
+      "format": "flac",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.078912666,
+      "process_lifetime_peak_rss_bytes": 124420096
+    },
+    {
+      "format": "flac",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.063543792,
+      "process_lifetime_peak_rss_bytes": 124551168
+    },
+    {
+      "format": "flac",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.055363416,
+      "process_lifetime_peak_rss_bytes": 124567552
+    },
+    {
+      "format": "wav",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.010879958,
+      "process_lifetime_peak_rss_bytes": 119734272
+    },
+    {
+      "format": "wav",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.005477459,
+      "process_lifetime_peak_rss_bytes": 119963648
+    },
+    {
+      "format": "wav",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.006221375,
+      "process_lifetime_peak_rss_bytes": 119980032
+    },
+    {
+      "format": "m4a",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 2.594194209,
+      "process_lifetime_peak_rss_bytes": 121700352
+    },
+    {
+      "format": "m4a",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.098640708,
+      "process_lifetime_peak_rss_bytes": 122208256
+    },
+    {
+      "format": "m4a",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.111894375,
+      "process_lifetime_peak_rss_bytes": 122421248
+    },
+    {
+      "format": "flac",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.085326333,
+      "process_lifetime_peak_rss_bytes": 124223488
+    },
+    {
+      "format": "flac",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.052296042,
+      "process_lifetime_peak_rss_bytes": 125403136
+    },
+    {
+      "format": "flac",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.056198584,
+      "process_lifetime_peak_rss_bytes": 125403136
+    }
+  ]
+}

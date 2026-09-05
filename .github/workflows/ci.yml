@@ -41,10 +41,10 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project HomeRec/HomeRec.xcodeproj \
-            -scheme HomeRec \
+            -project RecScribe/RecScribe.xcodeproj \
+            -scheme RecScribe \
             -destination 'platform=macOS' \
-            -only-testing:HomeRecTests \
+            -only-testing:RecScribeTests \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 120 \
             -resultBundlePath TestResults-functional.xcresult \
@@ -69,12 +69,12 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project HomeRec/HomeRec.xcodeproj \
-            -scheme HomeRec \
+            -project RecScribe/RecScribe.xcodeproj \
+            -scheme RecScribe \
             -destination 'platform=macOS' \
-            -only-testing:HomeRecTests \
-            -skip-testing:HomeRecTests/M4AEncoderTests \
-            -skip-testing:HomeRecTests/FLACEncoderTests \
+            -only-testing:RecScribeTests \
+            -skip-testing:RecScribeTests/M4AEncoderTests \
+            -skip-testing:RecScribeTests/FLACEncoderTests \
             -enableThreadSanitizer YES \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 300 \
@@ -126,8 +126,8 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -project HomeRec/HomeRec.xcodeproj \
-            -scheme HomeRec \
+            -project RecScribe/RecScribe.xcodeproj \
+            -scheme RecScribe \
             -configuration Release \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO

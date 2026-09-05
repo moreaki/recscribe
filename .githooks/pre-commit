@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Home Rec pre-commit hook — blocks secrets and internal PM docs from
+# RecScribe pre-commit hook — blocks secrets and internal PM docs from
 # entering the public repository.
 #
 # Setup (run once per clone — git config is not cloned):
@@ -24,14 +24,14 @@ BLOCKED=0
 FILE_PATTERNS='(^|/)\.env(\..*)?$|(^|/)private/|(^|/)BACKLOG\.md$|.*\.private\.md$|(^|/)secrets\.|(^|/)notariz.*\.txt$|\.(p12|cer|p8|key|pem|mobileprovision|provisionprofile)$|[-_]priv(ate)?[-_]?key|(^|/)id_(rsa|dsa|ecdsa|ed25519)$|(^|/)(sparkle|signing)[-_].*key|(^|/)AuthKey_.*\.p8$|appcast.*\.key$|(^|/)docs/product-strategy/'
 
 staged=$(git diff --cached --name-only --diff-filter=ACM || true)
+blocked_files=$(printf '%s\n' "$staged" | grep -E "$FILE_PATTERNS" || true)
 
-while IFS= read -r f; do
-  [ -z "$f" ] && continue
-  if printf '%s\n' "$f" | grep -Eq "$FILE_PATTERNS"; then
+if [ -n "$blocked_files" ]; then
+  while IFS= read -r f; do
     echo "${RED}✖ Blocked file:${NC} $f"
-    BLOCKED=1
-  fi
-done <<< "$staged"
+  done <<< "$blocked_files"
+  BLOCKED=1
+fi
 
 # ── 2. Content scan (unambiguous secret material in staged diff) ───────
 #
@@ -45,7 +45,9 @@ done <<< "$staged"
 # `SUPublicEDKey` is the same shape by construction, so it is filtered out
 # first. Filter by the key name, never by the literal value: pinning the
 # current public key here would silently disarm the rule the day it rotates.
-if git diff --cached -U0 \
+if git diff --cached -U0 --no-ext-diff \
+  | grep '^+' \
+  | grep -v '^+++' \
   | grep -v 'SUPublicEDKey' \
   | grep -Eq -- \
   '-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10,}|sk_live_[0-9A-Za-z]{16,}|(gh[pousr]_[A-Za-z0-9]{36})|github_pat_[A-Za-z0-9_]{22,}|(^|[^A-Za-z0-9+/])[A-Za-z0-9+/]{43}=([^A-Za-z0-9+/]|$)|[^a-z-]([a-z]{4}-){3}[a-z]{4}[^a-z-]'; then
@@ -56,7 +58,7 @@ fi
 
 if [ "$BLOCKED" -ne 0 ]; then
   echo ""
-  echo "${YEL}Commit aborted by the Home Rec pre-commit hook.${NC}"
+  echo "${YEL}Commit aborted by the RecScribe pre-commit hook.${NC}"
   echo "The items above are internal or sensitive and must not reach the public repo."
   echo "Move internal docs under private/ and keep secrets in Keychain."
   echo "If this is genuinely a false positive: ${GRN}git commit --no-verify${NC}"

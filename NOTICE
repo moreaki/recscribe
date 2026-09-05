@@ -1,11 +1,11 @@
-Home Rec
-Copyright 2026 Melissa de Britto
+RecScribe
+Copyright 2026 moreaki
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,12 @@ limitations under the License.
 
 ===============================================================================
 
-This product includes the following third-party components:
+RecScribe includes software derived from Home Rec.
+Home Rec Copyright 2026 Melissa de Britto.
+Home Rec is licensed under the Apache License, Version 2.0.
+Source: https://github.com/melissa-pereira-deel/home-rec
+
+This product also includes the following third-party components:
 
 -------------------------------------------------------------------------------
 Inter Font
@@ -34,5 +39,3 @@ https://openfontlicense.org
 This application uses Apple's ScreenCaptureKit framework for system audio
 capture. ScreenCaptureKit is proprietary software provided by Apple Inc.
 and is subject to Apple's software license agreements.
-
-Development assisted by Claude (Anthropic).

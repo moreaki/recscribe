@@ -22,12 +22,8 @@ dist/
 .build/
 Packages/
 Package.pins
-# Package.resolved is deliberately NOT ignored. That is the convention for a
-# *library*, whose consumers resolve their own versions — this is an app, and
-# the lockfile is the only record of which dependency version a release was
-# actually built from. It matters most for Sparkle (BL-034): an auto-updater
-# resolved at build time to "whatever is newest" is a supply-chain surface on
-# the one component that can replace the app on a user's disk.
+# Package.resolved is deliberately NOT ignored. RecScribe is an application,
+# so dependency versions must stay reproducible once packages are added.
 
 # Code signing
 *.mobileprovision
@@ -61,16 +57,16 @@ docs/product-strategy/
 *.private.md
 
 # ─── Marketing artifacts (keep local, publish via website host) ───
-home-rec-website.html
+recscribe-website.html
 privacy.html
 terms.html
 favicon.svg
 favicon.ico
 apple-touch-icon.png
 
-# The website is its own repo (home-rec-site) and deploys from there.
+# A future website belongs in its own repository and deploys from there.
 # A local copy here would be a second, silently-diverging source of truth.
-home-rec-site-main/
+recscribe-site-main/
 
 # Vercel deploy config — describes how the website is deployed, not how the
 # app is built. Kept local alongside the website HTML files.
@@ -78,7 +74,7 @@ vercel.json
 .vercelignore
 .vercel/
 
-# Build logs from scripts/build-dmg.sh (contain local paths + submission IDs)
+# Distribution logs can contain local paths and notarization submission IDs.
 dist-build.log
 
 # ─── Environment & secrets (NEVER publish) ───

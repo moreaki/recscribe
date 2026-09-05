@@ -25,7 +25,7 @@ REF_HZ="${REF_HZ:-1000}"
 # Reference tone. Generated rather than committed: it is 7 MB of sine wave that
 # any machine can rebuild in a second, and REF_HZ must be able to change it.
 if [[ "${1:-}" == "--tone" ]]; then
-    out="${2:-homerec-${REF_HZ}hz-reference.wav}"
+    out="${2:-recscribe-${REF_HZ}hz-reference.wav}"
     ffmpeg -v error -f lavfi -i "sine=frequency=${REF_HZ}:duration=75:sample_rate=48000" \
            -af "volume=0.3" -c:a pcm_s16le -y "$out"
     echo "Reference tone: $out  (${REF_HZ} Hz, 75 s)"

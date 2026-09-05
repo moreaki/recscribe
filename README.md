@@ -10,9 +10,11 @@ independent application for precise, private, high-performance transcription.
 
 RecScribe is in active development. The current codebase provides system-audio,
 per-application, and microphone recording with WAV, FLAC, and M4A output. The local
-transcription pipeline described in
-[`docs/transcription-architecture.md`](docs/transcription-architecture.md) is the next
-major implementation phase.
+WAV transcription CLI now provides a tested local vertical slice with a
+whisper.cpp adapter, versioned canonical JSON and deterministic text/subtitle
+exports. Normalization, translation and diarization remain explicit pending
+stages. See the [WAV guide](docs/wav-vertical-slice.md) and
+[architecture](docs/transcription-architecture.md).
 
 No RecScribe release or automatic update channel exists yet. Development builds do not
 contact the Home Rec update service.
@@ -76,6 +78,27 @@ xcodebuild test \
   -only-testing:RecScribeTests
 ```
 
+## Transcribe a finalized WAV locally
+
+The separate pipeline requires Python 3.12+, FFmpeg, a local `whisper-cli` and an
+existing ggml model. It never downloads a model or uses a cloud fallback.
+
+```bash
+python3 -m venv pipeline/.venv
+pipeline/.venv/bin/python -m pip install -e ./pipeline
+pipeline/.venv/bin/recscribe recording.wav \
+  --whisper-cli /absolute/path/to/whisper-cli \
+  --model /absolute/path/to/ggml-model.bin \
+  --source-language de-CH --mode verbatim --local-only \
+  --output jobs/first-recording
+pipeline/.venv/bin/python -m unittest discover -s pipeline/tests -v
+```
+
+Jobs preserve original audio and exact per-channel ASR JSON. Cancel with Ctrl-C
+or a `cancel.request` file in the job directory. Use the terminal manifest state
+to distinguish complete, reviewable, failed and cancelled results. See the WAV
+guide for all modes, profiles, artifact contracts and current limitations.
+
 ## Upstream workflow
 
 RecScribe is an independent repository, not a GitHub fork. `origin` belongs to
@@ -95,6 +118,10 @@ signing, release process, update channel, and product direction.
 
 ```text
 RecScribe/                         SwiftUI application and Xcode project
+pipeline/                          Standalone local WAV CLI and synthetic tests
+schemas/transcript.schema.json      Canonical transcript contract
+benchmarks/                        Local corpus protocol and readiness manifest
+skills/recscribe/                  Thin Codex wrapper for the CLI
 docs/transcription-architecture.md Processing architecture and delivery plan
 docs/upstream-home-rec-changelog.md Historical changelog inherited from Home Rec
 scripts/                           Development and packaging helpers

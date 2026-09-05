@@ -4,6 +4,16 @@ All notable RecScribe changes will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- A standalone local WAV transcription CLI with streamed PCM inspection,
+  per-channel working copies, cancellable jobs and the whisper.cpp adapter.
+- Versioned canonical JSON, immutable raw-ASR evidence and deterministic Markdown,
+  TXT, SRT, VTT and review exports. Unimplemented language/speaker stages remain
+  explicit pending/review states; verified mode requires two distinct local models.
+- Synthetic pipeline tests and documented CLI, benchmark and SwiftUI integration
+  boundaries. Capture code and signing configuration remain unchanged.
+
 ### Changed
 
 - Established RecScribe as an independent application based on Home Rec.

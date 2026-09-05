@@ -101,3 +101,14 @@ notariz*.txt
 .vercel
 .env*
 *.profraw
+
+# Local transcription jobs, dependencies and model files
+/jobs/
+/benchmarks/results/
+/benchmarks/audio/
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+*.gguf
+ggml-*.bin

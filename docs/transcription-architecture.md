@@ -1,6 +1,6 @@
 # RecScribe: Architecture Notes
 
-Status: Initial proposal  
+Status: Architecture and staged implementation; see [WAV slice](wav-vertical-slice.md) for implemented capabilities
 Date: 2026-09-05  
 Base project: [Home Rec](https://github.com/melissa-pereira-deel/home-rec)
 
@@ -64,7 +64,7 @@ must be retained. Modified upstream files must carry appropriate change notices.
 ## 4. Proposed system boundary
 
 ```text
-+------------------- Capture plane: existing Home Rec --------------------+
++------------------- Capture plane: existing RecScribe -------------------+
 | SwiftUI UI -> RecordingController -> AudioRecorder -> WAV/FLAC/M4A      |
 +----------------------------------+---------------------------------------+
                                    | finalized-file event / import
@@ -96,7 +96,7 @@ The first iterations should preserve the existing application and add a
 standalone pipeline before integrating it into the UI:
 
 ```text
-HomeRec/                         existing native recorder
+RecScribe/                       existing native recorder
 pipeline/
   pyproject.toml                 Python orchestration package
   src/recscribe/
@@ -279,7 +279,7 @@ Each stage writes atomically and can be resumed. Jobs retain logs but redact
 audio content and secrets. Model downloads are checksummed and isolated from job
 outputs.
 
-The Home Rec UI receives progress and cancellation events. It must remain usable
+The RecScribe UI receives progress and cancellation events. It must remain usable
 while transcription runs, and active recording always has priority over model
 inference.
 
@@ -360,11 +360,11 @@ These are provisional measurements from one recording, not general guarantees.
 - Add glossary and initial-prompt support.
 - Create the benchmark corpus manifest and comparison runner.
 
-### Milestone 3: speakers and Home Rec integration
+### Milestone 3: speakers and RecScribe integration
 
 - Benchmark WhisperKit, MLX and diarization options.
 - Add anonymous speaker labels and post-hoc naming.
-- Enqueue finalized Home Rec recordings and display job progress.
+- Enqueue finalized RecScribe recordings and display job progress.
 - Add import, transcript and review views to the native app.
 
 ### Milestone 4: reusable Codex skill
@@ -376,8 +376,8 @@ These are provisional measurements from one recording, not general guarantees.
 
 ## 17. Open decisions
 
-1. Should the shipped application remain named Home Rec, or be rebranded after
-   the transcription workflow is integrated?
+1. Resolved: the application is RecScribe (`com.moreaki.recscribe`);
+   Home Rec remains the upstream attribution, not a product name or path.
 2. Should the first release remain CLI-only for transcription, or expose an
    experimental UI immediately?
 3. Which text processor is acceptable for local normalization and translation?

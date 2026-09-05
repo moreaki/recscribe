@@ -1,0 +1,429 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/moreaki/recscribe/schemas/transcript.schema.json",
+  "title": "RecScribe canonical transcript v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "job_id",
+    "status",
+    "source",
+    "processing",
+    "language_processing",
+    "segments",
+    "review_reasons"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "completed_with_review"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "duration_ms",
+        "channels",
+        "sample_rate",
+        "bit_depth",
+        "frames",
+        "size_bytes",
+        "container",
+        "codec",
+        "channel_metrics"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "sample_rate": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bit_depth": {
+          "enum": [
+            8,
+            16,
+            24,
+            32
+          ]
+        },
+        "frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "container": {
+          "const": "WAV"
+        },
+        "codec": {
+          "const": "PCM"
+        },
+        "channel_metrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "channel",
+              "peak",
+              "rms",
+              "clipped_samples",
+              "digital_silence"
+            ],
+            "properties": {
+              "channel": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "peak": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "rms": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "clipped_samples": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "digital_silence": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "processing": {
+      "type": "object",
+      "required": [
+        "source_language",
+        "target_language",
+        "mode",
+        "profile",
+        "diarize",
+        "local_only",
+        "engine_passes",
+        "pipeline_version",
+        "started_at",
+        "duration_ms",
+        "formats"
+      ],
+      "properties": {
+        "source_language": {
+          "type": "string"
+        },
+        "target_language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "verbatim",
+            "normalize",
+            "translate"
+          ]
+        },
+        "profile": {
+          "enum": [
+            "fast",
+            "accurate",
+            "verified"
+          ]
+        },
+        "diarize": {
+          "enum": [
+            "off",
+            "auto"
+          ]
+        },
+        "local_only": {
+          "const": true
+        },
+        "engine_passes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "engine",
+              "version",
+              "model",
+              "model_sha256",
+              "command",
+              "duration_seconds",
+              "local_only"
+            ],
+            "properties": {
+              "engine": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "model_sha256": {
+                "$ref": "#/$defs/hash"
+              },
+              "command": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "duration_seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "local_only": {
+                "const": true
+              }
+            }
+          }
+        },
+        "pipeline_version": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "json",
+              "md",
+              "txt",
+              "srt",
+              "vtt"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 5,
+          "maxItems": 5
+        }
+      }
+    },
+    "language_processing": {
+      "type": "object",
+      "required": [
+        "mode",
+        "status",
+        "processor",
+        "derivations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "verbatim",
+            "normalize",
+            "translate"
+          ]
+        },
+        "status": {
+          "enum": [
+            "not_requested",
+            "pending",
+            "completed"
+          ]
+        },
+        "processor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "derivations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "segment_id",
+              "field",
+              "processor",
+              "source_sha256"
+            ],
+            "properties": {
+              "segment_id": {
+                "type": "string"
+              },
+              "field": {
+                "enum": [
+                  "normalized_text",
+                  "translated_text"
+                ]
+              },
+              "processor": {
+                "type": "string"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/hash"
+              }
+            }
+          }
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "start_ms",
+          "end_ms",
+          "channel",
+          "speaker",
+          "source_text",
+          "normalized_text",
+          "translated_text",
+          "confidence",
+          "needs_review",
+          "review_reasons",
+          "words"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^seg-[0-9]{6,}$"
+          },
+          "start_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "channel": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "speaker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "normalized_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "translated_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "needs_review": {
+            "type": "boolean"
+          },
+          "review_reasons": {
+            "$ref": "#/$defs/reasons"
+          },
+          "words": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "text",
+                "start_ms",
+                "end_ms"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "start_ms": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end_ms": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "timing_adjustment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["original_end_ms", "reason"],
+            "properties": {
+              "original_end_ms": {"type": "integer", "minimum": 1},
+              "reason": {"const": "decoder_padding_beyond_source"}
+            }
+          }
+        }
+      }
+    },
+    "review_reasons": {
+      "$ref": "#/$defs/reasons"
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}

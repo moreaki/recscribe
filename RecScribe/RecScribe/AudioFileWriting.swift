@@ -13,10 +13,11 @@ import AVFoundation
 @MainActor
 protocol AudioFileWriting: AnyObject, Sendable {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
+    var onWriteError: (@MainActor @Sendable (String) -> Void)? { get set }
     var recording: Bool { get }
     /// Begin writing to `fileURL`, encoding in `format` (BL-015). The format is
     /// fixed for the lifetime of this recording.
     func startRecording(to fileURL: URL, format: AudioFormat) throws
-    func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer)
-    func stopRecording() throws
+    nonisolated func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer)
+    func stopRecording() async throws
 }

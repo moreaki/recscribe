@@ -61,7 +61,7 @@ nonisolated final class FLACEncoder: AudioFileEncoder {
 
     private var file: AVAudioFile?
     private var url: URL?
-    private var framesWritten: AVAudioFrameCount = 0
+    private var framesWritten: AVAudioFramePosition = 0
 
     func createFile(at url: URL, sampleRate: Double, channels: Int) throws {
         framesWritten = 0
@@ -106,7 +106,7 @@ nonisolated final class FLACEncoder: AudioFileEncoder {
         }
 
         try file.write(from: buffer)
-        framesWritten += buffer.frameLength
+        framesWritten += AVAudioFramePosition(buffer.frameLength)
     }
 
     func finalize() throws {
@@ -128,8 +128,8 @@ nonisolated final class FLACEncoder: AudioFileEncoder {
 
         // Pad a sub-packet take up to the encodable boundary so it lands as a
         // real file rather than an unopenable stub (see `minimumEncodableFrames`).
-        if framesWritten < Self.minimumEncodableFrames {
-            let padding = Self.minimumEncodableFrames - framesWritten
+        if framesWritten < AVAudioFramePosition(Self.minimumEncodableFrames) {
+            let padding = Self.minimumEncodableFrames - AVAudioFrameCount(framesWritten)
             guard let silence = AVAudioPCMBuffer(
                 pcmFormat: file.processingFormat,
                 frameCapacity: padding
@@ -152,7 +152,7 @@ nonisolated final class FLACEncoder: AudioFileEncoder {
             // Advance the counter only on a successful write, so `expected`
             // below always describes what is actually on disk.
             try file.write(from: silence)
-            framesWritten += padding
+            framesWritten += AVAudioFramePosition(padding)
         }
 
         let expected = framesWritten

@@ -16,6 +16,7 @@ enum WAVWriterError: Error, LocalizedError, Equatable {
     case fileNotOpen
     /// A buffer arrived whose rate/channels differ from what the header declares.
     case formatMismatch
+    case sizeLimit
 
     var errorDescription: String? {
         switch self {
@@ -29,6 +30,8 @@ enum WAVWriterError: Error, LocalizedError, Equatable {
             return "WAV file is not open for writing"
         case .formatMismatch:
             return "Audio format changed mid-recording"
+        case .sizeLimit:
+            return "WAV size limit reached; the partial recording has been preserved"
         }
     }
 
@@ -44,6 +47,8 @@ enum WAVWriterError: Error, LocalizedError, Equatable {
             return "Call createFile() before writing data"
         case .formatMismatch:
             return "Capture buffers must be normalised to the file's declared format before writing"
+        case .sizeLimit:
+            return "Start a new recording or use FLAC for long recordings"
         }
     }
 }
@@ -58,6 +63,15 @@ nonisolated class WAVWriter: AudioFileEncoder {
     private var sampleRate: Double = 44100.0
     private var channels: Int = 2
     private var bytesWritten: UInt32 = 0
+    private var pcmData = Data()
+
+    /// RIFF includes 36 bytes beyond the payload in its 32-bit size field.
+    static func checkedDataSize(current: UInt32, adding: Int) throws -> UInt32 {
+        guard adding >= 0, UInt64(current) + UInt64(adding) <= UInt64(UInt32.max) - 36 else {
+            throw WAVWriterError.sizeLimit
+        }
+        return current + UInt32(adding)
+    }
 
     /// Rewrite the header in place after this many buffers (~0.7s at 48kHz) so the
     /// on-disk file stays playable even if `finalize()` never runs (crash/force-quit).
@@ -127,46 +141,41 @@ nonisolated class WAVWriter: AudioFileEncoder {
         let frameLength = Int(buffer.frameLength)
         let channelCount = Int(buffer.format.channelCount)
 
-        // Convert Float32 to Int16 PCM
-        var int16Data = [Int16]()
-        int16Data.reserveCapacity(frameLength * channelCount)
-
-        for frame in 0..<frameLength {
-            for channel in 0..<channelCount {
-                let floatValue = floatChannelData[channel][frame]
-                // Clamp and convert to Int16
-                let clampedValue = max(-1.0, min(1.0, floatValue))
-                let int16Value = Int16(clampedValue * 32767.0)
-                int16Data.append(int16Value)
+        let byteCount = frameLength * channelCount * MemoryLayout<Int16>.size
+        let nextSize = try Self.checkedDataSize(current: bytesWritten, adding: byteCount)
+        // Reuse one interleaved payload instead of allocating an Array and Data
+        // copy on every callback. Preserve the existing PCM quantization.
+        pcmData.count = byteCount
+        try pcmData.withUnsafeMutableBytes { raw in
+            let samples = raw.bindMemory(to: Int16.self)
+            for frame in 0..<frameLength {
+                for channel in 0..<channelCount {
+                    let value = floatChannelData[channel][frame]
+                    guard value.isFinite else { throw WAVWriterError.invalidFormat }
+                    samples[frame * channelCount + channel] = Int16(max(-1, min(1, value)) * 32767).littleEndian
+                }
             }
         }
-
-        // Write to file
-        let data = Data(bytes: int16Data, count: int16Data.count * MemoryLayout<Int16>.size)
-        fileHandle.write(data)
-        bytesWritten += UInt32(data.count)
+        try fileHandle.write(contentsOf: pcmData)
+        bytesWritten = nextSize
 
         // Periodically rewrite the header so the file is playable even if the
         // app is killed before finalize() runs.
         buffersSinceHeaderUpdate += 1
         if buffersSinceHeaderUpdate >= Self.headerUpdateInterval {
             buffersSinceHeaderUpdate = 0
-            updateHeaderInPlace()
+            try updateHeaderInPlace()
         }
     }
 
     /// Overwrite the 44-byte header with the current data size, then seek back to
-    /// the end so appending continues. Best-effort: `finalize()` writes the
-    /// authoritative header.
-    private func updateHeaderInPlace() {
+    /// the end so appending continues. A failed seek must stop writing, otherwise
+    /// the next payload could overwrite the header or earlier audio.
+    private func updateHeaderInPlace() throws {
         guard let fileHandle = fileHandle else { return }
-        do {
-            try fileHandle.seek(toOffset: 0)
-            fileHandle.write(createWAVHeader(dataSize: bytesWritten))
-            try fileHandle.seekToEnd()
-        } catch {
-            // Ignore; the next periodic update or finalize() will correct the header.
-        }
+        try fileHandle.seek(toOffset: 0)
+        try fileHandle.write(contentsOf: createWAVHeader(dataSize: bytesWritten))
+        try fileHandle.seekToEnd()
     }
 
     /// Finalize WAV file and update header with correct sizes
@@ -177,7 +186,8 @@ nonisolated class WAVWriter: AudioFileEncoder {
         }
 
         // Close the file
-        try? fileHandle.close()
+        defer { self.fileHandle = nil }
+        try fileHandle.close()
         self.fileHandle = nil
 
         // Re-open for reading and writing to update header
@@ -189,7 +199,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
             try handle.seek(toOffset: 0)
 
             let headerData = createWAVHeader(dataSize: bytesWritten)
-            handle.write(headerData)
+            try handle.write(contentsOf: headerData)
         } catch {
             throw WAVWriterError.fileWriteFailed
         }
@@ -206,7 +216,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
         }
 
         let headerData = createWAVHeader(dataSize: dataSize)
-        fileHandle.write(headerData)
+        try fileHandle.write(contentsOf: headerData)
     }
 
     /// Create WAV header data

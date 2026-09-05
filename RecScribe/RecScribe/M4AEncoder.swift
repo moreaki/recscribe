@@ -27,6 +27,8 @@ enum M4AEncoderError: Error, LocalizedError, Equatable {
     /// A buffer arrived whose rate/channels differ from what the writer input was
     /// configured for. Appending it would fail and cost the whole take at stop.
     case formatMismatch
+    case bufferLimit
+    case timedOut
 
     var errorDescription: String? {
         switch self {
@@ -34,6 +36,8 @@ enum M4AEncoderError: Error, LocalizedError, Equatable {
         case .notOpen:         return "M4A file is not open for writing"
         case .writeFailed:     return "Failed to finalize the M4A file"
         case .formatMismatch:  return "Audio format changed mid-recording"
+        case .bufferLimit:     return "AAC encoding cannot keep up; pending audio limit reached"
+        case .timedOut:        return "AAC finalization timed out; the partial file has been preserved"
         }
     }
 }
@@ -66,12 +70,33 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
 
     /// Buffers awaiting append while the input reports not-ready (FIFO).
     private var pending: [CMSampleBuffer] = []
+    private var pendingBytes = 0
+    private var peakPendingBytes = 0
+    private let pendingByteLimit: Int
+    private let pendingBufferLimit: Int
+    private let finalizeTimeout: TimeInterval
+    private let isReady: (AVAssetWriterInput) -> Bool
+    private let finish: (AVAssetWriter, @escaping @Sendable () -> Void) -> Void
+
+    init(pendingByteLimit: Int = 4 * 1_024 * 1_024, pendingBufferLimit: Int = 256,
+         finalizeTimeout: TimeInterval = 5,
+         isReady: @escaping (AVAssetWriterInput) -> Bool = { $0.isReadyForMoreMediaData },
+         finish: @escaping (AVAssetWriter, @escaping @Sendable () -> Void) -> Void = { $0.finishWriting(completionHandler: $1) }) {
+        precondition(pendingByteLimit > 0 && pendingBufferLimit > 0 && finalizeTimeout >= 0)
+        self.pendingByteLimit = pendingByteLimit
+        self.pendingBufferLimit = pendingBufferLimit
+        self.finalizeTimeout = finalizeTimeout
+        self.isReady = isReady
+        self.finish = finish
+    }
 
     func createFile(at url: URL, sampleRate: Double, channels: Int) throws {
         inputSampleRate = sampleRate
         inputChannels = channels
         totalInputFrames = 0
         pending.removeAll()
+        pendingBytes = 0
+        peakPendingBytes = 0
 
         // AVAssetWriter refuses to overwrite an existing file.
         try? FileManager.default.removeItem(at: url)
@@ -118,6 +143,11 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
             throw M4AEncoderError.formatMismatch
         }
 
+        guard drainPending(into: input) else { throw M4AEncoderError.writeFailed }
+        let bytes = Int(buffer.frameLength) * inputChannels * MemoryLayout<Float>.size
+        guard pending.count < pendingBufferLimit, bytes <= pendingByteLimit - pendingBytes else {
+            throw M4AEncoderError.bufferLimit
+        }
         let pts = CMTime(value: totalInputFrames, timescale: CMTimeScale(inputSampleRate))
         guard let sample = Self.makeInterleavedSampleBuffer(from: buffer, presentationTime: pts) else {
             // Bad/empty buffer: drop it (matches the WAV path's hot-path tolerance).
@@ -126,6 +156,8 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
         totalInputFrames += Int64(buffer.frameLength)
 
         pending.append(sample)
+        pendingBytes += bytes
+        peakPendingBytes = max(peakPendingBytes, pendingBytes)
         guard drainPending(into: input) else { throw M4AEncoderError.writeFailed }
     }
 
@@ -137,7 +169,7 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
     ///   take was gone with no indication of when or why it broke.
     @discardableResult
     private func drainPending(into input: AVAssetWriterInput) -> Bool {
-        while let head = pending.first, input.isReadyForMoreMediaData {
+        while let head = pending.first, isReady(input) {
             guard input.append(head) else {
                 // The writer has failed; every later append fails too. Stop and
                 // let the caller surface it while there is still context.
@@ -146,6 +178,7 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
                 )
                 return false
             }
+            pendingBytes -= CMSampleBufferGetNumSamples(head) * inputChannels * MemoryLayout<Float>.size
             pending.removeFirst()
         }
         return true
@@ -153,31 +186,34 @@ nonisolated final class M4AEncoder: AudioFileEncoder {
 
     func finalize() throws {
         guard let writer = writer, let input = input else { throw M4AEncoderError.notOpen }
-
-        // Drain anything still queued. The input encodes on its own queue, so
-        // readiness recovers continuously; bound the wait so a stuck writer can't
-        // hang stop indefinitely.
-        var waited = 0
+        let start = ContinuousClock.now
+        let deadline = start.advanced(by: .seconds(finalizeTimeout))
+        defer {
+            // Do not cancelWriting: Apple's API deletes the output file and can
+            // itself block. Release our references, preserving recovery fragments.
+            self.writer = nil
+            self.input = nil
+            pending.removeAll()
+            pendingBytes = 0
+            Log.recorder.notice("AAC finalized completed=\(writer.status == .completed) peak_pending_pcm_bytes=\(self.peakPendingBytes)")
+        }
+        // One monotonic deadline covers both draining and finishWriting. Never
+        // mark finished while unappended audio remains, even if AVF reports success.
         while !pending.isEmpty {
-            drainPending(into: input)
+            guard drainPending(into: input) else { throw M4AEncoderError.writeFailed }
             if pending.isEmpty { break }
-            if waited >= 5_000 { break }   // ~5s ceiling
+            guard ContinuousClock.now < deadline else { throw M4AEncoderError.timedOut }
             usleep(1_000)
-            waited += 1
         }
 
         input.markAsFinished()
 
         let done = DispatchSemaphore(value: 0)
-        writer.finishWriting { done.signal() }
-        done.wait()   // completion fires on AVF's internal queue — no deadlock
-
-        let status = writer.status
-        self.writer = nil
-        self.input = nil
-        pending.removeAll()
-
-        if status != .completed {
+        finish(writer) { done.signal() }
+        let remaining = ContinuousClock.now.duration(to: deadline)
+        let seconds = max(0, Double(remaining.components.seconds) + Double(remaining.components.attoseconds) / 1e18)
+        guard done.wait(timeout: .now() + seconds) == .success else { throw M4AEncoderError.timedOut }
+        if writer.status != .completed {
             throw M4AEncoderError.writeFailed
         }
     }

@@ -21,7 +21,7 @@ protocol AudioCapturing: AnyObject, Sendable {
     var onStreamError: (@MainActor (String) -> Void)? { get set }
     /// Set up capture for `source` (BL-100). Implementations resolve `.app` to
     /// their own framework's filter; the source is otherwise opaque to callers.
-    func setupCapture(source: AudioSource, audioCallback: @escaping (AVAudioPCMBuffer) -> Void) async throws
+    func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws
     func startCapture() async throws
     func stopCapture() async throws
     func cleanup() async

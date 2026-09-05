@@ -46,6 +46,9 @@ class RecordingController: RecordingControlling {
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }
+        self.audioRecorder.onWriteError = { [weak self] message in
+            self?.onStreamError?(message)
+        }
     }
 
     // MARK: - Public Methods
@@ -55,6 +58,7 @@ class RecordingController: RecordingControlling {
     /// - Throws: Error if recording cannot start
     @MainActor
     func startRecording(format: AudioFormat) async throws -> URL {
+        guard !audioRecorder.recording else { throw AudioRecorderError.alreadyRecording }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
@@ -77,12 +81,17 @@ class RecordingController: RecordingControlling {
 
         // Set up capture with audio callback
         let recorder = audioRecorder  // Keep strong reference
-        try await captureManager.setupCapture(source: source) { pcmBuffer in
-            recorder.processAudioSample(pcmBuffer)
+        do {
+            try await captureManager.setupCapture(source: source) { pcmBuffer in
+                recorder.processAudioSample(pcmBuffer)
+            }
+            try await captureManager.startCapture()
+        } catch {
+            await captureManager.cleanup()
+            try? await audioRecorder.stopRecording()
+            audioRecorder.onWaveformData = nil
+            throw error
         }
-
-        // Start capturing system audio
-        try await captureManager.startCapture()
 
         currentRecordingURL = fileURL
         Log.recorder.info("Recording started")
@@ -93,7 +102,8 @@ class RecordingController: RecordingControlling {
     /// - Throws: Error if stop fails
     func stopRecording() async throws {
         // Stop capturing audio
-        try await captureManager.stopCapture()
+        var captureError: Error?
+        do { try await captureManager.stopCapture() } catch { captureError = error }
 
         // Finalize the file, but capture the error rather than rethrowing here:
         // the teardown below must run either way, or a failed finalize would leak
@@ -102,7 +112,7 @@ class RecordingController: RecordingControlling {
         // path could never be reached.)
         let finalizeError: Error?
         do {
-            try audioRecorder.stopRecording()
+            try await audioRecorder.stopRecording()
             finalizeError = nil
         } catch {
             finalizeError = error
@@ -120,6 +130,7 @@ class RecordingController: RecordingControlling {
             )
             throw finalizeError
         }
+        if let captureError { throw captureError }
         Log.recorder.info("Recording stopped")
     }
 
@@ -133,7 +144,7 @@ class RecordingController: RecordingControlling {
         // useful diagnosis, and replacing it with a finalize error would bury
         // the actual cause. The partial file is preserved either way — for WAV
         // by its periodic header, for M4A by its movie fragments.
-        try? audioRecorder.stopRecording()
+        try? await audioRecorder.stopRecording()
         await captureManager.cleanup()
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
@@ -184,7 +195,7 @@ class RecordingController: RecordingControlling {
         Task { @MainActor in
             guard captureManager.capturing else { return }
             try? await captureManager.stopCapture()
-            try? audioRecorder.stopRecording()
+            try? await audioRecorder.stopRecording()
             await captureManager.cleanup()
         }
     }

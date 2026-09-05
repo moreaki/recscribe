@@ -56,27 +56,8 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     // MARK: - Properties
 
     private var stream: SCStream?
-    private var audioCallback: ((AVAudioPCMBuffer) -> Void)?
     private var isCapturing = false
-
-    /// Forces every captured buffer to the canonical 48 kHz stereo format the
-    /// encoders are told to expect (BL-112).
-    ///
-    /// ⚠️ One normalizer per sample-handler queue — it holds a stateful
-    /// `AVAudioConverter`, which is declared Sendable but is not safe to drive
-    /// from two queues. This one belongs to the `.audio` handler queue. When
-    /// BL-130 adds a `.microphone` output it must either share that queue or get
-    /// its own normalizer; it must not share this one across queues.
-    private var audioNormalizer = AudioFormatNormalizer()
-
-    /// One-shot latches so a rejected buffer is reported once per session rather
-    /// than per buffer — this is the capture hot path (BL-150).
-    ///
-    /// ⚠️ Written and read on the sample-handler queue only, unlike the
-    /// properties above it, so these two add no new cross-queue access. The rest
-    /// of this file's race is TD-009 and is not made worse here.
-    private var hasLoggedConversionFailure = false
-    private var hasLoggedNormalizeFailure = false
+    private var output: AudioCaptureOutput?
 
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
     var onStreamError: (@MainActor (String) -> Void)?
@@ -89,12 +70,13 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     ///   - audioCallback: Closure called for each audio buffer
     /// - Throws: ScreenCaptureAudioError if setup fails, or `.appNotRunning` if `source`
     ///   is `.app` and no running app matches its bundle ID.
-    func setupCapture(source: AudioSource, audioCallback: @escaping (AVAudioPCMBuffer) -> Void) async throws {
-        self.audioCallback = audioCallback
-        // Fresh converter state per session: this manager outlives a single
-        // recording, and a converter carrying the previous take's resampler state
-        // would start the next one mid-phase.
-        self.audioNormalizer = AudioFormatNormalizer()
+    func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
+        let id = UUID()
+        let output = AudioCaptureOutput(id: id, audioCallback: audioCallback) { [weak self] message in
+            guard let self, self.output?.id == id else { return }
+            self.onStreamError?(message)
+        }
+        self.output = output
 
         // Get available displays (and, for .app, running applications)
         let content = try await SCShareableContent.excludingDesktopWindows(
@@ -168,26 +150,15 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
         // Add screen output (required even though we only want audio)
         try stream.addStreamOutput(
-            self,
+            output,
             type: .screen,
-            sampleHandlerQueue: DispatchQueue(label: "com.moreaki.recscribe.screen.capture", qos: .userInitiated)
+            sampleHandlerQueue: output.queue
         )
 
-        // Add audio output.
-        //
-        // ⚠️ `.audio` and `.microphone` deliberately SHARE one sample-handler
-        // queue. They feed the same `AudioFormatNormalizer`, which holds a
-        // stateful `AVAudioConverter` — declared Sendable but not safe to drive
-        // from two queues, and the compiler will not warn about it. Giving the
-        // mic its own queue would be a silent data race.
-        let audioQueue = DispatchQueue(
-            label: "com.moreaki.recscribe.audio.capture",
-            qos: .userInitiated
-        )
-        try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue)
+        try stream.addStreamOutput(output, type: .audio, sampleHandlerQueue: output.queue)
 
         if isMicSource {
-            try stream.addStreamOutput(self, type: .microphone, sampleHandlerQueue: audioQueue)
+            try stream.addStreamOutput(output, type: .microphone, sampleHandlerQueue: output.queue)
         }
 
         Log.capture.debug("Capture stream configured (screen + audio handlers added)")
@@ -214,7 +185,14 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     func stopCapture() async throws {
         guard let stream = stream else { return }
 
-        try await stream.stopCapture()
+        do {
+            try await stream.stopCapture()
+        } catch {
+            await output?.finish()
+            isCapturing = false
+            throw error
+        }
+        await output?.finish()
         isCapturing = false
     }
 
@@ -222,7 +200,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     func cleanup() async {
         try? await stopCapture()
         stream = nil
-        audioCallback = nil
+        output = nil
     }
 
     var capturing: Bool {
@@ -234,23 +212,66 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
 extension ScreenCaptureAudioManager: SCStreamDelegate {
 
-    func stream(_ stream: SCStream, didStopWithError error: Error) {
+    nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
         let message = error.localizedDescription
-        Log.capture.error("Capture stream stopped with error: \(message, privacy: .public)")
-        isCapturing = false
-        onStreamError?(message)
+        let identity = ObjectIdentifier(stream)
+        Task { @MainActor [weak self] in
+            guard let self, self.stream.map(ObjectIdentifier.init) == identity else { return }
+            Log.capture.error("Capture stream stopped with error: \(message, privacy: .private)")
+            self.isCapturing = false
+            self.onStreamError?(message)
+        }
     }
 }
 
 // MARK: - SCStreamOutput
 
-extension ScreenCaptureAudioManager: SCStreamOutput {
+/// One output per session. Mutable converter state and callbacks are confined
+/// to this queue, not implicitly MainActor like the capture lifecycle manager.
+/// @unchecked Sendable is limited to the queue-owned storage below.
+nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
+    let id: UUID
+    let queue = DispatchQueue(label: "com.moreaki.recscribe.audio.capture", qos: .userInitiated)
+    private let audioCallback: @Sendable (AVAudioPCMBuffer) -> Void
+    private let audioNormalizer = AudioFormatNormalizer()
+    private var hasLoggedConversionFailure = false
+    private var hasLoggedNormalizeFailure = false
+    private var accepting = true
+    private var buffers = 0
+    private var callbackMS = 0.0
+    private var maxCallbackMS = 0.0
+    private let onError: @MainActor @Sendable (String) -> Void
+
+    init(id: UUID = UUID(), audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
+         onError: @escaping @MainActor @Sendable (String) -> Void = { _ in }) {
+        self.id = id
+        self.audioCallback = audioCallback
+        self.onError = onError
+    }
+
+    /// After stopCapture, wait for all already-delivered samples before sealing
+    /// this session. Late callbacks cannot enter a subsequent recording.
+    func finish() async {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                if self.accepting {
+                    Log.capture.notice("Capture drained id=\(self.id.uuidString, privacy: .public) buffers=\(self.buffers) callback_ms=\(self.callbackMS) max_callback_ms=\(self.maxCallbackMS) conversion_failed=\(self.hasLoggedConversionFailure || self.hasLoggedNormalizeFailure)")
+                }
+                self.accepting = false
+                continuation.resume()
+            }
+        }
+    }
 
     func stream(
         _ stream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType
     ) {
+        process(sampleBuffer, type: type)
+    }
+
+    func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType) {
         // Ignore video samples (we only need audio). No logging here: this
         // fires per audio buffer on the capture queue — the hot path.
         //
@@ -258,7 +279,17 @@ extension ScreenCaptureAudioManager: SCStreamOutput {
         // only one of them is ever configured at a time — a mic source sets
         // `capturesAudio = false`, so no `.audio` buffers arrive to interleave
         // with it. Both are normalised by the same converter on the same queue.
-        guard type == .audio || type == .microphone else { return }
+        dispatchPrecondition(condition: .onQueue(queue))
+        guard accepting, type == .audio || type == .microphone else { return }
+        guard CMSampleBufferGetNumSamples(sampleBuffer) > 0 else { return }
+        let start = ContinuousClock.now
+        defer {
+            let elapsed = start.duration(to: .now)
+            let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
+            callbackMS += ms
+            maxCallbackMS = max(maxCallbackMS, ms)
+            buffers += 1
+        }
 
         // Convert at the delegate boundary so every AudioCapturing implementation
         // hands AudioRecorder the same canonical AVAudioPCMBuffer type (BL-099),
@@ -279,6 +310,7 @@ extension ScreenCaptureAudioManager: SCStreamOutput {
                     .map { "\($0.mChannelsPerFrame)ch \($0.mSampleRate)Hz \($0.mBitsPerChannel)-bit flags=\($0.mFormatFlags)" }
                     ?? "unknown format"
                 Log.capture.error("Dropping buffers: unsupported capture format — \(desc, privacy: .public)")
+                Task { @MainActor [onError] in onError("Capture audio could not be converted; the partial recording is preserved") }
             }
             return
         }
@@ -287,9 +319,10 @@ extension ScreenCaptureAudioManager: SCStreamOutput {
                 hasLoggedNormalizeFailure = true
                 let f = pcmBuffer.format
                 Log.capture.error("Dropping buffers: normalizer rejected \(f.channelCount, privacy: .public)ch \(f.sampleRate, privacy: .public)Hz")
+                Task { @MainActor [onError] in onError("Capture audio could not be normalized; the partial recording is preserved") }
             }
             return
         }
-        audioCallback?(normalized)
+        audioCallback(normalized)
     }
 }

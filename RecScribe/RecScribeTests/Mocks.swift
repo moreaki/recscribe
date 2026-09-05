@@ -18,12 +18,15 @@ final class MockAudioCapturing: AudioCapturing {
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private(set) var cleanupCount = 0
+    var setupError: Error?
+    var stopError: Error?
     /// The source passed to the most recent `setupCapture`, for assertions (BL-100).
     private(set) var lastSource: AudioSource?
-    private var audioCallback: ((AVAudioPCMBuffer) -> Void)?
+    private var audioCallback: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
-    func setupCapture(source: AudioSource, audioCallback: @escaping (AVAudioPCMBuffer) -> Void) async throws {
+    func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
         setupCount += 1
+        if let setupError { throw setupError }
         lastSource = source
         self.audioCallback = audioCallback
     }
@@ -35,6 +38,7 @@ final class MockAudioCapturing: AudioCapturing {
 
     func stopCapture() async throws {
         stopCount += 1
+        if let stopError { throw stopError }
         capturing = false
     }
 
@@ -51,6 +55,7 @@ final class MockAudioCapturing: AudioCapturing {
 
 @MainActor
 final class MockAudioFileWriting: AudioFileWriting {
+    var onWriteError: (@MainActor @Sendable (String) -> Void)?
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     private(set) var recording = false
     private(set) var startCount = 0
@@ -69,9 +74,9 @@ final class MockAudioFileWriting: AudioFileWriting {
         recording = true
     }
 
-    func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer) {}
+    nonisolated func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer) {}
 
-    func stopRecording() throws {
+    func stopRecording() async throws {
         stopCount += 1
         recording = false
         onStop?()

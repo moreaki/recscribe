@@ -77,6 +77,31 @@ struct RecordingControllerTests {
 
     private struct FinalizeFailure: Error, Equatable {}
 
+    @Test("Capture setup failure closes the encoder")
+    func setupFailureClosesEncoder() async {
+        let recorder = MockAudioFileWriting()
+        let capture = MockAudioCapturing()
+        capture.setupError = FinalizeFailure()
+        let controller = makeController(recorder: recorder, capture: capture)
+        await #expect(throws: FinalizeFailure.self) { try await controller.startRecording(format: .wav) }
+        #expect(recorder.stopCount == 1)
+        #expect(capture.cleanupCount == 1)
+        #expect(!recorder.recording)
+    }
+
+    @Test("Capture stop failure still finalizes and cleans up")
+    func captureStopFailureFinalizes() async throws {
+        let recorder = MockAudioFileWriting()
+        let capture = MockAudioCapturing()
+        let controller = makeController(recorder: recorder, capture: capture)
+        _ = try await controller.startRecording(format: .wav)
+        capture.stopError = FinalizeFailure()
+        await #expect(throws: FinalizeFailure.self) { try await controller.stopRecording() }
+        #expect(recorder.stopCount == 1)
+        #expect(capture.cleanupCount == 1)
+        #expect(controller.recordingURL == nil)
+    }
+
     /// The regression this guards: a finalize failure must not skip teardown.
     /// Rethrowing straight out of `stopRecording()` would leak the SCStream and
     /// strand a stale recording URL — a worse outcome than the error itself.

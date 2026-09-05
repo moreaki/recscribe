@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {"id": "swiss-german", "category": "de-CH", "language": "de-CH", "audio": null, "reference": null, "sha256": null, "license": null, "speakers": 1},
+    {"id": "standard-german", "category": "de", "language": "de", "audio": null, "reference": null, "sha256": null, "license": null, "speakers": 1},
+    {"id": "english", "category": "en", "language": "en", "audio": null, "reference": null, "sha256": null, "license": null, "speakers": 1},
+    {"id": "noise-only", "category": "noise", "language": "auto", "audio": null, "reference": null, "sha256": null, "license": null, "speakers": 0},
+    {"id": "multiple-speakers", "category": "multiple-speakers", "language": "de-CH", "audio": null, "reference": null, "sha256": null, "license": null, "speakers": 3}
+  ]
+}

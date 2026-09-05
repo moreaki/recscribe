@@ -40,6 +40,11 @@ or additional inference is silently performed. Repeated same-channel ASR phrases
 and non-speech markers are review signals, never deleted or treated as confident
 speech. The private full-file test exposed this limit: an explicit German language
 request recognized speech where automatic detection had selected English.
+The reference adapter disables previous-text context (`-mc 0`) to limit repetition
+loops after silent openings. It retains upstream's local temperature fallback;
+this is decoding within the same local model, not a network/provider fallback.
+All exact options are recorded. ASR itself need not be byte-deterministic; exports
+from one canonical result are.
 
 `fast` and `accurate` each use the explicitly supplied model for one pass. They
 do not infer quality from a filename, download a recommended model or guarantee

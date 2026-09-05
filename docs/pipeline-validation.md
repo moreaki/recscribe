@@ -43,8 +43,12 @@ initialization during version probing, and represent end-of-audio decoder paddin
 as an explicit reviewed timing derivation, and mark automatic language selection
 and repeated phrases as unverified. Auto-detection on a quiet opening selected
 English for a German recording; an explicitly German later excerpt recognized
-coherent speech. This is a known upstream detection limit, not proof of dialect
-accuracy. Failed earlier jobs remain available
+coherent speech. A German full-file run still repeated one marker. A targeted
+silence-then-speech comparison exposed a second failure in the initial decoder
+configuration: carrying previous text while disabling temperature fallback could
+trap the decoder in repetition. With text context disabled and upstream's local
+decoder fallback restored, the speech after the silent opening was recognized.
+These observations are not proof of dialect accuracy. Failed earlier jobs remain available
 for inspection and were not reused or overwritten.
 
 The benchmark template correctly reports all five categories as `pending_corpus`.

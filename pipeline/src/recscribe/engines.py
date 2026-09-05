@@ -49,7 +49,7 @@ class WhisperCpp:
         version_match = re.search(r"whisper\.cpp version:\s*(\S+)", version_output)
         command = [str(self.binary), "-m", str(self.model), "-f", str(audio),
                    "-l", asr_language, "-ojf", "-of", str(output), "-t", "2",
-                   "-tp", "0", "-nf"]
+                   "-tp", "0", "-mc", "0"]
         if self.vad_model:
             command += ["--vad", "-vm", str(self.vad_model)]
         elapsed = run_local(command, output.with_suffix(".log"), cancel)

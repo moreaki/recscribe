@@ -19,7 +19,10 @@ protocol DurationClock: AnyObject {
 /// Production clock backed by the system clock and a run-loop `Timer`.
 @MainActor
 final class SystemDurationClock: DurationClock {
-    private var timer: Timer?
+    /// The run-loop timer is created, mutated, and invalidated on MainActor.
+    /// Deinitializers are nonisolated in Swift 6, so the storage itself must be
+    /// marked as externally synchronized for the final invalidation.
+    nonisolated(unsafe) private var timer: Timer?
     private var onTick: (@MainActor () -> Void)?
 
     var now: Date { Date() }

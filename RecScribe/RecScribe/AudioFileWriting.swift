@@ -12,7 +12,7 @@ import AVFoundation
 /// Writes captured audio buffers to a file. Implemented by `AudioRecorder`.
 @MainActor
 protocol AudioFileWriting: AnyObject, Sendable {
-    var onWaveformData: (([Float]) -> Void)? { get set }
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
     var recording: Bool { get }
     /// Begin writing to `fileURL`, encoding in `format` (BL-015). The format is
     /// fixed for the lifetime of this recording.

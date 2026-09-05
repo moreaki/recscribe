@@ -50,7 +50,10 @@ final class PermissionGrantWatcher {
     ///
     /// Bounded by the same budget as the poll, and released the instant it stops,
     /// so this cannot become a background app quietly holding the system awake.
-    private var activity: NSObjectProtocol?
+    /// MainActor owns this token during normal operation. Swift 6 deinitializers
+    /// are nonisolated, so teardown also needs direct access to release the App
+    /// Nap assertion if the owner disappears unexpectedly.
+    nonisolated(unsafe) private var activity: NSObjectProtocol?
 
     /// Whether the App Nap opt-out is currently held (lifecycle test seam — a
     /// leaked assertion is invisible from behaviour alone).

@@ -112,7 +112,10 @@ class RecorderViewModel: ObservableObject {
     let audioSource: AudioSourceProviding
     private var recordingStartTime: Date?
     private var longRecordingWarned = false
-    private var activationObserver: NSObjectProtocol?
+    /// Notification tokens are created and used on MainActor. Swift 6
+    /// deinitializers are nonisolated, so teardown needs direct access to remove
+    /// them without leaking observers.
+    nonisolated(unsafe) private var activationObserver: NSObjectProtocol?
     /// Whether the user has done something that asks for permission.
     ///
     /// The activation re-probe exists for exactly one scenario — the user granted
@@ -156,7 +159,7 @@ class RecorderViewModel: ObservableObject {
     /// window is about to appear, and `true` forever after even with every real
     /// window closed. Both answers are wrong at the moment they matter.
     private(set) var visibleWindowCount = 0
-    private var launchNoticeObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var launchNoticeObserver: NSObjectProtocol?
     /// Injected so tests get their own activation notifications. `.default` is
     /// process-global, and the suites are unserialized: one suite's synthetic
     /// `didBecomeActive` would otherwise reach every other suite's live view

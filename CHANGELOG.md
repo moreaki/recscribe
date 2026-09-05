@@ -9,7 +9,11 @@ All notable RecScribe changes will be documented in this file.
 - Established RecScribe as an independent application based on Home Rec.
 - Renamed the Xcode project, application target, test targets, source directories,
   product strings, diagnostics, and bundle identifiers.
-- Configured automatic signing for Apple Developer Team `VFABJ5RE5Q`.
+- Configured automatic signing for Apple Developer Team `CDS4KLP8GT`.
+- Migrated the application and test targets to Swift 6 language mode with complete
+  concurrency checking.
+- Added a command-line signed or ad-hoc Release build under
+  `scripts/build-app.sh`.
 - Reset the application version to `0.1.0` (`CFBundleVersion` 100).
 - Removed the inherited Home Rec Sparkle feed, signing key, update UI, and package
   dependency. RecScribe will add its own update channel before distributing releases.

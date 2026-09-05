@@ -51,7 +51,7 @@ final class MockAudioCapturing: AudioCapturing {
 
 @MainActor
 final class MockAudioFileWriting: AudioFileWriting {
-    var onWaveformData: (([Float]) -> Void)?
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     private(set) var recording = false
     private(set) var startCount = 0
     private(set) var stopCount = 0
@@ -291,7 +291,7 @@ final class ManualClock: DurationClock {
 
 @MainActor
 final class MockRecordingControlling: RecordingControlling {
-    var onWaveformData: (([Float]) -> Void)?
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     var onStreamError: (@MainActor (String) -> Void)?
     private(set) var isRecording = false
     private(set) var recordingURL: URL?

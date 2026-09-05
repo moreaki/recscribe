@@ -26,7 +26,7 @@ class RecordingController: RecordingControlling {
     private var currentRecordingURL: URL?
 
     /// Callback for waveform visualization data
-    var onWaveformData: (([Float]) -> Void)?
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
 
     /// Forwarded from the capture manager when the stream fails mid-recording.
     var onStreamError: (@MainActor (String) -> Void)?

@@ -1,7 +1,12 @@
 # Distribution status
 
 RecScribe has no public release channel yet. Development builds use automatic signing
-with Apple Developer Team `VFABJ5RE5Q`.
+with Apple Developer Team `CDS4KLP8GT`.
+
+For a local signed Release build without opening Xcode, run
+`scripts/build-app.sh`. It uses the checked-in automatic-signing configuration and
+writes `Build/Products/Release/RecScribe.app`. Use `--ad-hoc` only when an Apple
+development identity is unavailable.
 
 Before the first external release, the project needs its own:
 

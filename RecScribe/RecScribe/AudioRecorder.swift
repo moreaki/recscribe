@@ -44,11 +44,14 @@ enum AudioRecorderError: Error, LocalizedError {
 }
 
 /// Records audio from ScreenCaptureKit to WAV file
-class AudioRecorder: AudioFileWriting {
+final class AudioRecorder: AudioFileWriting {
 
     // MARK: - Properties
 
-    private var encoder: (any AudioFileEncoder)?
+    /// Access is confined to `processingQueue`. `nonisolated(unsafe)` expresses
+    /// that external synchronization to Swift's actor checker; callers never
+    /// touch this storage directly.
+    nonisolated(unsafe) private var encoder: (any AudioFileEncoder)?
 
     /// How an encoder is built for a format. Injectable so tests can drive the
     /// stop path with an encoder that fails to finalize (BL-016) — the real app
@@ -63,7 +66,7 @@ class AudioRecorder: AudioFileWriting {
     private let channels: Int = 2           // Stereo
 
     /// Callback for waveform visualization data (downsampled amplitude values)
-    var onWaveformData: (([Float]) -> Void)?
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
 
     // Processing queue for writing to disk
     private let processingQueue = DispatchQueue(
@@ -94,11 +97,17 @@ class AudioRecorder: AudioFileWriting {
     /// 48kHz/stereo/Float32/non-interleaved format by the `AudioCapturing` source).
     /// - Parameter pcmBuffer: Audio buffer from the capture source
     func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer) {
-        // Hand off to the serial queue immediately. `wavWriter` is only ever read
-        // there, so a concurrent stop cannot free it mid-read.
-        processingQueue.async { [weak self] in
-            guard let self, self.encoder != nil else { return }
-            self.processPCMBuffer(pcmBuffer)
+        // AVAudioPCMBuffer is imported from Objective-C without Sendable
+        // conformance. The capture pipeline transfers ownership here and never
+        // touches this instance again, so wrapping that transfer is safe. Encoder
+        // state remains confined to the serial processing queue.
+        let transferredBuffer = TransferredPCMBuffer(pcmBuffer)
+        let waveformHandler = onWaveformData
+        processingQueue.async { [weak self, transferredBuffer, waveformHandler] in
+            self?.processPCMBuffer(
+                transferredBuffer.value,
+                waveformHandler: waveformHandler
+            )
         }
     }
 
@@ -131,7 +140,10 @@ class AudioRecorder: AudioFileWriting {
 
     /// Process a PCM buffer on background thread (orchestrator).
     /// - Parameter pcmBuffer: canonical AVAudioPCMBuffer from the capture source
-    private func processPCMBuffer(_ pcmBuffer: AVAudioPCMBuffer) {
+    nonisolated private func processPCMBuffer(
+        _ pcmBuffer: AVAudioPCMBuffer,
+        waveformHandler: (@MainActor @Sendable ([Float]) -> Void)?
+    ) {
         // Runs ~47×/sec on the processing queue. No logging on this hot path;
         // failures drop the buffer. CMSampleBuffer→AVAudioPCMBuffer conversion now
         // happens at the capture source's delegate boundary (BL-099); downsampling
@@ -140,14 +152,25 @@ class AudioRecorder: AudioFileWriting {
         guard let encoder = encoder else { return }
 
         // Waveform visualization (skip the work entirely when nothing is listening).
-        if let onWaveformData = onWaveformData {
+        if let waveformHandler {
             let waveformSamples = WaveformDownsampler.downsample(pcmBuffer)
             DispatchQueue.main.async {
-                onWaveformData(waveformSamples)
+                waveformHandler(waveformSamples)
             }
         }
 
         // Encode the buffer. Errors intentionally not logged here (hot path).
         try? encoder.writeBuffer(pcmBuffer)
+    }
+}
+
+/// A single-owner transfer from the ScreenCaptureKit callback to the recorder's
+/// serial processing queue. The producer relinquishes the buffer after calling
+/// `processAudioSample`; only that queue reads it afterwards.
+private nonisolated struct TransferredPCMBuffer: @unchecked Sendable {
+    let value: AVAudioPCMBuffer
+
+    init(_ value: AVAudioPCMBuffer) {
+        self.value = value
     }
 }

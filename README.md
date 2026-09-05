@@ -29,6 +29,7 @@ contact the Home Rec update service.
 
 - macOS 15 or later
 - Xcode 16 or later
+- Swift 6 language mode
 - An Apple Developer account for local signing
 - Screen Recording permission for system or per-application audio
 - Microphone permission when recording an input device
@@ -39,12 +40,31 @@ contact the Home Rec update service.
 git clone git@github.com:moreaki/recscribe.git
 cd recscribe
 git config core.hooksPath .githooks
-open RecScribe/RecScribe.xcodeproj
+app_path="$(./scripts/build-app.sh | tail -n 1)"
+open "$app_path"
 ```
 
-The project uses automatic signing with Apple Developer Team `VFABJ5RE5Q` and the
-bundle identifier `com.moreaki.recscribe`. Select the **RecScribe** scheme and run it
-from Xcode.
+The script creates an optimized Release build under `Build/Products/Release` without
+opening Xcode. It uses automatic signing with Apple Developer Team `CDS4KLP8GT`, the
+bundle identifier `com.moreaki.recscribe`, hardened runtime, and provisioning updates
+managed by Xcode's command-line build tools. Xcode must be installed, but its GUI does
+not need to be open.
+
+For an offline build that does not require an Apple identity, use:
+
+```bash
+./scripts/build-app.sh --ad-hoc
+```
+
+An ad-hoc build is intended for local development and may require macOS permissions
+again after rebuilding. The signed build is the normal development path.
+
+RecScribe, RecScribeTests, and RecScribeUITests compile in Swift 6 language mode with
+complete concurrency checking. The application target uses Main Actor isolation as
+its default; the test targets retain their nonisolated XCTest-compatible default.
+
+You can still open `RecScribe/RecScribe.xcodeproj`, select the **RecScribe** scheme,
+and build with Command-B when working in Xcode.
 
 Run the unit tests from the command line:
 

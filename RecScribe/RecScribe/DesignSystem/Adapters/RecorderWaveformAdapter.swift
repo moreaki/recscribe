@@ -14,7 +14,7 @@
 
 import Foundation
 
-enum RecorderWaveformAdapter {
+nonisolated enum RecorderWaveformAdapter {
 
     /// Bars are 2pt wide with a 1pt gap, so each one occupies 3pt of width.
     private static let barPitch: CGFloat = 3

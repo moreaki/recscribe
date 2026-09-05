@@ -558,9 +558,8 @@ struct CaptureSourceErrorTests {
         await viewModel.startRecording()
 
         #expect(viewModel.state == .error(.sourceUnavailable(.appNotRunning("com.ableton.live"))))
-        let message = try? #require(viewModel.errorMessage)
-        #expect(message?.contains("not currently running") == true)
-        #expect(message?.contains("audio is playing") == false)
+        #expect(viewModel.errorMessage?.contains("not currently running") == true)
+        #expect(viewModel.errorMessage?.contains("audio is playing") == false)
     }
 
     @Test("An unavailable source does not offer Try again")

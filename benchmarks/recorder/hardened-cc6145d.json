@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "phase": "hardened",
+  "source_commit": "cc6145dc0a22a4dd00780a68756915e6dc3e11bd",
+  "hardware": "Apple M1, 16 GiB",
+  "os": "macOS 26.6.2 (25G83)",
+  "xcode": "26.6 (17F113)",
+  "configuration": "Release, ENABLE_TESTABILITY=YES",
+  "workload": "10 seconds synthetic stereo 48k Float32, 100 x 4800 frames, burst submission, no waveform observer; three iterations per format in each of two Xcode test runners",
+  "limitations": [
+    "Not live capture latency, not ASR performance",
+    "RSS is test-host process lifetime high-water mark, not encoder allocation",
+    "First AAC iteration includes cold codec startup; do not mix with warm iterations"
+  ],
+  "samples": [
+    {
+      "format": "wav",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.015047208,
+      "process_lifetime_peak_rss_bytes": 118702080
+    },
+    {
+      "format": "wav",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.005622834,
+      "process_lifetime_peak_rss_bytes": 118915072
+    },
+    {
+      "format": "wav",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.007366084,
+      "process_lifetime_peak_rss_bytes": 119422976
+    },
+    {
+      "format": "m4a",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.196592666,
+      "process_lifetime_peak_rss_bytes": 130056192
+    },
+    {
+      "format": "m4a",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.096248459,
+      "process_lifetime_peak_rss_bytes": 130646016
+    },
+    {
+      "format": "m4a",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.097695208,
+      "process_lifetime_peak_rss_bytes": 130695168
+    },
+    {
+      "format": "flac",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.051076125,
+      "process_lifetime_peak_rss_bytes": 132284416
+    },
+    {
+      "format": "flac",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.047919292,
+      "process_lifetime_peak_rss_bytes": 132366336
+    },
+    {
+      "format": "flac",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.047982667,
+      "process_lifetime_peak_rss_bytes": 132366336
+    },
+    {
+      "format": "wav",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.00444625,
+      "process_lifetime_peak_rss_bytes": 117571584
+    },
+    {
+      "format": "wav",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.005658458,
+      "process_lifetime_peak_rss_bytes": 118833152
+    },
+    {
+      "format": "wav",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.005758958,
+      "process_lifetime_peak_rss_bytes": 118882304
+    },
+    {
+      "format": "m4a",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.146372792,
+      "process_lifetime_peak_rss_bytes": 130269184
+    },
+    {
+      "format": "m4a",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.106996791,
+      "process_lifetime_peak_rss_bytes": 131121152
+    },
+    {
+      "format": "m4a",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.089084625,
+      "process_lifetime_peak_rss_bytes": 131121152
+    },
+    {
+      "format": "flac",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.059067708,
+      "process_lifetime_peak_rss_bytes": 132792320
+    },
+    {
+      "format": "flac",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.047953709,
+      "process_lifetime_peak_rss_bytes": 132808704
+    },
+    {
+      "format": "flac",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.048014334,
+      "process_lifetime_peak_rss_bytes": 132825088
+    }
+  ],
+  "telemetry": [
+    "Recording ended id=4D149FDC-3991-4DB6-9ACF-05D10B67279D failed=false accepted=100 written=100 rejected=0 peak_buffers=7 peak_pcm_bytes=268800 max_queue_ms=0.182042 write_ms=2.707582 max_write_ms=0.109292 drain_ms=0.180667 finalize_ms=0.396958",
+    "Recording ended id=2C9C9A4C-81CC-40D5-9FB2-E037E2345983 failed=false accepted=100 written=100 rejected=0 peak_buffers=34 peak_pcm_bytes=1305600 max_queue_ms=1.199917 write_ms=3.774619 max_write_ms=0.208166 drain_ms=1.317166 finalize_ms=0.538375",
+    "Recording ended id=A2529B8D-0F7A-42CB-BE42-6863ED8A63FE failed=false accepted=100 written=100 rejected=0 peak_buffers=35 peak_pcm_bytes=1344000 max_queue_ms=1.488333 write_ms=4.035034 max_write_ms=0.158292 drain_ms=1.520500 finalize_ms=0.556125",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=A621A4B6-896E-4605-8165-FACBFCFBFE9D failed=false accepted=100 written=100 rejected=0 peak_buffers=100 peak_pcm_bytes=3840000 max_queue_ms=17.880041 write_ms=19.728581 max_write_ms=16.243084 drain_ms=17.919667 finalize_ms=99.474000",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=E2BBB674-AE99-474D-A1CC-0B162681059B failed=false accepted=100 written=100 rejected=0 peak_buffers=100 peak_pcm_bytes=3840000 max_queue_ms=3.602917 write_ms=5.297126 max_write_ms=3.528041 drain_ms=2.864042 finalize_ms=100.320875",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=816B7AEE-38F2-428A-A892-B56BB7A899F1 failed=false accepted=100 written=100 rejected=0 peak_buffers=100 peak_pcm_bytes=3840000 max_queue_ms=3.276625 write_ms=5.351039 max_write_ms=3.009291 drain_ms=2.838542 finalize_ms=82.226542",
+    "Recording ended id=ED1D74ED-C251-48D8-A7A8-F147E946B473 failed=false accepted=100 written=100 rejected=0 peak_buffers=96 peak_pcm_bytes=3686400 max_queue_ms=44.609500 write_ms=46.964418 max_write_ms=1.343500 drain_ms=45.083542 finalize_ms=1.079958",
+    "Recording ended id=3AF626E4-7D0E-438E-9FF2-9FE0A5B7329E failed=false accepted=100 written=100 rejected=0 peak_buffers=94 peak_pcm_bytes=3609600 max_queue_ms=42.221709 write_ms=44.603171 max_write_ms=0.894041 drain_ms=42.686167 finalize_ms=1.667292",
+    "Recording ended id=EC2EB383-05AE-4649-A767-89463C3EE9CD failed=false accepted=100 written=100 rejected=0 peak_buffers=95 peak_pcm_bytes=3648000 max_queue_ms=42.975792 write_ms=45.139958 max_write_ms=1.541166 drain_ms=43.430000 finalize_ms=0.954792",
+    "Recording ended id=2A27F691-AEC4-46DA-8F17-3DD2E776875D failed=false accepted=100 written=100 rejected=0 peak_buffers=43 peak_pcm_bytes=1651200 max_queue_ms=4.526292 write_ms=6.973210 max_write_ms=0.635834 drain_ms=4.746000 finalize_ms=0.944500",
+    "Recording ended id=5E710700-9EDE-4D1A-B023-424612395AB2 failed=false accepted=100 written=100 rejected=0 peak_buffers=26 peak_pcm_bytes=998400 max_queue_ms=0.874625 write_ms=3.795290 max_write_ms=0.492291 drain_ms=0.670166 finalize_ms=0.457375",
+    "Recording ended id=5631F074-51FF-452F-83CD-5FDB65F11508 failed=false accepted=100 written=100 rejected=0 peak_buffers=56 peak_pcm_bytes=2150400 max_queue_ms=2.486917 write_ms=4.810995 max_write_ms=0.198792 drain_ms=2.499958 finalize_ms=0.408292",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=7315BB9E-D5A6-4E35-87E8-8182E3451385 failed=false accepted=100 written=100 rejected=0 peak_buffers=100 peak_pcm_bytes=3840000 max_queue_ms=18.387834 write_ms=20.571500 max_write_ms=16.248000 drain_ms=18.415208 finalize_ms=106.971958",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=C94C9BD3-9B53-426E-89D3-F42A4957F21C failed=false accepted=100 written=100 rejected=0 peak_buffers=100 peak_pcm_bytes=3840000 max_queue_ms=4.876000 write_ms=7.089083 max_write_ms=4.868917 drain_ms=4.481833 finalize_ms=87.794917",
+    "AAC finalized completed=true peak_pending_pcm_bytes=38400",
+    "Recording ended id=32DAC2AC-E962-41ED-829F-55CF7D425AA7 failed=false accepted=100 written=100 rejected=0 peak_buffers=94 peak_pcm_bytes=3609600 max_queue_ms=2.948541 write_ms=5.114460 max_write_ms=2.786625 drain_ms=2.547084 finalize_ms=91.091875",
+    "Recording ended id=12000FA2-944E-4849-B9FB-EA14AE53EEF2 failed=false accepted=100 written=100 rejected=0 peak_buffers=96 peak_pcm_bytes=3686400 max_queue_ms=44.535667 write_ms=46.969535 max_write_ms=1.633250 drain_ms=45.041750 finalize_ms=1.075125",
+    "Recording ended id=16FBA480-B9F5-47A6-BFDC-4FADB94DB520 failed=false accepted=100 written=100 rejected=0 peak_buffers=94 peak_pcm_bytes=3609600 max_queue_ms=42.209541 write_ms=44.636291 max_write_ms=0.990458 drain_ms=42.694000 finalize_ms=1.643125",
+    "Recording ended id=9678DDEE-2551-4F94-81D8-48651CA05FBC failed=false accepted=100 written=100 rejected=0 peak_buffers=94 peak_pcm_bytes=3609600 max_queue_ms=42.663416 write_ms=44.849420 max_write_ms=0.953792 drain_ms=43.141542 finalize_ms=1.256750"
+  ],
+  "live_smoke": {
+    "audio_seconds": 17.32,
+    "buffers": 866,
+    "written": 866,
+    "rejected": 0,
+    "peak_buffers": 8,
+    "peak_pcm_bytes": 61440,
+    "max_queue_ms": 2.011958,
+    "write_ms": 86.29885,
+    "max_write_ms": 0.715083,
+    "drain_ms": 0.0475,
+    "finalize_ms": 0.348625,
+    "capture_callback_total_ms": 50.218199,
+    "capture_callback_max_ms": 0.595917,
+    "process_rss_kib_after_stop": 102416,
+    "notes": "Real ScreenCaptureKit system-audio WAV capture with a quiet synthetic tone; no audio included. RSS is a post-stop snapshot, not peak RSS."
+  }
+}

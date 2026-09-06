@@ -421,6 +421,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
+				/* VideoPlayer resolves native AVPlayerView through runtime metadata. */
+				OTHER_LDFLAGS = ("$(inherited)", "-Wl,-needed_framework,AVKit");
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe;
 				INFOPLIST_KEY_CFBundleDisplayName = "RecScribe";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RecScribe needs access to your microphone to record from it. Audio is saved only to your Mac.";
@@ -454,6 +456,8 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
+				/* VideoPlayer resolves native AVPlayerView through runtime metadata. */
+				OTHER_LDFLAGS = ("$(inherited)", "-Wl,-needed_framework,AVKit");
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe;
 				INFOPLIST_KEY_CFBundleDisplayName = "RecScribe";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RecScribe needs access to your microphone to record from it. Audio is saved only to your Mac.";

@@ -1,0 +1,29 @@
+{
+  "benchmark": "session-export-copy-strategies",
+  "date": "2026-09-06",
+  "issue": "https://github.com/moreaki/recscribe/issues/5",
+  "baseline_commit": "85f1d0a443acf11533039fbde105434a6d00d2e4",
+  "baseline_implementation": "Test-only copy of the previous SessionLibrary.export file-work path",
+  "candidate": "Cancellable SessionExporter with per-block autorelease pools",
+  "hardware": { "model": "MacBookAir10,1", "chip": "Apple M1", "memory_bytes": 17179869184 },
+  "software": { "macOS": "26.6.2", "xcode": "26.6 (17F113)", "configuration": "Release", "architecture": "arm64" },
+  "fixture": { "kind": "synthetic PCM WAV", "source_bytes": 8388652, "parts": 1, "sample_rate": 48000, "channels": 2, "bit_depth": 16 },
+  "copy_and_hash_block_bytes": 1048576,
+  "samples": [
+    { "strategy": "legacy", "iteration": 0, "wall_seconds": 0.016113417, "process_lifetime_peak_rss_bytes": 186171392 },
+    { "strategy": "streaming", "iteration": 0, "wall_seconds": 0.014124500, "process_lifetime_peak_rss_bytes": 186204160 },
+    { "strategy": "streaming", "iteration": 1, "wall_seconds": 0.013436542, "process_lifetime_peak_rss_bytes": 186368000 },
+    { "strategy": "legacy", "iteration": 1, "wall_seconds": 0.014122916, "process_lifetime_peak_rss_bytes": 186368000 },
+    { "strategy": "legacy", "iteration": 2, "wall_seconds": 0.012429875, "process_lifetime_peak_rss_bytes": 186368000 },
+    { "strategy": "streaming", "iteration": 2, "wall_seconds": 0.013493875, "process_lifetime_peak_rss_bytes": 186368000 }
+  ],
+  "median_wall_seconds": { "legacy": 0.014122916, "streaming": 0.013493875 },
+  "limitations": [
+    "Benchmark run alone with parallel testing disabled; filesystem caches are warm.",
+    "Strategy order alternates across three pairs; this small sample does not establish a speed improvement.",
+    "FileManager.copyItem may use filesystem cloning; streaming intentionally provides cancellation checkpoints.",
+    "RSS is the cumulative peak of the entire test host, not isolated export memory or a per-strategy allocation measurement.",
+    "No wall-clock cancellation deadline is claimed for synchronous kernel filesystem calls."
+  ],
+  "local_log": "Build/export-benchmark-final.log"
+}

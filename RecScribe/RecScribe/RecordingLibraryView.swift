@@ -40,6 +40,7 @@ struct RecordingLibraryView: View {
                             let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
                             if panel.runModal() == .OK, let url = panel.url {
                                 Task { do { let result = try await library.export(entry.id, to: url); NSWorkspace.shared.activateFileViewerSelecting([result]) }
+                                    catch is CancellationError { /* Cancellation is shown by the library, not an error alert. */ }
                                     catch { library.errorMessage = error.localizedDescription } }
                             }
                         }

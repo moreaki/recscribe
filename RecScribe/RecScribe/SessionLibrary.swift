@@ -21,6 +21,16 @@ final class SessionLibrary: ObservableObject {
     private var directory: URL?
     private var operationID = UUID()
     private var progressTask: Task<Void, Never>?
+    private var shuttingDown = false
+    private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
+    private let cancelRuntime: () -> Void
+
+    init(exportSession: @escaping @Sendable (URL, URL, WorkCancellation) throws -> URL = { manifest, directory, token in
+        try SessionExporter().export(manifest, to: directory, checkCancellation: token.check)
+    }, cancelRuntime: @escaping () -> Void = { RuntimeManager.shared.cancel() }) {
+        self.exportSession = exportSession
+        self.cancelRuntime = cancelRuntime
+    }
 
     func load(_ directory: URL) {
         self.directory = directory
@@ -32,23 +42,29 @@ final class SessionLibrary: ObservableObject {
     }
     func setRecording(_ active: Bool) {
         recordingActive = active
-        if active { cancellation?.cancel(); RuntimeManager.shared.cancel(); activity = "Background work paused for recording" }
+        if active { cancellation?.cancel(); cancelRuntime(); activity = "Background work paused for recording" }
         else { startNext() }
     }
     func enqueue(_ url: URL, recover: Bool = false, issue: String? = nil) {
+        guard !shuttingDown else { return }
         if !pending.contains(where: { $0.0 == url }) { pending.append((url, recover, issue)) }
         load(url.deletingLastPathComponent())
         startNext()
     }
-    func cancel() { cancellation?.cancel(); activity = "Cancelling…" }
+    func cancel() {
+        guard let cancellation else { return }
+        cancellation.cancel()
+        activity = "Cancelling…"
+    }
     func shutdown() async {
+        shuttingDown = true
         pending.removeAll()
         cancellation?.cancel()
         await task?.value
     }
 
     private func startNext() {
-        guard !recordingActive, task == nil, !pending.isEmpty else { return }
+        guard !shuttingDown, !recordingActive, task == nil, !pending.isEmpty else { return }
         let item = pending.removeFirst()
         let token = WorkCancellation()
         cancellation = token
@@ -62,7 +78,7 @@ final class SessionLibrary: ObservableObject {
                 activity = result.status == "completed" ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
                 if settings.autoTranscribe && !recordingActive { try await runTranscription(item.0, settings: settings, cancel: token) }
             } catch is CancellationError {
-                if recordingActive { pending.insert(item, at: 0) }
+                if recordingActive && !shuttingDown { pending.insert(item, at: 0) }
                 activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
             } catch { errorMessage = error.localizedDescription; activity = "Needs attention" }
             task = nil
@@ -73,7 +89,7 @@ final class SessionLibrary: ObservableObject {
     }
 
     func transcribe(_ source: URL) {
-        guard !recordingActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
+        guard !shuttingDown, !recordingActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         let settings = AppSettings.shared.values
         let token = WorkCancellation()
         cancellation = token
@@ -132,24 +148,42 @@ final class SessionLibrary: ObservableObject {
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {
-        guard !recordingActive else { throw SessionError.invalid("Finish recording before exporting") }
-        let destination = directory.appendingPathComponent("\(manifest.deletingPathExtension().deletingPathExtension().lastPathComponent)-\(UUID().uuidString.prefix(8))", isDirectory: true)
-        return try await Task.detached(priority: .utility) {
-            let lease = try SessionLease(manifest)
-            defer { withExtendedLifetime(lease) {} }
-            let session = try RecordingSession.read(manifest)
-            guard session.parts.allSatisfy({ $0.status == "verified" }) else { throw SessionError.invalid("Verify or recover all parts before export") }
-            try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: false)
-            for name in session.parts.map(\.path) + session.artifacts.map(\.path) {
-                let source = try RecordingSession.safeURL(name, beside: manifest)
-                let copy = destination.appendingPathComponent(name)
-                let expected = session.parts.first(where: { $0.path == name })?.sha256 ?? session.artifacts.first(where: { $0.path == name })?.sha256
-                guard try RecordingSession.hash(source) == expected else { throw SessionError.invalid("Source changed before export") }
-                try FileManager.default.copyItem(at: source, to: copy)
-                guard try RecordingSession.hash(copy) == expected else { throw SessionError.invalid("Export checksum mismatch; incomplete export retained for inspection") }
+        guard !shuttingDown, !recordingActive, task == nil else {
+            throw SessionError.invalid("Wait for capture/background work to finish before exporting")
+        }
+        let token = WorkCancellation()
+        let exportSession = exportSession
+        cancellation = token
+        errorMessage = nil
+        activity = "Exporting and verifying copies…"
+        progress = 0
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                task = Task {
+                    defer {
+                        task = nil
+                        cancellation = nil
+                        startNext()
+                    }
+                    do {
+                        let destination = try await Task.detached(priority: .utility) {
+                            try exportSession(manifest, directory, token)
+                        }.value
+                        activity = "Export verified; originals retained"
+                        progress = 1
+                        continuation.resume(returning: destination)
+                    } catch is CancellationError {
+                        activity = "Export cancelled; incomplete copies remain as .partial"
+                        continuation.resume(throwing: CancellationError())
+                    } catch {
+                        activity = "Export failed; incomplete copies remain as .partial"
+                        errorMessage = error.localizedDescription
+                        continuation.resume(throwing: error)
+                    }
+                }
             }
-            try session.save(destination.appendingPathComponent(manifest.lastPathComponent))
-            return destination
-        }.value
+        } onCancel: {
+            token.cancel()
+        }
     }
 }

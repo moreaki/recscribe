@@ -305,7 +305,9 @@ struct FLACEncoderTests {
     @Test("An unwritable destination throws .setupFailed")
     func unwritableDestinationThrows() {
         let encoder: any AudioFileEncoder = FLACEncoder()
-        let url = URL(fileURLWithPath: "/nonexistent-\(UUID().uuidString)/out.flac")
+        // Keep the intentionally nonexistent destination inside test storage.
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nonexistent-\(UUID().uuidString)/out.flac")
 
         #expect(throws: FLACEncoderError.setupFailed) {
             try encoder.createFile(at: url, sampleRate: sampleRate, channels: channels)

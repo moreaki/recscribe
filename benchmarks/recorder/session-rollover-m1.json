@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "kind": "synthetic_recorder_benchmark",
+  "date": "2026-09-06",
+  "hardware": "Apple M1 MacBook Air, 16 GiB",
+  "configuration": "Release, arm64, one test runner; serialized benchmark suite",
+  "fixture": "10 seconds, 48 kHz stereo float input, 100 x 4800-frame buffers; PCM16 session cap 1 MiB, two parts",
+  "scope": "Allocation, admission, file creation, writing, disk checks, manifest rollover and finalization; no ASR or archive conversion",
+  "notes": [
+    "Both capacity probes measured in the same process; importantUsage is test-only, statfs is production.",
+    "Warm samples are iterations 1 and 2; no claim about live latency or memory reduction.",
+    "RSS is process-lifetime maximum including the XCTest host; it cannot isolate recorder memory."
+  ],
+  "samples": [
+    {
+      "format": "wav_session_1MiB_importantUsage",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.099762916,
+      "process_lifetime_peak_rss_bytes": 172982272
+    },
+    {
+      "format": "wav_session_1MiB_importantUsage",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.089486958,
+      "process_lifetime_peak_rss_bytes": 173080576
+    },
+    {
+      "format": "wav_session_1MiB_importantUsage",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.086494,
+      "process_lifetime_peak_rss_bytes": 173244416
+    },
+    {
+      "format": "wav_session_1MiB_statfs",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.007104042,
+      "process_lifetime_peak_rss_bytes": 173244416
+    },
+    {
+      "format": "wav_session_1MiB_statfs",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.006443125,
+      "process_lifetime_peak_rss_bytes": 173244416
+    },
+    {
+      "format": "wav_session_1MiB_statfs",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.007063,
+      "process_lifetime_peak_rss_bytes": 173244416
+    },
+    {
+      "format": "wav",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.004273375,
+      "process_lifetime_peak_rss_bytes": 173244416
+    },
+    {
+      "format": "wav",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.003880833,
+      "process_lifetime_peak_rss_bytes": 173326336
+    },
+    {
+      "format": "wav",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.00374075,
+      "process_lifetime_peak_rss_bytes": 173342720
+    },
+    {
+      "format": "m4a",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.104733208,
+      "process_lifetime_peak_rss_bytes": 181043200
+    },
+    {
+      "format": "m4a",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.080867625,
+      "process_lifetime_peak_rss_bytes": 181108736
+    },
+    {
+      "format": "m4a",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.079580792,
+      "process_lifetime_peak_rss_bytes": 181108736
+    },
+    {
+      "format": "flac",
+      "iteration": 0,
+      "audio_s": 10,
+      "wall_s": 0.044989417,
+      "process_lifetime_peak_rss_bytes": 182697984
+    },
+    {
+      "format": "flac",
+      "iteration": 1,
+      "audio_s": 10,
+      "wall_s": 0.044873375,
+      "process_lifetime_peak_rss_bytes": 182763520
+    },
+    {
+      "format": "flac",
+      "iteration": 2,
+      "audio_s": 10,
+      "wall_s": 0.045038334,
+      "process_lifetime_peak_rss_bytes": 182763520
+    }
+  ]
+}

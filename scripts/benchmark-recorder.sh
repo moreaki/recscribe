@@ -16,6 +16,7 @@ mkdir -p "$output"
 xcodebuild test -quiet \
     -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
     -configuration Release -destination 'platform=macOS,arch=arm64' \
+    -parallel-testing-enabled NO \
     -derivedDataPath Build/RecorderAudit ENABLE_TESTABILITY=YES \
     -only-testing:RecScribeTests/RecorderBenchmarkTests \
     -resultBundlePath "$output/result.xcresult" 2>&1 | tee "$output/build.log"

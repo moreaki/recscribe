@@ -7,7 +7,11 @@ import os
 @MainActor
 struct RecorderReliabilityTests {
     private nonisolated static func wait(_ semaphore: DispatchSemaphore) -> Bool {
-        semaphore.wait(timeout: .now() + 3) == .success
+        // Framework/file failure tests share MainActor and may stall it for
+        // several seconds. These deadlines protect the test harness, not a
+        // production latency budget; the fake encoder must stay blocked until
+        // the test explicitly releases it.
+        semaphore.wait(timeout: .now() + 15) == .success
     }
     /// Only the encoding queue mutates counters; assertions read after stop.
     private nonisolated final class Encoder: AudioFileEncoder, @unchecked Sendable {
@@ -29,7 +33,7 @@ struct RecorderReliabilityTests {
             writes += 1
             if blockWrite && writes == 1 {
                 entered.signal()
-                _ = release.wait(timeout: .now() + 5)
+                _ = release.wait(timeout: .now() + 30)
             }
             if failWrite { throw WriteFailure() }
         }
@@ -37,7 +41,7 @@ struct RecorderReliabilityTests {
             finalizes += 1
             if blockFinalize {
                 entered.signal()
-                _ = release.wait(timeout: .now() + 5)
+                _ = release.wait(timeout: .now() + 30)
             }
         }
         func waitUntilEntered() async -> Bool {

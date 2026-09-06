@@ -32,6 +32,9 @@ common_arguments=(
     CONFIGURATION_BUILD_DIR="$products_dir"
     COMPILER_INDEX_STORE_ENABLE=NO
 )
+if [[ "$configuration" == Release ]]; then
+    common_arguments+=(CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
+fi
 
 cd "$project_root"
 

@@ -57,6 +57,11 @@ struct RecScribeApp: App {
             RecorderView()
                 .environmentObject(viewModel)
                 .onAppear {
+                    appDelegate.prepareForTermination = {
+                        if viewModel.isRecording { await viewModel.stopRecording() }
+                        await SessionLibrary.shared.shutdown()
+                        await RuntimeManager.shared.shutdown()
+                    }
                     // Wire up the menu bar controller with the shared view model
                     if appDelegate.menuBarController == nil {
                         appDelegate.menuBarController = MenuBarController(viewModel: viewModel)
@@ -83,6 +88,8 @@ struct RecScribeApp: App {
         // brand lockup in the header, which is where the Glass concept puts it.
         .windowStyle(.hiddenTitleBar)
         .commands {
+            CommandGroup(replacing: .appSettings) { OpenSettingsCommand() }
+            CommandGroup(after: .newItem) { OpenRecordingsCommand() }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -90,5 +97,20 @@ struct RecScribeApp: App {
                 }
             }
         }
+        Window("RecScribe Settings", id: "settings") {
+            ConfigurationView().environmentObject(viewModel)
+        }.defaultSize(width: 740, height: 620)
+        Window("Recordings", id: "recordings") {
+            RecordingLibraryView().environmentObject(viewModel)
+        }.defaultSize(width: 820, height: 620)
     }
+}
+
+private struct OpenSettingsCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View { Button("Settings…") { openWindow(id: "settings") }.keyboardShortcut(",") }
+}
+private struct OpenRecordingsCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View { Button("Recordings & Import…") { openWindow(id: "recordings") }.keyboardShortcut("o") }
 }

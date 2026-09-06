@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Darwin
 
 enum DiskSpace {
     /// Minimum free space required to begin a recording (~8 min of WAV headroom
@@ -21,11 +22,15 @@ enum DiskSpace {
         availableBytes >= minimumBytesToRecord
     }
 
-    /// Available capacity (for important usage) on the volume holding `url`,
-    /// or `nil` if it can't be determined.
+    /// Currently available blocks, excluding space that would require purging.
+    /// statfs avoids the costly capacity-for-important-usage service on the
+    /// encoding queue. Failure is explicit; callers must not assume free space.
     nonisolated static func availableBytes(at url: URL) -> Int64? {
         let directory = url.deletingLastPathComponent()
-        let values = try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-        return values?.volumeAvailableCapacityForImportantUsage
+        var info = statfs()
+        guard statfs(directory.path, &info) == 0 else { return nil }
+        let (bytes, overflow) = info.f_bavail.multipliedReportingOverflow(by: UInt64(info.f_bsize))
+        guard !overflow else { return nil }
+        return Int64(min(bytes, UInt64(Int64.max)))
     }
 }

@@ -148,4 +148,9 @@ def process(segments, options, directory, cancel):
 
 
 if __name__ == "__main__":
-    print(json.dumps(models()))
+    import sys
+    try:
+        print(json.dumps(models()))
+    except (OSError, ValueError) as error:
+        print(f"Local AI unavailable: {error}. Start Ollama locally and install a local model; no fallback was used.", file=sys.stderr)
+        raise SystemExit(1)

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/moreaki/recscribe/schemas/recording-session.schema.json",
+  "title": "RecScribe PCM recording session v1",
+  "type": "object",
+  "required": ["schemaVersion", "id", "startedAt", "status", "sampleRate", "channels", "bitDepth", "channelMap", "options", "parts", "issues", "artifacts"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "id": {"type": "string", "format": "uuid"},
+    "startedAt": {"type": "string", "format": "date-time"},
+    "endedAt": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["recording", "finalized", "verified", "completed", "needs_review"]},
+    "sampleRate": {"type": "integer", "minimum": 1, "maximum": 384000},
+    "channels": {"type": "integer", "minimum": 1, "maximum": 32},
+    "bitDepth": {"const": 16},
+    "channelMap": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "options": {
+      "type": "object",
+      "required": ["maximumPartBytes", "archiveFormat", "bitrateKbps", "flacCompression"],
+      "properties": {
+        "maximumPartBytes": {"type": "integer", "minimum": 48, "maximum": 3758096384},
+        "archiveFormat": {"enum": ["wav", "flac", "opus", "m4a"]},
+        "bitrateKbps": {"type": "integer", "minimum": 32, "maximum": 320},
+        "flacCompression": {"type": "integer", "minimum": 0, "maximum": 12}
+      }
+    },
+    "parts": {"type": "array", "items": {
+      "type": "object",
+      "required": ["path", "startSample", "frames", "sizeBytes", "status", "recovered", "startedAt"],
+      "properties": {
+        "path": {"$ref": "#/$defs/filename"},
+        "startSample": {"type": "integer", "minimum": 0},
+        "frames": {"type": "integer", "minimum": 0},
+        "sizeBytes": {"type": "integer", "minimum": 44},
+        "sha256": {"$ref": "#/$defs/hash"},
+        "status": {"enum": ["opening", "recording", "finalized", "verified", "needs_review"]},
+        "recovered": {"type": "boolean"},
+        "startedAt": {"type": "string", "format": "date-time"}
+      }
+    }},
+    "issues": {"type": "array", "items": {"type": "string"}},
+    "artifacts": {"type": "array", "items": {
+      "type": "object", "required": ["path", "format", "sha256", "sizeBytes", "verifiedAt", "verification"],
+      "properties": {
+        "path": {"$ref": "#/$defs/filename"}, "format": {"enum": ["flac", "opus", "m4a"]},
+        "sha256": {"$ref": "#/$defs/hash"}, "sizeBytes": {"type": "integer", "minimum": 1},
+        "verifiedAt": {"type": "string", "format": "date-time"}, "verification": {"type": "string"}
+      }
+    }}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "filename": {"type": "string", "minLength": 1, "pattern": "^[^/\\\\\\r\\n\\u0000]+$"}
+  }
+}

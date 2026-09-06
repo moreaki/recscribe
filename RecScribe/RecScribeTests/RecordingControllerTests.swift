@@ -32,16 +32,16 @@ struct RecordingControllerTests {
         #expect(url.pathExtension == format.fileExtension)
     }
 
-    @Test("startRecording threads the format into the recorder and the file URL")
+    @Test("Capture always uses lossless WAV, independently of archive preference")
     func startThreadsFormat() async throws {
         let recorder = MockAudioFileWriting()
         let controller = makeController(recorder: recorder)
 
         let url = try await controller.startRecording(format: .m4a)
 
-        #expect(recorder.lastStartFormat == .m4a)
-        #expect(url.pathExtension == "m4a")
-        #expect(controller.recordingURL?.pathExtension == "m4a")
+        #expect(recorder.lastStartFormat == .wav)
+        #expect(url.pathExtension == "wav")
+        #expect(controller.recordingURL?.pathExtension == "wav")
     }
 
     @Test("startRecording threads the selected AudioSource into capture setup (BL-100)")

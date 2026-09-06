@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import Darwin
 
 /// Errors that can occur during WAV file writing
 enum WAVWriterError: Error, LocalizedError, Equatable {
@@ -94,17 +95,9 @@ nonisolated class WAVWriter: AudioFileEncoder {
         self.buffersSinceHeaderUpdate = 0
 
         // Create the file
-        let fileManager = FileManager.default
-        guard fileManager.createFile(atPath: url.path, contents: nil, attributes: nil) else {
-            throw WAVWriterError.fileCreationFailed
-        }
-
-        // Open file handle
-        do {
-            fileHandle = try FileHandle(forWritingTo: url)
-        } catch {
-            throw WAVWriterError.fileCreationFailed
-        }
+        let fd = Darwin.open(url.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        guard fd >= 0 else { throw WAVWriterError.fileCreationFailed }
+        fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
 
         // Write initial WAV header (will be updated in finalize())
         try writeWAVHeader(dataSize: 0)
@@ -114,6 +107,11 @@ nonisolated class WAVWriter: AudioFileEncoder {
     /// - Parameter buffer: AVAudioPCMBuffer containing audio data
     /// - Throws: WAVWriterError if write fails
     func writeBuffer(_ buffer: AVAudioPCMBuffer) throws {
+        try writeFrames(buffer, offset: 0, count: Int(buffer.frameLength))
+    }
+
+    func writeFrames(_ buffer: AVAudioPCMBuffer, offset: Int, count: Int) throws {
+        guard offset >= 0, count >= 0, offset <= Int(buffer.frameLength) - count else { throw WAVWriterError.invalidFormat }
         guard let fileHandle = fileHandle else {
             throw WAVWriterError.fileNotOpen
         }
@@ -138,7 +136,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
             throw WAVWriterError.invalidFormat
         }
 
-        let frameLength = Int(buffer.frameLength)
+        let frameLength = count
         let channelCount = Int(buffer.format.channelCount)
 
         let byteCount = frameLength * channelCount * MemoryLayout<Int16>.size
@@ -150,7 +148,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
             let samples = raw.bindMemory(to: Int16.self)
             for frame in 0..<frameLength {
                 for channel in 0..<channelCount {
-                    let value = floatChannelData[channel][frame]
+                    let value = floatChannelData[channel][frame + offset]
                     guard value.isFinite else { throw WAVWriterError.invalidFormat }
                     samples[frame * channelCount + channel] = Int16(max(-1, min(1, value)) * 32767).littleEndian
                 }

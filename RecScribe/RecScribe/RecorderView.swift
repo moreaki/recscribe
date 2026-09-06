@@ -34,7 +34,7 @@ struct RecorderView: View {
                 // The sample rate is fixed by the capture pipeline
                 // (AudioRecorder.sampleRate matches the ScreenCaptureKit
                 // config), so this states it rather than measuring it.
-                GlassMetaLabel("\(viewModel.selectedFormat.shortName.lowercased()) · 48kHz")
+                GlassMetaLabel("wav · 48kHz")
 
                 // Same control, same gating as the old bottom shelf: hidden for
                 // the whole of a take, because the settings it opens are

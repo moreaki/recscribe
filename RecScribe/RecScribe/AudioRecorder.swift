@@ -33,6 +33,8 @@ final class AudioRecorder: AudioFileWriting {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     var onWriteError: (@MainActor @Sendable (String) -> Void)?
     private(set) var lastMetrics = RecorderMetrics()
+    private(set) var sessionManifestURL: URL?
+    private(set) var actualAudioURL: URL?
     private let encoderFactory: (AudioFormat) throws -> any AudioFileEncoder
     nonisolated private let queue = DispatchQueue(label: "com.moreaki.recscribe.encoding", qos: .userInitiated)
     nonisolated private let maxBuffers: Int
@@ -72,6 +74,8 @@ final class AudioRecorder: AudioFileWriting {
         guard !recording else { throw AudioRecorderError.alreadyRecording }
         let encoder = try encoderFactory(format)
         try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
+        sessionManifestURL = (encoder as? SessionWAVWriter)?.manifestURL
+        actualAudioURL = (encoder as? SessionWAVWriter)?.audioURL ?? url
         queue.sync { self.encoder = encoder }
         let waveform = onWaveformData
         let failure = onWriteError
@@ -124,6 +128,9 @@ final class AudioRecorder: AudioFileWriting {
                 queue.async {
                     let finalize = ContinuousClock.now
                     var finalError: Error?
+                    if let failure = self.state.withLock({ $0.error }) {
+                        try? (self.encoder as? SessionWAVWriter)?.markFailure(failure)
+                    }
                     do { try self.encoder?.finalize() } catch { finalError = error }
                     self.encoder = nil
                     let completionError = finalError

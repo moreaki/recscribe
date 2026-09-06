@@ -22,6 +22,7 @@ class RecordingController: RecordingControlling {
     private let audioRecorder: AudioFileWriting
     private let saveLocation: SaveLocationProviding
     private let audioSource: AudioSourceProviding
+    private let sessionLibrary: SessionLibrary?
 
     private var currentRecordingURL: URL?
 
@@ -40,9 +41,12 @@ class RecordingController: RecordingControlling {
         audioSource: AudioSourceProviding? = nil
     ) {
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
-        self.audioRecorder = audioRecorder ?? AudioRecorder()
+        self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
+            SessionWAVWriter(options: AppSettings.shared.values.storage)
+        })
         self.saveLocation = saveLocation ?? SaveLocationManager()
         self.audioSource = audioSource ?? AudioSourceManager()
+        self.sessionLibrary = audioRecorder == nil ? .shared : nil
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }
@@ -59,13 +63,16 @@ class RecordingController: RecordingControlling {
     @MainActor
     func startRecording(format: AudioFormat) async throws -> URL {
         guard !audioRecorder.recording else { throw AudioRecorderError.alreadyRecording }
+        sessionLibrary?.setRecording(true)
+        var started = false
+        defer { if !started { sessionLibrary?.setRecording(false) } }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
         try await audioSource.validate(source)
 
         // Generate file path (extension follows the chosen format).
-        let fileURL = generateFilePath(format: format)
+        let fileURL = generateFilePath(format: .wav)
 
         // Refuse to start a doomed recording on a near-full disk.
         if let available = DiskSpace.availableBytes(at: fileURL),
@@ -77,7 +84,7 @@ class RecordingController: RecordingControlling {
         audioRecorder.onWaveformData = onWaveformData
 
         // Start audio recorder first (creates the file in the chosen format).
-        try audioRecorder.startRecording(to: fileURL, format: format)
+        try audioRecorder.startRecording(to: fileURL, format: .wav)
 
         // Set up capture with audio callback
         let recorder = audioRecorder  // Keep strong reference
@@ -90,17 +97,21 @@ class RecordingController: RecordingControlling {
             await captureManager.cleanup()
             try? await audioRecorder.stopRecording()
             audioRecorder.onWaveformData = nil
+            if let manifest = audioRecorder.sessionManifestURL { sessionLibrary?.enqueue(manifest, issue: error.localizedDescription) }
             throw error
         }
 
-        currentRecordingURL = fileURL
+        let actualURL = audioRecorder.actualAudioURL ?? fileURL
+        currentRecordingURL = actualURL
+        started = true
         Log.recorder.info("Recording started")
-        return fileURL
+        return actualURL
     }
 
     /// Stop recording
     /// - Throws: Error if stop fails
     func stopRecording() async throws {
+        defer { sessionLibrary?.setRecording(false) }
         // Stop capturing audio
         var captureError: Error?
         do { try await captureManager.stopCapture() } catch { captureError = error }
@@ -123,6 +134,9 @@ class RecordingController: RecordingControlling {
 
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
+        if let manifest = audioRecorder.sessionManifestURL {
+            sessionLibrary?.enqueue(manifest, issue: (finalizeError ?? captureError)?.localizedDescription)
+        }
 
         if let finalizeError {
             Log.recorder.error(
@@ -138,6 +152,7 @@ class RecordingController: RecordingControlling {
     /// stopped, so capture teardown is best-effort; finalizing the recorder
     /// preserves the audio captured before the failure as a playable file.
     func finalizeAfterFailure() async {
+        defer { sessionLibrary?.setRecording(false) }
         try? await captureManager.stopCapture()
         // Deliberately swallowed, unlike the user-initiated stop path (BL-016):
         // the caller is already reporting `.streamFailed`, which is the more
@@ -148,6 +163,9 @@ class RecordingController: RecordingControlling {
         await captureManager.cleanup()
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
+        if let manifest = audioRecorder.sessionManifestURL {
+            sessionLibrary?.enqueue(manifest, issue: "Capture stopped unexpectedly; review the end of this session")
+        }
         Log.recorder.error("Recording finalized after stream failure")
     }
 
@@ -192,11 +210,14 @@ class RecordingController: RecordingControlling {
         // Capture managers directly to avoid referencing self inside the Task closure
         let captureManager = captureManager
         let audioRecorder = audioRecorder
+        let sessionLibrary = sessionLibrary
         Task { @MainActor in
-            guard captureManager.capturing else { return }
+            guard captureManager.capturing || audioRecorder.recording else { return }
             try? await captureManager.stopCapture()
             try? await audioRecorder.stopRecording()
             await captureManager.cleanup()
+            if let manifest = audioRecorder.sessionManifestURL { sessionLibrary?.enqueue(manifest, issue: "Recorder closed before normal stop") }
+            sessionLibrary?.setRecording(false)
         }
     }
 }

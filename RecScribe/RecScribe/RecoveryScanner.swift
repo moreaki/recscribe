@@ -50,9 +50,13 @@ final class RecoveryScanner: RecoveryScanning {
         )) ?? []
 
         let excluded = inProgress?.standardizedFileURL
+        // Multipart sessions have their own leased, streaming recovery path.
+        let sessionParts = Set(contents.filter { $0.lastPathComponent.hasSuffix(".recscribe.json") }
+            .compactMap { try? RecordingSession.read($0) }.flatMap { $0.parts.map(\.path) })
 
         return contents.compactMap { url -> RecoverableRecording? in
             guard url.standardizedFileURL != excluded else { return nil }
+            guard !sessionParts.contains(url.lastPathComponent) else { return nil }
             // Only files this app wrote. `generateFilePath` names every recording
             // `recording_<timestamp>`, optionally with a ` (n)` disambiguator.
             guard url.lastPathComponent.hasPrefix("recording_") else { return nil }

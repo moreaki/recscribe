@@ -11,6 +11,16 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     var menuBarController: MenuBarController?
+    var prepareForTermination: (@MainActor () async -> Void)?
+    private var terminating = false
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let prepareForTermination else { return .terminateNow }
+        guard !terminating else { return .terminateLater }
+        terminating = true
+        Task { await prepareForTermination(); sender.reply(toApplicationShouldTerminate: true) }
+        return .terminateLater
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The design system is dark-only by intent — it has no light palette and

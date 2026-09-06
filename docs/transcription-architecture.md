@@ -387,7 +387,7 @@ These are provisional measurements from one recording, not general guarantees.
 
 ## 18. Initial architecture decision
 
-Proceed with Home Rec as the capture foundation and implement an external,
+Proceed with RecScribe's capture foundation and implement an external,
 schema-first transcription pipeline with `whisper.cpp` as the initial backend.
 Keep the backend replaceable and select the long-term Apple Silicon engine only
 after reproducible benchmarks. Integrate the pipeline into the native app after

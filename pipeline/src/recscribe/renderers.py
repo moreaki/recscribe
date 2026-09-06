@@ -33,6 +33,11 @@ def render(document: dict) -> dict[str, str]:
     if document["language_processing"]["status"] == "pending":
         md += ["Language processing is pending; the text below remains raw ASR source text.", ""]
     srt, vtt = [], ["WEBVTT", ""]
+    if document.get("summary"):
+        md += ["## Summary notes [REVIEW]", ""]
+        for note in document["summary"]["notes"]:
+            md += [f"- {markdown(note['text'])} ({', '.join(note['segment_ids'])})"]
+        md += [""]
     for i, segment in enumerate(segments, 1):
         text = line(selected_text(segment, mode))
         marker = "[REVIEW] " if segment["needs_review"] else ""

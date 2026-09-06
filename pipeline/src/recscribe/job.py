@@ -14,7 +14,7 @@ from jsonschema import Draft202012Validator
 from . import __version__
 from .audio import inspect_wav, prepare_channel
 from .engines import TranscriptEngine
-from .language import mark_pending
+from .local_ai import process as process_language
 from .process import Cancellation, Cancelled, run_local
 from .quality import flag_repetition
 from .renderers import render
@@ -35,6 +35,10 @@ def validate(document: dict) -> None:
     requires_review = bool(document["review_reasons"]) or any(s["needs_review"] for s in document["segments"])
     if (document["status"] == "completed_with_review") != requires_review:
         raise ValueError("Terminal status does not match review requirements")
+    ids = {s["id"] for s in document["segments"]}
+    for note in document.get("summary", {}).get("notes", []):
+        if not set(note["segment_ids"]) <= ids:
+            raise ValueError("Summary references unknown source segments")
     seen = set()
     previous = -1
     for segment in document["segments"]:
@@ -49,7 +53,7 @@ def validate(document: dict) -> None:
         if segment.get("timing_adjustment") is not None:
             adjustment = segment["timing_adjustment"]
             if (adjustment["original_end_ms"] <= segment["end_ms"]
-                    or segment["end_ms"] != duration
+                    or segment["end_ms"] not in [duration, *[p["offset_ms"] + p["report"]["duration_ms"] for p in document["source"].get("parts", []) if p["report"]]]
                     or "engine_end_exceeds_source; trimmed_with_provenance" not in segment["review_reasons"]):
                 raise ValueError("Invalid source-boundary timing adjustment")
         for field in ("normalized_text", "translated_text"):
@@ -67,6 +71,7 @@ class Job:
         # Exclusive directory creation prevents accidental reuse/overwrite of evidence.
         directory.mkdir(parents=True, exist_ok=False, mode=0o700)
         self.cancel = Cancellation(directory / "cancel.request")
+        self.started_monotonic = time.monotonic()
         self.manifest = {"schema_version": "1.0", "job_id": str(uuid.uuid4()),
                          "pipeline_version": __version__, "source_path": str(self.source),
                          "created_at": now(), "options": options,
@@ -75,7 +80,8 @@ class Job:
 
     def transition(self, state: str, progress: float):
         self.manifest.update(state=state, progress=progress, updated_at=now())
-        self.manifest["history"].append({"state": state, "at": now()})
+        self.manifest["history"].append({"state": state, "at": now(),
+                                         "elapsed_seconds": time.monotonic() - self.started_monotonic})
         write_json(self.directory / "manifest.json", self.manifest)
         print(json.dumps({"job_id": self.manifest["job_id"], "state": state,
                           "progress": progress}), file=sys.stderr, flush=True)
@@ -95,6 +101,8 @@ class Job:
             self.cancel.check()
             if self.options["profile"] == "verified" and verification_engine is None:
                 raise ValueError("verified requires an explicit second local model")
+            if self.source.name.endswith(".recscribe.json"):
+                return self.run_session(engine, ffmpeg, verification_engine, started)
             self.transition("inspecting", 0.05)
             report = inspect_wav(self.source, self.cancel)
             write_json(self.directory / "audio-report.json", report)
@@ -105,7 +113,7 @@ class Job:
                 reasons.append("diarization_not_available; channel indices are not speaker identities")
             if self.options["source_language"] == "de-CH":
                 reasons.append("dialect_fidelity_unverified; Whisper may produce Standard German")
-            if self.options["mode"] != "verbatim":
+            if self.options["mode"] != "verbatim" and not self.options.get("ollama_model"):
                 reasons.append(f"{self.options['mode']}_processor_not_configured")
             self.transition("preparing", 0.15)
             version_path = self.directory / "ffmpeg.version.log"
@@ -182,7 +190,9 @@ class Job:
             segments.sort(key=lambda s: (s["start_ms"], s["channel"], s["end_ms"]))
             for i, segment in enumerate(segments, 1):
                 segment["id"] = f"seg-{i:06d}"
-            language = mark_pending(segments, self.options["mode"])
+            language, summary = process_language(segments, self.options, self.directory, self.cancel)
+            if summary is not None:
+                reasons.append("ai_summary_unverified")
             flag_repetition(segments)
             for segment in segments:
                 segment["needs_review"] = bool(segment["review_reasons"])
@@ -201,6 +211,8 @@ class Job:
                                            duration_ms=round((time.monotonic() - started) * 1000)),
                         "language_processing": language, "segments": segments,
                         "review_reasons": reasons}
+            if summary is not None:
+                document["summary"] = summary
             self.transition("validating", 0.8)
             self.cancel.check()
             validate(document)
@@ -221,6 +233,74 @@ class Job:
             self.inventory()
             self.transition(state, self.manifest["progress"])
             raise
+
+    def run_session(self, engine, ffmpeg, verifier, started):
+        from .session import inspect_session
+        self.transition("inspecting-session", 0.05)
+        report, reasons = inspect_session(self.source, self.cancel)
+        write_json(self.directory / "audio-report.json", report)
+        segments, passes, raw = [], [], []
+        for part in report["parts"]:
+            self.cancel.check()
+            if part["report"] is None:
+                continue
+            self.transition("transcribing-parts", 0.1 + 0.55 * part["index"] / len(report["parts"]))
+            options = dict(self.options, mode="verbatim", target_language=None, ollama_model=None, summarize=False)
+            child = Job(self.directory / f"part-{part['index'] + 1:04d}", self.source.parent / part["path"], options)
+            child.cancel = self.cancel
+            document = child.run(engine, ffmpeg, verifier)
+            if document["source"]["sha256"] != part["sha256"]:
+                raise ValueError("Part changed after session inspection")
+            reasons.extend(document["review_reasons"])
+            passes.extend(document["processing"]["engine_passes"])
+            raw.append({"part": part["index"], "offset_ms": part["offset_ms"],
+                        "path": str((child.directory / "transcript.raw.json").relative_to(self.directory)),
+                        "sha256": sha256(child.directory / "transcript.raw.json", self.cancel.check)})
+            for segment in document["segments"]:
+                if ((part["index"] > 0 and segment["start_ms"] < 2000)
+                        or (part["index"] < len(report["parts"]) - 1 and segment["end_ms"] > part["report"]["duration_ms"] - 2000)):
+                    segment["review_reasons"].append("part_boundary; check_cut_or_duplicate_speech")
+                for key in ("start_ms", "end_ms"):
+                    segment[key] += part["offset_ms"]
+                    for word in segment["words"]:
+                        word[key] += part["offset_ms"]
+                if "timing_adjustment" in segment:
+                    segment["timing_adjustment"]["original_end_ms"] += part["offset_ms"]
+                segments.append(segment)
+        write_json(self.directory / "transcript.raw.json", {"schema_version": "1.0", "kind": "immutable_multipart_engine_output_index", "outputs": raw})
+        if sha256(self.source, self.cancel.check) != report["sha256"]:
+            raise ValueError("Session manifest changed during transcription")
+        for part in report["parts"]:
+            if part["report"] and sha256(self.source.parent / part["path"], self.cancel.check) != part["sha256"]:
+                raise ValueError("Session audio changed during transcription")
+        segments.sort(key=lambda s: (s["start_ms"], s["channel"], s["end_ms"]))
+        for index, segment in enumerate(segments, 1):
+            segment["id"] = f"seg-{index:06d}"
+        self.transition("post-processing", 0.7)
+        language, summary = process_language(segments, self.options, self.directory, self.cancel)
+        if self.options["mode"] != "verbatim" and not self.options.get("ollama_model"):
+            reasons.append(f"{self.options['mode']}_processor_not_configured")
+        if summary is not None:
+            reasons.append("ai_summary_unverified")
+        for segment in segments:
+            segment["needs_review"] = bool(segment["review_reasons"])
+        status = "completed_with_review" if reasons or any(s["needs_review"] for s in segments) else "completed"
+        document = {"schema_version": "1.0", "job_id": self.manifest["job_id"], "status": status,
+                    "source": report, "segments": segments, "review_reasons": sorted(set(reasons)),
+                    "language_processing": language, "processing": dict(self.options, engine_passes=passes,
+                        pipeline_version=__version__, started_at=self.manifest["created_at"],
+                        duration_ms=round((time.monotonic() - started) * 1000))}
+        if summary is not None:
+            document["summary"] = summary
+        validate(document)
+        write_json(self.directory / "transcript.json", document)
+        for name, content in render(document).items():
+            self.cancel.check()
+            write_text(self.directory / name, content)
+        self.inventory()
+        self.manifest["duration_seconds"] = time.monotonic() - started
+        self.transition(status, 1)
+        return document
 
     def raw_record(self, result, channel, role):
         return {"channel": channel, "role": role, "status": "produced",

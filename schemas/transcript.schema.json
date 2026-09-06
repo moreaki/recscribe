@@ -400,10 +400,18 @@
           "timing_adjustment": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["original_end_ms", "reason"],
+            "required": [
+              "original_end_ms",
+              "reason"
+            ],
             "properties": {
-              "original_end_ms": {"type": "integer", "minimum": 1},
-              "reason": {"const": "decoder_padding_beyond_source"}
+              "original_end_ms": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "reason": {
+                "const": "decoder_padding_beyond_source"
+              }
             }
           }
         }
@@ -411,6 +419,66 @@
     },
     "review_reasons": {
       "$ref": "#/$defs/reasons"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "processor",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "const": "needs_review"
+        },
+        "processor": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "segment_ids",
+              "provenance"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "segment_ids": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "provenance": {
+                "type": "object",
+                "required": [
+                  "processor",
+                  "source_sha256",
+                  "raw_path",
+                  "human_verified"
+                ],
+                "properties": {
+                  "human_verified": {
+                    "const": false
+                  },
+                  "source_sha256": {
+                    "$ref": "#/$defs/hash"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {

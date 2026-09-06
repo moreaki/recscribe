@@ -23,6 +23,7 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
         peaks, squares = (np.zeros(channels, dtype=np.float64) for _ in range(2))
         clipped, nonzero = (np.zeros(channels, dtype=np.int64) for _ in range(2))
         counts = 0
+        identical = True
         scale = 2 ** (8 * width - 1)
         while data := wav.readframes(65536):
             cancel.check()
@@ -37,6 +38,7 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
             else:
                 samples = np.frombuffer(data, dtype=f"<i{width}")
             samples = samples.reshape(-1, channels)
+            identical = identical and bool(np.all(samples == samples[:, :1]))
             floating = samples.astype(np.float64)
             peaks = np.maximum(peaks, np.max(np.abs(floating), axis=0))
             squares += np.sum(floating * floating, axis=0)
@@ -53,6 +55,8 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
             "bit_depth": width * 8, "channels": channels, "frames": frames,
             "duration_ms": math.ceil(frames * 1000 / rate),
             "channel_layout": "unspecified; channel indices preserved",
+            "channels_bit_identical": identical,
+            "mono_policy": "separate_channels_preserved; no downmix",
             "channel_metrics": [
                 {"channel": c, "peak": float(peaks[c] / scale),
                  "rms": math.sqrt(squares[c] / frames) / scale,

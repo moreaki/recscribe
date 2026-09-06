@@ -31,12 +31,16 @@ def parser():
     p.add_argument("--verify-model", type=Path)
     p.add_argument("--vad-model", type=Path)
     p.add_argument("--ffmpeg", type=Path)
+    p.add_argument("--ollama-model", help="Explicit installed local Ollama model; never pulls or uses cloud models")
+    p.add_argument("--summarize", action="store_true", help="Generate unverified source-linked local AI summary notes")
     return p
 
 
 def main(argv=None):
     p = parser()
     args = p.parse_args(argv)
+    if args.summarize and not args.ollama_model:
+        p.error("--summarize requires an explicit --ollama-model")
     if set(args.formats.split(",")) != {"json", "md", "txt", "srt", "vtt"}:
         p.error("The first slice requires --formats json,md,txt,srt,vtt")
     if args.mode != "verbatim" and not args.target_language:
@@ -55,7 +59,8 @@ def main(argv=None):
     os.umask(0o077)
     options = {"source_language": args.source_language, "target_language": args.target_language,
                "mode": args.mode, "profile": args.profile, "diarize": args.diarize,
-               "local_only": True, "formats": ["json", "md", "txt", "srt", "vtt"]}
+               "local_only": True, "formats": ["json", "md", "txt", "srt", "vtt"],
+               "ollama_model": args.ollama_model, "summarize": args.summarize}
     try:
         job = Job((args.output or Path("jobs") / str(uuid.uuid4())).resolve(), args.audio, options)
     except OSError as error:

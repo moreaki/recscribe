@@ -117,6 +117,32 @@ cloud refusal and invalid source references. Model/network installation UI is
 implemented but large downloads and real LLM semantic quality are not exercised
 without a separately authorized local model.
 
+### Local verification, 2026-09-06
+
+- Release suite: 308 tests, 672 executions across two repetitions, zero failures
+  (`Build/session-stable-tests.xcresult`). Test-only semaphore holds now outlast
+  unrelated synchronous framework tests; production queue limits/timeouts did not
+  change. Python: 36 tests passed (`Build/session-final-python.log`).
+- `./scripts/build-app.sh` succeeded (`Build/session-delivery-release.log`).
+  Native arm64/64-bit executable; Swift 6.0, strict concurrency complete,
+  MainActor default isolation; Hardened Runtime present. Bundle
+  `com.moreaki.recscribe`, team `CDS4KLP8GT`, valid Apple Development signature.
+  Release no longer injects `get-task-allow`; the audio-input entitlement remains.
+  This is a local development-signed Release, **not a notarized distribution**.
+- Standalone launch, settings layout, Whisper/Metal detection and the recordings
+  window were checked without Xcode. A 2-second generated tone was imported using
+  the actual app. The local job completed with review, produced all required
+  artifacts, and logged `whisper_backend_init_gpu: using MTL0 backend`. Total job
+  wall time was 2.81 seconds with the pre-existing converted small model; this tiny
+  smoke test is not an ASR accuracy or long-recording performance benchmark.
+- No model weights were downloaded. Download publication was tested with tiny
+  synthetic bytes for checksum, size, cancellation and collision protection.
+  The real Ollama service is unavailable here; AI semantics remain unverified,
+  while synthetic adapter/provenance tests pass. No cloud fallback was used.
+- Existing private recordings and the pre-existing signing stash were retained.
+  An existing unfinalized session was displayed for explicit recovery and was not
+  modified during UI verification.
+
 ## Deliberately open
 
 - Time-based splitting is reserved for later; size is authoritative now.

@@ -16,9 +16,12 @@ from .audio import inspect_wav, prepare_channel
 from .engines import TranscriptEngine
 from .local_ai import process as process_language
 from .process import Cancellation, Cancelled, run_local
-from .quality import flag_repetition
+from .quality import REVIEW_POLICY, flag_repetition
 from .renderers import render
 from .storage import sha256, write_json, write_text
+
+# Stage milestones, not estimates of remaining wall-clock time.
+FINALIZATION_PROGRESS = {"post-processing": 0.7, "validating": 0.8, "rendering": 0.9}
 
 
 def now() -> str:
@@ -86,9 +89,10 @@ class Job:
         print(json.dumps({"job_id": self.manifest["job_id"], "state": state,
                           "progress": progress}), file=sys.stderr, flush=True)
 
-    def inventory(self):
+    def inventory(self, *, cancellable: bool = False):
+        check = self.cancel.check if cancellable else lambda: None
         self.manifest["artifacts"] = {
-            str(p.relative_to(self.directory)): {"sha256": sha256(p), "size_bytes": p.stat().st_size}
+            str(p.relative_to(self.directory)): {"sha256": sha256(p, check), "size_bytes": p.stat().st_size}
             for p in sorted(self.directory.rglob("*"))
             if p.is_file() and p.name not in ("manifest.json", "cancel.request")
             and not p.name.endswith(".tmp")}
@@ -162,7 +166,7 @@ class Job:
                     # Whisper can include decoder padding beyond the last real frame.
                     # Preserve the engine time and explicitly mark this derived bound.
                     if (0 <= segment["start_ms"] < report["duration_ms"] < segment["end_ms"]
-                            <= report["duration_ms"] + 30000):
+                            <= report["duration_ms"] + REVIEW_POLICY.decoder_padding_ms):
                         segment["timing_adjustment"] = {
                             "original_end_ms": segment["end_ms"],
                             "reason": "decoder_padding_beyond_source"}
@@ -170,7 +174,7 @@ class Job:
                         segment["review_reasons"].append("engine_end_exceeds_source; trimmed_with_provenance")
                     if segment["confidence"] is None:
                         segment["review_reasons"].append("confidence_unavailable")
-                    elif segment["confidence"] < 0.6:
+                    elif segment["confidence"] < REVIEW_POLICY.minimum_confidence:
                         segment["review_reasons"].append("low_confidence")
                     if re.fullmatch(r"\s*\[(?:BLANK_AUDIO|NO_SPEECH|SILENCE|MUSIC)\]\s*",
                                     segment["source_text"], flags=re.IGNORECASE):
@@ -186,46 +190,7 @@ class Job:
             # Refuse a result whose original recording changed during processing.
             if sha256(self.source, self.cancel.check) != report["sha256"]:
                 raise ValueError("Source changed during processing; result invalidated")
-            self.transition("post-processing", 0.7)
-            segments.sort(key=lambda s: (s["start_ms"], s["channel"], s["end_ms"]))
-            for i, segment in enumerate(segments, 1):
-                segment["id"] = f"seg-{i:06d}"
-            language, summary = process_language(segments, self.options, self.directory, self.cancel)
-            if summary is not None:
-                reasons.append("ai_summary_unverified")
-            flag_repetition(segments)
-            for segment in segments:
-                segment["needs_review"] = bool(segment["review_reasons"])
-            if passes and self.options["source_language"] == "auto":
-                reasons.append("automatic_language_detection_unverified; a quiet opening can select the wrong language")
-            if any("engine_non_speech_marker" in s["review_reasons"] for s in segments):
-                reasons.append("asr_contains_non_speech_markers; inspect_source_audio")
-            if not any(p.get("vad_model_sha256") for p in passes) and passes:
-                reasons.append("learned_vad_not_run; silence guard only detects exact digital silence")
-            status = "completed_with_review" if reasons or any(s["needs_review"] for s in segments) else "completed"
-            document = {"schema_version": "1.0", "job_id": self.manifest["job_id"],
-                        "status": status, "source": report,
-                        "processing": dict(self.options, engine_passes=passes,
-                                           pipeline_version=__version__,
-                                           started_at=self.manifest["created_at"],
-                                           duration_ms=round((time.monotonic() - started) * 1000)),
-                        "language_processing": language, "segments": segments,
-                        "review_reasons": reasons}
-            if summary is not None:
-                document["summary"] = summary
-            self.transition("validating", 0.8)
-            self.cancel.check()
-            validate(document)
-            write_json(self.directory / "transcript.json", document)
-            self.transition("rendering", 0.9)
-            for name, content in render(document).items():
-                self.cancel.check()
-                write_text(self.directory / name, content)
-            self.cancel.check()
-            self.inventory()
-            self.manifest["duration_seconds"] = time.monotonic() - started
-            self.transition(status, 1)
-            return document
+            return self.finish(report, segments, passes, reasons, started)
         except (Exception, KeyboardInterrupt) as error:
             state = "cancelled" if isinstance(error, (Cancelled, KeyboardInterrupt)) else "failed"
             self.manifest["error"] = {"type": type(error).__name__, "message": str(error)}
@@ -257,8 +222,8 @@ class Job:
                         "path": str((child.directory / "transcript.raw.json").relative_to(self.directory)),
                         "sha256": sha256(child.directory / "transcript.raw.json", self.cancel.check)})
             for segment in document["segments"]:
-                if ((part["index"] > 0 and segment["start_ms"] < 2000)
-                        or (part["index"] < len(report["parts"]) - 1 and segment["end_ms"] > part["report"]["duration_ms"] - 2000)):
+                if ((part["index"] > 0 and segment["start_ms"] < REVIEW_POLICY.part_boundary_ms)
+                        or (part["index"] < len(report["parts"]) - 1 and segment["end_ms"] > part["report"]["duration_ms"] - REVIEW_POLICY.part_boundary_ms)):
                     segment["review_reasons"].append("part_boundary; check_cut_or_duplicate_speech")
                 for key in ("start_ms", "end_ms"):
                     segment[key] += part["offset_ms"]
@@ -273,31 +238,52 @@ class Job:
         for part in report["parts"]:
             if part["report"] and sha256(self.source.parent / part["path"], self.cancel.check) != part["sha256"]:
                 raise ValueError("Session audio changed during transcription")
+        return self.finish(report, segments, passes, reasons, started)
+
+    def finish(self, report: dict, segments: list[dict], passes: list[dict],
+               reasons: list[str], started: float) -> dict:
+        """One completion contract for files and sessions; raw evidence is untouched."""
+        self.cancel.check()
+        self.transition("post-processing", FINALIZATION_PROGRESS["post-processing"])
         segments.sort(key=lambda s: (s["start_ms"], s["channel"], s["end_ms"]))
         for index, segment in enumerate(segments, 1):
             segment["id"] = f"seg-{index:06d}"
-        self.transition("post-processing", 0.7)
         language, summary = process_language(segments, self.options, self.directory, self.cancel)
         if self.options["mode"] != "verbatim" and not self.options.get("ollama_model"):
             reasons.append(f"{self.options['mode']}_processor_not_configured")
         if summary is not None:
             reasons.append("ai_summary_unverified")
+        flag_repetition(segments)
         for segment in segments:
+            segment["review_reasons"] = list(dict.fromkeys(segment["review_reasons"]))
             segment["needs_review"] = bool(segment["review_reasons"])
+        if passes and self.options["source_language"] == "auto":
+            reasons.append("automatic_language_detection_unverified; a quiet opening can select the wrong language")
+        if any("engine_non_speech_marker" in s["review_reasons"] for s in segments):
+            reasons.append("asr_contains_non_speech_markers; inspect_source_audio")
+        if passes and not any(p.get("vad_model_sha256") for p in passes):
+            reasons.append("learned_vad_not_run; silence guard only detects exact digital silence")
+        reasons = list(dict.fromkeys(reasons))
         status = "completed_with_review" if reasons or any(s["needs_review"] for s in segments) else "completed"
         document = {"schema_version": "1.0", "job_id": self.manifest["job_id"], "status": status,
-                    "source": report, "segments": segments, "review_reasons": sorted(set(reasons)),
+                    "source": report, "segments": segments, "review_reasons": reasons,
                     "language_processing": language, "processing": dict(self.options, engine_passes=passes,
                         pipeline_version=__version__, started_at=self.manifest["created_at"],
                         duration_ms=round((time.monotonic() - started) * 1000))}
         if summary is not None:
             document["summary"] = summary
+        self.transition("validating", FINALIZATION_PROGRESS["validating"])
+        self.cancel.check()
         validate(document)
         write_json(self.directory / "transcript.json", document)
+        self.transition("rendering", FINALIZATION_PROGRESS["rendering"])
+        self.cancel.check()
         for name, content in render(document).items():
             self.cancel.check()
             write_text(self.directory / name, content)
-        self.inventory()
+        self.cancel.check()
+        self.inventory(cancellable=True)
+        self.cancel.check()
         self.manifest["duration_seconds"] = time.monotonic() - started
         self.transition(status, 1)
         return document

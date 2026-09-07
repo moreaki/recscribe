@@ -10,7 +10,7 @@ from unittest.mock import patch
 from test_pipeline import FFMPEG, SyntheticEngine, synthesize
 from recscribe.job import Job, validate
 from recscribe.local_ai import local_model, process
-from recscribe.process import Cancellation
+from recscribe.process import Cancellation, Cancelled
 from recscribe.session import inspect_session
 from recscribe.storage import sha256, write_json
 from recscribe.renderers import render
@@ -58,6 +58,45 @@ class SessionAITests(unittest.TestCase):
         self.assertEqual([s["start_ms"] for s in document["segments"]], [0, 2000])
         self.assertEqual(document["status"], "completed_with_review")
         self.assertTrue(any("part_2_unavailable" in r for r in document["review_reasons"]))
+
+    def test_shared_completion_phases_and_rendering(self):
+        self.manifest["parts"] = self.manifest["parts"][:1]
+        write_json(self.source, self.manifest)
+        for mode in ("verbatim", "normalize", "translate"):
+            documents = []
+            for name, source in (("wav", self.root / "OutputName.wav"), ("session", self.source)):
+                job = Job(self.root / f"{mode}-{name}", source,
+                          dict(self.options, mode=mode, target_language="de" if mode != "verbatim" else None))
+                document = job.run(SyntheticEngine(), FFMPEG)
+                documents.append(document)
+                phases = [p["state"] for p in job.manifest["history"]]
+                self.assertEqual(phases[-4:], ["post-processing", "validating", "rendering", document["status"]])
+                timings = [p["elapsed_seconds"] for p in job.manifest["history"]]
+                self.assertEqual(timings, sorted(timings))
+                self.assertIn("transcript.raw.json", job.manifest["artifacts"])
+            self.assertEqual(documents[0]["segments"], documents[1]["segments"])
+            for name in ("transcript.verbatim.txt", "transcript.srt", "transcript.vtt"):
+                self.assertEqual(render(documents[0])[name], render(documents[1])[name])
+
+    def test_completion_cancellation_preserves_raw_and_never_completes(self):
+        for source in (self.root / "OutputName.wav", self.source):
+            for phase in ("post-processing", "validating", "rendering", "inventory"):
+                job = Job(self.root / f"cancel-{source.suffix}-{phase}", source, self.options)
+                original_transition, original_inventory = job.transition, job.inventory
+                def transition(state, progress):
+                    original_transition(state, progress)
+                    if state == phase:
+                        job.cancel.event.set()
+                def inventory(*, cancellable=False):
+                    if phase == "inventory" and cancellable:
+                        job.cancel.event.set()
+                    original_inventory(cancellable=cancellable)
+                with patch.object(job, "transition", side_effect=transition), patch.object(job, "inventory", side_effect=inventory):
+                    with self.assertRaises(Cancelled):
+                        job.run(SyntheticEngine(), FFMPEG)
+                self.assertEqual(job.manifest["state"], "cancelled")
+                self.assertTrue((job.directory / "transcript.raw.json").exists())
+                self.assertNotIn("completed_with_review", [p["state"] for p in job.manifest["history"]])
 
     def test_corrupt_part_is_reviewed(self):
         (self.root / "OutputName-Part2.wav").write_bytes(b"broken")

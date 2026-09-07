@@ -68,7 +68,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
 
     /// RIFF includes 36 bytes beyond the payload in its 32-bit size field.
     static func checkedDataSize(current: UInt32, adding: Int) throws -> UInt32 {
-        guard adding >= 0, UInt64(current) + UInt64(adding) <= UInt64(UInt32.max) - 36 else {
+        guard adding >= 0, UInt64(current) + UInt64(adding) <= PCM16WAV.maximumPayload else {
             throw WAVWriterError.sizeLimit
         }
         return current + UInt32(adding)
@@ -88,6 +88,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
     ///   - channels: Number of channels (1 for mono, 2 for stereo)
     /// - Throws: WAVWriterError if file creation fails
     func createFile(at url: URL, sampleRate: Double, channels: Int) throws {
+        _ = try PCM16WAV(sampleRate: sampleRate, channels: channels)
         self.fileURL = url
         self.sampleRate = sampleRate
         self.channels = channels
@@ -196,7 +197,7 @@ nonisolated class WAVWriter: AudioFileEncoder {
             // Seek to beginning and update header with actual data size
             try handle.seek(toOffset: 0)
 
-            let headerData = createWAVHeader(dataSize: bytesWritten)
+            let headerData = try createWAVHeader(dataSize: bytesWritten)
             try handle.write(contentsOf: headerData)
         } catch {
             throw WAVWriterError.fileWriteFailed
@@ -213,37 +214,15 @@ nonisolated class WAVWriter: AudioFileEncoder {
             throw WAVWriterError.fileNotOpen
         }
 
-        let headerData = createWAVHeader(dataSize: dataSize)
+        let headerData = try createWAVHeader(dataSize: dataSize)
         try fileHandle.write(contentsOf: headerData)
     }
 
     /// Create WAV header data
     /// - Parameter dataSize: Size of audio data in bytes
     /// - Returns: WAV header as Data
-    private func createWAVHeader(dataSize: UInt32) -> Data {
-        var data = Data()
-
-        // RIFF chunk
-        data.append(string: "RIFF")
-        data.append(uint32: 36 + dataSize) // File size - 8
-        data.append(string: "WAVE")
-
-        // fmt chunk
-        data.append(string: "fmt ")
-        data.append(uint32: 16) // fmt chunk size
-        data.append(uint16: 1) // Audio format (1 = PCM)
-        data.append(uint16: UInt16(channels)) // Number of channels
-        data.append(uint32: UInt32(sampleRate)) // Sample rate
-        let byteRate = UInt32(sampleRate) * UInt32(channels) * 2 // bytes per second
-        data.append(uint32: byteRate)
-        data.append(uint16: UInt16(channels * 2)) // Block align
-        data.append(uint16: 16) // Bits per sample
-
-        // data chunk
-        data.append(string: "data")
-        data.append(uint32: dataSize) // Data size
-
-        return data
+    private func createWAVHeader(dataSize: UInt32) throws -> Data {
+        try PCM16WAV(sampleRate: sampleRate, channels: channels, payloadBytes: UInt64(dataSize)).header
     }
 
     // MARK: - Cleanup
@@ -266,14 +245,14 @@ nonisolated extension Data {
     }
 
     mutating func append(uint16: UInt16) {
-        var value = uint16
+        var value = uint16.littleEndian
         Swift.withUnsafeBytes(of: &value) { bytes in
             self.append(contentsOf: bytes)
         }
     }
 
     mutating func append(uint32: UInt32) {
-        var value = uint32
+        var value = uint32.littleEndian
         Swift.withUnsafeBytes(of: &value) { bytes in
             self.append(contentsOf: bytes)
         }

@@ -139,7 +139,7 @@ final class SessionLibrary: ObservableObject {
         if settings.aiEnabled && settings.summarize { args += ["--summarize"] }
         let arguments = args
         _ = try await Task.detached(priority: .utility) {
-            try SessionProcessing.run(URL(fileURLWithPath: settings.pythonPath), arguments, in: jobs, cancel: cancel)
+            try LocalProcessRunner.run(URL(fileURLWithPath: settings.pythonPath), arguments, in: jobs, cancel: cancel)
         }.value
         let data = try Data(contentsOf: job.appendingPathComponent("manifest.json"))
         let info = try JSONSerialization.jsonObject(with: data) as? [String: Any]

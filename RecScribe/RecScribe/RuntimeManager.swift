@@ -84,7 +84,7 @@ final class RuntimeManager: ObservableObject {
             let binary = URL(fileURLWithPath: values.whisperPath)
             let metal = MTLCreateSystemDefaultDevice()?.name ?? "unavailable"
             let output = try await Task.detached(priority: .utility) {
-                try SessionProcessing.run(binary, ["--help"], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 120)
+                try LocalProcessRunner.run(binary, ["--help"], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 120)
             }.value
             diagnostics = "64-bit process · Metal device: \(metal)\nwhisper-cli: \(binary.path)\n\(output.contains("ggml_metal") ? "Whisper Metal backend detected" : "Whisper Metal backend not confirmed by CLI")\nInference acceleration must be checked in each job’s ASR log.\n\n\(output.prefix(8_000))"
         }
@@ -94,7 +94,7 @@ final class RuntimeManager: ObservableObject {
         perform("Detect local AI") { [self] token in
             let python = AppSettings.shared.values.pythonPath
             let output = try await Task.detached(priority: .utility) {
-                try SessionProcessing.run(URL(fileURLWithPath: python), ["-m", "recscribe.local_ai", "--list"],
+                try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "recscribe.local_ai", "--list"],
                     in: FileManager.default.temporaryDirectory, cancel: token, timeout: 15)
             }.value
             localAIModels = try JSONDecoder().decode([String].self, from: Data(output.utf8))
@@ -109,7 +109,7 @@ final class RuntimeManager: ObservableObject {
                 throw SessionError.invalid("Install Homebrew from brew.sh first, then retry")
             }
             diagnostics = try await Task.detached(priority: .utility) {
-                try SessionProcessing.run(URL(fileURLWithPath: brew), ["install", formula], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 1800)
+                try LocalProcessRunner.run(URL(fileURLWithPath: brew), ["install", formula], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 1800)
             }.value
         }
     }
@@ -128,9 +128,9 @@ final class RuntimeManager: ObservableObject {
             defer { try? FileManager.default.removeItem(at: source) }
             let executable = environment.appendingPathComponent("bin/python3")
             _ = try await Task.detached(priority: .utility) {
-                _ = try SessionProcessing.run(URL(fileURLWithPath: "/usr/bin/tar"), ["-xzf", archive.path, "-C", source.path], in: source, cancel: token, timeout: 30)
-                _ = try SessionProcessing.run(URL(fileURLWithPath: python), ["-m", "venv", environment.path], in: AppSettings.supportDirectory, cancel: token, timeout: 120)
-                return try SessionProcessing.run(executable, ["-m", "pip", "install", source.path], in: AppSettings.supportDirectory, cancel: token, timeout: 600)
+                _ = try LocalProcessRunner.run(URL(fileURLWithPath: "/usr/bin/tar"), ["-xzf", archive.path, "-C", source.path], in: source, cancel: token, timeout: 30)
+                _ = try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "venv", environment.path], in: AppSettings.supportDirectory, cancel: token, timeout: 120)
+                return try LocalProcessRunner.run(executable, ["-m", "pip", "install", source.path], in: AppSettings.supportDirectory, cancel: token, timeout: 600)
             }.value
             AppSettings.shared.values.pythonPath = executable.path
         }

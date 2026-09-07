@@ -13,95 +13,11 @@ nonisolated final class WorkCancellation: Sendable {
 /// Blocking work belongs to one utility worker, never a capture/main queue.
 nonisolated enum SessionProcessing {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "SessionProcessing")
-    static func run(_ binary: URL, _ arguments: [String], in directory: URL,
-                    cancel: WorkCancellation, timeout: TimeInterval = 86_400) throws -> String {
-        try cancel.check()
-        let started = ContinuousClock.now
-        defer { logger.notice("Local process \(binary.lastPathComponent, privacy: .public) elapsed=\(String(describing: started.duration(to: .now)), privacy: .public)") }
-        let log = directory.appendingPathComponent("process-\(UUID()).log")
-        FileManager.default.createFile(atPath: log.path, contents: nil, attributes: [.posixPermissions: 0o600])
-        let output = try FileHandle(forWritingTo: log)
-        defer { try? output.close(); try? FileManager.default.removeItem(at: log) }
-        let process = Process()
-        process.executableURL = binary
-        process.arguments = arguments
-        process.standardInput = FileHandle.nullDevice
-        process.standardOutput = output
-        process.standardError = output
-        process.qualityOfService = .utility
-        try process.run()
-        let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
-        do {
-            while process.isRunning {
-                try cancel.check()
-                guard ContinuousClock.now < deadline else { throw SessionError.invalid("Local process timed out") }
-                usleep(50_000)
-            }
-        } catch {
-            process.terminate()
-            let stop = ContinuousClock.now.advanced(by: .seconds(5))
-            while process.isRunning && ContinuousClock.now < stop { usleep(20_000) }
-            if process.isRunning { kill(process.processIdentifier, SIGKILL) }
-            process.waitUntilExit()
-            throw error
-        }
-        process.waitUntilExit()
-        try cancel.check()
-        try output.synchronize()
-        let file = try FileHandle(forReadingFrom: log)
-        defer { try? file.close() }
-        let text = String(decoding: try file.read(upToCount: 128 * 1_024) ?? Data(), as: UTF8.self)
-        guard process.terminationStatus == 0 else { throw SessionError.invalid("\(binary.lastPathComponent) failed: \(text.prefix(2_000))") }
-        return text
-    }
-
     /// Recover only our fixed-layout PCM16 WAVs. Stream-copy before replacing;
     /// never load a multi-GB part into RAM or patch the only copy in place.
     static func recoverPart(_ url: URL, session: RecordingSession, cancel: WorkCancellation) throws -> Int64 {
-        let input = try FileHandle(forReadingFrom: url)
-        defer { try? input.close() }
-        guard var header = try input.read(upToCount: 44), header.count == 44,
-              header.prefix(4) == Data("RIFF".utf8), header[8..<12] == Data("WAVE".utf8),
-              header[12..<16] == Data("fmt ".utf8), header[36..<40] == Data("data".utf8) else {
-            throw SessionError.invalid("Unrecognized WAV header")
-        }
-        func number(_ offset: Int, _ count: Int) -> Int64 {
-            (0..<count).reduce(0) { $0 | Int64(header[offset + $1]) << (8 * $1) }
-        }
-        guard number(20, 2) == 1, number(22, 2) == session.channels,
-              number(24, 4) == session.sampleRate, number(34, 2) == 16 else {
-            throw SessionError.invalid("Part format does not match session")
-        }
-        let total = try input.seekToEnd()
-        let alignment = Int64(session.channels * 2)
-        let payload = (Int64(total) - 44) / alignment * alignment
-        guard payload >= 0, payload <= Int64(UInt32.max) - 36 else { throw SessionError.invalid("Invalid WAV size") }
-        let correct = number(40, 4) == payload && number(4, 4) == payload + 36 && Int64(total) == payload + 44
-        if !correct {
-            let temporary = url.deletingLastPathComponent().appendingPathComponent(".repair-\(UUID()).wav")
-            defer { try? FileManager.default.removeItem(at: temporary) }
-            for (offset, value) in [(4, payload + 36), (40, payload)] {
-                for byte in 0..<4 { header[offset + byte] = UInt8(truncatingIfNeeded: value >> (byte * 8)) }
-            }
-            FileManager.default.createFile(atPath: temporary.path, contents: header, attributes: [.posixPermissions: 0o600])
-            let output = try FileHandle(forWritingTo: temporary)
-            defer { try? output.close() }
-            try output.seekToEnd()
-            try input.seek(toOffset: 44)
-            var remaining = payload
-            while remaining > 0 {
-                try cancel.check()
-                guard let data = try input.read(upToCount: Int(min(remaining, 1_024 * 1_024))), !data.isEmpty else {
-                    throw SessionError.invalid("Part changed during recovery")
-                }
-                try output.write(contentsOf: data)
-                remaining -= Int64(data.count)
-            }
-            try output.synchronize()
-            try output.close()
-            _ = try FileManager.default.replaceItemAt(url, withItemAt: temporary)
-        }
-        return payload / alignment
+        let expected = try PCM16WAV(sampleRate: Double(session.sampleRate), channels: session.channels)
+        return Int64(try PCM16WAV.repair(url, expected: expected, check: cancel.check))
     }
 
     static func process(_ manifest: URL, ffmpeg: URL, cancel: WorkCancellation,
@@ -133,20 +49,20 @@ nonisolated enum SessionProcessing {
                     session.parts[index].recovered = true
                     session.issues.append("Recovered part: \(part.path); inspect its end and any following boundary")
                 } else {
-                    let file = try AVAudioFile(forReading: url)
+                    let file = try PCM16WAV.read(url)
                     let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                    guard file.fileFormat.sampleRate == Double(session.sampleRate),
-                          file.fileFormat.channelCount == session.channels,
-                          size == 44 + part.frames * Int64(session.channels * 2),
-                          file.length == part.frames else { throw SessionError.invalid("Part length or format mismatch") }
-                    frames = file.length
+                    guard file.sampleRate == session.sampleRate,
+                          file.channels == session.channels,
+                          size == Int64(PCM16WAV.headerBytes) + part.frames * Int64(session.channels * PCM16WAV.sampleBytes),
+                          file.frames == part.frames else { throw SessionError.invalid("Part length or format mismatch") }
+                    frames = Int64(file.frames)
                 }
                 guard frames > 0 else { throw SessionError.invalid("Part contains no audio") }
                 if index + 1 < session.parts.count, part.startSample + frames != session.parts[index + 1].startSample {
                     throw SessionError.invalid("Gap or overlap at part boundary")
                 }
                 session.parts[index].frames = frames
-                session.parts[index].sizeBytes = 44 + frames * Int64(session.channels * 2)
+                session.parts[index].sizeBytes = Int64(PCM16WAV.headerBytes) + frames * Int64(session.channels * PCM16WAV.sampleBytes)
                 session.parts[index].sha256 = try RecordingSession.hash(url, check: cancel.check)
                 session.parts[index].status = "verified"
             } catch is CancellationError { throw CancellationError() }
@@ -198,7 +114,7 @@ nonisolated enum SessionProcessing {
             lines.append("file '\(escaped)'")
             let input = try FileHandle(forReadingFrom: url)
             defer { try? input.close() }
-            try input.seek(toOffset: 44)
+            try input.seek(toOffset: UInt64(PCM16WAV.headerBytes))
             while let data = try input.read(upToCount: 1_024 * 1_024), !data.isEmpty { try cancel.check(); pcmHash.update(data: data) }
         }
         try lines.joined(separator: "\n").appending("\n").write(to: list, atomically: true, encoding: .utf8)
@@ -211,9 +127,9 @@ nonisolated enum SessionProcessing {
         case .opus: args += ["-c:a", "libopus", "-b:a", "\(session.options.bitrateKbps)k"]
         case .m4a: args += ["-c:a", "aac", "-b:a", "\(session.options.bitrateKbps)k", "-movflags", "+faststart"]
         }
-        _ = try run(ffmpeg, args + [temporary.path], in: work, cancel: cancel)
+        _ = try LocalProcessRunner.run(ffmpeg, args + [temporary.path], in: work, cancel: cancel)
         let probe = ffmpeg.deletingLastPathComponent().appendingPathComponent("ffprobe")
-        let metadata = try run(probe, ["-v", "error", "-show_entries", "stream=channels,sample_rate,duration:format=duration", "-of", "json", temporary.path], in: work, cancel: cancel)
+        let metadata = try LocalProcessRunner.run(probe, ["-v", "error", "-show_entries", "stream=channels,sample_rate,duration:format=duration", "-of", "json", temporary.path], in: work, cancel: cancel)
         guard let info = try JSONSerialization.jsonObject(with: Data(metadata.utf8)) as? [String: Any],
               let streams = info["streams"] as? [[String: Any]], let stream = streams.first,
               stream["channels"] as? Int == session.channels,
@@ -221,7 +137,7 @@ nonisolated enum SessionProcessing {
               let duration = Double(value), abs(duration - session.duration) <= 0.15 else {
             throw SessionError.invalid("Archive duration or channel verification failed")
         }
-        let decoded = try run(ffmpeg, ["-nostdin", "-hide_banner", "-loglevel", "error", "-xerror", "-i", temporary.path,
+        let decoded = try LocalProcessRunner.run(ffmpeg, ["-nostdin", "-hide_banner", "-loglevel", "error", "-xerror", "-i", temporary.path,
                                       "-map", "0:a:0", "-ar", "\(session.sampleRate)", "-c:a", "pcm_s16le", "-f", "hash", "-hash", "sha256", "-"], in: work, cancel: cancel)
         let expectedPCM = pcmHash.finalize().map { String(format: "%02x", $0) }.joined()
         if format == .flac && !decoded.lowercased().contains(expectedPCM) { throw SessionError.invalid("Lossless archive PCM checksum mismatch") }

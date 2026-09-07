@@ -83,73 +83,33 @@ private enum RecoveryIO {
         return (try? handle.read(upToCount: count)) ?? Data()
     }
 
-    /// Copy → mutate → atomic replace. `replaceItemAt` is atomic on the same
-    /// volume, so an interrupted repair can never leave a half-patched take.
-    static func atomicallyPatch(_ url: URL, _ mutate: (inout Data) throws -> Void) throws {
-        guard var bytes = try? Data(contentsOf: url) else {
-            throw AudioFileRecoveryError.unreadable
-        }
-        try mutate(&bytes)
-
-        let temp = url.deletingLastPathComponent()
-            .appendingPathComponent(".recscribe-repair-\(UUID().uuidString)")
-        do {
-            try bytes.write(to: temp, options: .atomic)
-            _ = try FileManager.default.replaceItemAt(url, withItemAt: temp)
-        } catch {
-            try? FileManager.default.removeItem(at: temp)
-            throw AudioFileRecoveryError.repairFailed
-        }
-    }
-
-    static func uint32LE(_ d: Data, _ offset: Int) -> UInt32 {
-        guard d.count >= offset + 4 else { return 0 }
-        return UInt32(d[offset]) | (UInt32(d[offset + 1]) << 8)
-            | (UInt32(d[offset + 2]) << 16) | (UInt32(d[offset + 3]) << 24)
-    }
 }
 
 // MARK: - WAV
 
 extension WAVWriter: AudioFileRecovering {
 
-    /// The 44-byte canonical header this writer emits.
-    static let headerByteCount = 44
+    static let headerByteCount = PCM16WAV.headerBytes
 
     static func isUnfinalized(at url: URL) throws -> Bool {
         let total = try RecoveryIO.size(of: url)
-        guard total > headerByteCount else { return true }   // header-only: never finalized
-
-        let head = try RecoveryIO.head(of: url, headerByteCount)
-        guard head.count == headerByteCount,
-              head.prefix(4) == Data("RIFF".utf8) else { throw AudioFileRecoveryError.unreadable }
-
-        // `finalize()` stamps the exact byte count; the periodic rewrite lags by up
-        // to `headerUpdateInterval` buffers. A mismatch therefore means the file
-        // was still being written. (A crash landing exactly on a rewrite boundary
-        // is indistinguishable — and harmless, since that file is already correct.)
-        return Int(RecoveryIO.uint32LE(head, 40)) != total - headerByteCount
+        guard total > headerByteCount else { return true }
+        let bytes = try RecoveryIO.head(of: url, headerByteCount)
+        let format = try PCM16WAV(header: bytes)
+        return UInt64(total) != format.fileBytes || bytes != format.header
     }
 
     static func isRepairable(at url: URL) throws -> Bool {
-        try RecoveryIO.size(of: url) > headerByteCount
+        let total = try RecoveryIO.size(of: url)
+        guard total > headerByteCount else { return false }
+        let format = try PCM16WAV.read(url)
+        let payload = UInt64(total - headerByteCount)
+        return payload >= format.frameBytes && payload <= PCM16WAV.maximumPayload
     }
 
     static func repair(at url: URL) throws {
-        let total = try RecoveryIO.size(of: url)
-        guard total > headerByteCount else { throw AudioFileRecoveryError.notRepairable }
-        let dataSize = UInt32(total - headerByteCount)
-
-        try RecoveryIO.atomicallyPatch(url) { bytes in
-            func put(_ value: UInt32, at offset: Int) {
-                bytes[offset]     = UInt8(value & 0xFF)
-                bytes[offset + 1] = UInt8((value >> 8) & 0xFF)
-                bytes[offset + 2] = UInt8((value >> 16) & 0xFF)
-                bytes[offset + 3] = UInt8((value >> 24) & 0xFF)
-            }
-            put(dataSize + 36, at: 4)    // RIFF chunk size
-            put(dataSize, at: 40)        // data chunk size
-        }
+        guard try isRepairable(at: url) else { throw AudioFileRecoveryError.notRepairable }
+        try PCM16WAV.repair(url)
     }
 }
 

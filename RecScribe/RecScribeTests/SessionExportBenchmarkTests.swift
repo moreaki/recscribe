@@ -49,7 +49,7 @@ struct SessionExportBenchmarkTests {
         let lease = try SessionLease(manifest)
         defer { withExtendedLifetime(lease) {} }
         let session = try RecordingSession.read(manifest)
-        guard session.parts.allSatisfy({ $0.status == "verified" }) else { throw SessionError.invalid("Unverified fixture") }
+        guard session.parts.allSatisfy({ $0.status == .verified }) else { throw SessionError.invalid("Unverified fixture") }
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: false)
         for name in session.parts.map(\.path) + session.artifacts.map(\.path) {
             let source = try RecordingSession.safeURL(name, beside: manifest)

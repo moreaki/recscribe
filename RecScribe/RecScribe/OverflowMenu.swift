@@ -112,6 +112,7 @@ indirect enum OverflowEntry {
 
 @MainActor
 enum OverflowMenu {
+    static var openWindow: @MainActor (AppWindow) -> Void = { _ in }
 
     /// Writes the user's capture-source choice. Set once at startup by
     /// `MenuBarController`. The single write path — checkmarks are derived from
@@ -333,6 +334,8 @@ enum OverflowMenu {
     static func appActionEntries(_ context: OverflowContext) -> [OverflowEntry] {
         [
             .action(OverflowAction(id: "showWindow", title: "Show Window", perform: showMainWindow)),
+            .action(OverflowAction(id: "recordings", title: AppWindow.recordings.title) { openWindow(.recordings) }),
+            .action(OverflowAction(id: "settings", title: AppWindow.settings.title) { openWindow(.settings) }),
             .separator,
             .action(OverflowAction(
                 id: "recoverRecordings",

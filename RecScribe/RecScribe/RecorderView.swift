@@ -10,6 +10,7 @@ import SwiftUI
 struct RecorderView: View {
 
     @EnvironmentObject var viewModel: RecorderViewModel
+    @Environment(\.openWindow) private var openWindow
 
     /// Label for the primary button, which carries whichever action stands between
     /// the user and recording: move the app, grant permission, or record/stop.
@@ -35,6 +36,12 @@ struct RecorderView: View {
                 // (AudioRecorder.sampleRate matches the ScreenCaptureKit
                 // config), so this states it rather than measuring it.
                 GlassMetaLabel("wav · 48kHz")
+                Button { openWindow(id: AppWindow.recordings.rawValue) } label: {
+                    Image(systemName: "text.bubble")
+                }.help(AppWindow.recordings.title)
+                Button { openWindow(id: AppWindow.settings.rawValue) } label: {
+                    Image(systemName: "gearshape")
+                }.help(AppWindow.settings.title)
 
                 // Same control, same gating as the old bottom shelf: hidden for
                 // the whole of a take, because the settings it opens are
@@ -227,7 +234,13 @@ struct RecorderView: View {
         // The window reports its own existence instead (BL-086): it is the canonical
         // surface for the install-location block, so while it is up the floating
         // panel must stand down, and when it goes away the panel is all that is left.
-        .onAppear { viewModel.mainWindowDidAppear() }
+        .onAppear {
+            viewModel.mainWindowDidAppear()
+            OverflowMenu.openWindow = { window in
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: window.rawValue)
+            }
+        }
         .onDisappear { viewModel.mainWindowDidDisappear() }
     }
 }

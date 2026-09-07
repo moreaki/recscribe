@@ -38,15 +38,17 @@ class RecordingController: RecordingControlling {
         captureManager: AudioCapturing? = nil,
         audioRecorder: AudioFileWriting? = nil,
         saveLocation: SaveLocationProviding? = nil,
-        audioSource: AudioSourceProviding? = nil
+        audioSource: AudioSourceProviding? = nil,
+        sessionLibrary: SessionLibrary? = nil,
+        storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
         self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
-            SessionWAVWriter(options: AppSettings.shared.values.storage)
+            SessionWAVWriter(options: storageOptions())
         })
         self.saveLocation = saveLocation ?? SaveLocationManager()
         self.audioSource = audioSource ?? AudioSourceManager()
-        self.sessionLibrary = audioRecorder == nil ? .shared : nil
+        self.sessionLibrary = sessionLibrary
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }

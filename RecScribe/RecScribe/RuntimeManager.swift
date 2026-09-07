@@ -43,9 +43,18 @@ nonisolated final class DownloadProgress: NSObject, URLSessionDownloadDelegate, 
     }
 }
 
+nonisolated enum LocalSoftware: String, Sendable {
+    case pipeline, ffmpeg, ollama
+    case whisperCPP = "whisper-cpp"
+}
+
 @MainActor
 final class RuntimeManager: ObservableObject {
-    static let shared = RuntimeManager()
+    private let settings: AppSettings
+    var isRecording: () -> Bool = { false }
+    @Published private(set) var detectedTools: [String: String] = [:]
+
+    init(settings: AppSettings) { self.settings = settings }
     @Published private(set) var status = "Detection has not run"
     @Published private(set) var diagnostics = ""
     @Published private(set) var localAIModels: [String] = []
@@ -58,7 +67,7 @@ final class RuntimeManager: ObservableObject {
     func cancel() { token?.cancel(); task?.cancel() }
     func shutdown() async { cancel(); await task?.value }
     private func perform(_ label: String, work: @escaping @MainActor (WorkCancellation) async throws -> Void) {
-        guard !busy, !SessionLibrary.shared.recordingActive else { return }
+        guard !busy, !isRecording() else { return }
         busy = true; status = label; progress = 0
         let cancellation = WorkCancellation()
         token = cancellation
@@ -73,15 +82,16 @@ final class RuntimeManager: ObservableObject {
 
     func detect() {
         perform("Detect local tools") { [self] token in
-            var values = AppSettings.shared.values
-            for (name, key) in [("whisper-cli", \AppSettings.Values.whisperPath), ("ffmpeg", \AppSettings.Values.ffmpegPath)] {
-                if !FileManager.default.isExecutableFile(atPath: values[keyPath: key]),
-                   let path = ["/opt/homebrew/bin/", "/usr/local/bin/"].map({ $0 + name }).first(where: FileManager.default.isExecutableFile) {
-                    values[keyPath: key] = path
-                }
+            let values = settings.values
+            detectedTools = await Task.detached(priority: .utility) {
+                Dictionary(uniqueKeysWithValues: ["whisper-cli", "ffmpeg"].compactMap { name in
+                    LocalToolDiscovery.executable(name).map { (name, $0) }
+                })
+            }.value
+            guard let path = values.whisperPath.isEmpty ? detectedTools["whisper-cli"] : values.whisperPath else {
+                throw SessionError.invalid("whisper-cli not found; install it or choose its executable")
             }
-            AppSettings.shared.values = values
-            let binary = URL(fileURLWithPath: values.whisperPath)
+            let binary = URL(fileURLWithPath: path)
             let metal = MTLCreateSystemDefaultDevice()?.name ?? "unavailable"
             let output = try await Task.detached(priority: .utility) {
                 try LocalProcessRunner.run(binary, ["--help"], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 120)
@@ -90,9 +100,14 @@ final class RuntimeManager: ObservableObject {
         }
     }
 
+    func useDetectedTools() {
+        if let path = detectedTools["whisper-cli"] { settings.values.whisperPath = path }
+        if let path = detectedTools["ffmpeg"] { settings.values.ffmpegPath = path }
+    }
+
     func detectAI() {
         perform("Detect local AI") { [self] token in
-            let python = AppSettings.shared.values.pythonPath
+            let python = settings.values.pythonPath
             let output = try await Task.detached(priority: .utility) {
                 try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "recscribe.local_ai", "--list"],
                     in: FileManager.default.temporaryDirectory, cancel: token, timeout: 15)
@@ -102,10 +117,11 @@ final class RuntimeManager: ObservableObject {
         }
     }
 
-    func install(_ formula: String) {
-        guard ["whisper-cpp", "ffmpeg", "ollama"].contains(formula) else { return }
+    func install(_ software: LocalSoftware) {
+        guard software != .pipeline else { installPipeline(); return }
+        let formula = software.rawValue
         perform("Install \(formula) with Homebrew") { [self] token in
-            guard let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first(where: FileManager.default.isExecutableFile) else {
+            guard let brew = LocalToolDiscovery.executable("brew") else {
                 throw SessionError.invalid("Install Homebrew from brew.sh first, then retry")
             }
             diagnostics = try await Task.detached(priority: .utility) {
@@ -115,10 +131,10 @@ final class RuntimeManager: ObservableObject {
     }
 
     func installPipeline() {
-        perform("Install local pipeline runtime") { token in
+        perform("Install local pipeline runtime") { [self] token in
             let archive = Bundle.main.resourceURL!.appendingPathComponent("pipeline.tar.gz")
             guard FileManager.default.fileExists(atPath: archive.path),
-                  let python = ["/opt/homebrew/bin/python3", "/usr/local/bin/python3"].first(where: FileManager.default.isExecutableFile) else {
+                  let python = LocalToolDiscovery.executable("python3") else {
                 throw SessionError.invalid("Python 3.12+ from Homebrew and bundled pipeline sources are required")
             }
             let environment = AppSettings.supportDirectory.appendingPathComponent("Pipeline-\(UUID().uuidString)")
@@ -132,7 +148,7 @@ final class RuntimeManager: ObservableObject {
                 _ = try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "venv", environment.path], in: AppSettings.supportDirectory, cancel: token, timeout: 120)
                 return try LocalProcessRunner.run(executable, ["-m", "pip", "install", source.path], in: AppSettings.supportDirectory, cancel: token, timeout: 600)
             }.value
-            AppSettings.shared.values.pythonPath = executable.path
+            settings.values.pythonPath = executable.path
         }
     }
 
@@ -151,7 +167,7 @@ final class RuntimeManager: ObservableObject {
             try await Task.detached(priority: .utility) {
                 try model.verifyAndInstall(temporary, to: destination, cancel: token)
             }.value
-            AppSettings.shared.values.modelPath = destination.path
+            settings.values.modelPath = destination.path
         }
     }
 }

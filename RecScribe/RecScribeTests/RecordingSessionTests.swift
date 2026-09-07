@@ -72,7 +72,7 @@ struct RecordingSessionTests {
         #expect(throws: SessionError.self) { try writer.writeBuffer(buffer()) }
         try writer.finalize()
         let session = try RecordingSession.read(writer.manifestURL!)
-        #expect(session.status == "needs_review")
+        #expect(session.status == .needsReview)
         #expect(session.parts.count == 1)
         #expect(try AVAudioFile(forReading: writer.audioURL!).length == 10)
     }
@@ -100,8 +100,8 @@ struct RecordingSessionTests {
         for index in [4, 5, 6, 7, 40, 41, 42, 43] { data[index] = 0 }
         data.append(0xFF) // incomplete frame is not part of the recovered timeline
         try data.write(to: last)
-        session.status = "recording"
-        session.parts[9].status = "recording"; session.parts[9].frames = 0
+        session.status = .recording
+        session.parts[9].status = .recording; session.parts[9].frames = 0
         try session.save(manifest)
         do {
             let lease = try SessionLease(manifest)
@@ -111,8 +111,8 @@ struct RecordingSessionTests {
         let result = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/missing"), cancel: WorkCancellation(), recover: true)
         #expect(result.totalFrames == 100)
         #expect(result.parts[9].recovered)
-        #expect(result.parts.allSatisfy { $0.status == "verified" })
-        #expect(result.status == "needs_review")
+        #expect(result.parts.allSatisfy { $0.status == .verified })
+        #expect(result.status == .needsReview)
         #expect(try AVAudioFile(forReading: last).length == 10)
     }
     @Test("Missing or modified parts remain needs-review; no successful empty sessions")
@@ -123,9 +123,9 @@ struct RecordingSessionTests {
         let part = directory.appendingPathComponent("OutputName-Part2.wav")
         try FileManager.default.removeItem(at: part)
         let result = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/missing"), cancel: WorkCancellation())
-        #expect(result.status == "needs_review")
-        #expect(result.parts[1].status == "needs_review")
-        #expect(result.parts[0].status == "verified")
+        #expect(result.status == .needsReview)
+        #expect(result.parts[1].status == .needsReview)
+        #expect(result.parts[0].status == .verified)
     }
     @Test("Verified multipart archives retain originals", arguments: [ArchiveFormat.flac, .opus, .m4a])
     func archive(_ format: ArchiveFormat) async throws {
@@ -136,7 +136,7 @@ struct RecordingSessionTests {
         let result = try await Task.detached(priority: .utility) {
             try SessionProcessing.process(manifest, ffmpeg: ffmpeg, cancel: WorkCancellation())
         }.value
-        #expect(result.status == "completed")
+        #expect(result.status == .completed)
         #expect(result.artifacts.count == 1)
         #expect(result.parts.count == 4)
         for part in result.parts { #expect(try RecordingSession.hash(directory.appendingPathComponent(part.path)) == part.sha256) }

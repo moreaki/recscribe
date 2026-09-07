@@ -13,7 +13,8 @@ import os
 struct RecScribeApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var viewModel = RecorderViewModel()
+    @StateObject private var services = AppServices()
+    private var viewModel: RecorderViewModel { services.recorder }
 
     init() {
         // Register custom fonts from the app bundle
@@ -59,8 +60,8 @@ struct RecScribeApp: App {
                 .onAppear {
                     appDelegate.prepareForTermination = {
                         if viewModel.isRecording { await viewModel.stopRecording() }
-                        await SessionLibrary.shared.shutdown()
-                        await RuntimeManager.shared.shutdown()
+                        await services.library.shutdown()
+                        await services.runtime.shutdown()
                     }
                     // Wire up the menu bar controller with the shared view model
                     if appDelegate.menuBarController == nil {
@@ -99,9 +100,10 @@ struct RecScribeApp: App {
         }
         Window("RecScribe Settings", id: "settings") {
             ConfigurationView().environmentObject(viewModel)
+                .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
         }.defaultSize(width: 740, height: 620)
         Window("Recordings", id: "recordings") {
-            RecordingLibraryView().environmentObject(viewModel)
+            RecordingLibraryView().environmentObject(viewModel).environmentObject(services.library)
         }.defaultSize(width: 820, height: 620)
     }
 }

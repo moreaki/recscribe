@@ -9,17 +9,47 @@ nonisolated enum ArchiveFormat: String, Codable, CaseIterable, Sendable {
 
 nonisolated struct RecordingStorageOptions: Codable, Equatable, Sendable {
     static let hardCap: Int64 = 3_758_096_384 // 3.5 GiB including the WAV header
+    static let minimumPartBytes = Int64(PCM16WAV.headerBytes + 2 * PCM16WAV.sampleBytes)
+    static let bytesPerMiB: Int64 = 1 << 20
+    static let bitrateRange = 32...320
+    static let flacCompressionRange = 0...12
+    static let bitrateChoices = [32, 64, 96, 128, 192, 256, 320]
     var maximumPartBytes: Int64 = hardCap
     var archiveFormat: ArchiveFormat = .wav
     var bitrateKbps = 128
     var flacCompression = 5
 
     func validated() throws -> Self {
-        guard (48...Self.hardCap).contains(maximumPartBytes),
-              (32...320).contains(bitrateKbps), (0...12).contains(flacCompression) else {
+        guard (Self.minimumPartBytes...Self.hardCap).contains(maximumPartBytes),
+              Self.bitrateRange.contains(bitrateKbps), Self.flacCompressionRange.contains(flacCompression) else {
             throw SessionError.invalid("Invalid recording storage options")
         }
         return self
+    }
+
+    static func partBytes(mebibytes: Double) throws -> Int64 {
+        let bytes = mebibytes * Double(bytesPerMiB)
+        guard bytes.isFinite, bytes >= Double(minimumPartBytes), bytes <= Double(hardCap) else {
+            throw SessionError.invalid("WAV part size must be finite and between \(minimumPartBytes) bytes and \(hardCap / bytesPerMiB) MiB")
+        }
+        return Int64(bytes.rounded(.down))
+    }
+
+    init(maximumPartBytes: Int64 = hardCap, archiveFormat: ArchiveFormat = .wav, bitrateKbps: Int = 128, flacCompression: Int = 5) {
+        self.maximumPartBytes = maximumPartBytes
+        self.archiveFormat = archiveFormat
+        self.bitrateKbps = bitrateKbps
+        self.flacCompression = flacCompression
+    }
+
+    private enum CodingKeys: String, CodingKey { case maximumPartBytes, archiveFormat, bitrateKbps, flacCompression }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Missing keys are migrations. Invalid manifest values still fail validated().
+        maximumPartBytes = try container.decodeIfPresent(Int64.self, forKey: .maximumPartBytes) ?? Self.hardCap
+        archiveFormat = try container.decodeIfPresent(ArchiveFormat.self, forKey: .archiveFormat) ?? .wav
+        bitrateKbps = try container.decodeIfPresent(Int.self, forKey: .bitrateKbps) ?? 128
+        flacCompression = try container.decodeIfPresent(Int.self, forKey: .flacCompression) ?? 5
     }
 }
 
@@ -39,10 +69,10 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     var id = UUID()
     var startedAt = Date()
     var endedAt: Date?
-    var status = "recording"
+    var status = SessionStatus.recording
     var sampleRate: Int
     var channels: Int
-    var bitDepth = 16
+    var bitDepth = PCM16WAV.bitDepth
     var channelMap: [String]
     var options: RecordingStorageOptions
     var parts: [Part] = []
@@ -53,9 +83,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         var path: String
         var startSample: Int64
         var frames: Int64 = 0
-        var sizeBytes: Int64 = 44
+        var sizeBytes = Int64(PCM16WAV.headerBytes)
         var sha256: String?
-        var status = "opening"
+        var status = PartStatus.opening
         var recovered = false
         var fileID: UInt64?
         var startedAt: Date
@@ -94,7 +124,7 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
             _ = try safeURL(part.path, beside: url)
             guard paths.insert(part.path).inserted, part.startSample >= end,
                   part.frames >= 0, part.frames <= Int64.max - part.startSample,
-                  part.frames <= (Self.maximumSafePartBytes - 44) / Int64(session.channels * 2) else {
+                  part.frames <= (Self.maximumSafePartBytes - Int64(PCM16WAV.headerBytes)) / Int64(session.channels * PCM16WAV.sampleBytes) else {
                 throw SessionError.invalid("Invalid or overlapping session parts")
             }
             end = part.startSample + part.frames
@@ -176,7 +206,7 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
     func createFile(at url: URL, sampleRate: Double, channels: Int) throws {
         _ = try options.validated()
         guard (1...32).contains(channels), sampleRate.isFinite, (1...384000).contains(sampleRate), sampleRate.rounded() == sampleRate,
-              options.maximumPartBytes >= 44 + Int64(channels * 2) else { throw SessionError.invalid("Invalid format or part cap smaller than one audio frame") }
+              options.maximumPartBytes >= Int64(PCM16WAV.headerBytes) + Int64(channels * PCM16WAV.sampleBytes) else { throw SessionError.invalid("Invalid format or part cap smaller than one audio frame") }
         try checkSpace(url)
         let base = try RecordingSession.reserve(url)
         audioURL = base
@@ -212,7 +242,7 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
         writer = next
         let index = session.parts.count - 1
         self.session?.parts[index].fileID = (try FileManager.default.attributesOfItem(atPath: partURL.path)[.systemFileNumber] as? NSNumber)?.uint64Value
-        self.session?.parts[index].status = "recording"
+        self.session?.parts[index].status = .recording
         try self.session?.save(manifestURL)
     }
 
@@ -227,14 +257,14 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
                     try checkSpace(audioURL)
                     nextDiskCheck = frames + Int64(rate) // at most one second between checks
                 }
-                let capacity = (options.maximumPartBytes - 44) / Int64(channels * 2)
+                let capacity = (options.maximumPartBytes - Int64(PCM16WAV.headerBytes)) / Int64(channels * PCM16WAV.sampleBytes)
                 let remaining = capacity - session!.parts.last!.frames
                 if remaining == 0 { try closePart(); try openPart(); continue }
                 let count = min(Int(remaining), Int(buffer.frameLength) - offset)
                 try writer?.writeFrames(buffer, offset: offset, count: count)
                 let index = session!.parts.count - 1
                 session!.parts[index].frames += Int64(count)
-                session!.parts[index].sizeBytes = 44 + session!.parts[index].frames * Int64(channels * 2)
+                session!.parts[index].sizeBytes = Int64(PCM16WAV.headerBytes) + session!.parts[index].frames * Int64(channels * PCM16WAV.sampleBytes)
                 offset += count
             }
         } catch { try? markFailure(error); throw error }
@@ -245,13 +275,13 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
         try writer.finalize()
         self.writer = nil
         let index = session!.parts.count - 1
-        session!.parts[index].status = "finalized"
+        session!.parts[index].status = .finalized
         try session!.save(manifestURL!)
     }
 
     func markFailure(_ error: Error) throws {
         failed = true
-        session?.status = "needs_review"
+        session?.status = .needsReview
         session?.issues.append(error.localizedDescription)
         if let manifestURL { try session?.save(manifestURL) }
     }
@@ -261,7 +291,7 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
         do {
             try closePart()
             session?.endedAt = Date()
-            session?.status = failed ? "needs_review" : "finalized"
+            session?.status = failed ? .needsReview : .finalized
             if let manifestURL { try session?.save(manifestURL) }
         } catch { try? markFailure(error); throw error }
     }

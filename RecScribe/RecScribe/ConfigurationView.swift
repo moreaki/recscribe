@@ -2,54 +2,61 @@ import SwiftUI
 
 struct ConfigurationView: View {
     @EnvironmentObject private var recorder: RecorderViewModel
-    @ObservedObject private var settings = AppSettings.shared
-    @ObservedObject private var runtime = RuntimeManager.shared
-    @ObservedObject private var library = SessionLibrary.shared
-    @State private var section = "Storage"
-    @State private var installation: String?
+    @EnvironmentObject private var settings: AppSettings
+    @Environment(\.glassTheme) private var theme
+    @EnvironmentObject private var runtime: RuntimeManager
+    @EnvironmentObject private var library: SessionLibrary
+    @State private var section = Section.storage
+    @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
-    private let sections = ["Storage", "Transcription", "Models", "AI", "Diagnostics"]
+    private enum Layout {
+        static let numericFieldWidth: CGFloat = 100
+        static let progressWidth: CGFloat = 90
+    }
+    private enum Section: String, CaseIterable { case storage = "Storage", transcription = "Transcription", models = "Models", ai = "AI", diagnostics = "Diagnostics" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 12) {
-                Image(systemName: "slider.horizontal.3").font(.title2).foregroundStyle(.purple)
-                    .padding(12).background(.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
+            HStack(spacing: GlassSpacing.md) {
+                Image(systemName: "slider.horizontal.3").font(.title2).foregroundStyle(theme.colors.accent)
+                    .padding(GlassSpacing.md).glassSurface(.inner)
+                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
                     Text("Make it yours").font(.title2.bold())
                     Text("Lossless capture. Local intelligence. Your originals stay yours.").font(.callout).foregroundStyle(.secondary)
                 }
             }
             Picker("Settings section", selection: $section) {
-                ForEach(sections, id: \.self) { Text($0) }
+                ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented)
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: GlassSpacing.xl) {
                     switch section {
-                    case "Storage": storage
-                    case "Transcription": transcription
-                    case "Models": models
-                    case "AI": intelligence
-                    default: diagnostics
+                    case .storage: storage
+                    case .transcription: transcription
+                    case .models: models
+                    case .ai: intelligence
+                    case .diagnostics: diagnostics
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(2)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(GlassSpacing.xxs)
             }
             Divider()
             HStack {
-                Image(systemName: "lock.shield").foregroundStyle(.mint)
+                Image(systemName: "lock.shield").foregroundStyle(theme.colors.statusSuccess)
                 Text(library.recordingActive ? "Recording takes priority. Background work is paused." : runtime.status)
                     .font(.caption).foregroundStyle(.secondary).lineLimit(3)
                 Spacer()
-                if runtime.busy { ProgressView(value: runtime.progress).frame(width: 90); Button("Cancel") { runtime.cancel() } }
+                if runtime.busy { ProgressView(value: runtime.progress).frame(width: Layout.progressWidth); Button("Cancel") { runtime.cancel() } }
             }
         }
-        .padding(26).frame(minWidth: 700, idealWidth: 740, minHeight: 560, idealHeight: 620)
+        .padding(GlassSpacing.xxl).frame(minWidth: AppWindow.settings.minimumSize.width,
+            idealWidth: AppWindow.settings.defaultSize.width, minHeight: AppWindow.settings.minimumSize.height,
+            idealHeight: AppWindow.settings.defaultSize.height)
         .background(GlassWindowGround()).glassThemeAdaptingToContrast()
         .onChange(of: library.recordingActive) { _, active in if active { runtime.cancel() } }
         .confirmationDialog("Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
-            Button("Install") { if let name = installation { name == "pipeline" ? runtime.installPipeline() : runtime.install(name) }; installation = nil }
+            Button("Install") { if let name = installation { runtime.install(name) }; installation = nil }
         } message: {
-            Text(installation == "pipeline" ? "Creates a private Python environment and downloads the pipeline’s package dependencies. No models or audio are uploaded." : "Runs brew install \(installation ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
+            Text(installation == .pipeline ? "Creates a private Python environment and downloads the pipeline’s package dependencies. No models or audio are uploaded." : "Runs brew install \(installation?.rawValue ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
         }
         .confirmationDialog("Download Whisper model?", isPresented: Binding(get: { download != nil }, set: { if !$0 { download = nil } })) {
             Button("Download and verify") { if let model = download { runtime.download(model) }; download = nil }
@@ -59,16 +66,16 @@ struct ConfigurationView: View {
     }
 
     private func card<Content: View>(_ title: String, detail: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(.headline)
-            Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            content()
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.primary.opacity(0.08)))
+        GlassCard {
+            VStack(alignment: .leading, spacing: GlassSpacing.l) {
+                Text(title).font(.headline)
+                Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                content()
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
     private func file(_ title: String, value: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: GlassSpacing.sm) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField(title, text: value).textFieldStyle(.roundedBorder)
@@ -84,11 +91,14 @@ struct ConfigurationView: View {
             card("Capture safely", detail: "Recording always writes 16-bit PCM WAV. Parts share one session and a continuous sample timeline. Changes apply to the next recording.") {
                 HStack {
                     Text("Maximum WAV part size (MiB)"); Spacer()
-                    TextField("MiB", value: Binding(get: { Double(settings.values.storage.maximumPartBytes) / 1_048_576 }, set: {
-                        settings.values.storage.maximumPartBytes = Int64(min(3584, max(1, $0)) * 1_048_576)
-                    }), format: .number).frame(width: 100).textFieldStyle(.roundedBorder)
+                    TextField("MiB", value: Binding(get: {
+                        Double(settings.values.storage.maximumPartBytes) / Double(RecordingStorageOptions.bytesPerMiB)
+                    }, set: { settings.setPartSizeMiB($0) }), format: .number)
+                        .frame(width: Layout.numericFieldWidth).textFieldStyle(.roundedBorder)
+
                 }
-                Text("Hard limit: 3.5 GiB. Smaller parts roll over without dropping or duplicating samples.").font(.caption).foregroundStyle(.secondary)
+                if let message = settings.validationMessage { Text(message).foregroundStyle(theme.colors.statusWarning) }
+                Text("Hard limit: \(RecordingStorageOptions.hardCap / RecordingStorageOptions.bytesPerMiB) MiB. Smaller parts roll over without dropping or duplicating samples.").font(.caption).foregroundStyle(.secondary)
                 HStack { Text(recorder.saveLocationPath).lineLimit(1).truncationMode(.middle); Spacer(); Button("Choose folder…") { recorder.chooseSaveLocation() } }
             }.disabled(library.recordingActive)
             card("Archive after recording", detail: "Optional conversion runs after finalization and verification, at utility priority. Originals are always retained.") {
@@ -96,12 +106,12 @@ struct ConfigurationView: View {
                     ForEach(ArchiveFormat.allCases, id: \.self) { Text($0 == .wav ? "WAV only" : $0.rawValue.uppercased()).tag($0) }
                 }.pickerStyle(.segmented)
                 if settings.values.storage.archiveFormat == .flac {
-                    Stepper("FLAC compression: \(settings.values.storage.flacCompression)", value: $settings.values.storage.flacCompression, in: 0...12)
+                    Stepper("FLAC compression: \(settings.values.storage.flacCompression)", value: $settings.values.storage.flacCompression, in: RecordingStorageOptions.flacCompressionRange)
                 } else if settings.values.storage.archiveFormat != .wav {
-                    Picker("Bitrate", selection: $settings.values.storage.bitrateKbps) { ForEach([64, 96, 128, 192, 256, 320], id: \.self) { Text("\($0) kbps").tag($0) } }
+                    Picker("Bitrate", selection: $settings.values.storage.bitrateKbps) { ForEach(RecordingStorageOptions.bitrateChoices, id: \.self) { Text("\($0) kbps").tag($0) } }
                 }
                 file("FFmpeg executable", value: $settings.values.ffmpegPath)
-                Button("Install FFmpeg…") { installation = "ffmpeg" }.disabled(runtime.busy)
+                Button("Install FFmpeg…") { installation = .ffmpeg }.disabled(runtime.busy)
             }
         }
     }
@@ -109,16 +119,16 @@ struct ConfigurationView: View {
         card("Opt-in transcription", detail: "Capture works without Whisper, Python or AI. Processing starts only after recording or file import. Channels stay independent; no automatic speaker claims.") {
             Toggle("Automatically transcribe completed recordings", isOn: $settings.values.autoTranscribe)
             Picker("Text mode", selection: $settings.values.mode) {
-                Text("Verbatim ASR").tag("verbatim"); Text("Normalize").tag("normalize"); Text("Translate").tag("translate")
+                Text("Verbatim ASR").tag(TranscriptionMode.verbatim); Text("Normalize").tag(TranscriptionMode.normalize); Text("Translate").tag(TranscriptionMode.translate)
             }.pickerStyle(.segmented)
-            HStack { TextField("Source language (auto, de-CH, en…)", text: $settings.values.sourceLanguage); TextField("Target language", text: $settings.values.targetLanguage).disabled(settings.values.mode == "verbatim") }.textFieldStyle(.roundedBorder)
+            HStack { TextField("Source language (auto, de-CH, en…)", text: $settings.values.sourceLanguage); TextField("Target language", text: $settings.values.targetLanguage).disabled(settings.values.mode == .verbatim) }.textFieldStyle(.roundedBorder)
             Picker("Recognition profile", selection: $settings.values.profile) {
-                Text("Single pass").tag("fast"); Text("Two distinct models, compare").tag("verified")
+                Text("Single pass").tag(RecognitionProfile.fast); Text("Two distinct models, compare").tag(RecognitionProfile.verified)
             }
-            if settings.values.profile == "verified" { file("Verification model", value: $settings.values.verificationModelPath) }
+            if settings.values.profile == .verified { file("Verification model", value: $settings.values.verificationModelPath) }
             file("Optional whisper.cpp VAD model", value: $settings.values.vadModelPath)
             file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
-            Button("Set up isolated pipeline runtime…") { installation = "pipeline" }.disabled(runtime.busy)
+            Button("Set up isolated pipeline runtime…") { installation = .pipeline }.disabled(runtime.busy)
             Text("Normalize/translate require the explicitly enabled local AI stage. Without it, output is marked pending, never silently rewritten.").font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -127,7 +137,11 @@ struct ConfigurationView: View {
             card("Whisper · accelerated locally", detail: "whisper.cpp is the reference adapter. Hardware availability is not proof that a particular inference used Metal.") {
                 file("Whisper executable", value: $settings.values.whisperPath)
                 file("Selected local ggml model", value: $settings.values.modelPath)
-                HStack { Button("Detect Whisper & Metal") { runtime.detect() }; Button("Install whisper.cpp…") { installation = "whisper-cpp" } }.disabled(runtime.busy || library.recordingActive)
+                if !runtime.detectedTools.isEmpty {
+                    Button("Use detected tool paths") { runtime.useDetectedTools() }
+                        .disabled(library.recordingActive)
+                }
+                HStack { Button("Detect Whisper & Metal") { runtime.detect() }; Button("Install whisper.cpp…") { installation = .whisperCPP } }.disabled(runtime.busy || library.recordingActive)
             }
             card("Model library", detail: "Choose the memory/accuracy trade-off explicitly. Downloads are optional and verified against the published model checksum.") {
                 ForEach(WhisperModel.catalog) { model in
@@ -139,7 +153,7 @@ struct ConfigurationView: View {
     private var intelligence: some View {
         card("Local intelligence", detail: "Optional Ollama processing derives normalized text, translations and source-linked summary notes. Raw ASR stays unchanged. All AI output is marked for review; remote models are refused.") {
             Toggle("Enable local AI post-processing", isOn: $settings.values.aiEnabled)
-            HStack { Button("Detect local AI models") { runtime.detectAI() }; Button("Install Ollama…") { installation = "ollama" } }.disabled(runtime.busy || library.recordingActive)
+            HStack { Button("Detect local AI models") { runtime.detectAI() }; Button("Install Ollama…") { installation = .ollama } }.disabled(runtime.busy || library.recordingActive)
             Picker("Installed local model", selection: $settings.values.ollamaModel) {
                 Text(settings.values.ollamaModel.isEmpty ? "Choose a model" : settings.values.ollamaModel).tag(settings.values.ollamaModel)
                 ForEach(runtime.localAIModels.filter { $0 != settings.values.ollamaModel }, id: \.self) { Text($0).tag($0) }
@@ -152,6 +166,9 @@ struct ConfigurationView: View {
         card("Evidence, not guesses", detail: "Recorder timings use unified logging/signposts. Each transcription job retains stage timings, engine commands, model hashes, raw output and review reasons.") {
             Text(runtime.diagnostics.isEmpty ? "Run detection in Models or AI to inspect this Mac." : runtime.diagnostics)
                 .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+            Button("Reveal private process diagnostics") {
+                NSWorkspace.shared.open(LocalProcessRunner().diagnosticsDirectory)
+            }
             if let job = library.latestJob { Button("Reveal latest job and logs") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
         }
     }

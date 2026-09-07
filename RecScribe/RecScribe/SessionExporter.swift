@@ -27,7 +27,7 @@ nonisolated struct SessionExporter {
         let lease = try SessionLease(manifest)
         defer { withExtendedLifetime(lease) {} }
         let session = try RecordingSession.read(manifest)
-        guard !session.parts.isEmpty, session.parts.allSatisfy({ $0.status == "verified" }) else {
+        guard !session.parts.isEmpty, session.parts.allSatisfy({ $0.status == .verified }) else {
             throw SessionError.invalid("Verify or recover all parts before export")
         }
         let name = "\(manifest.deletingPathExtension().deletingPathExtension().lastPathComponent)-Export-\(id.uuidString)"

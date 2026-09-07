@@ -28,7 +28,7 @@ nonisolated enum SessionProcessing {
         defer { withExtendedLifetime(lease) {} }
         var session = try RecordingSession.read(manifest)
         if let issue, !session.issues.contains(issue) { session.issues.append(issue) }
-        if session.status == "recording" && !recover { throw SessionError.invalid("Interrupted recording needs explicit recovery") }
+        if session.status == .recording && !recover { throw SessionError.invalid("Interrupted recording needs explicit recovery") }
         for index in session.parts.indices {
             try cancel.check()
             let part = session.parts[index]
@@ -36,7 +36,7 @@ nonisolated enum SessionProcessing {
                 let url = try RecordingSession.safeURL(part.path, beside: manifest)
                 let originalHash = try RecordingSession.hash(url, check: cancel.check)
                 if let expected = part.sha256, originalHash != expected { throw SessionError.invalid("Checksum mismatch") }
-                let wasInterrupted = ["opening", "recording"].contains(part.status)
+                let wasInterrupted = [PartStatus.opening, .recording].contains(part.status)
                 if wasInterrupted && !recover { throw SessionError.invalid("Part needs recovery") }
                 let frames: Int64
                 if wasInterrupted {
@@ -64,36 +64,38 @@ nonisolated enum SessionProcessing {
                 session.parts[index].frames = frames
                 session.parts[index].sizeBytes = Int64(PCM16WAV.headerBytes) + frames * Int64(session.channels * PCM16WAV.sampleBytes)
                 session.parts[index].sha256 = try RecordingSession.hash(url, check: cancel.check)
-                session.parts[index].status = "verified"
+                session.parts[index].status = .verified
             } catch is CancellationError { throw CancellationError() }
             catch {
-                session.parts[index].status = "needs_review"
+                session.parts[index].status = .needsReview
                 let message = "\(part.path): \(error.localizedDescription)"
                 if !session.issues.contains(message) { session.issues.append(message) }
             }
         }
         session.endedAt = session.endedAt ?? Date()
-        session.status = "verified"
+        session.status = session.issues.isEmpty && !session.parts.isEmpty && session.parts.allSatisfy { $0.status == .verified } ? .verified : .needsReview
         try session.save(manifest)
-        if session.options.archiveFormat != .wav, session.parts.allSatisfy({ $0.status == "verified" }) {
+        if session.options.archiveFormat != .wav, session.parts.allSatisfy({ $0.status == .verified }) {
             let exists = try session.artifacts.contains { artifact in
                 guard artifact.format == session.options.archiveFormat else { return false }
                 let url = try RecordingSession.safeURL(artifact.path, beside: manifest)
-                return (try? RecordingSession.hash(url, check: cancel.check)) == artifact.sha256
+                do { return try RecordingSession.hash(url, check: cancel.check) == artifact.sha256 }
+                catch is CancellationError { throw CancellationError() }
+                catch { return false }
             }
             if !exists {
                 do {
                     session.artifacts.append(try archive(session, manifest: manifest, ffmpeg: ffmpeg, cancel: cancel))
                 } catch is CancellationError { throw CancellationError() }
                 catch {
-                    session.status = "needs_review"
+                    session.status = .needsReview
                     session.issues.append("Archive conversion failed; originals retained: \(error.localizedDescription)")
                     try session.save(manifest)
                     throw error
                 }
             }
         }
-        session.status = session.issues.isEmpty && session.parts.allSatisfy { $0.status == "verified" } ? "completed" : "needs_review"
+        session.status = session.issues.isEmpty && !session.parts.isEmpty && session.parts.allSatisfy { $0.status == .verified } ? .completed : .needsReview
         try session.save(manifest)
         return session
     }

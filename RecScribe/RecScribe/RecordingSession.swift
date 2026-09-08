@@ -42,7 +42,7 @@ nonisolated struct RecordingStorageOptions: Codable, Equatable, Sendable {
         self.flacCompression = flacCompression
     }
 
-    private enum CodingKeys: String, CodingKey { case maximumPartBytes, archiveFormat, bitrateKbps, flacCompression }
+    enum CodingKeys: String, CodingKey { case maximumPartBytes, archiveFormat, bitrateKbps, flacCompression }
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         // Missing keys are migrations. Invalid manifest values still fail validated().
@@ -65,7 +65,9 @@ nonisolated enum SessionError: Error, LocalizedError {
 }
 
 nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
-    var schemaVersion = 1
+    static let currentSchemaVersion = 1
+    static let maximumManifestBytes = 16 * 1_024 * 1_024
+    var schemaVersion = currentSchemaVersion
     var id = UUID()
     var startedAt = Date()
     var endedAt: Date?
@@ -109,19 +111,25 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     }
 
     static func read(_ url: URL) throws -> Self {
-        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size <= 16 * 1_024 * 1_024 else { throw SessionError.invalid("Session manifest is too large") }
+        let input = try FileHandle(forReadingFrom: url)
+        defer { try? input.close() }
+        let bytes = try input.read(upToCount: maximumManifestBytes + 1) ?? Data()
+        guard bytes.count <= maximumManifestBytes else { throw SessionError.invalid("Session manifest is too large") }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let session = try decoder.decode(Self.self, from: Data(contentsOf: url))
-        guard session.schemaVersion == 1, (1...32).contains(session.channels),
-              (1...384000).contains(session.sampleRate), session.bitDepth == 16,
+        return try decoder.decode(Self.self, from: bytes).validated(beside: url)
+    }
+
+    func validated(beside url: URL) throws -> Self {
+        let session = self
+        guard session.schemaVersion == Self.currentSchemaVersion, (1...32).contains(session.channels),
+              (1...384000).contains(session.sampleRate), session.bitDepth == PCM16WAV.bitDepth,
               session.channelMap.count == session.channels else { throw SessionError.invalid("Unsupported session schema or audio format") }
         _ = try session.options.validated()
         var end: Int64 = 0
         var paths = Set<String>()
         for part in session.parts {
-            _ = try safeURL(part.path, beside: url)
+            _ = try Self.safeURL(part.path, beside: url)
             guard paths.insert(part.path).inserted, part.startSample >= end,
                   part.frames >= 0, part.frames <= Int64.max - part.startSample,
                   part.frames <= (Self.maximumSafePartBytes - Int64(PCM16WAV.headerBytes)) / Int64(session.channels * PCM16WAV.sampleBytes) else {
@@ -129,10 +137,16 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
             }
             end = part.startSample + part.frames
         }
-        for artifact in session.artifacts { _ = try safeURL(artifact.path, beside: url) }
+        for artifact in session.artifacts { _ = try Self.safeURL(artifact.path, beside: url) }
         return session
     }
-    private static let maximumSafePartBytes = Int64(UInt32.max) + 8
+    private static let maximumSafePartBytes = Int64(PCM16WAV.maximumPayload) + Int64(PCM16WAV.headerBytes)
+
+    /// No archive may promote an incomplete or review-marked source session.
+    func verifiedStatus(archiveComplete: Bool) -> SessionStatus {
+        guard issues.isEmpty, !parts.isEmpty, parts.allSatisfy({ $0.status == .verified }) else { return .needsReview }
+        return archiveComplete ? .completed : .verified
+    }
 
     static func safeURL(_ name: String, beside manifest: URL) throws -> URL {
         guard !name.isEmpty, name != ".", name != "..", !name.contains("/"),

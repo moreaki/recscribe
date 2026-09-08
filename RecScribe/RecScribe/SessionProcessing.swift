@@ -5,6 +5,7 @@ import Foundation
 import os
 
 nonisolated final class WorkCancellation: Sendable {
+    let id = UUID()
     private let cancelled = OSAllocatedUnfairLock(initialState: false)
     func cancel() { cancelled.withLock { $0 = true } }
     func check() throws { if cancelled.withLock({ $0 }) { throw CancellationError() } }
@@ -21,14 +22,22 @@ nonisolated enum SessionProcessing {
     }
 
     static func process(_ manifest: URL, ffmpeg: URL, cancel: WorkCancellation,
-                        recover: Bool = false, issue: String? = nil) throws -> RecordingSession {
+                        recover: Bool = false, issue: String? = nil,
+                        archiveWorker: (RecordingSession, URL, URL, WorkCancellation) throws -> RecordingSession.Artifact = {
+                            try archive($0, manifest: $1, ffmpeg: $2, cancel: $3)
+                        }) throws -> RecordingSession {
         let started = ContinuousClock.now
-        defer { logger.notice("Session verification elapsed=\(String(describing: started.duration(to: .now)), privacy: .public) recovery=\(recover)") }
+        defer { logger.notice("Session verification operation=\(cancel.id) elapsed=\(String(describing: started.duration(to: .now)), privacy: .public) recovery=\(recover)") }
         let lease = try SessionLease(manifest)
         defer { withExtendedLifetime(lease) {} }
         var session = try RecordingSession.read(manifest)
+        try cancel.check()
         if let issue, !session.issues.contains(issue) { session.issues.append(issue) }
         if session.status == .recording && !recover { throw SessionError.invalid("Interrupted recording needs explicit recovery") }
+        // Persist pending verification before any fallible/cancellable work. A
+        // restart must never inherit an old 'completed' stamp from this attempt.
+        session.status = .finalized
+        try session.save(manifest)
         for index in session.parts.indices {
             try cancel.check()
             let part = session.parts[index]
@@ -48,6 +57,9 @@ nonisolated enum SessionProcessing {
                     session.parts[index].fileID = (try FileManager.default.attributesOfItem(atPath: url.path)[.systemFileNumber] as? NSNumber)?.uint64Value
                     session.parts[index].recovered = true
                     session.issues.append("Recovered part: \(part.path); inspect its end and any following boundary")
+                    // Atomic repair changes the inode. Journal ownership before
+                    // cancellable hashing so another recovery can safely resume.
+                    try session.save(manifest)
                 } else {
                     let file = try PCM16WAV.read(url)
                     let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
@@ -58,6 +70,7 @@ nonisolated enum SessionProcessing {
                     frames = Int64(file.frames)
                 }
                 guard frames > 0 else { throw SessionError.invalid("Part contains no audio") }
+                guard index != 0 || part.startSample == 0 else { throw SessionError.invalid("Gap before first part") }
                 if index + 1 < session.parts.count, part.startSample + frames != session.parts[index + 1].startSample {
                     throw SessionError.invalid("Gap or overlap at part boundary")
                 }
@@ -73,19 +86,28 @@ nonisolated enum SessionProcessing {
             }
         }
         session.endedAt = session.endedAt ?? Date()
-        session.status = session.issues.isEmpty && !session.parts.isEmpty && session.parts.allSatisfy { $0.status == .verified } ? .verified : .needsReview
+        session.status = session.verifiedStatus(archiveComplete: false)
         try session.save(manifest)
-        if session.options.archiveFormat != .wav, session.parts.allSatisfy({ $0.status == .verified }) {
-            let exists = try session.artifacts.contains { artifact in
-                guard artifact.format == session.options.archiveFormat else { return false }
-                let url = try RecordingSession.safeURL(artifact.path, beside: manifest)
-                do { return try RecordingSession.hash(url, check: cancel.check) == artifact.sha256 }
-                catch is CancellationError { throw CancellationError() }
-                catch { return false }
+        if session.options.archiveFormat != .wav, !session.parts.isEmpty, session.parts.allSatisfy({ $0.status == .verified }) {
+            var exists = false
+            for artifact in session.artifacts where artifact.format == session.options.archiveFormat {
+                do {
+                    let url = try RecordingSession.safeURL(artifact.path, beside: manifest)
+                    guard try RecordingSession.hash(url, check: cancel.check) == artifact.sha256 else {
+                        throw SessionError.invalid("Archive checksum mismatch")
+                    }
+                    exists = true
+                } catch is CancellationError { throw CancellationError() }
+                catch {
+                    let message = "Archive requires review: \(artifact.path)"
+                    if !session.issues.contains(message) { session.issues.append(message) }
+                }
             }
+            session.status = session.verifiedStatus(archiveComplete: false)
+            try session.save(manifest)
             if !exists {
                 do {
-                    session.artifacts.append(try archive(session, manifest: manifest, ffmpeg: ffmpeg, cancel: cancel))
+                    session.artifacts.append(try archiveWorker(session, manifest, ffmpeg, cancel))
                 } catch is CancellationError { throw CancellationError() }
                 catch {
                     session.status = .needsReview
@@ -95,7 +117,8 @@ nonisolated enum SessionProcessing {
                 }
             }
         }
-        session.status = session.issues.isEmpty && !session.parts.isEmpty && session.parts.allSatisfy { $0.status == .verified } ? .completed : .needsReview
+        try cancel.check()
+        session.status = session.verifiedStatus(archiveComplete: true)
         try session.save(manifest)
         return session
     }

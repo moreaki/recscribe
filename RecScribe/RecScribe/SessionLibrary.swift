@@ -12,18 +12,21 @@ final class SessionLibrary: ObservableObject {
     private let readSessions: @Sendable (URL) async throws -> SessionSnapshot
     private let readJob: @Sendable (URL) async throws -> JobSnapshot
     private let settings: () -> AppSettings.Values
-    private static let progressPollInterval: Duration = .milliseconds(500)
+    private let progressMonitor: JobProgressMonitor
     @Published private(set) var entries: [Entry] = []
     @Published private(set) var activity = "Ready"
     @Published private(set) var progress = 0.0
     @Published private(set) var recordingActive = false
     @Published private(set) var latestJob: URL?
     @Published var errorMessage: String?
-    private var pending: [(URL, Bool, String?)] = []
+    private struct PendingSession {
+        let manifest: URL
+        let recover: Bool
+        let issue: String?
+    }
+    private var pending: [PendingSession] = []
     private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
-    private var operationID = UUID()
-    private var progressTask: Task<Void, Never>?
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
@@ -32,13 +35,16 @@ final class SessionLibrary: ObservableObject {
         try SessionExporter().export(manifest, to: directory, checkCancellation: token.check)
     }, cancelRuntime: @escaping () -> Void = {},
          settings: @escaping () -> AppSettings.Values = { .init() },
-         readSessions: @escaping @Sendable (URL) async throws -> SessionSnapshot = { try await ManifestRepository().sessions(in: $0) },
-         readJob: @escaping @Sendable (URL) async throws -> JobSnapshot = { try await ManifestRepository().job(at: $0) }) {
+         readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
+         readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil) {
+        let repository = ManifestRepository()
+        let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
         self.cancelRuntime = cancelRuntime
         self.settings = settings
-        self.readSessions = readSessions
-        self.readJob = readJob
+        self.readSessions = readSessions ?? { try await repository.sessions(in: $0) }
+        self.readJob = jobReader
+        self.progressMonitor = JobProgressMonitor(read: jobReader)
     }
 
     func load(_ directory: URL) {
@@ -47,7 +53,7 @@ final class SessionLibrary: ObservableObject {
         let id = UUID(), read = readSessions
         refreshID = id
         refreshing = true
-        refreshTask = Task { [weak self] in
+        refreshTask = Task(priority: .utility) { [weak self] in
             do {
                 let snapshot = try await read(directory)
                 guard !Task.isCancelled, self?.refreshID == id else { return }
@@ -71,24 +77,25 @@ final class SessionLibrary: ObservableObject {
     }
     func setRecording(_ active: Bool) {
         recordingActive = active
-        if active { cancellation?.cancel(); cancelRuntime(); activity = "Background work paused for recording" }
+        if active { cancellation?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }
         else { startNext() }
     }
     func enqueue(_ url: URL, recover: Bool = false, issue: String? = nil) {
         guard !shuttingDown else { return }
-        if !pending.contains(where: { $0.0 == url }) { pending.append((url, recover, issue)) }
+        if !pending.contains(where: { $0.manifest == url }) { pending.append(.init(manifest: url, recover: recover, issue: issue)) }
         load(url.deletingLastPathComponent())
         startNext()
     }
     func cancel() {
         guard let cancellation else { return }
         cancellation.cancel()
+        progressMonitor.stop()
         activity = "Cancelling…"
     }
     func shutdown() async {
         shuttingDown = true
         cancelRefresh()
-        progressTask?.cancel()
+        progressMonitor.stop()
         pending.removeAll()
         cancellation?.cancel()
         await task?.value
@@ -100,21 +107,21 @@ final class SessionLibrary: ObservableObject {
         let token = WorkCancellation()
         cancellation = token
         let settings = settings()
-        activity = item.1 ? "Recovering recording parts…" : "Verifying recording and archive…"
+        activity = item.recover ? "Recovering recording parts…" : "Verifying recording and archive…"
         task = Task {
             do {
                 let result = try await Task.detached(priority: .utility) {
-                    try SessionProcessing.process(item.0, ffmpeg: URL(fileURLWithPath: settings.ffmpegPath), cancel: token, recover: item.1, issue: item.2)
+                    try SessionProcessing.process(item.manifest, ffmpeg: URL(fileURLWithPath: settings.ffmpegPath), cancel: token, recover: item.recover, issue: item.issue)
                 }.value
                 activity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
-                if settings.autoTranscribe && !recordingActive { try await runTranscription(item.0, settings: settings, cancel: token) }
+                if settings.autoTranscribe && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
             } catch is CancellationError {
                 if recordingActive && !shuttingDown { pending.insert(item, at: 0) }
                 activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
             } catch { errorMessage = error.localizedDescription; activity = "Needs attention" }
             task = nil
             cancellation = nil
-            load(item.0.deletingLastPathComponent())
+            load(item.manifest.deletingLastPathComponent())
             startNext()
         }
     }
@@ -136,31 +143,15 @@ final class SessionLibrary: ObservableObject {
 
     private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation) async throws {
         let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
-        let job = jobs.appendingPathComponent(UUID().uuidString)
+        let job = jobs.appendingPathComponent(cancel.id.uuidString)
         latestJob = job
-        let id = UUID()
-        operationID = id
         activity = "Starting local transcription…"
         progress = 0
-        let readJob = readJob
-        progressTask = Task { [weak self] in
-            while !Task.isCancelled {
-                do {
-                    let value = try await readJob(job.appendingPathComponent("manifest.json"))
-                    guard !Task.isCancelled, self?.operationID == id else { return }
-                    self?.activity = value.state.label
-                    self?.progress = value.progress
-                } catch is CancellationError { return }
-                catch {
-                    guard !Task.isCancelled, self?.operationID == id else { return }
-                    if (error as NSError).code != NSFileReadNoSuchFileError {
-                        self?.errorMessage = "Cannot read job status: \(error.localizedDescription)"
-                    }
-                }
-                try? await Task.sleep(for: Self.progressPollInterval)
-            }
-        }
-        defer { operationID = UUID(); progressTask?.cancel(); progressTask = nil }
+        progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] value in
+            self?.activity = value.state.label
+            self?.progress = value.progress
+        }, failure: { [weak self] message in self?.errorMessage = message })
+        defer { progressMonitor.stop() }
         var args = ["-m", "recscribe", source.path, "--output", job.path,
                     "--whisper-cli", settings.whisperPath, "--model", settings.modelPath,
                     "--ffmpeg", settings.ffmpegPath, "--source-language", settings.sourceLanguage,
@@ -180,7 +171,7 @@ final class SessionLibrary: ObservableObject {
             try FileManager.default.createDirectory(at: jobs, withIntermediateDirectories: true)
             return try LocalProcessRunner.run(URL(fileURLWithPath: settings.pythonPath), arguments, in: jobs, cancel: cancel)
         }.value
-        let info = try await readJob(job.appendingPathComponent("manifest.json"))
+        let info = try await readJob(job.appendingPathComponent("manifest.json")).validated()
         try cancel.check()
         guard info.state.isTerminal else { throw SessionError.invalid("Pipeline exited without a terminal job state") }
         activity = info.state.label

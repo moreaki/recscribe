@@ -68,9 +68,12 @@ struct RecordingLibraryView: View {
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
         }.padding(GlassSpacing.xxl).frame(minWidth: AppWindow.recordings.minimumSize.width, minHeight: AppWindow.recordings.minimumSize.height)
-            .background(GlassWindowGround()).glassThemeAdaptingToContrast().onAppear { reload() }
+            .background(GlassWindowGround()).glassThemeAdaptingToContrast().onAppear {
+                playback.setRecording(library.recordingActive)
+                reload()
+            }
             .onDisappear { playback.stop(); library.cancelRefresh() }
-            .onChange(of: library.recordingActive) { _, active in if active { playback.stop() } }
+            .onChange(of: library.recordingActive) { _, active in playback.setRecording(active) }
     }
     private func reload() { library.load(URL(fileURLWithPath: recorder.saveLocationPath)) }
 }

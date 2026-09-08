@@ -5,7 +5,8 @@ import Combine
 enum SessionPlaybackBuilder {
     static func item(for entry: SessionEntry) async throws -> AVPlayerItem {
         // Validate on a utility worker before asking AVFoundation to load tracks.
-        let urls = try await Task.detached(priority: .utility) {
+        let validation = Task.detached(priority: .utility) {
+            _ = try entry.session.validated(beside: entry.id)
             guard !entry.session.parts.isEmpty else { throw SessionError.invalid("Session contains no parts") }
             var end: Int64 = 0
             return try entry.session.parts.map { part in
@@ -23,7 +24,10 @@ enum SessionPlaybackBuilder {
                 end = part.startSample + part.frames
                 return url
             }
-        }.value
+        }
+        let urls = try await withTaskCancellationHandler {
+            try await validation.value
+        } onCancel: { validation.cancel() }
         try Task.checkCancellation()
         let composition = AVMutableComposition()
         guard let track = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
@@ -55,12 +59,17 @@ final class SessionPlayback: ObservableObject {
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private let build: (SessionEntry) async throws -> AVPlayerItem
+    private let activate: (AVPlayer) -> Void
+    private var recordingActive = false
 
-    init(build: @escaping (SessionEntry) async throws -> AVPlayerItem = SessionPlaybackBuilder.item) {
+    init(build: @escaping (SessionEntry) async throws -> AVPlayerItem = SessionPlaybackBuilder.item,
+         activate: @escaping (AVPlayer) -> Void = { $0.play() }) {
         self.build = build
+        self.activate = activate
     }
     func play(_ entry: SessionEntry) {
         stop()
+        guard !recordingActive else { return }
         let id = generation, build = build
         loading = true
         errorMessage = nil
@@ -71,11 +80,15 @@ final class SessionPlayback: ObservableObject {
                 let player = AVPlayer(playerItem: item)
                 self.player = player
                 playing = entry.session.id
-                player.play()
+                activate(player)
             } catch is CancellationError { }
             catch { if self?.generation == id { self?.errorMessage = error.localizedDescription } }
             if self?.generation == id { self?.loading = false; self?.task = nil }
         }
+    }
+    func setRecording(_ active: Bool) {
+        recordingActive = active
+        if active { stop() }
     }
     func stop() {
         generation = UUID()

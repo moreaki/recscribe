@@ -12,6 +12,25 @@ import Foundation
 
 @MainActor
 struct RecordingControllerTests {
+    @Test func injectedRecorderCoordinatesCaptureAndFailureWithTheLibrary() async throws {
+        for shouldFail in [false, true] {
+            let capture = MockAudioCapturing(), recorder = MockAudioFileWriting()
+            var runtimeCancellations = 0
+            let library = SessionLibrary(cancelRuntime: { runtimeCancellations += 1 })
+            if shouldFail { capture.setupError = FinalizeFailure() }
+            let controller = RecordingController(captureManager: capture, audioRecorder: recorder,
+                saveLocation: MockSaveLocationProviding(directory: FileManager.default.temporaryDirectory),
+                audioSource: MockAudioSourceProviding(), sessionLibrary: library)
+            do {
+                _ = try await controller.startRecording(format: .wav)
+                #expect(library.recordingActive)
+                try await controller.stopRecording()
+            } catch { #expect(shouldFail) }
+            #expect(!library.recordingActive)
+            #expect(runtimeCancellations == 1)
+            await library.shutdown()
+        }
+    }
 
     private func makeController(
         recorder: MockAudioFileWriting? = nil,

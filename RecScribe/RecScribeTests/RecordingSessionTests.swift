@@ -5,6 +5,66 @@ import Testing
 
 @MainActor
 struct RecordingSessionTests {
+    @Test func archiveCancellationAndRestartNeverPublishPrematureCompletion() throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory, format: .flac)
+        let cancel = WorkCancellation()
+        #expect(throws: CancellationError.self) {
+            try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: cancel,
+                archiveWorker: { session, file, _, token in
+                    #expect(session.parts.allSatisfy { $0.status == .verified })
+                    #expect(try RecordingSession.read(file).status == .verified)
+                    token.cancel()
+                    try token.check()
+                    throw SessionError.invalid("unreachable")
+                })
+        }
+        let interrupted = try RecordingSession.read(manifest)
+        #expect(interrupted.status == .verified)
+        #expect(interrupted.artifacts.isEmpty)
+        // A fresh worker can resume from the journal without any real subprocess.
+        let resumed = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: WorkCancellation(),
+            archiveWorker: { _, _, _, _ in
+                let artifact = directory.appendingPathComponent("test.flac")
+                try Data("synthetic verified archive".utf8).write(to: artifact)
+                return .init(path: artifact.lastPathComponent, format: .flac, sha256: try RecordingSession.hash(artifact),
+                             sizeBytes: 26, verification: "synthetic_test")
+            })
+        #expect(resumed.status == .completed)
+        #expect(resumed.artifacts.count == 1)
+        for part in resumed.parts {
+            #expect(try RecordingSession.hash(directory.appendingPathComponent(part.path)) == part.sha256)
+        }
+        try Data("tampered".utf8).write(to: directory.appendingPathComponent(resumed.artifacts[0].path))
+        let replaced = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: WorkCancellation(),
+            archiveWorker: { _, _, _, _ in
+                let artifact = directory.appendingPathComponent("replacement.flac")
+                try Data("synthetic".utf8).write(to: artifact)
+                return .init(path: artifact.lastPathComponent, format: .flac, sha256: try RecordingSession.hash(artifact),
+                             sizeBytes: 9, verification: "synthetic_test")
+            })
+        #expect(replaced.status == .needsReview)
+        #expect(replaced.artifacts.count == 2)
+        #expect(replaced.issues.contains { $0.contains("Archive requires review") })
+    }
+
+    @Test func archiveFailureAndLeadingGapRemainReviewableAfterRestart() throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory, format: .flac)
+        #expect(throws: POSIXError(.ENOSPC)) {
+            try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: WorkCancellation(),
+                archiveWorker: { _, _, _, _ in throw POSIXError(.ENOSPC) })
+        }
+        var failed = try RecordingSession.read(manifest)
+        #expect(failed.status == .needsReview)
+        #expect(!failed.issues.isEmpty)
+        failed.options.archiveFormat = .wav
+        for index in failed.parts.indices { failed.parts[index].startSample += 1 }
+        try failed.save(manifest)
+        let reviewed = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: WorkCancellation())
+        #expect(reviewed.status == .needsReview)
+        #expect(reviewed.parts[0].status == .needsReview)
+    }
     private func folder() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("session-test-\(UUID())")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)

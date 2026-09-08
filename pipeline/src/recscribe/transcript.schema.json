@@ -169,7 +169,7 @@
           ]
         },
         "local_only": {
-          "const": true
+          "type": "boolean"
         },
         "engine_passes": {
           "type": "array",

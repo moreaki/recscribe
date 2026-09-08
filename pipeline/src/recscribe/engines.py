@@ -8,6 +8,7 @@ from typing import Protocol
 
 from .process import Cancellation, run_local
 from .storage import sha256
+from .vad import validate_vad
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class WhisperCpp:
         self.binary, self.model, self.vad_model = binary, model, vad_model
 
     def transcribe(self, audio, output, language, cancel):
+        validate_vad(self.vad_model)
         if output.with_suffix(".json").exists():
             raise FileExistsError("Refusing to overwrite existing raw ASR evidence")
         for path in (self.binary, self.model, self.vad_model):

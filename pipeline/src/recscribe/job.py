@@ -33,6 +33,10 @@ def validate(document: dict) -> None:
     Draft202012Validator(schema).validate(document)
     duration = document["source"]["duration_ms"]
     language = document["language_processing"]
+    processing = document["processing"]
+    cloud = bool(processing.get("openai_model"))
+    if cloud != (processing["local_only"] is False) or cloud and not processing.get("allow_cloud_text"):
+        raise ValueError("Cloud processing requires explicit, recorded text-transfer consent")
     if language["mode"] != document["processing"]["mode"]:
         raise ValueError("Language stage mode differs from requested processing mode")
     requires_review = bool(document["review_reasons"]) or any(s["needs_review"] for s in document["segments"])
@@ -111,7 +115,7 @@ class Job:
             report = inspect_wav(self.source, self.cancel)
             write_json(self.directory / "audio-report.json", report)
             reasons = []
-            if report["channels"] > 1:
+            if report["channels"] > 1 and not report["channels_bit_identical"]:
                 reasons.append("multiple_channels; overlapping cues and duplicate speech require review")
             if self.options["diarize"] == "auto":
                 reasons.append("diarization_not_available; channel indices are not speaker identities")
@@ -125,7 +129,12 @@ class Job:
             self.manifest["normalizer"] = {
                 "version": version_path.read_text().splitlines()[0],
                 "binary_sha256": sha256(ffmpeg, self.cancel.check)}
-            for channel in range(report["channels"]):
+            recognition_channels = [0] if report["channels_bit_identical"] else range(report["channels"])
+            # Retain every original channel; only share recognition when the full
+            # sample-by-sample analysis proved equality (never a heuristic downmix).
+            report["recognition_channels"] = list(recognition_channels)
+            write_json(self.directory / "audio-report.json", report)
+            for channel in recognition_channels:
                 self.cancel.check()
                 path = self.directory / f"working-channel-{channel}.wav"
                 working.append(prepare_channel(self.source, channel, path, ffmpeg, self.cancel))
@@ -133,6 +142,9 @@ class Job:
             self.transition("transcribing", 0.3)
             for channel in range(report["channels"]):
                 self.cancel.check()
+                if channel not in recognition_channels:
+                    raw_records.append({"channel": channel, "status": "shared_bit_identical_channel", "source_channel": 0})
+                    continue
                 if report["channel_metrics"][channel]["digital_silence"]:
                     raw_records.append({"channel": channel, "status": "skipped_digital_silence"})
                     continue
@@ -241,15 +253,25 @@ class Job:
         return self.finish(report, segments, passes, reasons, started)
 
     def finish(self, report: dict, segments: list[dict], passes: list[dict],
-               reasons: list[str], started: float) -> dict:
+               reasons: list[str], started: float, *, cloud_key=None, retained_text=None) -> dict:
         """One completion contract for files and sessions; raw evidence is untouched."""
         self.cancel.check()
         self.transition("post-processing", FINALIZATION_PROGRESS["post-processing"])
         segments.sort(key=lambda s: (s["start_ms"], s["channel"], s["end_ms"]))
         for index, segment in enumerate(segments, 1):
             segment["id"] = f"seg-{index:06d}"
-        language, summary = process_language(segments, self.options, self.directory, self.cancel)
-        if self.options["mode"] != "verbatim" and not self.options.get("ollama_model"):
+        language, summary = process_language(segments, self.options, self.directory, self.cancel, cloud_key=cloud_key)
+        if retained_text is not None:
+            # Summarizing is orthogonal to the selected reading rendition.
+            language = retained_text["language_processing"]
+            self.options["mode"] = language["mode"]
+            self.options["target_language"] = retained_text["processing"]["target_language"]
+            for segment, previous in zip(segments, retained_text["segments"], strict=True):
+                if segment["id"] != previous["id"]:
+                    raise ValueError("Summary changed source segment identity")
+                for field in ("normalized_text", "translated_text"):
+                    segment[field] = previous[field]
+        if self.options["mode"] != "verbatim" and not (self.options.get("ollama_model") or self.options.get("openai_model")):
             reasons.append(f"{self.options['mode']}_processor_not_configured")
         if summary is not None:
             reasons.append("ai_summary_unverified")

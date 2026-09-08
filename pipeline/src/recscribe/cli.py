@@ -25,7 +25,11 @@ def parser():
     p.add_argument("--diarize", choices=("off", "auto"), default="off")
     p.add_argument("--formats", default="json,md,txt,srt,vtt",
                    help="First slice always emits all five canonical views")
-    p.add_argument("--local-only", action="store_true", default=True)
+    p.add_argument("--local-only", action="store_true")
+    p.add_argument("--derive", action="store_true", help="Input is an existing canonical transcript.json; no ASR is run")
+    p.add_argument("--openai-model", help="Explicit Responses API model for text-only derivation")
+    p.add_argument("--allow-cloud-text", action="store_true", help="Consent to upload transcript text, never audio")
+    p.add_argument("--openai-key-stdin", action="store_true", help="Read key from an inherited private pipe, never arguments")
     p.add_argument("--whisper-cli", type=Path)
     p.add_argument("--model", type=Path, help="Existing primary ggml model; no automatic model selection")
     p.add_argument("--verify-model", type=Path)
@@ -39,15 +43,22 @@ def parser():
 def main(argv=None):
     p = parser()
     args = p.parse_args(argv)
-    if args.summarize and not args.ollama_model:
-        p.error("--summarize requires an explicit --ollama-model")
+    cloud = bool(args.openai_model)
+    if cloud and (not args.derive or args.local_only or not args.allow_cloud_text or not args.openai_key_stdin or args.ollama_model):
+        p.error("OpenAI is text-only: requires --derive, --allow-cloud-text and --openai-key-stdin; cannot combine with local-only/Ollama")
+    if not cloud and (args.allow_cloud_text or args.openai_key_stdin):
+        p.error("Cloud flags require an explicit --openai-model")
+    if args.derive and args.mode == "verbatim" and not args.summarize:
+        p.error("--derive requires normalize, translate or --summarize")
+    if args.summarize and not (args.ollama_model or cloud):
+        p.error("--summarize requires an explicit AI model")
     if set(args.formats.split(",")) != {"json", "md", "txt", "srt", "vtt"}:
         p.error("The first slice requires --formats json,md,txt,srt,vtt")
     if args.mode != "verbatim" and not args.target_language:
         p.error("normalize and translate require --target-language")
     if args.mode == "verbatim" and args.target_language not in (None, args.source_language):
         p.error("verbatim cannot change language; select normalize or translate")
-    if args.profile == "verified" and not args.verify_model:
+    if not args.derive and args.profile == "verified" and not args.verify_model:
         p.error("verified requires --verify-model; no silent single-pass fallback")
     if args.verify_model and args.model and args.verify_model.resolve() == args.model.resolve():
         p.error("Verification must use a distinct model")
@@ -59,7 +70,8 @@ def main(argv=None):
     os.umask(0o077)
     options = {"source_language": args.source_language, "target_language": args.target_language,
                "mode": args.mode, "profile": args.profile, "diarize": args.diarize,
-               "local_only": True, "formats": ["json", "md", "txt", "srt", "vtt"],
+               "local_only": not cloud, "formats": ["json", "md", "txt", "srt", "vtt"],
+               "openai_model": args.openai_model, "allow_cloud_text": args.allow_cloud_text,
                "ollama_model": args.ollama_model, "summarize": args.summarize}
     try:
         job = Job((args.output or Path("jobs") / str(uuid.uuid4())).resolve(), args.audio, options)
@@ -70,6 +82,12 @@ def main(argv=None):
     for sig in (signal.SIGINT, signal.SIGTERM):
         previous[sig] = signal.signal(sig, lambda *_: job.cancel.event.set())
     try:
+        if args.derive:
+            from .derive import run
+            from .openai_ai import read_key
+            result = run(job, read_key(sys.stdin) if cloud else None)
+            print(json.dumps({"job": str(job.directory), "status": result["status"]}))
+            return 0
         engine = WhisperCpp(binary.resolve(), (args.model or Path("missing-local-model")).resolve(),
                             args.vad_model.resolve() if args.vad_model else None)
         verifier = WhisperCpp(binary.resolve(), args.verify_model.resolve(), engine.vad_model) if args.verify_model else None
@@ -79,6 +97,9 @@ def main(argv=None):
     except (Cancelled, KeyboardInterrupt):
         return 130
     except Exception as error:
+        if job.manifest["state"] not in ("failed", "cancelled"):
+            job.manifest["error"] = {"type": type(error).__name__, "message": str(error)}
+            job.transition("failed", job.manifest["progress"])
         print(f"Job failed: {error}", file=sys.stderr)
         return 1
     finally:

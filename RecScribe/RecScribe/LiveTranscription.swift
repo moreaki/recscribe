@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import RecScribeCore
 import os
 
 nonisolated enum LiveTranscriptionPolicy {
@@ -63,6 +64,14 @@ nonisolated struct LiveChunkTiming: Sendable {
 /// before opt-in. The retained UI preview is bounded; raw chunks stay on disk.
 @MainActor
 final class LiveTranscription: ObservableObject {
+    struct CloudRequest: Identifiable {
+        let id: UUID
+        let source: URL
+        let model: String
+    }
+    @Published private(set) var pendingCloudRequest: CloudRequest?
+    @Published private(set) var isCloudDraft = false
+    @Published private(set) var cloudAudioActive = false
     @Published private(set) var enabled = false
     @Published private(set) var busy = false
     @Published private(set) var status = "Live transcription is off"
@@ -84,7 +93,11 @@ final class LiveTranscription: ObservableObject {
     private let settings: () -> AppSettings.Values
     private let work: @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult?
     private let wait: @Sendable () async throws -> Void
+    private let cloudKey: () throws -> Data
+    private let cloudClient: RealtimeTranscriber
+    private var cloudWorker: CloudTranscriptionWorker?
     var onBusyChange: (Bool) -> Void = { _ in }
+    var onCloudTranscript: (URL, URL) -> Void = { _, _ in }
 
     init(settings: @escaping () -> AppSettings.Values = { .init() },
          work: @escaping @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult? = { source, output, cursor, final, settings, token in
@@ -92,21 +105,86 @@ final class LiveTranscription: ObservableObject {
                  try LiveWhisperTranscriber.step(manifest: source, directory: output, cursor: cursor,
                                                  finished: final, settings: settings, cancel: token)
              }.value
-         }, wait: @escaping @Sendable () async throws -> Void = { try await Task.sleep(for: LiveTranscriptionPolicy.pollInterval) }) {
+         }, wait: @escaping @Sendable () async throws -> Void = { try await Task.sleep(for: LiveTranscriptionPolicy.pollInterval) },
+         cloudKey: @escaping () throws -> Data = { try IntelligenceCredentials().key() },
+         cloudClient: RealtimeTranscriber = .init()) {
         self.settings = settings
         self.work = work
         self.wait = wait
+        self.cloudKey = cloudKey
+        self.cloudClient = cloudClient
     }
 
     func setEnabled(_ value: Bool) {
         enabled = value
         errorMessage = nil
-        if value { status = capturing ? "Waiting for a complete audio chunk…" : "Armed for the next recording"; start() }
-        else { invalidate(); status = capturing ? "Live transcription is off · audio is still recorded" : "Live transcription is off" }
+        if value {
+            if settings().processingLocation == .cloud { requestCloudAudio() }
+            else { status = capturing ? "Waiting for a complete audio chunk…" : "Armed for the next recording"; start() }
+        } else {
+            pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
+            invalidate(); status = capturing ? "Live transcription is off · audio is still recorded" : "Live transcription is off"
+        }
+    }
+
+    func configurationChanged() {
+        // A preference change revokes consent, never silently switches an active adapter.
+        if enabled || busy || pendingCloudRequest != nil { setEnabled(false) }
+    }
+
+    private func requestCloudAudio() {
+        guard capturing, let manifest else { status = "Cloud armed · approval required when recording starts"; return }
+        pendingCloudRequest = CloudRequest(id: generation, source: manifest, model: settings().cloudTranscriptionModel)
+        status = "Waiting for cloud audio approval · recording stays local"
+    }
+
+    func dismissCloudAudio() {
+        guard pendingCloudRequest != nil else { return }
+        setEnabled(false)
+    }
+
+    func confirmCloudAudio() {
+        guard let request = pendingCloudRequest, request.id == generation, capturing, enabled,
+              settings().processingLocation == .cloud, settings().cloudTranscriptionModel == request.model,
+              task == nil else { return }
+        pendingCloudRequest = nil
+        let token = WorkCancellation(), client = cloudClient
+        let key: Data
+        do { key = try cloudKey() }
+        catch { enabled = false; errorMessage = error.localizedDescription; status = "Cloud setup needs attention"; return }
+        self.token = token
+        busy = true; onBusyChange(true)
+        task = Task { [weak self] in
+            do {
+                let consent = try await Task.detached(priority: .utility) {
+                    let session = try RecordingSession.read(request.source)
+                    let position = try LiveAudioReader.position(manifest: request.source, cancel: token)
+                    return CloudAudioConsent(sourceSessionID: session.id, approvedAt: Date(), startSample: position, model: request.model)
+                }.value
+                try token.check()
+                guard let self, generation == request.id, capturing else { throw CancellationError() }
+                cursor = consent.startSample
+                directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
+                segments = []; lastChunk = nil; lagSeconds = 0
+                isCloudDraft = true; modelName = consent.model
+                cloudWorker = CloudTranscriptionWorker(consent: consent, key: key, client: client)
+            } catch is CancellationError {
+                if let self, generation == request.id, !capturing {
+                    enabled = false; status = "Recording ended before cloud approval was prepared; no audio sent"
+                }
+            }
+            catch {
+                if let self, generation == request.id { enabled = false; errorMessage = error.localizedDescription }
+            }
+            guard let self else { return }
+            task = nil; self.token = nil; busy = false; onBusyChange(false)
+            start()
+        }
     }
 
     func recordingStarted(_ audio: URL) {
         invalidate()
+        pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false; isCloudDraft = false
         manifest = RecordingSession.manifestURL(for: audio)
         sourceURL = manifest
         modelName = nil
@@ -119,12 +197,13 @@ final class LiveTranscription: ObservableObject {
         captureNeedsReview = false
         capturing = true
         errorMessage = nil
-        if enabled { status = "Waiting for a complete audio chunk…"; start() }
+        if enabled { setEnabled(true) }
         else { status = "Live transcription is off · audio is still recorded" }
     }
 
     func recordingStopped(needsReview: Bool = false) {
         capturing = false
+        if pendingCloudRequest != nil { dismissCloudAudio() }
         captureNeedsReview = captureNeedsReview || needsReview
         if enabled { status = "Finishing remaining audio chunks…"; start() }
         else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
@@ -132,6 +211,7 @@ final class LiveTranscription: ObservableObject {
 
     func shutdown() async {
         enabled = false
+        pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
         invalidate()
         await task?.value
     }
@@ -145,14 +225,30 @@ final class LiveTranscription: ObservableObject {
     private func start() {
         guard enabled, task == nil, let manifest, let directory else { return }
         let id = generation, token = WorkCancellation(), values = settings(), work = work, wait = wait
+        let cloud = cloudWorker
+        guard values.processingLocation != .cloud || cloud != nil else { return }
         self.token = token
         busy = true
         onBusyChange(true)
         task = Task { [weak self] in
+            var cloudJobCreated = false
             do {
+                if let cloud {
+                    try await CloudTranscriptArtifacts.begin(directory, source: manifest, consent: cloud.consent)
+                    cloudJobCreated = true
+                    try token.check()
+                    guard let self, generation == id else { throw CancellationError() }
+                    cloudAudioActive = true
+                }
                 while let self, enabled, generation == id {
                     let final = !capturing, position = cursor
-                    let result = try await work(manifest, directory, position, final, values, token)
+                    let result: LiveChunkResult?
+                    if let cloud {
+                        result = try await cloud.step(manifest: manifest, directory: directory, cursor: position,
+                            finished: final, settings: values, cancel: token) { [weak self] segment in
+                                await self?.updateCloudPreview(segment, generation: id)
+                            }
+                    } else { result = try await work(manifest, directory, position, final, values, token) }
                     try token.check()
                     guard generation == id else { break }
                     if let result {
@@ -160,7 +256,8 @@ final class LiveTranscription: ObservableObject {
                             throw SessionError.invalid("Invalid live transcription cursor")
                         }
                         cursor = result.endFrame
-                        segments = Self.preview(segments + result.segments)
+                        let finalIDs = Set(result.segments.map(\.id))
+                        segments = Self.preview(segments.filter { !finalIDs.contains($0.id) } + result.segments)
                         modelName = result.model.map { URL(fileURLWithPath: $0).lastPathComponent }
                         audioSeconds = Double(result.availableFrames) / Double(result.sampleRate)
                         lastChunk = LiveChunkTiming(wallSeconds: result.durationSeconds,
@@ -169,12 +266,20 @@ final class LiveTranscription: ObservableObject {
                         lagSeconds = Double(max(0, result.availableFrames - cursor)) / Double(result.sampleRate)
                         status = capturing ? "Live draft · \(Int(lagSeconds)) s queued at last snapshot" : "Finishing live draft…"
                     } else if final {
+                        if let cloud {
+                            try await CloudTranscriptArtifacts.finish(directory, source: manifest, consent: cloud.consent, cancel: token)
+                            try token.check()
+                            onCloudTranscript(directory, manifest)
+                        }
                         status = captureNeedsReview ? "Partial live draft · recording needs review" : "Live draft ready · verify before use"
                         break
                     } else { try await wait() }
                 }
-            } catch is CancellationError { }
+            } catch is CancellationError {
+                if cloudJobCreated { await CloudTranscriptArtifacts.interrupted(directory, source: manifest, cancelled: true) }
+            }
             catch {
+                if cloudJobCreated { await CloudTranscriptArtifacts.interrupted(directory, source: manifest, cancelled: false) }
                 if let self, generation == id {
                     errorMessage = error.localizedDescription
                     status = capturing ? "Live transcription needs attention · recording is unaffected" : "Live transcription needs attention · draft is incomplete"
@@ -185,9 +290,17 @@ final class LiveTranscription: ObservableObject {
             task = nil
             self.token = nil
             busy = false
+            cloudAudioActive = false
+            if cloud != nil, generation == id { enabled = false; cloudWorker = nil }
             onBusyChange(false)
             if generation != id { start() } // A cancelled worker must exit before a replacement starts.
         }
+    }
+
+    private func updateCloudPreview(_ segment: LiveSegment, generation id: UUID) {
+        guard generation == id, enabled else { return }
+        segments = Self.preview(segments.filter { $0.id != segment.id } + (segment.text.isEmpty ? [] : [segment]))
+        status = "Cloud draft · estimated audio-window timing"
     }
 
     static func preview(_ values: [LiveSegment]) -> [LiveSegment] {

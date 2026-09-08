@@ -11,6 +11,10 @@ struct IntelligenceSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.l) {
             Toggle("Enable AI post-processing", isOn: $settings.values.aiEnabled)
+            if settings.values.processingLocation == .local {
+                Text("Local mode permits Ollama text processing only. Configure an OpenAI key here if needed, then choose Hybrid or Cloud in Transcription before approving any upload.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Picker("Provider", selection: $settings.values.aiProvider) {
                 ForEach(IntelligenceProvider.allCases, id: \.self) { Text($0.label).tag($0) }
             }.pickerStyle(.segmented)
@@ -40,7 +44,7 @@ struct IntelligenceSettingsView: View {
                         }
                     }.disabled(credentials.models.isEmpty)
                 }
-                Text("Audio recognition stays on this Mac. Each cloud text action requires confirmation and may incur API charges. Keys are stored only in RecScribe’s Keychain. Requests use store:false; OpenAI’s abuse-monitoring retention can still apply. No automatic upload or fallback.")
+                Text("This RecScribe Keychain key also serves optional cloud transcription. Audio requires its own approval in Cloud mode. Each cloud text action requires separate confirmation and may incur API charges. Text requests use store:false; OpenAI’s abuse-monitoring retention can still apply. No automatic upload or fallback.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Toggle("Include summary in local automatic processing", isOn: $settings.values.summarize)

@@ -9,6 +9,7 @@ final class AppServices: ObservableObject {
     let library: SessionLibrary
     let recorder: RecorderViewModel
     let live: LiveTranscription
+    private var locationObservation: AnyCancellable?
 
     init() {
         let settings = AppSettings()
@@ -23,6 +24,7 @@ final class AppServices: ObservableObject {
             })
         let live = LiveTranscription(settings: { settings.values })
         live.onBusyChange = { [weak library] in library?.setLiveWork($0) }
+        live.onCloudTranscript = { [weak library] job, source in library?.acceptCloudTranscript(job, source: source) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
         let source = AudioSourceManager(), location = SaveLocationManager()
         let controller = RecordingController(saveLocation: location, audioSource: source, sessionLibrary: library, liveTranscription: live,
@@ -32,5 +34,8 @@ final class AppServices: ObservableObject {
         self.library = library
         self.live = live
         self.recorder = RecorderViewModel(controller: controller, saveLocation: location, audioSource: source)
+        locationObservation = settings.$values.removeDuplicates {
+            $0.processingLocation == $1.processingLocation && $0.cloudTranscriptionModel == $1.cloudTranscriptionModel
+        }.dropFirst().sink { [weak live] _ in live?.configurationChanged() }
     }
 }

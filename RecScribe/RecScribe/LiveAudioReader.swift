@@ -21,12 +21,25 @@ nonisolated enum LiveAudioReader {
 
     static func copy(manifest: URL, cursor: Int64, seconds: Int, overlapSeconds: Int,
                      finished: Bool, to destination: URL, cancel: WorkCancellation) throws -> Slice? {
-        try cancel.check()
-        let session = try RecordingSession.read(manifest)
         guard cursor >= 0, LiveTranscriptionPolicy.chunkChoices.contains(seconds),
               overlapSeconds >= 0, overlapSeconds < seconds else {
             throw SessionError.invalid("Invalid live audio window")
         }
+        return try snapshot(manifest: manifest, finished: finished, cancel: cancel) { session, parts, available in
+            try copy(session: session, parts: parts, available: available, cursor: cursor, seconds: seconds,
+                     overlapSeconds: overlapSeconds, finished: finished, to: destination, cancel: cancel)
+        }
+    }
+
+    /// Sample the consent boundary from bytes on disk, not the lagging manifest frame count.
+    static func position(manifest: URL, cancel: WorkCancellation) throws -> Int64 {
+        try snapshot(manifest: manifest, finished: false, cancel: cancel) { _, _, available in available }
+    }
+
+    private static func snapshot<T>(manifest: URL, finished: Bool, cancel: WorkCancellation,
+                                    read: (RecordingSession, [Part], Int64) throws -> T) throws -> T {
+        try cancel.check()
+        let session = try RecordingSession.read(manifest)
         let frameBytes = session.channels * PCM16WAV.sampleBytes
         var parts: [Part] = []
         defer { for part in parts { try? part.handle.close() } }
@@ -54,9 +67,17 @@ nonisolated enum LiveAudioReader {
                     throw SessionError.invalid("Live recording size does not match its manifest")
                 }
                 parts.append(Part(handle: file, start: available, frames: frames))
+                guard frames <= Int64.max - available else { throw WAVWriterError.invalidFormat }
                 available += frames
             } catch { try? file.close(); throw error }
         }
+        return try read(session, parts, available)
+    }
+
+    private static func copy(session: RecordingSession, parts: [Part], available: Int64, cursor: Int64,
+                             seconds: Int, overlapSeconds: Int, finished: Bool, to destination: URL,
+                             cancel: WorkCancellation) throws -> Slice? {
+        let frameBytes = session.channels * PCM16WAV.sampleBytes
         let wanted = Int64(seconds * session.sampleRate)
         guard available > cursor, finished || available - cursor >= wanted else { return nil }
         let end = min(available, cursor + wanted)

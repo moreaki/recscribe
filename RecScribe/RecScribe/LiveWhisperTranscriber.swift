@@ -72,17 +72,18 @@ nonisolated enum LiveWhisperTranscriber {
 
     /// One converter owns one bounded input stream; flushes its tail at EOF.
     @discardableResult
-    static func convert(_ source: URL, channel: Int, to destination: URL, cancel: WorkCancellation) throws -> Bool {
+    static func convert(_ source: URL, channel: Int, to destination: URL, cancel: WorkCancellation,
+                        sampleRate: Int = LiveTranscriptionPolicy.sampleRate) throws -> Bool {
         let input = try AVAudioFile(forReading: source)
         guard (0..<Int(input.processingFormat.channelCount)).contains(channel),
-              let format = AVAudioFormat(standardFormatWithSampleRate: Double(LiveTranscriptionPolicy.sampleRate), channels: 1),
+              let format = AVAudioFormat(standardFormatWithSampleRate: Double(sampleRate), channels: 1),
               let converter = AVAudioConverter(from: input.processingFormat, to: format),
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(LiveTranscriptionPolicy.conversionFrames)) else {
             throw WAVWriterError.invalidFormat
         }
         converter.channelMap = [NSNumber(value: channel)]
         let output = try AVAudioFile(forWriting: destination, settings: [
-            AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: LiveTranscriptionPolicy.sampleRate,
+            AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: sampleRate,
             AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: PCM16WAV.bitDepth,
             AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false
         ])

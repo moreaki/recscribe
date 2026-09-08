@@ -23,7 +23,7 @@ struct RecScribeApp: App {
     var body: some Scene {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environmentObject(services.recorder)
-                .environmentObject(services.live).environmentObject(services.library)
+                .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
                 .onAppear {
                     appDelegate.prepareForTermination = {
                         if services.recorder.isRecording { await services.recorder.stopRecording() }

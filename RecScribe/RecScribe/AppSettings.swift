@@ -1,5 +1,18 @@
 import Combine
 import Foundation
+import RecScribeCore
+
+nonisolated enum ProcessingLocation: String, Codable, CaseIterable, Sendable {
+    case local, hybrid, cloud
+    var label: String { rawValue.capitalized }
+    var detail: String {
+        switch self {
+        case .local: "Audio and AI text processing stay on this Mac."
+        case .hybrid: "Local transcription; cloud text processing requires separate approval."
+        case .cloud: "Optional OpenAI audio streaming; approval is required for each recording activation."
+        }
+    }
+}
 
 nonisolated enum TranscriptionMode: String, Codable, CaseIterable, Sendable {
     case verbatim, normalize, translate
@@ -38,10 +51,12 @@ final class AppSettings: ObservableObject {
         var openaiModel = ""
         var ollamaModel = ""
         var summarize = false
+        var processingLocation = ProcessingLocation.local
+        var cloudTranscriptionModel = RealtimePolicy.model
         var migrationWarnings: [String] = []
 
         init() {}
-        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, liveChunkSeconds, liveThreads, aiEnabled, aiProvider, openaiModel, ollamaModel, summarize }
+        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, liveChunkSeconds, liveThreads, aiEnabled, aiProvider, openaiModel, ollamaModel, summarize, processingLocation, cloudTranscriptionModel }
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             var reader = PreferenceReader(container: container)
@@ -76,6 +91,10 @@ final class AppSettings: ObservableObject {
             openaiModel = reader.value(.openaiModel, openaiModel)
             ollamaModel = reader.value(.ollamaModel, ollamaModel)
             summarize = reader.value(.summarize, summarize)
+            // Existing explicit cloud-text selection becomes Hybrid, never Cloud audio.
+            if !container.contains(.processingLocation), aiProvider == .openai { processingLocation = .hybrid }
+            else { processingLocation = reader.value(.processingLocation, .local) }
+            cloudTranscriptionModel = reader.value(.cloudTranscriptionModel, cloudTranscriptionModel) { $0 == RealtimePolicy.model }
             migrationWarnings += reader.warnings
         }
     }

@@ -116,6 +116,12 @@ final class SessionLibrary: ObservableObject {
     func rememberOpenedTranscript(_ job: URL, source: URL?) {
         if let source { rememberJob(job, source) }
     }
+    func acceptCloudTranscript(_ job: URL, source: URL) {
+        previousJob = latestJob; latestJob = job; latestSource = source
+        progress = 1
+        activity = "Cloud transcript ready · estimated timing, review required"
+        rememberJob(job, source)
+    }
     func shutdown() async {
         shuttingDown = true
         cancelRefresh()
@@ -140,7 +146,7 @@ final class SessionLibrary: ObservableObject {
                     try SessionProcessing.process(item.manifest, ffmpeg: URL(fileURLWithPath: settings.ffmpegPath), cancel: token, recover: item.recover, issue: item.issue)
                 }.value
                 activity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
-                if settings.autoTranscribe && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
+                if settings.autoTranscribe && settings.processingLocation != .cloud && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
             } catch is CancellationError {
                 if (recordingActive || liveWorkActive) && !shuttingDown { pending.insert(item, at: 0) }
                 activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
@@ -155,6 +161,10 @@ final class SessionLibrary: ObservableObject {
     func transcribe(_ source: URL, summarize: Bool = false) {
         guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         var settings = settings()
+        guard settings.processingLocation != .cloud else {
+            errorMessage = "Cloud mode transcribes newly approved live audio. Choose Local or Hybrid to re-transcribe a completed recording locally; no fallback or upload was started."
+            return
+        }
         if summarize {
             guard settings.aiEnabled, settings.aiProvider == .ollama, !settings.ollamaModel.isEmpty else {
                 errorMessage = "For cloud summaries, first create a transcript, then choose Generate summary in the Studio. For local summaries, enable Ollama in Settings → Intelligence."
@@ -245,6 +255,10 @@ final class SessionLibrary: ObservableObject {
     private func processText(_ request: TextProcessingRequest, cloudConsent: Bool) {
         guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         guard !request.isCloud || cloudConsent else { return }
+        guard !request.isCloud || settings().processingLocation != .local else {
+            errorMessage = "Cloud text consent was revoked by Local mode"
+            return
+        }
         let token = WorkCancellation()
         cancellation = token
         busy = true

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StudioView: View {
     @EnvironmentObject private var live: LiveTranscription
+    @EnvironmentObject private var settings: AppSettings
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         VStack(spacing: 0) {
@@ -9,7 +10,9 @@ struct StudioView: View {
                 GlassBrandLockup(size: .compact)
                 Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer()
-                Label("Audio stays on your Mac", systemImage: "lock.shield").font(.caption).foregroundStyle(WorkspaceStyle.mint)
+                Label(live.cloudAudioActive ? "Cloud audio approved" : settings.values.processingLocation == .cloud ? "Cloud audio requires approval" : "Audio stays on your Mac",
+                      systemImage: live.cloudAudioActive ? "cloud" : "lock.shield")
+                    .font(.caption).foregroundStyle(live.cloudAudioActive ? .orange : WorkspaceStyle.mint)
                 Button("Recordings", systemImage: "rectangle.stack") { openWindow(id: AppWindow.recordings.rawValue) }
                 SettingsPopover()
             }.padding(WorkspaceStyle.contentPadding)
@@ -20,7 +23,7 @@ struct StudioView: View {
                     RecorderView()
                     Divider()
                     LiveTranscriptionControl(live: live)
-                    Text("Recording always comes first. Transcription is optional, local and can be switched on at any time.")
+                    Text("Recording always comes first. Transcription is optional. \(settings.values.processingLocation.detail)")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }.padding(WorkspaceStyle.contentPadding)

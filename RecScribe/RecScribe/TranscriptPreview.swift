@@ -17,6 +17,8 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         let sourceLanguage: String?
         let enginePasses: [Engine]?
         let localOnly: Bool?
+        let allowCloudAudio: Bool?
+        let openaiModel: String?
     }
     struct Source: Decodable, Sendable {
         let path: String
@@ -39,8 +41,9 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     let reviewReasons: [String]
     var sourceURL: URL? { source.map { URL(fileURLWithPath: $0.path) } }
     var includesCloudText: Bool {
-        processing.localOnly == false || languageProcessing?.processor?.hasPrefix("openai:") == true || summary?.processor?.hasPrefix("openai:") == true
+        processing.openaiModel != nil || (processing.localOnly == false && !includesCloudAudio) || languageProcessing?.processor?.hasPrefix("openai:") == true || summary?.processor?.hasPrefix("openai:") == true
     }
+    var includesCloudAudio: Bool { processing.allowCloudAudio == true }
     var recognitionLabel: String {
         let models = Array(Set(processing.enginePasses?.map(\.model) ?? [])).sorted().joined(separator: ", ")
         let languages = Array(Set(processing.enginePasses?.compactMap(\.detectedLanguage) ?? [])).sorted().joined(separator: ", ")
@@ -57,7 +60,7 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let result = try decoder.decode(Self.self, from: data)
-            guard result.schemaVersion == Self.currentSchemaVersion else { throw SessionError.invalid("Unsupported transcript version") }
+            guard [Self.currentSchemaVersion, "1.1"].contains(result.schemaVersion) else { throw SessionError.invalid("Unsupported transcript version") }
             try Task.checkCancellation()
             return result
         }

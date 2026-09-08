@@ -1,4 +1,5 @@
 import SwiftUI
+import RecScribeCore
 
 struct ConfigurationView: View {
     @EnvironmentObject private var recorder: RecorderViewModel
@@ -119,15 +120,42 @@ struct ConfigurationView: View {
     }
     private var transcription: some View {
         Group {
-        card("Live draft", detail: "Switch on in the recorder at any time. Native Swift prepares 16-kHz chunks; one local Whisper worker catches up from disk. Different channels stay separate. Text is provisional, with a small delay.") {
+        card("Processing location", detail: settings.values.processingLocation.detail) {
+            Picker("Processing location", selection: $settings.values.processingLocation) {
+                ForEach(ProcessingLocation.allCases, id: \.self) { Text($0.label).tag($0) }
+            }.pickerStyle(.segmented)
+            Text("Changing location stops optional live transcription and revokes audio approval. Recording continues locally. There is no automatic fallback.")
+                .font(.caption).foregroundStyle(.secondary)
+            if settings.values.processingLocation == .cloud {
+                Picker("Cloud transcription model", selection: $settings.values.cloudTranscriptionModel) {
+                    Text(RealtimePolicy.model).tag(RealtimePolicy.model)
+                }
+                Label("Audio leaves this Mac only after you approve each recording activation. Internet and API usage charges apply, separately for every channel.", systemImage: "cloud")
+                    .font(.callout).foregroundStyle(.orange)
+                Text("Uses the RecScribe OpenAI key in Intelligence. This speech model does not summarize or translate text. Account access must support the selected model. Precise timestamps, speakers and detected languages are not claimed.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack { Link("OpenAI pricing", destination: RealtimePolicy.pricing); Link("Data retention & privacy", destination: RealtimePolicy.privacy) }
+            }
+        }
+        card("Live draft", detail: settings.values.processingLocation == .cloud
+             ? "Swift prepares 24-kHz mono PCM for each channel independently. Only new audio after approval is streamed in bounded windows; incremental text arrives with a delay. Turn timestamps are approximate."
+             : "Switch on in the recorder at any time. Native Swift prepares 16-kHz chunks; one local Whisper worker catches up from disk. Different channels stay separate. Text is provisional, with a small delay.") {
             Picker("Chunk duration", selection: $settings.values.liveChunkSeconds) {
                 ForEach(LiveTranscriptionPolicy.chunkChoices, id: \.self) { Text("\($0) seconds").tag($0) }
             }.pickerStyle(.segmented)
             Stepper("Whisper CPU threads: \(settings.values.liveThreads)", value: $settings.values.liveThreads, in: LiveTranscriptionPolicy.threadRange)
-            Text("Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto language detection runs per chunk; mixed-language boundaries require review.").font(.caption).foregroundStyle(.secondary)
+                .disabled(settings.values.processingLocation == .cloud)
+            Text(settings.values.processingLocation == .cloud
+                 ? "Each window uses an isolated Realtime connection. Shorter windows reduce the initial wait, but increase connection overhead. No history is uploaded when enabling mid-recording."
+                 : "Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto language detection runs per chunk; mixed-language boundaries require review.")
+                .font(.caption).foregroundStyle(.secondary)
         }
         card("Completed recordings", detail: "Capture works without Whisper, Python or AI. The full verification, normalization and summary pipeline runs after recording or file import, independently of live drafts.") {
             Toggle("Automatically transcribe completed recordings", isOn: $settings.values.autoTranscribe)
+                .disabled(settings.values.processingLocation == .cloud)
+            if settings.values.processingLocation == .cloud {
+                Text("Approved cloud results appear in Transcript after recording stops. Full-recording recognition requires Local or Hybrid; completed files are never silently uploaded.").font(.caption).foregroundStyle(.secondary)
+            }
             Picker("Text mode", selection: $settings.values.mode) {
                 Text("Verbatim ASR").tag(TranscriptionMode.verbatim); Text("Normalize").tag(TranscriptionMode.normalize); Text("Translate").tag(TranscriptionMode.translate)
             }.pickerStyle(.segmented)
@@ -144,7 +172,7 @@ struct ConfigurationView: View {
             }
             file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
             Button("Set up isolated pipeline runtime…") { installation = .pipeline }.disabled(runtime.busy)
-            Text("Text actions require pipeline \(PipelineRuntime.minimumVersion) or newer. Setup creates a new environment and retains previous versions.").font(.caption).foregroundStyle(.secondary)
+            Text("Completed local audio jobs use this runtime. AI text actions and cloud live transcription run natively in Swift. Setup retains previous versions.").font(.caption).foregroundStyle(.secondary)
             Text("Normalize/translate require AI post-processing. Cloud text processing is always a separate, confirmed action in the Studio; automatic recognition never uploads text.").font(.caption).foregroundStyle(.secondary)
         }
         }

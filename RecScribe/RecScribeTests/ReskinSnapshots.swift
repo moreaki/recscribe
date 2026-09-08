@@ -235,6 +235,10 @@ struct ReskinSnapshots {
 
     @Test func interruptedStudio() async {
         guard Self.outputDirectory != nil else { return }
+        let suite = "recscribe-studio-snapshot-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
         let controller = MockRecordingControlling(), library = SessionLibrary()
         let model = makeViewModel(controller: controller)
         await model.startRecording()
@@ -257,7 +261,7 @@ struct ReskinSnapshots {
         for (name, size) in [("studio-interrupted", AppWindow.studio.defaultSize),
                              ("studio-interrupted-minimum", AppWindow.studio.minimumSize)] {
             write(name, size: size, contrast: .standard) {
-                StudioView().environmentObject(model).environmentObject(live).environmentObject(library)
+                StudioView().environmentObject(model).environmentObject(live).environmentObject(library).environmentObject(settings)
             }
         }
         await live.shutdown()

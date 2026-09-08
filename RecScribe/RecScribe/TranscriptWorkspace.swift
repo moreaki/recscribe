@@ -42,7 +42,7 @@ struct LiveTranscriptView: View {
             }
             if live.segments.isEmpty {
                 ContentUnavailableView("Let the conversation unfold", systemImage: "waveform.and.mic",
-                    description: Text("Enable live transcription before or during recording. Words appear here after a complete chunk has been processed locally."))
+                    description: Text("Enable live transcription before or during recording. Words appear after an audio window is processed. Cloud audio requires separate approval."))
                     .frame(maxWidth: .infinity)
             } else {
                 ScrollViewReader { proxy in
@@ -51,7 +51,7 @@ struct LiveTranscriptView: View {
                         ForEach(live.segments) { segment in
                             VStack(alignment: .leading, spacing: GlassSpacing.sm) {
                                 MarkdownReadingText(text: segment.text)
-                                Text("\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")")
+                                Text("\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")")
                                     .font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                             }
                             .id(segment.id)
@@ -59,7 +59,7 @@ struct LiveTranscriptView: View {
                     }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .onChange(of: live.segments.last?.id) { _, id in if followsLatest, let id { proxy.scrollTo(id, anchor: .bottom) } }
+                .onChange(of: live.segments.last) { _, value in if followsLatest, let value { proxy.scrollTo(value.id, anchor: .bottom) } }
                 .onChange(of: followsLatest) { _, follow in if follow, let id = live.segments.last?.id { proxy.scrollTo(id, anchor: .bottom) } }
                 .onAppear { if let id = live.segments.last?.id, followsLatest { proxy.scrollTo(id, anchor: .bottom) } }
                 }
@@ -73,7 +73,9 @@ struct LiveTranscriptView: View {
                         Button("Draft artifacts", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([directory]) }
                     }
                 }.font(.caption).foregroundStyle(.secondary)
-                Text("Bounded recent preview. Complete raw chunk results stay on this Mac. Word boundaries, silence and language switches need review; this is not the final transcript.")
+                Text(live.isCloudDraft
+                     ? "Cloud audio requires this activation’s approval. Raw events remain on this Mac. Times describe uploaded windows, not aligned words; speakers and languages are unverified. Transcript becomes available after recording stops."
+                     : "Bounded recent preview. Complete raw chunk results stay on this Mac. Word boundaries, silence and language switches need review; this is not the final transcript.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -97,6 +99,15 @@ struct LiveTranscriptionControl: View {
                         .background(WorkspaceStyle.background).preferredColorScheme(.dark)
                 }
         }
+        .confirmationDialog("Send new audio to OpenAI?", isPresented: Binding(
+            get: { live.pendingCloudRequest != nil }, set: { if !$0 { live.dismissCloudAudio() } }), titleVisibility: .visible) {
+                Button("Approve new audio") { live.confirmCloudAudio() }.disabled(live.busy)
+                Button("Keep audio local", role: .cancel) { live.dismissCloudAudio() }
+            } message: {
+                if let request = live.pendingCloudRequest {
+                    Text("\(request.source.lastPathComponent)\nModel: \(request.model)\nOnly audio recorded after this approval is eligible, including each separate channel. Audio leaves this Mac; API costs and OpenAI retention rules apply. Approval ends when transcription stops or settings change. WAV recording continues if the network fails. Text cleanup and summary require a separate action.")
+                }
+            }
     }
 }
 
@@ -162,7 +173,7 @@ struct TranscriptWorkspace: View {
                     ScrollView { MarkdownReadingText(text: content).frame(maxWidth: WorkspaceStyle.readingWidth).padding(.vertical, GlassSpacing.s) }
                 }
                 Spacer(minLength: 0)
-                Label("\(document.processing.mode.rawValue) · \(document.includesCloudText ? "Includes cloud text" : "Processed locally") · review required", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
+                Label("\(document.processing.mode.rawValue) · \(document.includesCloudAudio ? "Includes cloud audio transcription" : document.includesCloudText ? "Includes cloud text" : "Processed locally") · review required", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
             } else {
                 ContentUnavailableView(library.busy ? "Processing your recording" : "Create a final transcript", systemImage: "doc.text",
                     description: Text(source == nil ? "Choose a recording or import a WAV. Live drafts and final transcripts are separate." : "The Live tab is a provisional chunk preview. Create a final transcript from the complete recording, then improve its text or generate a summary."))

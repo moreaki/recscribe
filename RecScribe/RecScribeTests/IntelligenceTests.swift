@@ -72,6 +72,7 @@ import Testing
         let source = URL(fileURLWithPath: "/synthetic/transcript.json")
         #expect(throws: (any Error).self) { try TextProcessingRequest(transcript: source, settings: settings, summary: true) }
         settings.aiEnabled = true; settings.aiProvider = .openai; settings.openaiModel = "chosen-model"
+        settings.processingLocation = .hybrid
         let request = try TextProcessingRequest(transcript: source, settings: settings, summary: false)
         settings.openaiModel = "later-selection"
         let options = request.options(cloudConsent: true)
@@ -91,6 +92,7 @@ import Testing
     @Test func cloudTextRequestWaitsForConfirmationWithoutLaunchingJob() throws {
         var settings = AppSettings.Values()
         settings.aiEnabled = true; settings.aiProvider = .openai; settings.openaiModel = "synthetic"
+        settings.processingLocation = .hybrid
         let library = SessionLibrary(settings: { settings })
         library.requestTextProcessing(URL(fileURLWithPath: "/synthetic-job"), summary: true)
         #expect(library.pendingTextRequest?.isCloud == true)

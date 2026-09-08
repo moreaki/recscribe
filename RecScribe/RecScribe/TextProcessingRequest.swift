@@ -14,6 +14,9 @@ nonisolated struct TextProcessingRequest: Identifiable, Sendable {
 
     init(transcript: URL, settings: AppSettings.Values, summary: Bool, sourceName: String? = nil) throws {
         guard settings.aiEnabled else { throw SessionError.invalid("Enable AI and select a model in Settings → Intelligence") }
+        guard settings.processingLocation != .local || settings.aiProvider != .openai else {
+            throw SessionError.invalid("Local mode does not send text to OpenAI. Choose Hybrid or Cloud in Settings → Transcription first.")
+        }
         guard !(settings.aiProvider == .openai ? settings.openaiModel : settings.ollamaModel).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw SessionError.invalid("Choose an AI model in Settings → Intelligence")
         }

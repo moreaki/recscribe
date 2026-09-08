@@ -5,7 +5,7 @@ struct SettingsPopover: View {
     var body: some View {
         GlassIconButton(systemImage: "slider.horizontal.3", accessibilityLabel: "Settings",
                         accessibilityHint: "Storage, transcription, models and local AI") {
-            openWindow(id: "settings")
+            openWindow(id: AppWindow.settings.rawValue)
         }
     }
 }

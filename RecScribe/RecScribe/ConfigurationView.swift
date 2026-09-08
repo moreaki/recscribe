@@ -40,6 +40,9 @@ struct ConfigurationView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(GlassSpacing.xxs)
             }
             Divider()
+            ForEach(settings.values.migrationWarnings, id: \.self) { warning in
+                Text(warning).font(.caption).foregroundStyle(theme.colors.statusWarning)
+            }
             HStack {
                 Image(systemName: "lock.shield").foregroundStyle(theme.colors.statusSuccess)
                 Text(library.recordingActive ? "Recording takes priority. Background work is paused." : runtime.status)
@@ -138,6 +141,9 @@ struct ConfigurationView: View {
                 file("Whisper executable", value: $settings.values.whisperPath)
                 file("Selected local ggml model", value: $settings.values.modelPath)
                 if !runtime.detectedTools.isEmpty {
+                    ForEach(runtime.detectedTools.keys.sorted(), id: \.self) { name in
+                        Text("\(name): \(runtime.detectedTools[name] ?? "")").font(.caption).textSelection(.enabled)
+                    }
                     Button("Use detected tool paths") { runtime.useDetectedTools() }
                         .disabled(library.recordingActive)
                 }

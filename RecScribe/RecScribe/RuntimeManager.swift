@@ -16,6 +16,7 @@ nonisolated struct WhisperModel: Identifiable, Sendable {
         try cancel.check()
         try FileManager.default.moveItem(at: temporary, to: destination)
     }
+    static let catalogVersion = 1
     static let catalog: [Self] = [
         .init(id: "tiny", bytes: 77_691_713, sha256: "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"),
         .init(id: "base", bytes: 147_951_465, sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"),
@@ -73,9 +74,9 @@ final class RuntimeManager: ObservableObject {
         token = cancellation
         task = Task {
             let start = ContinuousClock.now
-            do { try await work(cancellation); status = "\(label) — complete"; progress = 1 }
+            do { try await work(cancellation); try cancellation.check(); try Task.checkCancellation(); status = "\(label) — complete"; progress = 1 }
             catch { status = error is CancellationError ? "Cancelled" : error.localizedDescription }
-            logger.notice("Operation \(label, privacy: .public) elapsed=\(String(describing: start.duration(to: .now)), privacy: .public)")
+            logger.notice("Operation id=\(cancellation.id) \(label, privacy: .public) elapsed=\(String(describing: start.duration(to: .now)), privacy: .public)")
             busy = false; token = nil; task = nil
         }
     }
@@ -94,9 +95,9 @@ final class RuntimeManager: ObservableObject {
             let binary = URL(fileURLWithPath: path)
             let metal = MTLCreateSystemDefaultDevice()?.name ?? "unavailable"
             let output = try await Task.detached(priority: .utility) {
-                try LocalProcessRunner.run(binary, ["--help"], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 120)
+                try LocalProcessRunner.run(binary, ["--help"], in: FileManager.default.temporaryDirectory, cancel: token, timeout: RuntimeInstallation.Policy.toolDetection)
             }.value
-            diagnostics = "64-bit process · Metal device: \(metal)\nwhisper-cli: \(binary.path)\n\(output.contains("ggml_metal") ? "Whisper Metal backend detected" : "Whisper Metal backend not confirmed by CLI")\nInference acceleration must be checked in each job’s ASR log.\n\n\(output.prefix(8_000))"
+            diagnostics = "64-bit process · Metal device: \(metal)\nwhisper-cli: \(binary.path)\n\(output.contains("ggml_metal") ? "Whisper Metal backend detected" : "Whisper Metal backend not confirmed by CLI")\nInference acceleration must be checked in each job’s ASR log.\n\n\(output.prefix(RuntimeInstallation.Policy.diagnosticCharacters))"
         }
     }
 
@@ -110,7 +111,7 @@ final class RuntimeManager: ObservableObject {
             let python = settings.values.pythonPath
             let output = try await Task.detached(priority: .utility) {
                 try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "recscribe.local_ai", "--list"],
-                    in: FileManager.default.temporaryDirectory, cancel: token, timeout: 15)
+                    in: FileManager.default.temporaryDirectory, cancel: token, timeout: RuntimeInstallation.Policy.aiDetection)
             }.value
             localAIModels = try JSONDecoder().decode([String].self, from: Data(output.utf8))
             diagnostics = "Ollama · 127.0.0.1:11434\nLocal models: \(localAIModels.joined(separator: ", "))\nRemote/cloud models are excluded; no transcript was sent."
@@ -121,33 +122,21 @@ final class RuntimeManager: ObservableObject {
         guard software != .pipeline else { installPipeline(); return }
         let formula = software.rawValue
         perform("Install \(formula) with Homebrew") { [self] token in
-            guard let brew = LocalToolDiscovery.executable("brew") else {
-                throw SessionError.invalid("Install Homebrew from brew.sh first, then retry")
-            }
             diagnostics = try await Task.detached(priority: .utility) {
-                try LocalProcessRunner.run(URL(fileURLWithPath: brew), ["install", formula], in: FileManager.default.temporaryDirectory, cancel: token, timeout: 1800)
+                try RuntimeInstallation.install(software, cancel: token)
             }.value
         }
     }
 
     func installPipeline() {
         perform("Install local pipeline runtime") { [self] token in
-            let archive = Bundle.main.resourceURL!.appendingPathComponent("pipeline.tar.gz")
-            guard FileManager.default.fileExists(atPath: archive.path),
-                  let python = LocalToolDiscovery.executable("python3") else {
-                throw SessionError.invalid("Python 3.12+ from Homebrew and bundled pipeline sources are required")
+            guard let archive = Bundle.main.url(forResource: "pipeline", withExtension: "tar.gz") else {
+                throw SessionError.invalid("Bundled pipeline sources are missing; rebuild or reinstall RecScribe")
             }
-            let environment = AppSettings.supportDirectory.appendingPathComponent("Pipeline-\(UUID().uuidString)")
-            try FileManager.default.createDirectory(at: AppSettings.supportDirectory, withIntermediateDirectories: true)
-            let source = AppSettings.supportDirectory.appendingPathComponent("pipeline-source-\(UUID())")
-            try FileManager.default.createDirectory(at: source, withIntermediateDirectories: false)
-            defer { try? FileManager.default.removeItem(at: source) }
-            let executable = environment.appendingPathComponent("bin/python3")
-            _ = try await Task.detached(priority: .utility) {
-                _ = try LocalProcessRunner.run(URL(fileURLWithPath: "/usr/bin/tar"), ["-xzf", archive.path, "-C", source.path], in: source, cancel: token, timeout: 30)
-                _ = try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "venv", environment.path], in: AppSettings.supportDirectory, cancel: token, timeout: 120)
-                return try LocalProcessRunner.run(executable, ["-m", "pip", "install", source.path], in: AppSettings.supportDirectory, cancel: token, timeout: 600)
+            let executable = try await Task.detached(priority: .utility) {
+                try RuntimeInstallation.pipeline(archive: archive, support: AppSettings.supportDirectory, cancel: token)
             }.value
+            try token.check()
             settings.values.pythonPath = executable.path
         }
     }
@@ -155,11 +144,16 @@ final class RuntimeManager: ObservableObject {
     func download(_ model: WhisperModel) {
         perform("Download and verify \(model.id)") { [self] token in
             let directory = AppSettings.supportDirectory.appendingPathComponent("Models")
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            guard let free = DiskSpace.availableBytes(at: directory), free > model.bytes + DiskSpace.minimumBytesToRecord else { throw SessionError.diskFull }
-            let destination = directory.appendingPathComponent(model.filename)
-            guard !FileManager.default.fileExists(atPath: destination.path) else { throw SessionError.invalid("Model already exists; select its local file instead") }
-            let delegate = DownloadProgress { [weak self] fraction in Task { @MainActor in self?.progress = fraction * 0.95 } }
+            let destination = try await Task.detached(priority: .utility) {
+                try RuntimeInstallation.modelDestination(model, directory: directory, cancel: token)
+            }.value
+            try token.check()
+            let delegate = DownloadProgress { [weak self] fraction in
+                Task { @MainActor in
+                    guard self?.token === token else { return }
+                    self?.progress = fraction * RuntimeInstallation.Policy.downloadProgressShare
+                }
+            }
             let (temporary, response) = try await URLSession.shared.download(for: URLRequest(url: model.url), delegate: delegate)
             defer { try? FileManager.default.removeItem(at: temporary) }
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw SessionError.invalid("Model download failed") }
@@ -167,6 +161,7 @@ final class RuntimeManager: ObservableObject {
             try await Task.detached(priority: .utility) {
                 try model.verifyAndInstall(temporary, to: destination, cancel: token)
             }.value
+            try token.check()
             settings.values.modelPath = destination.path
         }
     }

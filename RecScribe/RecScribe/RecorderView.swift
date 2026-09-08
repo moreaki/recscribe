@@ -39,9 +39,6 @@ struct RecorderView: View {
                 Button { openWindow(id: AppWindow.recordings.rawValue) } label: {
                     Image(systemName: "text.bubble")
                 }.help(AppWindow.recordings.title)
-                Button { openWindow(id: AppWindow.settings.rawValue) } label: {
-                    Image(systemName: "gearshape")
-                }.help(AppWindow.settings.title)
 
                 // Same control, same gating as the old bottom shelf: hidden for
                 // the whole of a take, because the settings it opens are

@@ -37,7 +37,18 @@ nonisolated struct LocalProcessRunner: Sendable {
     struct Failure: Error, LocalizedError {
         let result: Result
         var errorDescription: String? {
-            "\(result.executable): \(result.outcome.rawValue), exit \(result.exitCode.map(String.init) ?? "not started"). \(result.tail.suffix(Policy.errorTailCharacters))\nDiagnostic ID: \(result.id)\(result.diagnosticError.map { "\nDiagnostics could not be saved: \($0)" } ?? "")"
+            "\(result.executable): \(result.outcome.rawValue), exit \(result.exitCode.map(String.init) ?? "not started"). \(detail)\nDiagnostic ID: \(result.id)\(result.diagnosticError.map { "\nDiagnostics could not be saved: \($0)" } ?? "")"
+        }
+        private var detail: String {
+            // argparse prints usage before the actionable error. Keep the full
+            // bounded output in diagnostics, not in the transcript's reading area.
+            if result.outcome == .exited, result.exitCode == 2,
+               result.tail.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("usage:"),
+               let line = result.tail.split(separator: "\n").last,
+               let marker = line.range(of: ": error: ") {
+                return String(line[marker.upperBound...].prefix(Policy.errorTailCharacters))
+            }
+            return String(result.tail.suffix(Policy.errorTailCharacters))
         }
     }
     var policy = Policy()

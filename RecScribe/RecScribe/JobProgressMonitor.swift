@@ -20,10 +20,12 @@ final class JobProgressMonitor {
         stop()
         let id = generation, read = read, wait = wait
         task = Task { [weak self] in
+            var hasReadManifest = false
             while !Task.isCancelled {
                 do {
                     let value = try await read(manifest).validated()
                     guard !Task.isCancelled, self?.generation == id else { return }
+                    hasReadManifest = true
                     update(value)
                     if value.state.isTerminal { return }
                 } catch is CancellationError { return }
@@ -31,7 +33,9 @@ final class JobProgressMonitor {
                     guard !Task.isCancelled, self?.generation == id else { return }
                     let fileError = error as NSError
                     // An atomically published manifest may not exist during startup.
-                    if fileError.domain != NSCocoaErrorDomain || fileError.code != NSFileReadNoSuchFileError {
+                    let awaitingCreation = !hasReadManifest && fileError.domain == NSCocoaErrorDomain
+                        && [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains(fileError.code)
+                    if !awaitingCreation {
                         failure("Cannot read job status: \(error.localizedDescription)")
                     }
                 }

@@ -10,6 +10,7 @@ struct ManifestRepositoryTests {
             try await withCheckedThrowingContinuation { pending[url] = $0 }
         }
         func finish(_ url: URL, _ value: Value) { pending.removeValue(forKey: url)?.resume(returning: value) }
+        func fail(_ url: URL, _ error: any Error) { pending.removeValue(forKey: url)?.resume(throwing: error) }
     }
 
     @Test func concurrentRefreshAndCloseDiscardStaleResults() async {
@@ -55,6 +56,32 @@ struct ManifestRepositoryTests {
         gate.finish(second, .init(schemaVersion: "1.0", state: .completed, progress: 1))
         await settle()
         #expect(states == [.transcribing])
+    }
+
+    @Test(arguments: [NSFileNoSuchFileError, NSFileReadNoSuchFileError])
+    func missingJobManifestIsExpectedOnlyDuringStartup(code: Int) async {
+        let gate = Gate<JobSnapshot>(), ticks = Gate<Bool>()
+        let manifest = URL(fileURLWithPath: "/synthetic/manifest.json"), clock = URL(fileURLWithPath: "/clock")
+        let monitor = JobProgressMonitor(read: { try await gate.read($0) }, wait: { _ = try await ticks.read(clock) })
+        var failures: [String] = [], states: [JobState] = []
+        monitor.start(manifest, update: { states.append($0.state) }, failure: { failures.append($0) })
+        await waitUntil("startup read") { gate.pending[manifest] != nil }
+        gate.fail(manifest, NSError(domain: NSCocoaErrorDomain, code: code))
+        await waitUntil("await manifest creation") { ticks.pending[clock] != nil }
+        #expect(failures.isEmpty)
+        ticks.finish(clock, true)
+        await waitUntil("created manifest read") { gate.pending[manifest] != nil }
+        gate.finish(manifest, .init(schemaVersion: "1.0", state: .transcribing, progress: 0.3))
+        await waitUntil("next poll") { ticks.pending[clock] != nil }
+        #expect(states == [.transcribing])
+        ticks.finish(clock, true)
+        await waitUntil("disappeared manifest read") { gate.pending[manifest] != nil }
+        gate.fail(manifest, NSError(domain: NSCocoaErrorDomain, code: code))
+        await waitUntil("missing after startup") { ticks.pending[clock] != nil }
+        #expect(failures.count == 1)
+        monitor.stop()
+        ticks.finish(clock, true)
+        await settle()
     }
 
     @Test func largeLibraryIsReadOffMainAndCorruptionRemainsVisible() async throws {

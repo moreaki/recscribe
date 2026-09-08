@@ -169,7 +169,10 @@ struct TranscriptWorkspace: View {
                 if source == nil { Button("Choose recording / import…") { openWindow(id: AppWindow.recordings.rawValue) } }
                 Spacer(minLength: 0)
             }
-            if let message = error ?? library.errorMessage { Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if let message = error ?? library.errorMessage {
+                Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if library.busy {
                 HStack { ProgressView(value: library.progress); Button("Cancel") { library.cancel() } }
             }

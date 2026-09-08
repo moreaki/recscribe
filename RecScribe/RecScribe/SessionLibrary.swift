@@ -1,9 +1,11 @@
 import AVFoundation
 import Combine
 import Foundation
+import os
 
 @MainActor
 final class SessionLibrary: ObservableObject {
+    private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "Pipeline")
     typealias Entry = SessionEntry
     @Published private(set) var readFailures: [ManifestFailure] = []
     @Published private(set) var refreshing = false
@@ -127,6 +129,7 @@ final class SessionLibrary: ObservableObject {
         let token = WorkCancellation()
         cancellation = token
         let settings = settings()
+        errorMessage = nil
         activity = item.recover ? "Recovering recording parts…" : "Verifying recording and archive…"
         task = Task {
             do {
@@ -170,6 +173,10 @@ final class SessionLibrary: ObservableObject {
     }
 
     private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation) async throws {
+        if let issue = settings.verificationIssue {
+            Self.logger.error("Transcription preflight rejected model configuration operation=\(cancel.id)")
+            throw SessionError.invalid(issue)
+        }
         busy = true
         defer { busy = false }
         try VADModel.validate(settings.vadModelPath)

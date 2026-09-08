@@ -136,6 +136,7 @@ struct ConfigurationView: View {
                 Text("Single pass").tag(RecognitionProfile.fast); Text("Two distinct models, compare").tag(RecognitionProfile.verified)
             }
             if settings.values.profile == .verified { file("Verification model", value: $settings.values.verificationModelPath) }
+            verificationWarning
             file("Optional whisper.cpp VAD model", value: $settings.values.vadModelPath)
             Text(VADModel.guidance).font(.caption).foregroundStyle(.secondary)
             if !settings.values.vadModelPath.isEmpty {
@@ -153,6 +154,7 @@ struct ConfigurationView: View {
             card("Whisper · accelerated locally", detail: "whisper.cpp is the reference adapter. Hardware availability is not proof that a particular inference used Metal.") {
                 file("Whisper executable", value: $settings.values.whisperPath)
                 file("Selected local ggml model", value: $settings.values.modelPath)
+                verificationWarning
                 if !runtime.detectedTools.isEmpty {
                     ForEach(runtime.detectedTools.keys.sorted(), id: \.self) { name in
                         Text("\(name): \(runtime.detectedTools[name] ?? "")").font(.caption).textSelection(.enabled)
@@ -167,6 +169,13 @@ struct ConfigurationView: View {
                     HStack { Text(model.id).fontWeight(.medium); Spacer(); Text(ByteCountFormatter.string(fromByteCount: model.bytes, countStyle: .file)).foregroundStyle(.secondary); Button("Download…") { download = model } }.disabled(runtime.busy || library.recordingActive)
                 }
             }
+        }
+    }
+    @ViewBuilder private var verificationWarning: some View {
+        if let issue = settings.values.verificationIssue {
+            Label(issue, systemImage: "exclamationmark.triangle")
+                .font(.caption).foregroundStyle(theme.colors.statusWarning)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
     private var intelligence: some View {

@@ -3,6 +3,26 @@ import Testing
 @testable import RecScribe
 
 struct LocalProcessRunnerTests {
+    @Test func usageErrorsShowTheCauseAndRetainFullDiagnostics() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runner = LocalProcessRunner(diagnosticsDirectory: root)
+        let usage = "usage: python3 -m recscribe [options]\npython3 -m recscribe: error: Verification must use a distinct model\n"
+        let result = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
+            ["-c", "printf '%s' \"$1\"; exit 2", "synthetic-cli", usage], cancel: WorkCancellation())
+        let message = LocalProcessRunner.Failure(result: result).localizedDescription
+        #expect(message.contains("Verification must use a distinct model"))
+        #expect(message.contains("Diagnostic ID: \(result.id)"))
+        #expect(!message.contains("usage:"))
+        let data = try Data(contentsOf: #require(result.diagnostics))
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        #expect(try decoder.decode(LocalProcessRunner.Result.self, from: data).tail == usage)
+        let other = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
+            ["-c", "printf '%s' 'Unrelated failure'; exit 2"], cancel: WorkCancellation())
+        #expect(LocalProcessRunner.Failure(result: other).localizedDescription.contains("Unrelated failure"))
+    }
+
     @Test func launchAndDiagnosticFailuresKeepStructuredEvidence() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

@@ -6,28 +6,26 @@ struct ConfigurationView: View {
     @Environment(\.glassTheme) private var theme
     @EnvironmentObject private var runtime: RuntimeManager
     @EnvironmentObject private var library: SessionLibrary
-    @State private var section = Section.storage
+    @State private var section = SettingsSection.storage
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
     private enum Layout {
         static let numericFieldWidth: CGFloat = 100
         static let progressWidth: CGFloat = 90
     }
-    private enum Section: String, CaseIterable { case storage = "Storage", transcription = "Transcription", models = "Models", ai = "AI", diagnostics = "Diagnostics" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
             HStack(spacing: GlassSpacing.md) {
-                Image(systemName: "slider.horizontal.3").font(.title2).foregroundStyle(theme.colors.accent)
-                    .padding(GlassSpacing.md).glassSurface(.inner)
+                WorkspaceIcon(symbol: "gearshape.fill", tint: WorkspaceStyle.violet)
                 VStack(alignment: .leading, spacing: GlassSpacing.xs) {
-                    Text("Make it yours").font(.title2.bold())
-                    Text("Lossless capture. Local intelligence. Your originals stay yours.").font(.callout).foregroundStyle(.secondary)
+                    Text("Settings").font(.title3.weight(.semibold))
+                    Text("Recording, local models and intelligence. Configured your way.").font(.caption).foregroundStyle(.secondary)
                 }
+                Spacer()
+                Label("Local first", systemImage: "lock.shield").font(.caption).foregroundStyle(WorkspaceStyle.mint)
             }
-            Picker("Settings section", selection: $section) {
-                ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented)
+            SettingsNavigation(selection: $section)
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassSpacing.xl) {
                     switch section {
@@ -38,14 +36,14 @@ struct ConfigurationView: View {
                     case .diagnostics: diagnostics
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(GlassSpacing.xxs)
-            }
+            }.scrollIndicators(.never)
             Divider()
             ForEach(settings.values.migrationWarnings, id: \.self) { warning in
                 Text(warning).font(.caption).foregroundStyle(theme.colors.statusWarning)
             }
             HStack {
                 Image(systemName: "lock.shield").foregroundStyle(theme.colors.statusSuccess)
-                Text(library.recordingActive ? "Recording takes priority. Background work is paused." : runtime.status)
+                Text(library.recordingActive ? "Recording takes priority. Opt-in live ASR runs at utility priority." : runtime.status)
                     .font(.caption).foregroundStyle(.secondary).lineLimit(3)
                 Spacer()
                 if runtime.busy { ProgressView(value: runtime.progress).frame(width: Layout.progressWidth); Button("Cancel") { runtime.cancel() } }
@@ -54,7 +52,7 @@ struct ConfigurationView: View {
         .padding(GlassSpacing.xxl).frame(minWidth: AppWindow.settings.minimumSize.width,
             idealWidth: AppWindow.settings.defaultSize.width, minHeight: AppWindow.settings.minimumSize.height,
             idealHeight: AppWindow.settings.defaultSize.height)
-        .background(GlassWindowGround()).glassThemeAdaptingToContrast()
+        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onChange(of: library.recordingActive) { _, active in if active { runtime.cancel() } }
         .confirmationDialog("Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
             Button("Install") { if let name = installation { runtime.install(name) }; installation = nil }
@@ -69,9 +67,9 @@ struct ConfigurationView: View {
     }
 
     private func card<Content: View>(_ title: String, detail: String, @ViewBuilder content: () -> Content) -> some View {
-        GlassCard {
+        WorkspaceCard {
             VStack(alignment: .leading, spacing: GlassSpacing.l) {
-                Text(title).font(.headline)
+                Label(title, systemImage: section.symbol).font(.headline).foregroundStyle(section.tint)
                 Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 content()
             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +117,15 @@ struct ConfigurationView: View {
         }
     }
     private var transcription: some View {
-        card("Opt-in transcription", detail: "Capture works without Whisper, Python or AI. Processing starts only after recording or file import. Channels stay independent; no automatic speaker claims.") {
+        Group {
+        card("Live draft", detail: "Switch on in the recorder at any time. Native Swift prepares 16-kHz chunks; one local Whisper worker catches up from disk. Different channels stay separate. Text is provisional, with a small delay.") {
+            Picker("Chunk duration", selection: $settings.values.liveChunkSeconds) {
+                ForEach(LiveTranscriptionPolicy.chunkChoices, id: \.self) { Text("\($0) seconds").tag($0) }
+            }.pickerStyle(.segmented)
+            Stepper("Whisper CPU threads: \(settings.values.liveThreads)", value: $settings.values.liveThreads, in: LiveTranscriptionPolicy.threadRange)
+            Text("Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto language detection runs per chunk; mixed-language boundaries require review.").font(.caption).foregroundStyle(.secondary)
+        }
+        card("Completed recordings", detail: "Capture works without Whisper, Python or AI. The full verification, normalization and summary pipeline runs after recording or file import, independently of live drafts.") {
             Toggle("Automatically transcribe completed recordings", isOn: $settings.values.autoTranscribe)
             Picker("Text mode", selection: $settings.values.mode) {
                 Text("Verbatim ASR").tag(TranscriptionMode.verbatim); Text("Normalize").tag(TranscriptionMode.normalize); Text("Translate").tag(TranscriptionMode.translate)
@@ -133,6 +139,7 @@ struct ConfigurationView: View {
             file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
             Button("Set up isolated pipeline runtime…") { installation = .pipeline }.disabled(runtime.busy)
             Text("Normalize/translate require the explicitly enabled local AI stage. Without it, output is marked pending, never silently rewritten.").font(.caption).foregroundStyle(.secondary)
+        }
         }
     }
     private var models: some View {

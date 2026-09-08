@@ -392,11 +392,7 @@ enum OverflowMenu {
 
     private static func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        // The main window is the WindowGroup titled "RecScribe" (see `RecScribeApp`).
-        // Matching on title is the only stable handle AppKit has on a SwiftUI
-        // scene's window, and the app deliberately outlives its closure, so the
-        // window may legitimately be absent here.
-        NSApp.windows.first { $0.title == "RecScribe" }?.makeKeyAndOrderFront(nil)
+        openWindow(.studio)
     }
 
     /// Supplies the file being written right now, so the recovery window never

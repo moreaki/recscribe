@@ -21,7 +21,7 @@ class MenuBarController: NSObject {
     private let appListCache = PerAppListCache()
     /// Retained for the lifetime of the controller: `NSMenu.delegate` is weak.
     private var perAppDelegate: PerAppMenuDelegate?
-    init(viewModel: RecorderViewModel) {
+    init(viewModel: RecorderViewModel, live: LiveTranscription? = nil) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.viewModel = viewModel
         super.init()
@@ -50,10 +50,10 @@ class MenuBarController: NSObject {
         }
 
         // Configure popover
-        let popoverView = MenuBarPopoverView()
+        let popoverView = MenuBarPopoverView(live: live)
             .environmentObject(viewModel)
         popover.contentViewController = NSHostingController(rootView: popoverView)
-        popover.contentSize = NSSize(width: 280, height: 240)
+        popover.contentSize = NSSize(width: WorkspaceStyle.popoverWidth, height: WorkspaceStyle.previewHeight)
         popover.behavior = .transient
         // The popover draws its own chrome and arrow, neither of which SwiftUI can
         // reach. Without this the arrow stays light while the content it points at

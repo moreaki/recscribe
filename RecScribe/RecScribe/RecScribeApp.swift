@@ -1,118 +1,70 @@
-//
-//  RecScribeApp.swift
-//  RecScribe
-//
-//  Created by Melissa de Britto Pereira on 10/01/26.
-//
-
+// Based on Home Rec by Melissa de Britto Pereira; see NOTICE.
+// Modified for RecScribe's single-window studio and optional live ASR (2026).
 import SwiftUI
 import CoreText
 import os
 
 @main
 struct RecScribeApp: App {
-
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var services = AppServices()
-    private var viewModel: RecorderViewModel { services.recorder }
 
     init() {
-        // Register custom fonts from the app bundle
-        Self.registerCustomFonts()
-    }
-
-    private static func registerCustomFonts() {
-        let fontFiles = ["Archivo-Variable", "Inter"]
-        for fontName in fontFiles {
-            guard let fontURL = Bundle.main.url(forResource: fontName, withExtension: "ttf") else {
-                Log.recorder.error("Font resource not found in bundle: \(fontName, privacy: .public).ttf")
-                continue
-            }
-            var errorRef: Unmanaged<CFError>?
-            if !CTFontManagerRegisterFontsForURL(fontURL as CFURL, .process, &errorRef) {
-                let error = errorRef?.takeRetainedValue()
-                Log.recorder.error("Failed to register font \(fontName, privacy: .public): \(error?.localizedDescription ?? "unknown", privacy: .public)")
+        for name in ["Archivo-Variable", "Inter"] {
+            if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
+                var error: Unmanaged<CFError>?
+                if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
+                    Log.recorder.error("Font registration failed: \(name, privacy: .public)")
+                }
             }
         }
     }
 
     var body: some Scene {
-        WindowGroup("RecScribe") {
-            // Flat ground, not the design system's mesh backdrop.
-            //
-            // The mesh exists so that a frosted panel has tonal variation to
-            // sample — over flat black, a translucent panel is just a grey
-            // rectangle. This window has no panel: it is one centred column
-            // straight on the window background. With nothing sampling it, the
-            // mesh stops reading as depth and starts reading as blue wallpaper,
-            // which is a lot of colour for a window whose job is to stay out of
-            // the way. If the layout ever grows a real glass panel, the mesh
-            // earns its place and `GlassBackdrop()` goes back here.
-            //
-            // The ground is a sibling of RecorderView rather than a modifier on
-            // it, and that placement is load-bearing. RecorderViewModel is an
-            // ObservableObject, so publishing a waveform frame invalidates every
-            // view that reads it — the whole of RecorderView's body, roughly 47
-            // times a second while recording. Out here the ground reads the theme
-            // and nothing else, so it stays out of that.
-            RecorderView()
-                .environmentObject(viewModel)
+        Window("RecScribe", id: AppWindow.studio.rawValue) {
+            StudioView().environmentObject(services.recorder)
+                .environmentObject(services.live).environmentObject(services.library)
                 .onAppear {
                     appDelegate.prepareForTermination = {
-                        if viewModel.isRecording { await viewModel.stopRecording() }
+                        if services.recorder.isRecording { await services.recorder.stopRecording() }
+                        await services.live.shutdown()
                         await services.library.shutdown()
                         await services.runtime.shutdown()
                     }
-                    // Wire up the menu bar controller with the shared view model
                     if appDelegate.menuBarController == nil {
-                        appDelegate.menuBarController = MenuBarController(viewModel: viewModel)
+                        appDelegate.menuBarController = MenuBarController(viewModel: services.recorder, live: services.live)
                     }
                 }
-                // `.background` rather than a ZStack sibling, and the distinction
-                // is load-bearing twice over. A background is sized *by* its
-                // content and never the other way round, so the window keeps the
-                // fixed 450×450 that `.windowResizability(.contentSize)` depends
-                // on — as a ZStack sibling the ground is a Color, which is
-                // infinitely flexible, and the window becomes freely resizable
-                // with the controls stranded in the middle of it. It also still
-                // sits outside RecorderView's body, so the ~47×/sec waveform
-                // republish never drags the ground through a redraw.
-                .background(GlassWindowGround())
-                .glassThemeAdaptingToContrast()
         }
-        .windowResizability(.contentSize)
-        // No titlebar band: the glass runs to the window's top edge and the
-        // traffic lights float on it. This is SwiftUI's own lever — the AppKit
-        // route (`titlebarAppearsTransparent` + `.fullSizeContentView`) gets
-        // reasserted from under us on scene updates, so the band kept coming
-        // back. The title *text* goes with it; the app's name is carried by the
-        // brand lockup in the header, which is where the Glass concept puts it.
-        .windowStyle(.hiddenTitleBar)
+        .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appSettings) { OpenSettingsCommand() }
             CommandGroup(after: .newItem) { OpenRecordingsCommand() }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
                     NSApp.activate(ignoringOtherApps: true)
-                    viewModel.showOnboardingAgain()
+                    services.recorder.showOnboardingAgain()
                 }
             }
         }
-        Window("RecScribe Settings", id: "settings") {
-            ConfigurationView().environmentObject(viewModel)
+        Window("RecScribe Settings", id: AppWindow.settings.rawValue) {
+            ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
-        }.defaultSize(width: 740, height: 620)
-        Window("Recordings", id: "recordings") {
-            RecordingLibraryView().environmentObject(viewModel).environmentObject(services.library)
-        }.defaultSize(width: 820, height: 620)
+        }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
+        Window("Recordings", id: AppWindow.recordings.rawValue) {
+            RecordingLibraryView().environmentObject(services.recorder).environmentObject(services.library)
+        }.defaultSize(AppWindow.recordings.defaultSize).windowResizability(.contentMinSize)
     }
 }
 
 private struct OpenSettingsCommand: View {
     @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Settings…") { openWindow(id: "settings") }.keyboardShortcut(",") }
+    var body: some View { Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }.keyboardShortcut(",") }
 }
 private struct OpenRecordingsCommand: View {
     @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Recordings & Import…") { openWindow(id: "recordings") }.keyboardShortcut("o") }
+    var body: some View {
+        Button("Recording Studio") { openWindow(id: AppWindow.studio.rawValue) }.keyboardShortcut("1")
+        Button("Recordings & Import…") { openWindow(id: AppWindow.recordings.rawValue) }.keyboardShortcut("o")
+    }
 }

@@ -10,15 +10,13 @@ import SwiftUI
 struct MenuBarPopoverView: View {
 
     @EnvironmentObject var viewModel: RecorderViewModel
+    var live: LiveTranscription?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header: logo, with secondary actions collected under "•••" (BL-110)
             HStack(alignment: .top) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                GlassBrandLockup(size: .compact)
 
                 Spacer()
 
@@ -134,6 +132,12 @@ struct MenuBarPopoverView: View {
                 }
             }
 
+            if let live {
+                Divider()
+                LiveTranscriptionControl(live: live)
+                Text(live.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+
             // Last recording info. Hidden while blocked: its "Reveal" targets the
             // recording, and the block's "Reveal in Finder" targets the app bundle
             // — two near-identical affordances with different targets, 40pt apart
@@ -163,14 +167,14 @@ struct MenuBarPopoverView: View {
             }
 
         }
-        .padding(16)
-        .frame(width: 280)
+        .padding(WorkspaceStyle.contentPadding)
+        .frame(width: WorkspaceStyle.popoverWidth)
         // The same ground as the window, deliberately. This was a flat opaque
         // fill first, reasoning that an NSPopover already draws its own vibrancy
         // and a second material would read as mud. What an opaque fill actually
         // does is *cover* that vibrancy, so the popover came out visibly darker
         // than the window it belongs to — the app looking like two apps.
-        .background(GlassWindowGround())
+        .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
     }
 }

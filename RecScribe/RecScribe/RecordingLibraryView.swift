@@ -11,9 +11,10 @@ struct RecordingLibraryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
             HStack {
+                WorkspaceIcon(symbol: "rectangle.stack.fill", tint: WorkspaceStyle.mint)
                 VStack(alignment: .leading) {
                     Text("Your recordings").font(.title2.bold())
-                    Text("One session. Every part. A continuous timeline.").foregroundStyle(.secondary)
+                    Text("Listen, transcribe and make sense of your recordings.").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Import WAV / session…") {
@@ -21,6 +22,7 @@ struct RecordingLibraryView: View {
                     if panel.runModal() == .OK, let url = panel.url { library.transcribe(url) }
                 }.disabled(library.recordingActive)
                 Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }
+                Button("Studio", systemImage: "macwindow") { openWindow(id: AppWindow.studio.rawValue) }
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
             if playback.loading { ProgressView("Loading session…") }
@@ -28,7 +30,7 @@ struct RecordingLibraryView: View {
             List(library.entries) { entry in
                 VStack(alignment: .leading, spacing: GlassSpacing.m) {
                     HStack {
-                        Image(systemName: "waveform").foregroundStyle(theme.colors.accent)
+                        WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
                         Text(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")).font(.headline)
                         Spacer()
                         Text(entry.session.status == .recording && !library.recordingActive ? "Not finalized — verify / recover" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
@@ -36,9 +38,16 @@ struct RecordingLibraryView: View {
                     Text("\(entry.session.parts.count) parts · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
-                        Button(playback.playing == entry.session.id ? "Restart" : "Play session") { playback.play(entry) }
-                        Button("Transcribe") { library.transcribe(entry.id) }
-                        Button("Verify / Recover") { library.enqueue(entry.id, recover: true) }
+                        Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
+                        Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); openWindow(id: AppWindow.studio.rawValue) }
+                        Menu {
+                            Button("Transcribe & summarize", systemImage: "sparkles") {
+                                library.transcribe(entry.id, summarize: true)
+                                openWindow(id: AppWindow.studio.rawValue)
+                            }
+                            Button("Verify / Recover", systemImage: "checkmark.shield") { library.enqueue(entry.id, recover: true) }
+                            Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
+                        } label: { Label("More", systemImage: "ellipsis.circle") }
                         Button("Export…") {
                             let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
                             if panel.runModal() == .OK, let url = panel.url {
@@ -47,11 +56,10 @@ struct RecordingLibraryView: View {
                                     catch { library.errorMessage = error.localizedDescription } }
                             }
                         }
-                        Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
-                    }.buttonStyle(.borderless).disabled(library.recordingActive)
+                    }.buttonStyle(.borderless).disabled(library.recordingActive || library.liveWorkActive)
                     ForEach(entry.session.issues, id: \.self) { Text($0).font(.caption).foregroundStyle(theme.colors.statusWarning) }
                 }.padding(.vertical, GlassSpacing.s)
-            }.listStyle(.inset).overlay {
+            }.listStyle(.inset).scrollContentBackground(.hidden).overlay {
                 if library.entries.isEmpty { ContentUnavailableView("No sessions yet", systemImage: "waveform", description: Text("New recordings appear here. Existing WAV files can be imported for optional transcription.")) }
             }
             ForEach(library.readFailures) { failure in
@@ -68,7 +76,7 @@ struct RecordingLibraryView: View {
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
         }.padding(GlassSpacing.xxl).frame(minWidth: AppWindow.recordings.minimumSize.width, minHeight: AppWindow.recordings.minimumSize.height)
-            .background(GlassWindowGround()).glassThemeAdaptingToContrast().onAppear {
+            .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast().onAppear {
                 playback.setRecording(library.recordingActive)
                 reload()
             }

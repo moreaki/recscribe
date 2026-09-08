@@ -57,7 +57,7 @@ public struct TextJob: Sendable {
             var processing = document["processing"].object ?? [:]
             for field in ["openai_model", "ollama_model", "allow_cloud_text"] { processing.removeValue(forKey: field) }
             processing[options.provider == .openai ? "openai_model" : "ollama_model"] = .string(options.model)
-            processing["local_only"] = .bool(options.provider == .ollama)
+            processing["local_only"] = .bool(options.provider == .ollama && processing["allow_cloud_audio"] != true)
             if options.provider == .openai { processing["allow_cloud_text"] = true }
             processing["summarize"] = .bool(options.summarize)
             processing["pipeline_version"] = .string(Self.version)

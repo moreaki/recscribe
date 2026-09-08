@@ -5,7 +5,11 @@ import Foundation
 public struct CanonicalTranscript: Sendable {
     public let value: JSONValue
     public init(_ value: JSONValue) throws {
-        let schema = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: Self.schemaURL))
+        let name = value["schema_version"] == "1.1" ? "transcript-v1.1.schema" : "transcript.schema"
+        guard let url = Bundle.module.url(forResource: name, withExtension: "json") else {
+            throw CoreFailure("The app is missing its transcript schema resource; reinstall this build")
+        }
+        let schema = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: url))
         try Self.validate(value, schema: schema, root: schema, path: "$", depth: 0)
         try Self.validateMeaning(value)
         self.value = value
@@ -73,8 +77,26 @@ public struct CanonicalTranscript: Sendable {
         let source = document["source"], processing = document["processing"], language = document["language_processing"]
         let segments = document["segments"].array ?? [], derivations = language["derivations"].array ?? []
         let cloud = !(processing["openai_model"].string ?? "").isEmpty
-        guard cloud == (processing["local_only"] == false), !cloud || processing["allow_cloud_text"] == true,
+        let cloudAudio = processing["allow_cloud_audio"] == true
+        guard (cloud || cloudAudio) == (processing["local_only"] == false), !cloud || processing["allow_cloud_text"] == true,
               language["mode"] == processing["mode"] else { throw CoreFailure("Transcript mode or cloud consent is inconsistent") }
+        let passes = processing["engine_passes"].array ?? []
+        guard cloudAudio == (document["schema_version"] == "1.1"),
+              cloudAudio == passes.contains(where: { $0["local_only"] == false }) else {
+            throw CoreFailure("Cloud audio provenance requires transcript v1.1 and explicit consent")
+        }
+        for pass in passes {
+            if pass["local_only"] == true {
+                guard pass["model_sha256"].string?.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
+                    throw CoreFailure("Local models require a SHA-256 digest")
+                }
+            } else {
+                guard pass["model_sha256"] == .null,
+                      pass["model"] == processing["cloud_audio_consent"]["model"] else {
+                    throw CoreFailure("Cloud model weights must not claim a local hash")
+                }
+            }
+        }
         let needsReview = !(document["review_reasons"].array ?? []).isEmpty || segments.contains { $0["needs_review"] == true }
         guard (document["status"] == "completed_with_review") == needsReview else { throw CoreFailure("Transcript status does not match review requirements") }
         let ids = Set(segments.compactMap { $0["id"].string })

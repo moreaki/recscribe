@@ -1,5 +1,8 @@
 # Cleanliness checkpoint — 2026-09-07
 
+Historical checkpoint. The follow-up work below was completed on 2026-09-08;
+see [completion and measured verification](cleanliness-completion.md).
+
 Scope: the remaining cleanliness tickets and menu access. Simultaneous system
 audio + microphone capture (#1) is explicitly out of this batch. Work stopped at
 the user's requested checkpoint; remaining acceptance work is listed below.

@@ -2,6 +2,7 @@ import AVFoundation
 import Combine
 import Foundation
 import os
+import RecScribeCore
 
 @MainActor
 final class SessionLibrary: ObservableObject {
@@ -91,12 +92,12 @@ final class SessionLibrary: ObservableObject {
     }
     func setRecording(_ active: Bool) {
         recordingActive = active
-        if active { cancellation?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }
+        if active { cancellation?.cancel(); task?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }
         else { startNext() }
     }
     func setLiveWork(_ active: Bool) {
         liveWorkActive = active
-        if active { cancellation?.cancel(); progressMonitor.stop() }
+        if active { cancellation?.cancel(); task?.cancel(); progressMonitor.stop() }
         else { startNext() }
     }
     func enqueue(_ url: URL, recover: Bool = false, issue: String? = nil) {
@@ -108,6 +109,7 @@ final class SessionLibrary: ObservableObject {
     func cancel() {
         guard let cancellation else { return }
         cancellation.cancel()
+        task?.cancel()
         progressMonitor.stop()
         activity = "Cancelling…"
     }
@@ -120,6 +122,7 @@ final class SessionLibrary: ObservableObject {
         progressMonitor.stop()
         pending.removeAll()
         cancellation?.cancel()
+        task?.cancel()
         await task?.value
     }
 
@@ -131,7 +134,7 @@ final class SessionLibrary: ObservableObject {
         let settings = settings()
         errorMessage = nil
         activity = item.recover ? "Recovering recording parts…" : "Verifying recording and archive…"
-        task = Task {
+        task = Task(priority: .utility) {
             do {
                 let result = try await Task.detached(priority: .utility) {
                     try SessionProcessing.process(item.manifest, ffmpeg: URL(fileURLWithPath: settings.ffmpegPath), cancel: token, recover: item.recover, issue: item.issue)
@@ -162,7 +165,7 @@ final class SessionLibrary: ObservableObject {
         let token = WorkCancellation()
         cancellation = token
         errorMessage = nil
-        task = Task {
+        task = Task(priority: .utility) {
             do { try await runTranscription(source, settings: settings, cancel: token) }
             catch is CancellationError { activity = "Transcription cancelled; partial job retained" }
             catch { errorMessage = error.localizedDescription; activity = "Transcription failed" }
@@ -199,10 +202,6 @@ final class SessionLibrary: ObservableObject {
         if settings.mode != .verbatim { args += ["--target-language", settings.targetLanguage] }
         if settings.profile == .verified { args += ["--verify-model", settings.verificationModelPath] }
         if !settings.vadModelPath.isEmpty { args += ["--vad-model", settings.vadModelPath] }
-        if settings.aiEnabled && settings.aiProvider == .ollama {
-            args += ["--ollama-model", settings.ollamaModel]
-            if settings.summarize { args += ["--summarize"] }
-        }
         let arguments = args
         _ = try await Task.detached(priority: .utility) {
             guard FileManager.default.isExecutableFile(atPath: settings.pythonPath),
@@ -220,6 +219,13 @@ final class SessionLibrary: ObservableObject {
         activity = info.state.label
         progress = info.progress
         rememberJob(job, source)
+        if settings.aiEnabled && settings.aiProvider == .ollama && (settings.mode != .verbatim || settings.summarize) {
+            try cancel.check()
+            try await deriveText(from: job.appendingPathComponent("transcript.json"), source: source,
+                output: jobs.appendingPathComponent(UUID().uuidString),
+                options: .init(provider: .ollama, model: settings.ollamaModel, mode: settings.mode.textMode,
+                    targetLanguage: settings.targetLanguage, summarize: settings.summarize), key: nil)
+        }
     }
 
     func requestTextProcessing(_ job: URL, summary: Bool, sourceName: String? = nil) {
@@ -244,7 +250,7 @@ final class SessionLibrary: ObservableObject {
         busy = true
         errorMessage = nil
         activity = request.isCloud ? "Sending approved transcript text to OpenAI…" : "Processing text on this Mac…"
-        task = Task {
+        task = Task(priority: .utility) {
             defer { busy = false; task = nil; cancellation = nil; progressMonitor.stop(); startNext() }
             do {
                 let key = request.isCloud ? try IntelligenceCredentials().key() : nil
@@ -252,28 +258,30 @@ final class SessionLibrary: ObservableObject {
                 try token.check()
                 let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
                 let job = jobs.appendingPathComponent(token.id.uuidString)
-                latestSource = preview.sourceURL
-                previousJob = latestJob
-                latestJob = job
-                progress = 0
-                progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
-                    self?.activity = snapshot.state.label; self?.progress = snapshot.progress
-                }, failure: { [weak self] message in self?.errorMessage = message })
-                _ = try await Task.detached(priority: .utility) {
-                    try PipelineRuntime.validate(request.settings.pythonPath, cancel: token)
-                    try FileManager.default.createDirectory(at: jobs, withIntermediateDirectories: true)
-                    return try LocalProcessRunner.run(URL(fileURLWithPath: request.settings.pythonPath), request.arguments(output: job),
-                                                      in: jobs, cancel: token, privateInput: key)
-                }.value
-                let result = try await readJob(job.appendingPathComponent("manifest.json")).validated()
-                try token.check()
-                guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
-                progress = result.progress
-                if let source = preview.sourceURL { rememberJob(job, source) }
+                try await deriveText(from: request.transcript, source: preview.sourceURL, output: job,
+                                     options: request.options(cloudConsent: cloudConsent), key: key)
                 activity = request.isCloud ? "OpenAI text derivative ready · review required" : "Local text derivative ready · review required"
             } catch is CancellationError { activity = "Text processing cancelled; previous transcript retained" }
             catch { errorMessage = error.localizedDescription; activity = "Text processing failed; previous transcript retained" }
         }
+    }
+
+    private func deriveText(from transcript: URL, source: URL?, output: URL, options: TextDerivationOptions, key: Data?) async throws {
+        latestSource = source
+        previousJob = latestJob
+        latestJob = output
+        progress = 0
+        progressMonitor.start(output.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
+            self?.activity = snapshot.state.label; self?.progress = snapshot.progress
+        }, failure: { [weak self] message in self?.errorMessage = message })
+        defer { progressMonitor.stop() }
+        try await TextJob().run(source: transcript, output: output, options: options, key: key)
+        let result = try await readJob(output.appendingPathComponent("manifest.json")).validated()
+        try Task.checkCancellation()
+        guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
+        progress = result.progress
+        activity = result.state.label
+        if let source { rememberJob(output, source) }
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {

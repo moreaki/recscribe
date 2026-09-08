@@ -1,4 +1,5 @@
 import Foundation
+import RecScribeCore
 
 /// Snapshot the exact source/model/mode before presenting consent. Settings may
 /// change while a confirmation is open; they must not change the approved job.
@@ -26,13 +27,15 @@ nonisolated struct TextProcessingRequest: Identifiable, Sendable {
         self.sourceName = sourceName ?? transcript.deletingLastPathComponent().lastPathComponent
     }
 
-    func arguments(output: URL) -> [String] {
-        var args = ["-m", "recscribe", transcript.path, "--derive", "--output", output.path,
-                    "--mode", settings.mode.rawValue]
-        if settings.mode != .verbatim { args += ["--target-language", settings.targetLanguage] }
-        if summary { args += ["--summarize"] }
-        if isCloud { args += ["--openai-model", model, "--allow-cloud-text", "--openai-key-stdin"] }
-        else { args += ["--ollama-model", model, "--local-only"] }
-        return args
+    func options(cloudConsent: Bool) -> TextDerivationOptions {
+        .init(provider: isCloud ? .openai : .ollama, model: model,
+              mode: settings.mode.textMode, targetLanguage: settings.targetLanguage,
+              summarize: summary, cloudConsent: cloudConsent)
+    }
+}
+
+nonisolated extension TranscriptionMode {
+    var textMode: TextMode {
+        switch self { case .verbatim: .verbatim; case .normalize: .normalize; case .translate: .translate }
     }
 }

@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import Metal
 import os
+import RecScribeCore
 
 nonisolated struct WhisperModel: Identifiable, Sendable {
     let id: String
@@ -108,12 +109,9 @@ final class RuntimeManager: ObservableObject {
 
     func detectAI() {
         perform("Detect local AI") { [self] token in
-            let python = settings.values.pythonPath
-            let output = try await Task.detached(priority: .utility) {
-                try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "recscribe.local_ai", "--list"],
-                    in: FileManager.default.temporaryDirectory, cancel: token, timeout: RuntimeInstallation.Policy.aiDetection)
-            }.value
-            localAIModels = try JSONDecoder().decode([String].self, from: Data(output.utf8))
+            let models = try await IntelligenceClient().models(provider: .ollama)
+            try token.check()
+            localAIModels = models
             diagnostics = "Ollama · 127.0.0.1:11434\nLocal models: \(localAIModels.joined(separator: ", "))\nRemote/cloud models are excluded; no transcript was sent."
         }
     }

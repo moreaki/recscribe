@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import RecScribeCore
 import Security
 
 @MainActor protocol IntelligenceSecretStore {
@@ -49,8 +50,12 @@ import Security
     @Published private(set) var models: [String] = []
     @Published private(set) var busy = false
     private let secrets: any IntelligenceSecretStore
-    private var token: WorkCancellation?
-    init(secrets: any IntelligenceSecretStore = KeychainIntelligenceSecret()) { self.secrets = secrets }
+    private var task: Task<Void, Never>?
+    private let client: IntelligenceClient
+    init(secrets: any IntelligenceSecretStore = KeychainIntelligenceSecret(), client: IntelligenceClient = .init()) {
+        self.secrets = secrets
+        self.client = client
+    }
 
     func key() throws -> Data {
         guard let value = try secrets.load(), !value.isEmpty else { throw SessionError.invalid("Save your OpenAI API key in Settings → Intelligence first") }
@@ -58,35 +63,30 @@ import Security
     }
     func save(_ value: String) {
         let key = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty, key.utf8.count <= LocalProcessRunner.Policy.maximumInputBytes,
+        guard !busy, !key.isEmpty, key.utf8.count <= client.policy.maximumKeyBytes,
               key.utf8.allSatisfy({ $0 > 32 && $0 < 127 }) else { status = "Enter a valid API key"; return }
         do { try secrets.save(key); models = []; status = "Key saved in RecScribe’s Keychain · not tested" }
         catch { status = error.localizedDescription }
     }
     func remove() {
-        token?.cancel()
+        guard !busy else { return }
         do { try secrets.remove(); models = []; status = "Key removed" }
         catch { status = error.localizedDescription }
     }
-    func cancel() { token?.cancel() }
-    func test(python: String) {
+    func cancel() { task?.cancel() }
+    func test() {
         guard !busy else { return }
         do {
-            let key = try key(), token = WorkCancellation()
-            self.token = token
+            let key = try key()
             busy = true
             status = "Checking OpenAI model access… No transcript is sent."
-            Task {
-                defer { busy = false; self.token = nil }
+            task = Task {
+                defer { busy = false; task = nil }
                 do {
-                    let output = try await Task.detached(priority: .utility) {
-                        try PipelineRuntime.validate(python, cancel: token)
-                        return try LocalProcessRunner.run(URL(fileURLWithPath: python), ["-m", "recscribe.openai_ai"],
-                            in: AppSettings.supportDirectory, cancel: token, timeout: 190, privateInput: key)
-                    }.value
-                    try token.check()
-                    models = try JSONDecoder().decode([String].self, from: Data(output.utf8))
-                    status = "Connected · \(models.count) accessible models. Choose a text model supporting Structured Outputs."
+                    let result = try await client.models(provider: .openai, key: key)
+                    try Task.checkCancellation()
+                    models = result
+                    status = "Connected · \(models.count) candidate text models. Structured Outputs support is checked when generating text."
                 } catch is CancellationError { status = "Connection test cancelled" }
                 catch { status = error.localizedDescription }
             }

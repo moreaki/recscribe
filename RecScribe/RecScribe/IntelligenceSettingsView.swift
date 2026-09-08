@@ -27,7 +27,7 @@ struct IntelligenceSettingsView: View {
                 SecureField("OpenAI API key", text: $apiKey).textFieldStyle(.roundedBorder)
                 HStack {
                     Button("Save key") { credentials.save(apiKey); apiKey = "" }.disabled(apiKey.isEmpty || credentials.busy)
-                    Button("Test connection & load models") { credentials.test(python: settings.values.pythonPath) }.disabled(credentials.busy)
+                    Button("Test connection & load models") { credentials.test() }.disabled(credentials.busy)
                     Button("Remove key", role: .destructive) { credentials.remove() }.disabled(credentials.busy)
                     if credentials.busy { ProgressView().controlSize(.small); Button("Cancel") { credentials.cancel() } }
                 }
@@ -46,6 +46,8 @@ struct IntelligenceSettingsView: View {
             Toggle("Include summary in local automatic processing", isOn: $settings.values.summarize)
                 .disabled(!settings.values.aiEnabled || settings.values.aiProvider != .ollama)
             Text("AI text is an unverified derivative, not a correction to the audio evidence. Review ambiguous words against the recording.")
+                .font(.caption).foregroundStyle(.secondary)
+            Text("Connections, text improvement and summaries run natively in Swift. Python is only needed for the reference audio transcription pipeline.")
                 .font(.caption).foregroundStyle(.secondary)
         }.onDisappear { apiKey = ""; credentials.cancel() }
     }

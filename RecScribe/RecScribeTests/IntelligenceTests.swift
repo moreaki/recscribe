@@ -1,4 +1,5 @@
 import Foundation
+import RecScribeCore
 import Testing
 @testable import RecScribe
 
@@ -40,6 +41,32 @@ import Testing
         #expect(!String(decoding: defaults, as: UTF8.self).contains("synthetic-secret"))
     }
 
+    private struct NativeModels: IntelligenceTransport {
+        let waits: Bool
+        func send(_ request: URLRequest, maximumBytes: Int) async throws -> Data {
+            if waits { try await Task.sleep(for: .seconds(30)) }
+            return Data(#"{"data":[{"id":"synthetic-text-model"},{"id":"gpt-realtime-whisper"}]}"#.utf8)
+        }
+    }
+    @Test func connectionTestingDoesNotRequireAnyPythonConfiguration() async {
+        let store = MemorySecret(); store.value = "synthetic-key"
+        let credentials = IntelligenceCredentials(secrets: store, client: .init(transport: NativeModels(waits: false)))
+        credentials.test()
+        await waitUntil("native model discovery") { !credentials.busy }
+        #expect(credentials.models == ["synthetic-text-model"])
+        #expect(credentials.status.hasPrefix("Connected"))
+        #expect(store.value == "synthetic-key")
+    }
+    @Test func connectionCancellationDoesNotPublishStaleModels() async {
+        let store = MemorySecret(); store.value = "synthetic-key"
+        let credentials = IntelligenceCredentials(secrets: store, client: .init(transport: NativeModels(waits: true)))
+        credentials.test()
+        credentials.cancel()
+        await waitUntil("native connection cancellation") { !credentials.busy }
+        #expect(credentials.models.isEmpty)
+        #expect(credentials.status == "Connection test cancelled")
+    }
+
     @Test func textRequestsSnapshotSettingsAndSeparateCloudFromAudio() throws {
         var settings = AppSettings.Values()
         let source = URL(fileURLWithPath: "/synthetic/transcript.json")
@@ -47,20 +74,18 @@ import Testing
         settings.aiEnabled = true; settings.aiProvider = .openai; settings.openaiModel = "chosen-model"
         let request = try TextProcessingRequest(transcript: source, settings: settings, summary: false)
         settings.openaiModel = "later-selection"
-        let args = request.arguments(output: URL(fileURLWithPath: "/new-job"))
+        let options = request.options(cloudConsent: true)
         #expect(request.settings.mode == .normalize)
         #expect(request.model == "chosen-model")
-        #expect(args.contains("--derive"))
-        #expect(args.contains("--allow-cloud-text"))
-        #expect(args.contains("--openai-key-stdin"))
-        #expect(!args.contains("--model"))
-        #expect(!args.contains("--local-only"))
+        #expect(options.cloudConsent)
+        #expect(options.provider == .openai)
+        #expect(options.mode == .normalize)
         let summary = try TextProcessingRequest(transcript: source, settings: settings, summary: true)
         #expect(summary.settings.mode == .verbatim)
         settings.aiProvider = .ollama; settings.ollamaModel = "local-model"
         let local = try TextProcessingRequest(transcript: source, settings: settings, summary: false)
-        #expect(local.arguments(output: source).contains("--local-only"))
-        #expect(!local.arguments(output: source).contains("--allow-cloud-text"))
+        #expect(local.options(cloudConsent: false).provider == .ollama)
+        #expect(!local.options(cloudConsent: false).cloudConsent)
     }
 
     @Test func cloudTextRequestWaitsForConfirmationWithoutLaunchingJob() throws {

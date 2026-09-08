@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D1A000000000000000000010 /* RecScribeCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1A000000000000000000011 /* RecScribeCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		49856F302F12CB6E00BED9E8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1A000000000000000000010 /* RecScribeCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -113,6 +118,7 @@
 			);
 			name = RecScribe;
 			packageProductDependencies = (
+				D1A000000000000000000011 /* RecScribeCore */,
 			);
 			productName = RecScribe;
 			productReference = 49856F222F12CB6E00BED9E8 /* RecScribe.app */;
@@ -200,6 +206,7 @@
 			productRefGroup = 49856F232F12CB6E00BED9E8 /* Products */;
 			projectDirPath = "";
 			packageReferences = (
+				D1A000000000000000000012 /* XCLocalSwiftPackageReference "../core" */,
 			);
 			projectRoot = "";
 			targets = (
@@ -412,7 +419,7 @@
 				CODE_SIGN_ENTITLEMENTS = RecScribe.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -420,7 +427,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				/* VideoPlayer resolves native AVPlayerView through runtime metadata. */
 				OTHER_LDFLAGS = ("$(inherited)", "-Wl,-needed_framework,AVKit");
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe;
@@ -447,7 +454,7 @@
 				CODE_SIGN_ENTITLEMENTS = RecScribe.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -455,7 +462,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				/* VideoPlayer resolves native AVPlayerView through runtime metadata. */
 				OTHER_LDFLAGS = ("$(inherited)", "-Wl,-needed_framework,AVKit");
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe;
@@ -479,10 +486,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -501,10 +508,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -523,10 +530,10 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -545,10 +552,10 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.moreaki.recscribe.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -602,6 +609,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		D1A000000000000000000012 /* XCLocalSwiftPackageReference "../core" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../core;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D1A000000000000000000011 /* RecScribeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RecScribeCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 	};
 	rootObject = 49856F1A2F12CB6E00BED9E8 /* Project object */;

@@ -72,6 +72,9 @@ final class LiveTranscription: ObservableObject {
     @Published private(set) var lagSeconds = 0.0
     @Published private(set) var lastChunk: LiveChunkTiming?
     @Published private(set) var captureNeedsReview = false
+    @Published private(set) var sourceURL: URL?
+    @Published private(set) var modelName: String?
+    @Published private(set) var audioSeconds: Double = 0
     private(set) var cursor: Int64 = 0
     private var manifest: URL?
     private var capturing = false
@@ -105,6 +108,9 @@ final class LiveTranscription: ObservableObject {
     func recordingStarted(_ audio: URL) {
         invalidate()
         manifest = RecordingSession.manifestURL(for: audio)
+        sourceURL = manifest
+        modelName = nil
+        audioSeconds = 0
         directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
         cursor = 0
         segments = []
@@ -155,6 +161,8 @@ final class LiveTranscription: ObservableObject {
                         }
                         cursor = result.endFrame
                         segments = Self.preview(segments + result.segments)
+                        modelName = result.model.map { URL(fileURLWithPath: $0).lastPathComponent }
+                        audioSeconds = Double(result.availableFrames) / Double(result.sampleRate)
                         lastChunk = LiveChunkTiming(wallSeconds: result.durationSeconds,
                             audioSeconds: Double(result.endFrame - result.startFrame) / Double(result.sampleRate),
                             asrRuns: result.asrRuns)

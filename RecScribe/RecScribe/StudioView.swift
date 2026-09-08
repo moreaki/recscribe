@@ -9,7 +9,7 @@ struct StudioView: View {
                 GlassBrandLockup(size: .compact)
                 Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer()
-                Label("On your Mac", systemImage: "lock.shield").font(.caption).foregroundStyle(WorkspaceStyle.mint)
+                Label("Audio stays on your Mac", systemImage: "lock.shield").font(.caption).foregroundStyle(WorkspaceStyle.mint)
                 Button("Recordings", systemImage: "rectangle.stack") { openWindow(id: AppWindow.recordings.rawValue) }
                 SettingsPopover()
             }.padding(WorkspaceStyle.contentPadding)

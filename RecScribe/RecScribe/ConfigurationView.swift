@@ -6,9 +6,10 @@ struct ConfigurationView: View {
     @Environment(\.glassTheme) private var theme
     @EnvironmentObject private var runtime: RuntimeManager
     @EnvironmentObject private var library: SessionLibrary
-    @State private var section = SettingsSection.storage
+    @State private var section: SettingsSection
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
+    init(section: SettingsSection = .storage) { _section = State(initialValue: section) }
     private enum Layout {
         static let numericFieldWidth: CGFloat = 100
         static let progressWidth: CGFloat = 90
@@ -136,9 +137,14 @@ struct ConfigurationView: View {
             }
             if settings.values.profile == .verified { file("Verification model", value: $settings.values.verificationModelPath) }
             file("Optional whisper.cpp VAD model", value: $settings.values.vadModelPath)
+            Text(VADModel.guidance).font(.caption).foregroundStyle(.secondary)
+            if !settings.values.vadModelPath.isEmpty {
+                Button("Clear optional VAD model") { settings.values.vadModelPath = "" }
+            }
             file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
             Button("Set up isolated pipeline runtime…") { installation = .pipeline }.disabled(runtime.busy)
-            Text("Normalize/translate require the explicitly enabled local AI stage. Without it, output is marked pending, never silently rewritten.").font(.caption).foregroundStyle(.secondary)
+            Text("Text actions require pipeline \(PipelineRuntime.minimumVersion) or newer. Setup creates a new environment and retains previous versions.").font(.caption).foregroundStyle(.secondary)
+            Text("Normalize/translate require AI post-processing. Cloud text processing is always a separate, confirmed action in the Studio; automatic recognition never uploads text.").font(.caption).foregroundStyle(.secondary)
         }
         }
     }
@@ -164,15 +170,11 @@ struct ConfigurationView: View {
         }
     }
     private var intelligence: some View {
-        card("Local intelligence", detail: "Optional Ollama processing derives normalized text, translations and source-linked summary notes. Raw ASR stays unchanged. All AI output is marked for review; remote models are refused.") {
-            Toggle("Enable local AI post-processing", isOn: $settings.values.aiEnabled)
-            HStack { Button("Detect local AI models") { runtime.detectAI() }; Button("Install Ollama…") { installation = .ollama } }.disabled(runtime.busy || library.recordingActive)
-            Picker("Installed local model", selection: $settings.values.ollamaModel) {
-                Text(settings.values.ollamaModel.isEmpty ? "Choose a model" : settings.values.ollamaModel).tag(settings.values.ollamaModel)
-                ForEach(runtime.localAIModels.filter { $0 != settings.values.ollamaModel }, id: \.self) { Text($0).tag($0) }
+        card("Intelligence", detail: "Improve text, translate or summarize a finished transcript. Every action creates a new, source-linked version; audio and raw recognition stay unchanged.") {
+            IntelligenceSettingsView()
+            if settings.values.aiProvider == .ollama {
+                Button("Install Ollama…") { installation = .ollama }.disabled(runtime.busy || library.recordingActive)
             }
-            Toggle("Generate source-linked summary notes", isOn: $settings.values.summarize).disabled(!settings.values.aiEnabled)
-            Text("Endpoint: 127.0.0.1:11434 only. Install/start Ollama and provision an AI model separately; RecScribe never pulls one implicitly.").font(.caption).foregroundStyle(.secondary)
         }
     }
     private var diagnostics: some View {

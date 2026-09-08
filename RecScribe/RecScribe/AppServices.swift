@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 
 /// The only composition root. Features receive dependencies, not global peers.
 @MainActor
@@ -13,8 +14,13 @@ final class AppServices: ObservableObject {
         let settings = AppSettings()
         let runtime = RuntimeManager(settings: settings)
         let repository = ManifestRepository()
+        let defaults = UserDefaults.standard
         let library = SessionLibrary(cancelRuntime: { runtime.cancel() }, settings: { settings.values },
-            readSessions: { try await repository.sessions(in: $0) }, readJob: { try await repository.job(at: $0) })
+            readSessions: { try await repository.sessions(in: $0) }, readJob: { try await repository.job(at: $0) },
+            initialJob: defaults.url(forKey: "workspace.lastJob"), initialSource: defaults.url(forKey: "workspace.lastSource"),
+            rememberJob: { job, source in
+                defaults.set(job, forKey: "workspace.lastJob"); defaults.set(source, forKey: "workspace.lastSource")
+            })
         let live = LiveTranscription(settings: { settings.values })
         live.onBusyChange = { [weak library] in library?.setLiveWork($0) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }

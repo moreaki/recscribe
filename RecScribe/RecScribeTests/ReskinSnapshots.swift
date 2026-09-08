@@ -59,6 +59,29 @@ struct ReskinSnapshots {
 
     // MARK: - Rendering
 
+    @Test("Intelligence settings and actionable transcript workspace")
+    func intelligenceWorkspace() throws {
+        guard Self.outputDirectory != nil else { return }
+        let suite = "recscribe-intelligence-snapshot-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        settings.values.aiEnabled = true
+        settings.values.aiProvider = .openai
+        settings.values.openaiModel = "your-selected-model"
+        let runtime = RuntimeManager(settings: settings), recorder = makeViewModel()
+        write("intelligence-openai-settings", size: AppWindow.settings.defaultSize, contrast: .standard) {
+            ConfigurationView(section: .ai).environmentObject(settings).environmentObject(runtime)
+                .environmentObject(SessionLibrary()).environmentObject(recorder)
+        }
+        for section in [TranscriptWorkspace.Section.transcript, .summary] {
+            write("workspace-empty-\(section.rawValue)", size: CGSize(width: 700, height: 680), contrast: .standard) {
+                TranscriptWorkspace(section: section).environmentObject(LiveTranscription())
+                    .environmentObject(SessionLibrary())
+            }
+        }
+    }
+
     /// Renders `view` at `size` and writes `<name>.png`.
     ///
     /// `cacheDisplay` draws the layer tree straight into a bitmap, so the view

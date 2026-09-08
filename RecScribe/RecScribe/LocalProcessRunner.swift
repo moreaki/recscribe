@@ -16,6 +16,7 @@ nonisolated struct LocalProcessRunner: Sendable {
         static let finalDrainPasses = 2 // Never wait indefinitely for a descendant's pipe.
         static let errorTailCharacters = 2_000
         static let defaultTimeout: TimeInterval = 86_400
+        static let maximumInputBytes = 2_048 // Fits in an empty pipe without blocking.
     }
     enum Outcome: String, Codable, Sendable { case exited, cancelled, timedOut, launchFailed, ioFailed }
     struct Result: Codable, Sendable {
@@ -43,8 +44,10 @@ nonisolated struct LocalProcessRunner: Sendable {
     var diagnosticsDirectory = AppSettings.supportDirectory.appendingPathComponent("Diagnostics/Processes", isDirectory: true)
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LocalProcess")
 
-    func execute(_ binary: URL, _ arguments: [String], in directory: URL? = nil, cancel: WorkCancellation) throws -> Result {
+    func execute(_ binary: URL, _ arguments: [String], in directory: URL? = nil, cancel: WorkCancellation,
+                 privateInput: Data? = nil) throws -> Result {
         try cancel.check()
+        guard (privateInput?.count ?? 0) <= Policy.maximumInputBytes else { throw SessionError.invalid("Private process input is too large") }
         guard policy.timeout.isFinite, policy.timeout > 0, policy.terminationGrace >= 0,
               policy.terminationGrace.isFinite, policy.outputBytes > 0, policy.retainedRuns > 0 else {
             throw SessionError.invalid("Invalid local process policy")
@@ -52,10 +55,18 @@ nonisolated struct LocalProcessRunner: Sendable {
         let id = UUID(), started = Date()
         let clock = ContinuousClock.now
         let process = Process(), pipe = Pipe()
+        let secretPipe = privateInput == nil ? nil : Pipe()
+        defer { try? secretPipe?.fileHandleForReading.close(); try? secretPipe?.fileHandleForWriting.close() }
         process.executableURL = binary
         process.arguments = arguments
         process.currentDirectoryURL = directory
-        process.standardInput = FileHandle.nullDevice
+        process.standardInput = secretPipe?.fileHandleForReading ?? FileHandle.nullDevice
+        // Preload the bounded input before launch, avoiding a broken-pipe race
+        // if Python fails to launch. Neither key nor input is retained in Result.
+        if let privateInput, let secretPipe {
+            try secretPipe.fileHandleForWriting.write(contentsOf: privateInput)
+            try secretPipe.fileHandleForWriting.close()
+        }
         process.standardOutput = pipe
         process.standardError = pipe
         process.qualityOfService = .utility
@@ -167,10 +178,11 @@ nonisolated struct LocalProcessRunner: Sendable {
     }
 
     static func run(_ binary: URL, _ arguments: [String], in directory: URL,
-                    cancel: WorkCancellation, timeout: TimeInterval = Policy.defaultTimeout) throws -> String {
+                    cancel: WorkCancellation, timeout: TimeInterval = Policy.defaultTimeout,
+                    privateInput: Data? = nil) throws -> String {
         var runner = Self()
         runner.policy.timeout = timeout
-        let result = try runner.execute(binary, arguments, in: directory, cancel: cancel)
+        let result = try runner.execute(binary, arguments, in: directory, cancel: cancel, privateInput: privateInput)
         if result.outcome == .cancelled { throw CancellationError() }
         guard result.outcome == .exited, result.exitCode == 0, result.diagnosticError == nil else { throw Failure(result: result) }
         return result.output

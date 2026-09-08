@@ -19,6 +19,10 @@ final class SessionLibrary: ObservableObject {
     @Published private(set) var recordingActive = false
     @Published private(set) var liveWorkActive = false
     @Published private(set) var latestJob: URL?
+    @Published private(set) var latestSource: URL?
+    @Published private(set) var previousJob: URL?
+    @Published private(set) var busy = false
+    @Published var pendingTextRequest: TextProcessingRequest?
     @Published var errorMessage: String?
     private struct PendingSession {
         let manifest: URL
@@ -31,18 +35,25 @@ final class SessionLibrary: ObservableObject {
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
+    private let rememberJob: (URL, URL) -> Void
 
     init(exportSession: @escaping @Sendable (URL, URL, WorkCancellation) throws -> URL = { manifest, directory, token in
         try SessionExporter().export(manifest, to: directory, checkCancellation: token.check)
     }, cancelRuntime: @escaping () -> Void = {},
          settings: @escaping () -> AppSettings.Values = { .init() },
          readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
-         readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil) {
+         readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil,
+         initialJob: URL? = nil, initialSource: URL? = nil,
+         rememberJob: @escaping (URL, URL) -> Void = { _, _ in }) {
         let repository = ManifestRepository()
         let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
         self.cancelRuntime = cancelRuntime
         self.settings = settings
+        self.rememberJob = rememberJob
+        self.latestJob = initialJob
+        self.latestSource = initialSource
+        if initialJob != nil { self.progress = 1 }
         self.readSessions = readSessions ?? { try await repository.sessions(in: $0) }
         self.readJob = jobReader
         self.progressMonitor = JobProgressMonitor(read: jobReader)
@@ -98,6 +109,9 @@ final class SessionLibrary: ObservableObject {
         progressMonitor.stop()
         activity = "Cancelling…"
     }
+    func rememberOpenedTranscript(_ job: URL, source: URL?) {
+        if let source { rememberJob(job, source) }
+    }
     func shutdown() async {
         shuttingDown = true
         cancelRefresh()
@@ -136,14 +150,15 @@ final class SessionLibrary: ObservableObject {
         guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         var settings = settings()
         if summarize {
-            guard settings.aiEnabled, !settings.ollamaModel.isEmpty else {
-                errorMessage = "Enable local AI and choose an installed model in Settings → Intelligence first"
+            guard settings.aiEnabled, settings.aiProvider == .ollama, !settings.ollamaModel.isEmpty else {
+                errorMessage = "For cloud summaries, first create a transcript, then choose Generate summary in the Studio. For local summaries, enable Ollama in Settings → Intelligence."
                 return
             }
             settings.summarize = true
         }
         let token = WorkCancellation()
         cancellation = token
+        errorMessage = nil
         task = Task {
             do { try await runTranscription(source, settings: settings, cancel: token) }
             catch is CancellationError { activity = "Transcription cancelled; partial job retained" }
@@ -155,8 +170,13 @@ final class SessionLibrary: ObservableObject {
     }
 
     private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation) async throws {
+        busy = true
+        defer { busy = false }
+        try VADModel.validate(settings.vadModelPath)
+        latestSource = source
         let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
         let job = jobs.appendingPathComponent(cancel.id.uuidString)
+        previousJob = latestJob
         latestJob = job
         activity = "Starting local transcription…"
         progress = 0
@@ -172,8 +192,10 @@ final class SessionLibrary: ObservableObject {
         if settings.mode != .verbatim { args += ["--target-language", settings.targetLanguage] }
         if settings.profile == .verified { args += ["--verify-model", settings.verificationModelPath] }
         if !settings.vadModelPath.isEmpty { args += ["--vad-model", settings.vadModelPath] }
-        if settings.aiEnabled { args += ["--ollama-model", settings.ollamaModel] }
-        if settings.aiEnabled && settings.summarize { args += ["--summarize"] }
+        if settings.aiEnabled && settings.aiProvider == .ollama {
+            args += ["--ollama-model", settings.ollamaModel]
+            if settings.summarize { args += ["--summarize"] }
+        }
         let arguments = args
         _ = try await Task.detached(priority: .utility) {
             guard FileManager.default.isExecutableFile(atPath: settings.pythonPath),
@@ -181,14 +203,70 @@ final class SessionLibrary: ObservableObject {
                   FileManager.default.fileExists(atPath: settings.modelPath) else {
                 throw SessionError.invalid("Configure the pipeline runtime, whisper-cli and a local model in Settings")
             }
+            try PipelineRuntime.validate(settings.pythonPath, cancel: cancel)
             try FileManager.default.createDirectory(at: jobs, withIntermediateDirectories: true)
             return try LocalProcessRunner.run(URL(fileURLWithPath: settings.pythonPath), arguments, in: jobs, cancel: cancel)
         }.value
         let info = try await readJob(job.appendingPathComponent("manifest.json")).validated()
         try cancel.check()
-        guard info.state.isTerminal else { throw SessionError.invalid("Pipeline exited without a terminal job state") }
+        guard [.completed, .completedWithReview].contains(info.state) else { throw SessionError.invalid("Pipeline exited without a completed transcript") }
         activity = info.state.label
         progress = info.progress
+        rememberJob(job, source)
+    }
+
+    func requestTextProcessing(_ job: URL, summary: Bool, sourceName: String? = nil) {
+        do {
+            let request = try TextProcessingRequest(transcript: job.appendingPathComponent("transcript.json"), settings: settings(), summary: summary, sourceName: sourceName)
+            if request.isCloud { pendingTextRequest = request }
+            else { processText(request, cloudConsent: false) }
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    func confirmTextProcessing() {
+        guard let request = pendingTextRequest else { return }
+        pendingTextRequest = nil
+        processText(request, cloudConsent: true)
+    }
+
+    private func processText(_ request: TextProcessingRequest, cloudConsent: Bool) {
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
+        guard !request.isCloud || cloudConsent else { return }
+        let token = WorkCancellation()
+        cancellation = token
+        busy = true
+        errorMessage = nil
+        activity = request.isCloud ? "Sending approved transcript text to OpenAI…" : "Processing text on this Mac…"
+        task = Task {
+            defer { busy = false; task = nil; cancellation = nil; progressMonitor.stop(); startNext() }
+            do {
+                let key = request.isCloud ? try IntelligenceCredentials().key() : nil
+                let preview = try await TranscriptPreview.read(request.transcript.deletingLastPathComponent())
+                try token.check()
+                let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
+                let job = jobs.appendingPathComponent(token.id.uuidString)
+                latestSource = preview.sourceURL
+                previousJob = latestJob
+                latestJob = job
+                progress = 0
+                progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
+                    self?.activity = snapshot.state.label; self?.progress = snapshot.progress
+                }, failure: { [weak self] message in self?.errorMessage = message })
+                _ = try await Task.detached(priority: .utility) {
+                    try PipelineRuntime.validate(request.settings.pythonPath, cancel: token)
+                    try FileManager.default.createDirectory(at: jobs, withIntermediateDirectories: true)
+                    return try LocalProcessRunner.run(URL(fileURLWithPath: request.settings.pythonPath), request.arguments(output: job),
+                                                      in: jobs, cancel: token, privateInput: key)
+                }.value
+                let result = try await readJob(job.appendingPathComponent("manifest.json")).validated()
+                try token.check()
+                guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
+                progress = result.progress
+                if let source = preview.sourceURL { rememberJob(job, source) }
+                activity = request.isCloud ? "OpenAI text derivative ready · review required" : "Local text derivative ready · review required"
+            } catch is CancellationError { activity = "Text processing cancelled; previous transcript retained" }
+            catch { errorMessage = error.localizedDescription; activity = "Text processing failed; previous transcript retained" }
+        }
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {

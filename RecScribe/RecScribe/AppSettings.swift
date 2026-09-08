@@ -7,6 +7,10 @@ nonisolated enum TranscriptionMode: String, Codable, CaseIterable, Sendable {
 nonisolated enum RecognitionProfile: String, Codable, CaseIterable, Sendable {
     case fast, verified
 }
+nonisolated enum IntelligenceProvider: String, Codable, CaseIterable, Sendable {
+    case ollama, openai
+    var label: String { self == .ollama ? "Ollama · on this Mac" : "OpenAI · cloud text only" }
+}
 
 @MainActor
 final class AppSettings: ObservableObject {
@@ -30,12 +34,14 @@ final class AppSettings: ObservableObject {
         var liveChunkSeconds = LiveTranscriptionPolicy.defaultChunkSeconds
         var liveThreads = LiveTranscriptionPolicy.defaultThreads
         var aiEnabled = false
+        var aiProvider = IntelligenceProvider.ollama
+        var openaiModel = ""
         var ollamaModel = ""
         var summarize = false
         var migrationWarnings: [String] = []
 
         init() {}
-        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, liveChunkSeconds, liveThreads, aiEnabled, ollamaModel, summarize }
+        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, liveChunkSeconds, liveThreads, aiEnabled, aiProvider, openaiModel, ollamaModel, summarize }
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             var reader = PreferenceReader(container: container)
@@ -66,6 +72,8 @@ final class AppSettings: ObservableObject {
             liveChunkSeconds = reader.value(.liveChunkSeconds, liveChunkSeconds, valid: LiveTranscriptionPolicy.chunkChoices.contains)
             liveThreads = reader.value(.liveThreads, liveThreads, valid: LiveTranscriptionPolicy.threadRange.contains)
             aiEnabled = reader.value(.aiEnabled, aiEnabled)
+            aiProvider = reader.value(.aiProvider, aiProvider)
+            openaiModel = reader.value(.openaiModel, openaiModel)
             ollamaModel = reader.value(.ollamaModel, ollamaModel)
             summarize = reader.value(.summarize, summarize)
             migrationWarnings += reader.warnings

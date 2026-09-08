@@ -11,16 +11,41 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         let translatedText: String?
         let needsReview: Bool
     }
-    struct Processing: Decodable, Sendable { let mode: TranscriptionMode }
+    struct Processing: Decodable, Sendable {
+        struct Engine: Decodable, Sendable { let model: String; let detectedLanguage: String? }
+        let mode: TranscriptionMode
+        let sourceLanguage: String?
+        let enginePasses: [Engine]?
+        let localOnly: Bool?
+    }
+    struct Source: Decodable, Sendable {
+        let path: String
+        let durationMs: Int64
+        let channels: Int
+        let sampleRate: Int
+    }
     struct Summary: Decodable, Sendable {
         struct Note: Decodable, Sendable { let text: String; let segmentIds: [String] }
         let notes: [Note]
+        let processor: String?
     }
+    struct Language: Decodable, Sendable { let processor: String? }
     let schemaVersion: String
     let processing: Processing
+    let source: Source?
     let segments: [Segment]
     let summary: Summary?
+    let languageProcessing: Language?
     let reviewReasons: [String]
+    var sourceURL: URL? { source.map { URL(fileURLWithPath: $0.path) } }
+    var includesCloudText: Bool {
+        processing.localOnly == false || languageProcessing?.processor?.hasPrefix("openai:") == true || summary?.processor?.hasPrefix("openai:") == true
+    }
+    var recognitionLabel: String {
+        let models = Array(Set(processing.enginePasses?.map(\.model) ?? [])).sorted().joined(separator: ", ")
+        let languages = Array(Set(processing.enginePasses?.compactMap(\.detectedLanguage) ?? [])).sorted().joined(separator: ", ")
+        return [models, languages.isEmpty ? processing.sourceLanguage ?? "" : languages].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
 
     static func read(_ directory: URL) async throws -> Self {
         let worker = Task.detached(priority: .utility) {

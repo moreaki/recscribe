@@ -103,12 +103,21 @@ struct LiveTranscriptionControl: View {
 struct TranscriptWorkspace: View {
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var library: SessionLibrary
-    @State private var section = Section.live
+    @Environment(\.openWindow) private var openWindow
+    @State private var section: Section
     @State private var document: TranscriptPreview?
     @State private var error: String?
     @State private var selectedJob: URL?
-    private var displayedJob: URL? { selectedJob ?? library.latestJob }
-    private enum Section: String, CaseIterable { case live = "Live", transcript = "Transcript", summary = "Summary", review = "Review" }
+    @State private var followLiveSource = false
+    private var displayedJob: URL? {
+        selectedJob ?? (followLiveSource && library.latestSource != live.sourceURL ? nil : library.latestJob)
+    }
+    private var source: URL? {
+        if section == .live { return live.sourceURL }
+        return document?.sourceURL ?? (followLiveSource ? live.sourceURL : library.latestSource ?? live.sourceURL)
+    }
+    enum Section: String, CaseIterable { case live = "Live", transcript = "Transcript", summary = "Summary", review = "Review" }
+    init(section: Section = .live) { _section = State(initialValue: section) }
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
             HStack {
@@ -122,23 +131,51 @@ struct TranscriptWorkspace: View {
             Picker("Text view", selection: $section) {
                 ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented)
+            if let source {
+                TranscriptSourceView(source: source,
+                    duration: section == .live ? live.audioSeconds : document?.source.map { Double($0.durationMs) / 1_000 },
+                    detail: section == .live ? live.modelName ?? "Local live draft" : document?.recognitionLabel ?? "Full recording · final recognition",
+                    recording: library.recordingActive)
+            }
+            if section != .live {
+                HStack {
+                    if let source {
+                        Button(document == nil ? "Create final transcript" : "Transcribe again", systemImage: "text.bubble") {
+                            selectedJob = nil; library.transcribe(source)
+                        }
+                    }
+                    if document != nil, let job = displayedJob {
+                        Button(section == .summary ? "Generate summary" : "Improve text", systemImage: "sparkles") {
+                            library.requestTextProcessing(job, summary: section == .summary, sourceName: source?.lastPathComponent)
+                        }
+                    }
+                    Button("AI & transcription settings", systemImage: "slider.horizontal.3") { openWindow(id: AppWindow.settings.rawValue) }
+                }.disabled(library.busy || library.recordingActive || library.liveWorkActive)
+            }
             if section == .live { LiveTranscriptView(live: live) }
             else if let document {
                 let content = section == .summary ? document.summaryText : section == .review ? document.reviewReasons.joined(separator: "\n\n") : document.text
                 if content.isEmpty {
                     ContentUnavailableView(section == .summary ? "No summary yet" : "No review notes", systemImage: section == .summary ? "sparkles" : "checkmark.shield",
-                        description: Text(section == .summary ? "Enable local AI in Settings, choose an installed model, then use Transcribe & summarize in Recordings. Originals and raw ASR remain unchanged." : "Inspect the transcript before relying on it."))
+                        description: Text(section == .summary ? "Choose Ollama or OpenAI in Settings → Intelligence, then Generate summary above. Cloud text transfer always asks for confirmation." : "Inspect the transcript before relying on it."))
                 } else {
                     ScrollView { MarkdownReadingText(text: content).frame(maxWidth: WorkspaceStyle.readingWidth).padding(.vertical, GlassSpacing.s) }
                 }
                 Spacer(minLength: 0)
-                Label("\(document.processing.mode.rawValue) · AI-derived text and notes require review", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
+                Label("\(document.processing.mode.rawValue) · \(document.includesCloudText ? "Includes cloud text" : "Processed locally") · review required", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)
             } else {
-                ContentUnavailableView("A little more than a recording", systemImage: section == .summary ? "sparkles" : "doc.text",
-                    description: Text("Open Recordings to transcribe a completed session or import a WAV. Your transcript, source-linked summary and review notes appear here."))
+                ContentUnavailableView(library.busy ? "Processing your recording" : "Create a final transcript", systemImage: "doc.text",
+                    description: Text(source == nil ? "Choose a recording or import a WAV. Live drafts and final transcripts are separate." : "The Live tab is a provisional chunk preview. Create a final transcript from the complete recording, then improve its text or generate a summary."))
+                if source == nil { Button("Choose recording / import…") { openWindow(id: AppWindow.recordings.rawValue) } }
                 Spacer(minLength: 0)
             }
             if let message = error ?? library.errorMessage { Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if library.busy {
+                HStack { ProgressView(value: library.progress); Button("Cancel") { library.cancel() } }
+            }
+            if let previous = library.previousJob, library.errorMessage != nil {
+                Button("Open previous transcript") { selectedJob = previous }
+            }
             HStack {
                 Text("Pipeline: \(library.activity)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
@@ -156,7 +193,17 @@ struct TranscriptWorkspace: View {
             }
         }
         .padding(WorkspaceStyle.contentPadding)
-        .onChange(of: library.latestJob) { _, _ in selectedJob = nil }
+        .confirmationDialog("Send transcript text to OpenAI?", isPresented: Binding(
+            get: { library.pendingTextRequest != nil }, set: { if !$0 { library.pendingTextRequest = nil } })) {
+                Button("Send text and process") { library.confirmTextProcessing() }
+                Button("Cancel", role: .cancel) { library.pendingTextRequest = nil }
+            } message: {
+                Text("Source: \(library.pendingTextRequest?.sourceName ?? "")\nModel: \(library.pendingTextRequest?.model ?? "")\nOnly transcript text, segment IDs and uncertainty flags are sent to api.openai.com. No audio or local file paths. API charges and OpenAI retention policies apply. Originals remain on this Mac.")
+            }
+        .onChange(of: library.latestJob) { _, _ in selectedJob = nil; followLiveSource = false }
+        .onChange(of: live.sourceURL) { _, _ in
+            selectedJob = nil; document = nil; followLiveSource = true; section = .live
+        }
         .task(id: "\(displayedJob?.path ?? ""):\(library.progress == 1)") {
             document = nil
             error = nil
@@ -165,7 +212,8 @@ struct TranscriptWorkspace: View {
                 let result = try await TranscriptPreview.read(job)
                 try Task.checkCancellation()
                 document = result
-                section = .transcript
+                if selectedJob != nil { library.rememberOpenedTranscript(job, source: result.sourceURL) }
+                if section == .live { section = .transcript }
             } catch is CancellationError { }
             catch { if !Task.isCancelled { self.error = error.localizedDescription } }
         }

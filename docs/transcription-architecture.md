@@ -4,6 +4,12 @@ Status: Architecture and staged implementation; see [WAV slice](wav-vertical-sli
 Date: 2026-09-05  
 Base project: [Home Rec](https://github.com/melissa-pereira-deel/home-rec)
 
+Implementation update (2026-09-09): [Swift-first migration](swift-first-migration.md)
+tracks the staged transition. Native AI connections, text-only jobs, canonical v1
+validation and deterministic exports now share `RecScribeCore` between the app and
+the `recscribe-text` CLI. Python remains the audio/ASR reference; it is no longer
+required for the app's AI settings, text improvement, translation or summaries.
+
 ## 1. Purpose
 
 RecScribe extends Home Rec from a reliable macOS recorder into a

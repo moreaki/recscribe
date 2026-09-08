@@ -34,6 +34,9 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Run native text core and CLI tests
+        run: swift test --package-path core
+
       - name: Run unit tests (functional)
         # BLOCKING gate: full unit-test suite WITHOUT Thread Sanitizer. Covers all
         # correctness, including the AVAssetWriter-based encoder tests. No

@@ -12,8 +12,10 @@ RecScribe is in active development. The current codebase provides system-audio,
 per-application, and microphone recording with WAV, FLAC, and M4A output. The local
 WAV transcription CLI now provides a tested local vertical slice with a
 whisper.cpp adapter, versioned canonical JSON and deterministic text/subtitle
-exports. Normalization, translation and diarization remain explicit pending
-stages. See the [WAV guide](docs/wav-vertical-slice.md) and
+exports. Text normalization, translation and source-linked summaries now use a
+shared native Swift core, with opt-in Ollama or explicitly approved OpenAI text
+processing. Diarization remains pending. See the [Swift migration](docs/swift-first-migration.md),
+[WAV guide](docs/wav-vertical-slice.md) and
 [architecture](docs/transcription-architecture.md).
 
 No RecScribe release or automatic update channel exists yet. Development builds do not
@@ -30,7 +32,7 @@ contact the Home Rec update service.
 ## Requirements
 
 - macOS 15 or later
-- Xcode 16 or later
+- Xcode 26 or later (Swift 6.2 toolchain for the shared core)
 - Swift 6 language mode
 - An Apple Developer account for local signing
 - Screen Recording permission for system or per-application audio
@@ -71,6 +73,7 @@ and build with Command-B when working in Xcode.
 Run the unit tests from the command line:
 
 ```bash
+swift test --package-path core
 xcodebuild test \
   -project RecScribe/RecScribe.xcodeproj \
   -scheme RecScribe \

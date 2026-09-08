@@ -1,4 +1,4 @@
-# Source-linked transcript and intelligence workflow (0.2.2)
+# Source-linked transcript and intelligence workflow (0.2.4)
 
 ## What the tabs mean
 
@@ -39,11 +39,12 @@ audio, not guessed into a fluent but unsupported reading rendition.
 
 ## Local and cloud providers
 
-The app requires pipeline 0.2.0 or newer. An existing isolated Python environment
-does not change when the app updates. Set up the bundled pipeline again in
-Settings → Transcription; old environments remain intact. Recognition, text
-actions and model connection tests perform a lightweight version preflight and
-give an explicit upgrade instruction instead of invoking an incompatible CLI.
+Audio recognition still requires pipeline 0.2.0 or newer. An existing isolated
+Python environment does not change when the app updates. Set up the bundled
+pipeline again in Settings → Transcription if the recognition preflight requests
+it; old environments remain intact. AI discovery, connection testing, text
+improvement/translation and summaries now run natively without Python. See the
+[Swift-first migration](swift-first-migration.md) for the shared core and CLI.
 
 - **Ollama** is the default provider. Explicit local model selection is required;
   loopback-only HTTP and remote-model refusal remain unchanged.
@@ -70,7 +71,7 @@ give an explicit upgrade instruction instead of invoking an incompatible CLI.
 
 ## Evidence and boundaries
 
-`--derive` creates an exclusive new job. `input-transcript.json` preserves the
+Native `TextJob` (or the reference Python `--derive`) creates an exclusive new job. `input-transcript.json` preserves the
 parent canonical document; the manifest and raw index link its path/hash.
 Existing raw ASR evidence stays in its parent job, avoiding copies of large audio
 work files. Retain parent job directories when archiving/exporting derivatives.
@@ -80,8 +81,9 @@ request timeout and cancellation are defined at the adapter boundary.
 Language derivations and summary notes retain source segment IDs, input/raw
 hashes, processor/model identity, token counts where reported and elapsed time.
 AI responses and prompts are private local artifacts; do not commit them.
-The API key is read from an inherited bounded pipe, never CLI arguments,
-environment variables, manifests or diagnostic records. Unified logging retains
+The app passes its Keychain credential directly to the native client in memory;
+the standalone text CLI reads an explicitly provided bounded stdin pipe. Keys
+never enter CLI arguments, environment variables, manifests or diagnostic records. Unified logging retains
 operation IDs/outcomes/timings, not transcript content or credentials.
 
 `processing.local_only` describes the current job. Earlier cloud-derived text
@@ -93,7 +95,9 @@ a recursively synthesized global narrative. Persistent Whisper residency,
 learned live VAD, word-level alignment and human quality scoring remain separate
 follow-ups.
 
-## Local acceptance, 2026-09-09
+## Historical 0.2.2 acceptance, 2026-09-09
+
+Current migration acceptance is recorded in [Swift-first migration](swift-first-migration.md).
 
 - Synthetic Python suite: 46 tests, including model-family rejection, channel
   sharing, provider consent, fixed TLS origin, no retries/fallback, structured

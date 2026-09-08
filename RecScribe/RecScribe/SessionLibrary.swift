@@ -17,6 +17,7 @@ final class SessionLibrary: ObservableObject {
     @Published private(set) var activity = "Ready"
     @Published private(set) var progress = 0.0
     @Published private(set) var recordingActive = false
+    @Published private(set) var liveWorkActive = false
     @Published private(set) var latestJob: URL?
     @Published var errorMessage: String?
     private struct PendingSession {
@@ -80,6 +81,11 @@ final class SessionLibrary: ObservableObject {
         if active { cancellation?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }
         else { startNext() }
     }
+    func setLiveWork(_ active: Bool) {
+        liveWorkActive = active
+        if active { cancellation?.cancel(); progressMonitor.stop() }
+        else { startNext() }
+    }
     func enqueue(_ url: URL, recover: Bool = false, issue: String? = nil) {
         guard !shuttingDown else { return }
         if !pending.contains(where: { $0.manifest == url }) { pending.append(.init(manifest: url, recover: recover, issue: issue)) }
@@ -102,7 +108,7 @@ final class SessionLibrary: ObservableObject {
     }
 
     private func startNext() {
-        guard !shuttingDown, !recordingActive, task == nil, !pending.isEmpty else { return }
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, !pending.isEmpty else { return }
         let item = pending.removeFirst()
         let token = WorkCancellation()
         cancellation = token
@@ -116,7 +122,7 @@ final class SessionLibrary: ObservableObject {
                 activity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
                 if settings.autoTranscribe && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
             } catch is CancellationError {
-                if recordingActive && !shuttingDown { pending.insert(item, at: 0) }
+                if (recordingActive || liveWorkActive) && !shuttingDown { pending.insert(item, at: 0) }
                 activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
             } catch { errorMessage = error.localizedDescription; activity = "Needs attention" }
             task = nil
@@ -126,9 +132,16 @@ final class SessionLibrary: ObservableObject {
         }
     }
 
-    func transcribe(_ source: URL) {
-        guard !shuttingDown, !recordingActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
-        let settings = settings()
+    func transcribe(_ source: URL, summarize: Bool = false) {
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
+        var settings = settings()
+        if summarize {
+            guard settings.aiEnabled, !settings.ollamaModel.isEmpty else {
+                errorMessage = "Enable local AI and choose an installed model in Settings → Intelligence first"
+                return
+            }
+            settings.summarize = true
+        }
         let token = WorkCancellation()
         cancellation = token
         task = Task {
@@ -179,7 +192,7 @@ final class SessionLibrary: ObservableObject {
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {
-        guard !shuttingDown, !recordingActive, task == nil else {
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else {
             throw SessionError.invalid("Wait for capture/background work to finish before exporting")
         }
         let token = WorkCancellation()

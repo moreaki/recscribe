@@ -23,6 +23,7 @@ class RecordingController: RecordingControlling {
     private let saveLocation: SaveLocationProviding
     private let audioSource: AudioSourceProviding
     private let sessionLibrary: SessionLibrary?
+    private let liveTranscription: LiveTranscription?
 
     private var currentRecordingURL: URL?
 
@@ -40,6 +41,7 @@ class RecordingController: RecordingControlling {
         saveLocation: SaveLocationProviding? = nil,
         audioSource: AudioSourceProviding? = nil,
         sessionLibrary: SessionLibrary? = nil,
+        liveTranscription: LiveTranscription? = nil,
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
@@ -49,6 +51,7 @@ class RecordingController: RecordingControlling {
         self.saveLocation = saveLocation ?? SaveLocationManager()
         self.audioSource = audioSource ?? AudioSourceManager()
         self.sessionLibrary = sessionLibrary
+        self.liveTranscription = liveTranscription
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }
@@ -105,6 +108,7 @@ class RecordingController: RecordingControlling {
 
         let actualURL = audioRecorder.actualAudioURL ?? fileURL
         currentRecordingURL = actualURL
+        liveTranscription?.recordingStarted(actualURL)
         started = true
         Log.recorder.info("Recording started")
         return actualURL
@@ -113,7 +117,7 @@ class RecordingController: RecordingControlling {
     /// Stop recording
     /// - Throws: Error if stop fails
     func stopRecording() async throws {
-        defer { sessionLibrary?.setRecording(false) }
+        defer { liveTranscription?.recordingStopped(); sessionLibrary?.setRecording(false) }
         // Stop capturing audio
         var captureError: Error?
         do { try await captureManager.stopCapture() } catch { captureError = error }
@@ -154,7 +158,7 @@ class RecordingController: RecordingControlling {
     /// stopped, so capture teardown is best-effort; finalizing the recorder
     /// preserves the audio captured before the failure as a playable file.
     func finalizeAfterFailure() async {
-        defer { sessionLibrary?.setRecording(false) }
+        defer { liveTranscription?.recordingStopped(); sessionLibrary?.setRecording(false) }
         try? await captureManager.stopCapture()
         // Deliberately swallowed, unlike the user-initiated stop path (BL-016):
         // the caller is already reporting `.streamFailed`, which is the more

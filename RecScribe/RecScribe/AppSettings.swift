@@ -27,13 +27,15 @@ final class AppSettings: ObservableObject {
         var mode = TranscriptionMode.verbatim
         var profile = RecognitionProfile.fast
         var autoTranscribe = false
+        var liveChunkSeconds = LiveTranscriptionPolicy.defaultChunkSeconds
+        var liveThreads = LiveTranscriptionPolicy.defaultThreads
         var aiEnabled = false
         var ollamaModel = ""
         var summarize = false
         var migrationWarnings: [String] = []
 
         init() {}
-        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, aiEnabled, ollamaModel, summarize }
+        private enum CodingKeys: String, CodingKey { case storage, whisperPath, ffmpegPath, pythonPath, modelPath, verificationModelPath, vadModelPath, sourceLanguage, targetLanguage, mode, profile, autoTranscribe, liveChunkSeconds, liveThreads, aiEnabled, ollamaModel, summarize }
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             var reader = PreferenceReader(container: container)
@@ -61,6 +63,8 @@ final class AppSettings: ObservableObject {
             mode = reader.value(.mode, mode)
             profile = reader.value(.profile, profile)
             autoTranscribe = reader.value(.autoTranscribe, autoTranscribe)
+            liveChunkSeconds = reader.value(.liveChunkSeconds, liveChunkSeconds, valid: LiveTranscriptionPolicy.chunkChoices.contains)
+            liveThreads = reader.value(.liveThreads, liveThreads, valid: LiveTranscriptionPolicy.threadRange.contains)
             aiEnabled = reader.value(.aiEnabled, aiEnabled)
             ollamaModel = reader.value(.ollamaModel, ollamaModel)
             summarize = reader.value(.summarize, summarize)

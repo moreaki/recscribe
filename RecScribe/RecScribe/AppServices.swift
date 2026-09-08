@@ -7,6 +7,7 @@ final class AppServices: ObservableObject {
     let runtime: RuntimeManager
     let library: SessionLibrary
     let recorder: RecorderViewModel
+    let live: LiveTranscription
 
     init() {
         let settings = AppSettings()
@@ -14,13 +15,16 @@ final class AppServices: ObservableObject {
         let repository = ManifestRepository()
         let library = SessionLibrary(cancelRuntime: { runtime.cancel() }, settings: { settings.values },
             readSessions: { try await repository.sessions(in: $0) }, readJob: { try await repository.job(at: $0) })
-        runtime.isRecording = { [weak library] in library?.recordingActive ?? false }
+        let live = LiveTranscription(settings: { settings.values })
+        live.onBusyChange = { [weak library] in library?.setLiveWork($0) }
+        runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
         let source = AudioSourceManager(), location = SaveLocationManager()
-        let controller = RecordingController(saveLocation: location, audioSource: source, sessionLibrary: library,
+        let controller = RecordingController(saveLocation: location, audioSource: source, sessionLibrary: library, liveTranscription: live,
                                              storageOptions: { settings.values.storage })
         self.settings = settings
         self.runtime = runtime
         self.library = library
+        self.live = live
         self.recorder = RecorderViewModel(controller: controller, saveLocation: location, audioSource: source)
     }
 }

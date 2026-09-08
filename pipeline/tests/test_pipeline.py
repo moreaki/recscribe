@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import shlex
 import signal
 import struct
 import subprocess
@@ -30,6 +31,13 @@ from recscribe.storage import sha256, write_json
 
 ROOT = Path(__file__).resolve().parents[2]
 FFMPEG = Path(shutil.which("ffmpeg") or "/missing-ffmpeg")
+
+
+def python_tool(path, source):
+    # A shebang cannot quote an interpreter path containing "Application Support".
+    # Keep fixture execution on the selected Python using an explicitly quoted argv.
+    path.write_text("#!/bin/sh\nexec " + shlex.quote(sys.executable) + " -c " + shlex.quote(source) + ' "$@"\n')
+    path.chmod(0o700)
 
 
 def synthesize(path, channels=1, width=2, rate=16000, silence=False):
@@ -291,8 +299,7 @@ class PipelineTests(unittest.TestCase):
     def test_cli_signal_cancel(self):
         # Use a fake normalizer which waits; exercise actual CLI signal handling.
         binary = self.root / "slow-ffmpeg"
-        binary.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(60)\n")
-        binary.chmod(0o700)
+        python_tool(binary, "import time\ntime.sleep(60)\n")
         output = self.root / "signal-job"
         process = subprocess.Popen([sys.executable, "-m", "recscribe", str(self.source),
                                    "--output", str(output), "--ffmpeg", str(binary)],
@@ -313,7 +320,7 @@ class PipelineTests(unittest.TestCase):
     def test_whisper_cpp_contract_real_subprocess(self):
         binary = self.root / "fake-whisper-cli"
         # This emits the documented whisper.cpp JSON structure, not recognized speech.
-        binary.write_text(f"#!{sys.executable}\n" + '''import json, pathlib, sys
+        python_tool(binary, '''import json, pathlib, sys
 if "--version" in sys.argv:
     print("synthetic whisper.cpp contract fixture 1")
 else:
@@ -323,7 +330,6 @@ else:
     out.write_text(json.dumps({"result": {"language": "de"}, "transcription": [
         {"offsets": {"from": 0, "to": 900}, "text": " Grüezi! "}]}))
 ''')
-        binary.chmod(0o700)
         model = self.root / "synthetic-model.bin"
         model.write_bytes(b"not an ASR model")
         job, doc = self.run_job(WhisperCpp(binary, model))

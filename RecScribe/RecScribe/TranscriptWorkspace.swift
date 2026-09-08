@@ -35,6 +35,11 @@ struct LiveTranscriptView: View {
                     .accessibilityValue(followsLatest ? "On" : "Off")
             }
             Text("Unverified · \(live.status)").font(.caption).foregroundStyle(.secondary)
+            if live.captureNeedsReview {
+                Label("Recording was interrupted or could not be finalized. Review the saved audio and this partial draft.",
+                      systemImage: "exclamationmark.triangle")
+                    .font(.callout).foregroundStyle(.orange)
+            }
             if live.segments.isEmpty {
                 ContentUnavailableView("Let the conversation unfold", systemImage: "waveform.and.mic",
                     description: Text("Enable live transcription before or during recording. Words appear here after a complete chunk has been processed locally."))
@@ -62,7 +67,7 @@ struct LiveTranscriptView: View {
             if let error = live.errorMessage { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if !compact {
                 HStack {
-                    Label("\(live.lastChunkSeconds.formatted(.number.precision(.fractionLength(1)))) s / last chunk", systemImage: "timer")
+                    Label(live.lastChunk?.label ?? "No chunk processed yet", systemImage: "timer")
                     Spacer()
                     if let directory = live.directory {
                         Button("Draft artifacts", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([directory]) }
@@ -135,7 +140,7 @@ struct TranscriptWorkspace: View {
             }
             if let message = error ?? library.errorMessage { Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             HStack {
-                Text(library.activity).font(.caption).foregroundStyle(.secondary)
+                Text("Pipeline: \(library.activity)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Open transcript…", systemImage: "doc.text.magnifyingglass") {
                     let panel = NSOpenPanel()

@@ -76,7 +76,7 @@ struct RecordingStateTests {
     @Test("RecorderError maps to the right recovery action")
     func errorRecoveryMapping() {
         #expect(RecorderError.startFailed("x").recovery == .tryAgain)
-        #expect(RecorderError.streamFailed("x").recovery == .openSettings)
+        #expect(RecorderError.streamFailed("x").recovery == nil)
         #expect(RecorderError.stopFailed("x").recovery == nil)
         #expect(RecorderError.diskFull.recovery == nil)
         #expect(RecoverySuggestion.openSettings.label == "Open settings")

@@ -144,9 +144,8 @@ struct RecorderViewModelTests {
     @Test("Recovery action .openSettings opens System Settings and dismisses the error")
     func recoveryOpensSettings() async {
         let controller = MockRecordingControlling()
-        // Denied, because that is what a permission-related stream failure means —
-        // and because opening Settings is now gated on the answer (BL-087): an
-        // already-granted user has nothing to go there for.
+        // An actual permission denial offers Settings. A generic stream
+        // interruption (which can also mean sleep) must not assume revocation.
         let permission = MockPermissionProviding(.denied)
         let viewModel = RecorderViewModel(
             controller: controller,
@@ -156,10 +155,7 @@ struct RecorderViewModelTests {
             pollClock: ImmediatePollClock(),
             registrationTimeout: 0
         )
-        viewModel.permissionStatus = .granted   // stale, as it would be mid-recording
-
-        await viewModel.startRecording()
-        controller.emitStreamError("permission turned off")
+        await viewModel.requestPermission()
         #expect(viewModel.recoverySuggestion == .openSettings)
         #expect(viewModel.showError)
 

@@ -24,6 +24,7 @@ class RecordingController: RecordingControlling {
     private let audioSource: AudioSourceProviding
     private let sessionLibrary: SessionLibrary?
     private let liveTranscription: LiveTranscription?
+    private let activity: RecordingActivity
 
     private var currentRecordingURL: URL?
 
@@ -42,6 +43,7 @@ class RecordingController: RecordingControlling {
         audioSource: AudioSourceProviding? = nil,
         sessionLibrary: SessionLibrary? = nil,
         liveTranscription: LiveTranscription? = nil,
+        activity: RecordingActivity? = nil,
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
@@ -52,6 +54,8 @@ class RecordingController: RecordingControlling {
         self.audioSource = audioSource ?? AudioSourceManager()
         self.sessionLibrary = sessionLibrary
         self.liveTranscription = liveTranscription
+        self.activity = activity ?? RecordingActivity()
+        self.activity.onInterruption = { [weak self] message in self?.onStreamError?(message) }
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }
@@ -70,7 +74,7 @@ class RecordingController: RecordingControlling {
         guard !audioRecorder.recording else { throw AudioRecorderError.alreadyRecording }
         sessionLibrary?.setRecording(true)
         var started = false
-        defer { if !started { sessionLibrary?.setRecording(false) } }
+        defer { if !started { activity.stop(); sessionLibrary?.setRecording(false) } }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
@@ -89,6 +93,7 @@ class RecordingController: RecordingControlling {
         audioRecorder.onWaveformData = onWaveformData
 
         // Start audio recorder first (creates the file in the chosen format).
+        activity.start()
         try audioRecorder.startRecording(to: fileURL, format: .wav)
 
         // Set up capture with audio callback
@@ -98,6 +103,9 @@ class RecordingController: RecordingControlling {
                 recorder.processAudioSample(pcmBuffer)
             }
             try await captureManager.startCapture()
+            guard !activity.interrupted else {
+                throw ScreenCaptureAudioError.interruptedBySleep
+            }
         } catch {
             await captureManager.cleanup()
             try? await audioRecorder.stopRecording()
@@ -117,7 +125,12 @@ class RecordingController: RecordingControlling {
     /// Stop recording
     /// - Throws: Error if stop fails
     func stopRecording() async throws {
-        defer { liveTranscription?.recordingStopped(); sessionLibrary?.setRecording(false) }
+        var needsReview = false
+        defer {
+            activity.stop()
+            liveTranscription?.recordingStopped(needsReview: needsReview)
+            sessionLibrary?.setRecording(false)
+        }
         // Stop capturing audio
         var captureError: Error?
         do { try await captureManager.stopCapture() } catch { captureError = error }
@@ -141,8 +154,11 @@ class RecordingController: RecordingControlling {
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
         if let manifest = audioRecorder.sessionManifestURL {
-            sessionLibrary?.enqueue(manifest, issue: (finalizeError ?? captureError)?.localizedDescription)
+            let issue = (finalizeError ?? captureError)?.localizedDescription
+                ?? (activity.interrupted ? "Sleep interrupted recording; review the end of this session" : nil)
+            sessionLibrary?.enqueue(manifest, issue: issue)
         }
+        needsReview = finalizeError != nil || captureError != nil || activity.interrupted
 
         if let finalizeError {
             Log.recorder.error(
@@ -158,19 +174,25 @@ class RecordingController: RecordingControlling {
     /// stopped, so capture teardown is best-effort; finalizing the recorder
     /// preserves the audio captured before the failure as a playable file.
     func finalizeAfterFailure() async {
-        defer { liveTranscription?.recordingStopped(); sessionLibrary?.setRecording(false) }
+        defer {
+            activity.stop()
+            liveTranscription?.recordingStopped(needsReview: true)
+            sessionLibrary?.setRecording(false)
+        }
         try? await captureManager.stopCapture()
-        // Deliberately swallowed, unlike the user-initiated stop path (BL-016):
-        // the caller is already reporting `.streamFailed`, which is the more
-        // useful diagnosis, and replacing it with a finalize error would bury
-        // the actual cause. The partial file is preserved either way — for WAV
-        // by its periodic header, for M4A by its movie fragments.
-        try? await audioRecorder.stopRecording()
+        // Keep the original interruption visible, but don't lose a secondary
+        // finalization failure: record it in diagnostics and the session issue.
+        var issue = "Capture stopped unexpectedly; review the end of this session"
+        do { try await audioRecorder.stopRecording() }
+        catch {
+            Log.recordFailure(error, operation: "finalize_after_capture_failure")
+            issue += "; audio finalization also failed; verify or recover the saved parts"
+        }
         await captureManager.cleanup()
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
         if let manifest = audioRecorder.sessionManifestURL {
-            sessionLibrary?.enqueue(manifest, issue: "Capture stopped unexpectedly; review the end of this session")
+            sessionLibrary?.enqueue(manifest, issue: issue)
         }
         Log.recorder.error("Recording finalized after stream failure")
     }
@@ -217,7 +239,9 @@ class RecordingController: RecordingControlling {
         let captureManager = captureManager
         let audioRecorder = audioRecorder
         let sessionLibrary = sessionLibrary
+        let activity = activity
         Task { @MainActor in
+            defer { activity.stop() }
             guard captureManager.capturing || audioRecorder.recording else { return }
             try? await captureManager.stopCapture()
             try? await audioRecorder.stopRecording()

@@ -153,6 +153,7 @@ struct ReskinSnapshots {
             saveLocation: MockSaveLocationProviding(
                 directory: URL(fileURLWithPath: "/Users/me/Desktop")
             ),
+            audioSource: MockAudioSourceProviding(),
             installLocation: MockInstallLocationProviding(install),
             // A scratch suite, or the images inherit whatever format the person
             // running this happens to have selected — the snapshots would drift
@@ -208,6 +209,37 @@ struct ReskinSnapshots {
     }
 
     // MARK: - Cases
+
+    @Test func interruptedStudio() async {
+        guard Self.outputDirectory != nil else { return }
+        let controller = MockRecordingControlling(), library = SessionLibrary()
+        let model = makeViewModel(controller: controller)
+        await model.startRecording()
+        model.duration = 40
+        controller.emitStreamError("Synthetic sleep interruption")
+        await model.waitForFailureFinalization()
+        model.showError = false // Inspect the persistent state after dismissing the alert.
+        let live = LiveTranscription(work: { _, output, cursor, _, _, _ in
+            guard cursor < 40 else { return nil }
+            let segments = cursor == 0 ? [LiveSegment(id: UUID(), startSeconds: 0, endSeconds: 20,
+                channel: 0, language: "en", text: "This is a synthetic partial draft. Review the saved audio before using it.")] : []
+            return LiveChunkResult(asrRuns: cursor == 0 ? 1 : 0, startFrame: cursor, endFrame: cursor + 20,
+                availableFrames: 40, sampleRate: 1, durationSeconds: cursor == 0 ? 1.2 : 0.013,
+                segments: segments, directory: output)
+        })
+        live.setEnabled(true)
+        live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
+        live.recordingStopped(needsReview: true)
+        await waitUntil("synthetic draft drained") { !live.busy }
+        for (name, size) in [("studio-interrupted", AppWindow.studio.defaultSize),
+                             ("studio-interrupted-minimum", AppWindow.studio.minimumSize)] {
+            write(name, size: size, contrast: .standard) {
+                StudioView().environmentObject(model).environmentObject(live).environmentObject(library)
+            }
+        }
+        await live.shutdown()
+        await library.shutdown()
+    }
 
     @Test("Main window, every state", arguments: [ColorSchemeContrast.standard, .increased])
     func mainWindow(contrast: ColorSchemeContrast) async {

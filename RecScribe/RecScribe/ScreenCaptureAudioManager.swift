@@ -16,6 +16,7 @@ enum ScreenCaptureAudioError: Error, LocalizedError {
     case noDisplaysAvailable
     case streamCreationFailed
     case startCaptureFailed(Error)
+    case interruptedBySleep
     /// The `.app` source's bundle ID has no matching running `SCRunningApplication` (BL-100).
     case appNotRunning(String)
 
@@ -29,6 +30,8 @@ enum ScreenCaptureAudioError: Error, LocalizedError {
             return "Failed to create capture stream"
         case .startCaptureFailed(let error):
             return "Failed to start audio capture: \(error.localizedDescription)"
+        case .interruptedBySleep:
+            return "The Mac or display entered sleep while starting capture. Wake it and start a new recording."
         case .appNotRunning(let bundleID):
             return "The selected app (\(bundleID)) is not currently running."
         }
@@ -44,6 +47,8 @@ enum ScreenCaptureAudioError: Error, LocalizedError {
             return "Try restarting the application"
         case .startCaptureFailed:
             return "Check if another app is already capturing system audio"
+        case .interruptedBySleep:
+            return "Keep the Mac open and awake while recording."
         case .appNotRunning:
             return "Open the app, or choose a different capture source."
         }
@@ -58,6 +63,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var stream: SCStream?
     private var isCapturing = false
     private var output: AudioCaptureOutput?
+    private var stopTask: Task<Void, Error>?
 
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
     var onStreamError: (@MainActor (String) -> Void)?
@@ -176,24 +182,31 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             isCapturing = true
             Log.capture.info("Capture started")
         } catch {
-            Log.capture.error("Capture failed to start: \(error.localizedDescription, privacy: .public)")
+            Log.recordFailure(error, operation: "start_stream")
             throw ScreenCaptureAudioError.startCaptureFailed(error)
         }
     }
 
     /// Stop audio capture
     func stopCapture() async throws {
-        guard let stream = stream else { return }
-
-        do {
-            try await stream.stopCapture()
-        } catch {
-            await output?.finish()
-            isCapturing = false
-            throw error
-        }
-        await output?.finish()
+        if let stopTask { return try await stopTask.value }
+        guard let stream else { return }
+        let shouldStop = isCapturing, output = output
         isCapturing = false
+        let task = Task {
+            var failure: Error?
+            if shouldStop {
+                do { try await stream.stopCapture() }
+                catch { Log.recordFailure(error, operation: "stop_stream"); failure = error }
+            }
+            // Even a stream stopped by macOS may still have queued callbacks.
+            // Cleanup joins this drain; it must not call stopCapture twice.
+            await output?.finish()
+            if let failure { throw failure }
+        }
+        stopTask = task
+        defer { stopTask = nil }
+        try await task.value
     }
 
     /// Clean up resources
@@ -213,11 +226,14 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 extension ScreenCaptureAudioManager: SCStreamDelegate {
 
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
+        let error = error as NSError
         let message = error.localizedDescription
         let identity = ObjectIdentifier(stream)
         Task { @MainActor [weak self] in
             guard let self, self.stream.map(ObjectIdentifier.init) == identity else { return }
-            Log.capture.error("Capture stream stopped with error: \(message, privacy: .private)")
+            Log.recordFailure(error, operation: "stream_delegate")
+            Log.capture.error("Capture stream interrupted id=\(String(describing: self.output?.id), privacy: .public)")
+            guard self.isCapturing else { return } // Don't report teardown as a second failure.
             self.isCapturing = false
             self.onStreamError?(message)
         }

@@ -61,9 +61,9 @@ enum RecorderError: Error, Equatable, Sendable {
         case .microphoneDenied:
             return "RecScribe doesn't have permission to use the microphone."
         case .stopFailed:
-            return "RecScribe couldn't finish saving the recording. The audio captured so far may still be on your Desktop."
+            return "RecScribe couldn't finish saving the recording. Open Recordings to verify or recover the saved parts."
         case .streamFailed:
-            return "Recording stopped unexpectedly. This usually means Screen Recording permission was turned off, or another app took over audio capture."
+            return "Recording was interrupted. Open Recordings to verify the saved audio and review its ending before use. Sleep, a disconnected source or a capture error can interrupt recording."
         case .diskFull:
             return "There isn't enough free space to start recording. Free up some disk space and try again."
         case .saveLocationUnavailable:
@@ -84,7 +84,7 @@ enum RecorderError: Error, Equatable, Sendable {
         case .microphoneDenied:
             return .openMicrophoneSettings
         case .streamFailed:
-            return .openSettings
+            return nil
         case .saveLocationUnavailable:
             return .chooseFolder
         case .stopFailed, .diskFull:
@@ -121,6 +121,19 @@ enum RecordingState: Equatable, Sendable {
     case stopping
     case error(RecorderError)
     case recovering
+
+    nonisolated func heading(duration: String) -> String {
+        switch self {
+        case .idle: return "Ready when you are"
+        case .starting: return "Starting recording…"
+        case .recording: return duration
+        case .stopping: return "Saving recording…"
+        case .recovering: return "Recovering recording…"
+        case .error(.streamFailed): return "Recording interrupted"
+        case .error(.stopFailed): return "Recording needs review"
+        case .error: return "Recording unavailable"
+        }
+    }
 
     /// Whether the user may change the capture source right now (BL-111).
     ///

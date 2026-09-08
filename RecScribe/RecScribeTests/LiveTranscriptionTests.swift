@@ -122,6 +122,35 @@ struct LiveTranscriptionTests {
         #expect(parsed[0].text == "Neue Worte")
     }
 
+    @Test func digitalSilenceRecordsSkippedASRWithoutLaunchingTheExecutable() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 2))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 8_000))
+        buffer.frameLength = buffer.frameCapacity
+        for channel in 0..<2 { buffer.floatChannelData![channel].update(repeating: 0, count: 8_000) }
+        let writer = SessionWAVWriter()
+        let audio = root.appendingPathComponent("silence.wav")
+        try writer.createFile(at: audio, sampleRate: 8_000, channels: 2)
+        try writer.writeBuffer(buffer)
+        try writer.finalize()
+        let manifest = try #require(writer.manifestURL)
+        var settings = AppSettings.Values()
+        // Any accidental ASR launch fails: no actual model is needed for silence.
+        settings.whisperPath = "/usr/bin/false"
+        settings.modelPath = audio.path
+        let configured = settings
+        let result = try await Task.detached(priority: .utility) {
+            try LiveWhisperTranscriber.step(manifest: manifest, directory: root.appendingPathComponent("draft"),
+                cursor: 0, finished: true, settings: configured, cancel: WorkCancellation())
+        }.value
+        let chunk = try #require(result)
+        #expect(chunk.asrRuns == 0)
+        #expect(chunk.segments.isEmpty)
+        #expect(chunk.endFrame == 8_000)
+        let saved = try JSONDecoder().decode(LiveChunkResult.self, from: Data(contentsOf: chunk.directory.appendingPathComponent("chunk.json")))
+        #expect(saved.asrRuns == 0)
+    }
+
     @MainActor final class Worker {
         var requests: [(Int64, Bool)] = []
         var pending: [CheckedContinuation<LiveChunkResult?, any Error>] = []
@@ -172,6 +201,60 @@ struct LiveTranscriptionTests {
         let text = "[hello](https://example.com) **literal**"
         #expect(String(MarkdownReadingText.literal(text).characters) == text)
         #expect(MarkdownReadingText.literal(text).runs.allSatisfy { $0.link == nil })
+    }
+
+    @Test func interruptedDraftCannotBecomeReadyAndANewRecordingResetsIt() async {
+        let worker = Worker()
+        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let source = URL(fileURLWithPath: "/synthetic.wav")
+        live.setEnabled(true)
+        live.recordingStarted(source)
+        await waitUntil("live chunk") { worker.pending.count == 1 }
+        live.recordingStopped(needsReview: true)
+        worker.finish(.init(asrRuns: 0, startFrame: 0, endFrame: 20, availableFrames: 20, sampleRate: 1,
+                            durationSeconds: 0.013, segments: [], directory: source))
+        await waitUntil("final chunk") { worker.pending.count == 1 }
+        worker.finish(nil)
+        await waitUntil("draft drained") { !live.busy }
+        #expect(live.captureNeedsReview)
+        #expect(live.status == "Partial live draft · recording needs review")
+        #expect(live.lastChunk?.label.contains("ASR skipped") == true)
+        #expect(live.lastChunk?.label.contains("13") == true)
+        live.setEnabled(false)
+        #expect(live.captureNeedsReview)
+        live.recordingStarted(source)
+        #expect(!live.captureNeedsReview)
+        #expect(live.lastChunk == nil)
+        await live.shutdown()
+    }
+
+    @Test func processingTimingsDistinguishSilenceFromEmptyRecognitionAndOldEvidence() throws {
+        let run = LiveChunkTiming(wallSeconds: 1.25, audioSeconds: 20, asrRuns: 1)
+        #expect(!run.label.contains("silence"))
+        let old = LiveChunkResult(startFrame: 0, endFrame: 20, availableFrames: 20, sampleRate: 1,
+                                  durationSeconds: 0.013, segments: [], directory: URL(fileURLWithPath: "/synthetic"))
+        let data = try JSONEncoder().encode(old)
+        let decoded = try JSONDecoder().decode(LiveChunkResult.self, from: data)
+        #expect(decoded.asrRuns == nil)
+        #expect(!LiveChunkTiming(wallSeconds: decoded.durationSeconds, audioSeconds: 20,
+                                asrRuns: decoded.asrRuns).label.contains("silence"))
+    }
+
+    @Test func disabledLiveStatusTracksStopAndNewRecordingAfterASRError() async {
+        let live = LiveTranscription(work: { _, _, _, _, _, _ in throw SessionError.invalid("Synthetic ASR failure") })
+        let source = URL(fileURLWithPath: "/synthetic.wav")
+        live.setEnabled(true)
+        live.recordingStarted(source)
+        await waitUntil("live failure") { !live.busy }
+        live.recordingStopped(needsReview: true)
+        #expect(live.status.contains("draft is incomplete"))
+        #expect(!live.status.contains("recording is unaffected"))
+        live.recordingStarted(source)
+        #expect(live.status == "Live transcription is off · audio is still recorded")
+        #expect(live.errorMessage == nil)
+        live.recordingStopped()
+        #expect(live.status == "Live transcription is off")
+        await live.shutdown()
     }
 
     @Test func canonicalPreviewKeepsModesSourcesAndReviewSeparate() async throws {

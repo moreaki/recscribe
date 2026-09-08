@@ -24,7 +24,12 @@ struct RecorderView: View {
                 Spacer()
                 OverflowMenuButton()
             }
-            StatusBar(isRecording: viewModel.isRecording, duration: viewModel.formattedDuration, statusText: viewModel.statusText)
+            StatusBar(state: viewModel.state, duration: viewModel.formattedDuration, statusText: viewModel.statusText)
+            if case .error = viewModel.state {
+                Button("Review saved recordings", systemImage: "waveform.path.badge.exclamationmark") {
+                    openWindow(id: AppWindow.recordings.rawValue)
+                }.buttonStyle(.borderless)
+            }
             GlassLiveWaveform(samples: RecorderWaveformAdapter.magnitudes(viewModel.waveformSamples,
                 bucketedTo: RecorderWaveformAdapter.popoverBarCount))
                 .frame(height: WorkspaceStyle.waveformHeight)
@@ -47,8 +52,12 @@ struct RecorderView: View {
                     else if viewModel.permissionStatus != .granted { viewModel.openSystemSettings() }
                     else { Task { await viewModel.toggleRecording() } }
                 }
-                .disabled(viewModel.state == .starting || viewModel.state == .stopping)
+                .disabled(viewModel.isFinalizingAfterFailure || !viewModel.state.allowsCaptureSourceChange && !viewModel.isRecording)
                 .keyboardShortcut("r", modifiers: .command)
+            if viewModel.isRecording {
+                Label("Mac and display stay awake while recording. Closing the lid can interrupt capture.", systemImage: "moon.zzz")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Label(viewModel.saveLocationName, systemImage: "folder").font(.caption).foregroundStyle(.secondary)
                 .lineLimit(1).help(viewModel.saveLocationPath)
             if viewModel.lastRecordingURL != nil, !viewModel.isRecording {
@@ -77,16 +86,29 @@ struct RecorderView: View {
 }
 
 struct StatusBar: View {
-    let isRecording: Bool
+    let state: RecordingState
     let duration: String
     let statusText: String
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.md) {
-            Text(isRecording ? duration : "Ready when you are")
+            Text(state.heading(duration: duration))
                 .font(.system(.title, design: .rounded, weight: .semibold)).monospacedDigit()
-            Label(statusText, systemImage: isRecording ? "record.circle" : "headphones")
-                .font(.callout).foregroundStyle(isRecording ? .red : .secondary)
+            Label(statusText, systemImage: symbol)
+                .font(.callout).foregroundStyle(color)
                 .fixedSize(horizontal: false, vertical: true)
+            if case .error(.streamFailed) = state {
+                Text("Stopped at \(duration) · verify saved audio duration in Recordings")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
+    }
+
+    private var symbol: String {
+        if case .error = state { return "exclamationmark.triangle" }
+        return state == .recording ? "record.circle" : "headphones"
+    }
+    private var color: Color {
+        if case .error = state { return .orange }
+        return state == .recording ? .red : .secondary
     }
 }

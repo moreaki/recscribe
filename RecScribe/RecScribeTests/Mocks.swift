@@ -20,6 +20,7 @@ final class MockAudioCapturing: AudioCapturing {
     private(set) var cleanupCount = 0
     var setupError: Error?
     var stopError: Error?
+    var onStart: (() -> Void)?
     /// The source passed to the most recent `setupCapture`, for assertions (BL-100).
     private(set) var lastSource: AudioSource?
     private var audioCallback: (@Sendable (AVAudioPCMBuffer) -> Void)?
@@ -34,6 +35,7 @@ final class MockAudioCapturing: AudioCapturing {
     func startCapture() async throws {
         startCount += 1
         capturing = true
+        onStart?()
     }
 
     func stopCapture() async throws {
@@ -44,6 +46,8 @@ final class MockAudioCapturing: AudioCapturing {
 
     func cleanup() async {
         cleanupCount += 1
+        capturing = false
+        audioCallback = nil
     }
 
     /// Simulate the capture stream dying unexpectedly.
@@ -314,6 +318,7 @@ final class MockRecordingControlling: RecordingControlling {
     private(set) var lastStartFormat: AudioFormat?
     /// Fired when `finalizeAfterFailure()` runs.
     var onFinalize: (() -> Void)?
+    var beforeFinalize: (() async -> Void)?
 
     func startRecording(format: AudioFormat) async throws -> URL {
         startCount += 1
@@ -332,6 +337,7 @@ final class MockRecordingControlling: RecordingControlling {
     }
 
     func finalizeAfterFailure() async {
+        await beforeFinalize?()
         finalizeCount += 1
         isRecording = false
         recordingURL = nil

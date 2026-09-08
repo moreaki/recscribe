@@ -32,6 +32,9 @@ nonisolated struct LiveChunkResult: Codable, Sendable {
     var engine = "whisper.cpp"
     var sourceManifest: URL?
     var model: String?
+    /// Absent in older evidence. Zero means every channel was digital silence,
+    /// not merely that the recognizer returned no words.
+    var asrRuns: Int? = nil
     let startFrame: Int64
     let endFrame: Int64
     let availableFrames: Int64
@@ -39,6 +42,20 @@ nonisolated struct LiveChunkResult: Codable, Sendable {
     let durationSeconds: Double
     let segments: [LiveSegment]
     let directory: URL
+}
+
+nonisolated struct LiveChunkTiming: Sendable {
+    let wallSeconds: Double
+    let audioSeconds: Double
+    let asrRuns: Int?
+
+    var label: String {
+        let time = Duration.seconds(wallSeconds).formatted(.units(allowed: [.seconds, .milliseconds],
+                                                                 width: .abbreviated, maximumUnitCount: 1))
+        let audio = Duration.seconds(audioSeconds).formatted(.units(allowed: [.seconds], width: .abbreviated))
+        let detail = asrRuns == 0 ? " · digital silence, ASR skipped" : ""
+        return "\(time) processing / \(audio) audio\(detail)"
+    }
 }
 
 /// Owns one serial utility worker. Turning off never stops recording; turning
@@ -53,7 +70,8 @@ final class LiveTranscription: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var directory: URL?
     @Published private(set) var lagSeconds = 0.0
-    @Published private(set) var lastChunkSeconds = 0.0
+    @Published private(set) var lastChunk: LiveChunkTiming?
+    @Published private(set) var captureNeedsReview = false
     private(set) var cursor: Int64 = 0
     private var manifest: URL?
     private var capturing = false
@@ -81,7 +99,7 @@ final class LiveTranscription: ObservableObject {
         enabled = value
         errorMessage = nil
         if value { status = capturing ? "Waiting for a complete audio chunk…" : "Armed for the next recording"; start() }
-        else { invalidate(); status = "Live transcription is off · audio is still recorded" }
+        else { invalidate(); status = capturing ? "Live transcription is off · audio is still recorded" : "Live transcription is off" }
     }
 
     func recordingStarted(_ audio: URL) {
@@ -91,14 +109,19 @@ final class LiveTranscription: ObservableObject {
         cursor = 0
         segments = []
         lagSeconds = 0
+        lastChunk = nil
+        captureNeedsReview = false
         capturing = true
         errorMessage = nil
         if enabled { status = "Waiting for a complete audio chunk…"; start() }
+        else { status = "Live transcription is off · audio is still recorded" }
     }
 
-    func recordingStopped() {
+    func recordingStopped(needsReview: Bool = false) {
         capturing = false
+        captureNeedsReview = captureNeedsReview || needsReview
         if enabled { status = "Finishing remaining audio chunks…"; start() }
+        else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
     }
 
     func shutdown() async {
@@ -132,11 +155,13 @@ final class LiveTranscription: ObservableObject {
                         }
                         cursor = result.endFrame
                         segments = Self.preview(segments + result.segments)
-                        lastChunkSeconds = result.durationSeconds
+                        lastChunk = LiveChunkTiming(wallSeconds: result.durationSeconds,
+                            audioSeconds: Double(result.endFrame - result.startFrame) / Double(result.sampleRate),
+                            asrRuns: result.asrRuns)
                         lagSeconds = Double(max(0, result.availableFrames - cursor)) / Double(result.sampleRate)
                         status = capturing ? "Live draft · \(Int(lagSeconds)) s queued at last snapshot" : "Finishing live draft…"
                     } else if final {
-                        status = "Live draft ready · verify before use"
+                        status = captureNeedsReview ? "Partial live draft · recording needs review" : "Live draft ready · verify before use"
                         break
                     } else { try await wait() }
                 }
@@ -144,7 +169,7 @@ final class LiveTranscription: ObservableObject {
             catch {
                 if let self, generation == id {
                     errorMessage = error.localizedDescription
-                    status = "Live transcription needs attention · recording is unaffected"
+                    status = capturing ? "Live transcription needs attention · recording is unaffected" : "Live transcription needs attention · draft is incomplete"
                     enabled = false
                 }
             }

@@ -23,6 +23,8 @@ class RecorderViewModel: ObservableObject {
     @Published var duration: TimeInterval = 0
     @Published var errorMessage: String?
     @Published var showError = false
+    @Published private(set) var isFinalizingAfterFailure = false
+    private var failureFinalizationTask: Task<Void, Never>?
     /// A recovery action to offer alongside the current error, if any.
     @Published var recoverySuggestion: RecoverySuggestion?
     /// Set once a recording passes the long-recording threshold.
@@ -343,7 +345,7 @@ class RecorderViewModel: ObservableObject {
     /// Start recording
     func startRecording() async {
         // Only legal from idle or a prior error state.
-        guard state.canTransition(to: .starting) else { return }
+        guard !isFinalizingAfterFailure, state.canTransition(to: .starting) else { return }
 
         // Install location is checked *before* permission (BL-082). A translocated
         // bundle can be granted permission and will still lose it on the next
@@ -364,6 +366,9 @@ class RecorderViewModel: ObservableObject {
         }
 
         transition(to: .starting)
+        errorMessage = nil
+        showError = false
+        recoverySuggestion = nil
 
         // Recording a microphone needs its own grant, and it is a *different*
         // flow rather than the same one parameterised (BL-130): unlike Screen
@@ -759,11 +764,18 @@ class RecorderViewModel: ObservableObject {
     private func handleStreamFailure(_ message: String) {
         guard state == .recording else { return }
         stopTimer()
+        isFinalizingAfterFailure = true
         waveformSamples = Array(repeating: 0, count: 200)
         transition(to: .error(.streamFailed(message)))
-        Task { [weak self] in
+        failureFinalizationTask = Task { [weak self] in
             await self?.controller.finalizeAfterFailure()
+            self?.isFinalizingAfterFailure = false
+            self?.failureFinalizationTask = nil
         }
+    }
+
+    func waitForFailureFinalization() async {
+        await failureFinalizationTask?.value
     }
 
     /// Apply a state transition, rejecting illegal ones. Surfaces the alert when
@@ -884,8 +896,8 @@ class RecorderViewModel: ObservableObject {
             return "Stopping…"
         case .recovering:
             return "Recovering…"
-        case .error:
-            return "Something went wrong"
+        case .error(let error):
+            return error.message
         case .idle:
             // A translocated bundle can't hold a permission grant, so "Almost
             // ready / grant permission" would be a lie — point at the real fix.

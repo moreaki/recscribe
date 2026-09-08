@@ -6,6 +6,7 @@
 //  with Console.app or OSLogStore — never a file on the user's Desktop.
 //
 
+import Foundation
 import os
 
 /// App-wide loggers, grouped by subsystem area.
@@ -21,4 +22,11 @@ nonisolated enum Log {
     static let recorder = Logger(subsystem: subsystem, category: "recorder")
     static let file = Logger(subsystem: subsystem, category: "file")
     static let permission = Logger(subsystem: subsystem, category: "permission")
+
+    /// Error identity is useful in Release logs; descriptions can contain paths
+    /// or other private data and must not be made public to diagnose a failure.
+    static func recordFailure(_ error: Error, operation: String) {
+        let error = error as NSError
+        capture.error("Capture failure operation=\(operation, privacy: .public) domain=\(error.domain, privacy: .public) code=\(error.code) detail=\(error.localizedDescription, privacy: .private)")
+    }
 }

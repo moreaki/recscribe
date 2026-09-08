@@ -36,6 +36,7 @@ nonisolated enum LiveWhisperTranscriber {
             finished: finished, to: source, cancel: cancel) else { return nil }
         keepEvidence = true
         var segments: [LiveSegment] = []
+        var asrRuns = 0
         let channels = slice.identicalChannels ? [0] : Array(0..<slice.channels)
         for channel in channels {
             try cancel.check()
@@ -51,12 +52,13 @@ nonisolated enum LiveWhisperTranscriber {
                              "-ojf", "-of", output.path, "-t", String(settings.liveThreads), "-tp", "0", "-mc", "0"]
             _ = try LocalProcessRunner.run(URL(fileURLWithPath: settings.whisperPath), arguments,
                                           in: attempt, cancel: cancel, timeout: LiveTranscriptionPolicy.timeout)
+            asrRuns += 1
             segments += try parse(output.appendingPathExtension("json"), slice: slice, cursor: cursor, channel: channel)
         }
         try cancel.check()
         let elapsed = clock.duration(to: .now).components
         let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
-        let result = LiveChunkResult(sourceManifest: manifest, model: settings.modelPath,
+        let result = LiveChunkResult(sourceManifest: manifest, model: settings.modelPath, asrRuns: asrRuns,
                                     startFrame: cursor, endFrame: slice.endFrame, availableFrames: slice.availableFrames,
                                     sampleRate: slice.sampleRate, durationSeconds: seconds,
                                     segments: segments.sorted { $0.startSeconds < $1.startSeconds }, directory: attempt)
@@ -64,7 +66,7 @@ nonisolated enum LiveWhisperTranscriber {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(result).write(to: attempt.appendingPathComponent("chunk.json"), options: .atomic)
         try encoder.encode(result).write(to: directory.appendingPathComponent("latest.json"), options: .atomic)
-        logger.notice("Live chunk operation=\(cancel.id) start_frame=\(cursor) end_frame=\(slice.endFrame) channels=\(channels.count) elapsed_s=\(seconds) audio_s=\(Double(slice.endFrame - cursor) / Double(slice.sampleRate))")
+        logger.notice("Live chunk operation=\(cancel.id) start_frame=\(cursor) end_frame=\(slice.endFrame) channels=\(channels.count) asr_runs=\(asrRuns) elapsed_s=\(seconds) audio_s=\(Double(slice.endFrame - cursor) / Double(slice.sampleRate))")
         return result
     }
 

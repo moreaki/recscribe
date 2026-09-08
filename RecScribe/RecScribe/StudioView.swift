@@ -15,6 +15,7 @@ struct StudioView: View {
             }.padding(WorkspaceStyle.contentPadding)
             Divider()
             HStack(alignment: .top, spacing: 0) {
+                ScrollView {
                 VStack(spacing: GlassSpacing.xl) {
                     RecorderView()
                     Divider()
@@ -22,7 +23,8 @@ struct StudioView: View {
                     Text("Recording always comes first. Transcription is optional, local and can be switched on at any time.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
-                }.padding(WorkspaceStyle.contentPadding).frame(width: WorkspaceStyle.railWidth)
+                }.padding(WorkspaceStyle.contentPadding)
+                }.frame(width: WorkspaceStyle.railWidth)
                 Divider()
                 TranscriptWorkspace().frame(maxWidth: .infinity, maxHeight: .infinity)
             }

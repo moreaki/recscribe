@@ -27,6 +27,7 @@ struct RecScribeApp: App {
                 .onAppear {
                     appDelegate.prepareForTermination = {
                         if services.recorder.isRecording { await services.recorder.stopRecording() }
+                        await services.recorder.waitForFailureFinalization()
                         await services.live.shutdown()
                         await services.library.shutdown()
                         await services.runtime.shutdown()

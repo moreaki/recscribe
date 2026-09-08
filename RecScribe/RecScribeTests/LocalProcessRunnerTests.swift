@@ -3,6 +3,50 @@ import Testing
 @testable import RecScribe
 
 struct LocalProcessRunnerTests {
+    @Test func launchAndDiagnosticFailuresKeepStructuredEvidence() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var runner = LocalProcessRunner(diagnosticsDirectory: root)
+        let token = WorkCancellation()
+        let failure = try runner.execute(root.appendingPathComponent("missing-binary"), [], cancel: token)
+        #expect(failure.outcome == .launchFailed)
+        #expect(failure.exitCode == nil)
+        #expect(failure.operationID == token.id)
+        #expect(failure.endedAt >= failure.startedAt)
+        #expect(failure.durationSeconds >= 0)
+        #expect(failure.diagnostics != nil)
+        let obstruction = root.appendingPathComponent("not-a-directory")
+        try Data().write(to: obstruction)
+        runner.diagnosticsDirectory = obstruction
+        let noLog = try runner.execute(URL(fileURLWithPath: "/usr/bin/printf"), ["ok"], cancel: token)
+        #expect(noLog.exitCode == 0)
+        #expect(noLog.output == "ok")
+        #expect(noLog.diagnosticError != nil)
+        #expect(LocalProcessRunner.Failure(result: noLog).localizedDescription.contains("Diagnostics could not be saved"))
+    }
+
+    @Test func descendantsHoldingOutputDoNotHangAndUnrelatedProcessesSurvive() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var runner = LocalProcessRunner(diagnosticsDirectory: root)
+        runner.policy.timeout = 0.1
+        runner.policy.terminationGrace = 0.05
+        let unrelated = Process()
+        unrelated.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        unrelated.arguments = ["30"]
+        try unrelated.run()
+        defer { unrelated.terminate(); unrelated.waitUntilExit() }
+        let parent = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
+            ["-c", "sleep 1 & printf 'parent done'"], cancel: WorkCancellation())
+        #expect(parent.output == "parent done")
+        #expect(parent.durationSeconds < 2)
+        let timeout = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
+            ["-c", "trap '' TERM; while :; do printf 'synthetic output'; done"], cancel: WorkCancellation())
+        #expect(timeout.outcome == .timedOut)
+        #expect(timeout.durationSeconds < 2)
+        #expect(timeout.output.utf8.count <= runner.policy.outputBytes)
+        #expect(unrelated.isRunning)
+    }
     @Test func outputIsBoundedFailuresRetainTailAndLogsExpire() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

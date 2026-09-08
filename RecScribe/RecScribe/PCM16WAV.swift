@@ -76,17 +76,23 @@ nonisolated struct PCM16WAV: Equatable, Sendable {
     static func read(_ url: URL) throws -> Self {
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
-        return try Self(header: input.read(upToCount: headerBytes) ?? Data())
+        let bytes = try input.read(upToCount: headerBytes) ?? Data()
+        let value = try Self(header: bytes)
+        guard bytes == value.header, UInt64(value.payloadBytes).isMultiple(of: value.frameBytes) else {
+            throw SessionError.invalid("WAV header needs recovery")
+        }
+        return value
     }
 
     /// Copy complete frames, sync, then atomically replace. Cancellation/error leaves
     /// the original intact. Caller must exclude live writers (SessionLease for sessions).
     @discardableResult
     static func repair(_ url: URL, expected: PCM16WAV? = nil, blockBytes: Int = copyBlockBytes,
+                       write: (FileHandle, Data) throws -> Void = { try $0.write(contentsOf: $1) },
                        check: () throws -> Void = {}) throws -> UInt64 {
         guard blockBytes > 0 else { throw WAVWriterError.invalidFormat }
         try check()
-        let original = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        let original = try FileManager.default.attributesOfItem(atPath: url.path)
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
         let bytes = try input.read(upToCount: headerBytes) ?? Data()
@@ -105,7 +111,7 @@ nonisolated struct PCM16WAV: Equatable, Sendable {
         guard fd >= 0 else { throw WAVWriterError.fileCreationFailed }
         let output = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? output.close(); try? FileManager.default.removeItem(at: temporary) }
-        try output.write(contentsOf: repaired.header)
+        try write(output, repaired.header)
         try input.seek(toOffset: UInt64(headerBytes))
         var remaining = payload
         while remaining > 0 {
@@ -114,7 +120,7 @@ nonisolated struct PCM16WAV: Equatable, Sendable {
                 guard let data = try input.read(upToCount: Int(min(remaining, UInt64(blockBytes)))), !data.isEmpty else {
                     throw SessionError.invalid("WAV changed during recovery")
                 }
-                try output.write(contentsOf: data)
+                try write(output, data)
                 return UInt64(data.count)
             }
             remaining -= copied
@@ -122,8 +128,10 @@ nonisolated struct PCM16WAV: Equatable, Sendable {
         try output.synchronize()
         try output.close()
         try check()
-        let current = try url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-        guard original.fileSize == current.fileSize, original.contentModificationDate == current.contentModificationDate else {
+        let current = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard original[.size] as? NSNumber == current[.size] as? NSNumber,
+              original[.systemFileNumber] as? NSNumber == current[.systemFileNumber] as? NSNumber,
+              original[.modificationDate] as? Date == current[.modificationDate] as? Date else {
             throw SessionError.invalid("WAV changed during recovery")
         }
         _ = try FileManager.default.replaceItemAt(url, withItemAt: temporary)

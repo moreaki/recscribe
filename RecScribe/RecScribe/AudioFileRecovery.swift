@@ -102,7 +102,7 @@ extension WAVWriter: AudioFileRecovering {
     static func isRepairable(at url: URL) throws -> Bool {
         let total = try RecoveryIO.size(of: url)
         guard total > headerByteCount else { return false }
-        let format = try PCM16WAV.read(url)
+        let format = try PCM16WAV(header: RecoveryIO.head(of: url, headerByteCount))
         let payload = UInt64(total - headerByteCount)
         return payload >= format.frameBytes && payload <= PCM16WAV.maximumPayload
     }

@@ -1,8 +1,63 @@
 import Foundation
+import Darwin
 import Testing
 @testable import RecScribe
 
 @MainActor struct PCM16WAVTests {
+    @Test func sparseMultiGiBRecoveryAndRIFFBoundary() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("sparse.wav")
+        let format = try PCM16WAV(sampleRate: 48_000, channels: 2)
+        try format.header.write(to: url)
+        let file = try FileHandle(forWritingTo: url)
+        defer { try? file.close() }
+        let payload: UInt64 = 2 << 30
+        try file.truncate(atOffset: payload + UInt64(PCM16WAV.headerBytes))
+        let started = ContinuousClock.now
+        try WAVWriter.repair(at: url)
+        let elapsed = started.duration(to: .now)
+        #expect(try PCM16WAV.read(url).frames == payload / format.frameBytes)
+        var usage = rusage()
+        getrusage(RUSAGE_SELF, &usage)
+        print("WAV_RECOVERY_BENCH source_bytes=\(payload) block_bytes=\(PCM16WAV.copyBlockBytes) wall=\(elapsed) process_lifetime_peak_rss_bytes=\(usage.ru_maxrss)")
+        // A second sparse file beyond RIFF's field range must fail before copying.
+        let oversized = root.appendingPathComponent("oversized.wav")
+        try format.header.write(to: oversized)
+        let large = try FileHandle(forWritingTo: oversized)
+        defer { try? large.close() }
+        let tooLarge = PCM16WAV.maximumPayload + format.frameBytes + UInt64(PCM16WAV.headerBytes)
+        try large.truncate(atOffset: tooLarge)
+        #expect(throws: WAVWriterError.sizeLimit) { try PCM16WAV.repair(oversized) }
+        #expect(try large.seekToEnd() == tooLarge)
+    }
+
+    @Test func writeENOSPCKeepsOriginalAndBadRIFFIsNotVerified() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("recording.wav")
+        var header = try PCM16WAV(sampleRate: 16_000, channels: 1, payloadBytes: 100).header
+        header[4] = 0 // Valid format but wrong RIFF size.
+        let original = header + Data(repeating: 5, count: 100)
+        try original.write(to: url)
+        #expect(throws: (any Error).self) { try PCM16WAV.read(url) }
+        var writes = 0
+        #expect(throws: POSIXError(.ENOSPC)) {
+            try PCM16WAV.repair(url, write: { handle, bytes in
+                writes += 1
+                if writes == 2 { throw POSIXError(.ENOSPC) }
+                try handle.write(contentsOf: bytes)
+            })
+        }
+        #expect(writes == 2)
+        #expect(try Data(contentsOf: url) == original)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path) == [url.lastPathComponent])
+        let session = RecordingSession(sampleRate: 16_000, channels: 1, channelMap: ["mono"], options: .init())
+        #expect(try SessionProcessing.recoverPart(url, session: session, cancel: WorkCancellation()) == 50)
+        #expect(try PCM16WAV.read(url).frames == 50)
+    }
     @Test func headerRoundTripsAndChecksWideSizes() throws {
         let header = try PCM16WAV(sampleRate: 48_000, channels: 2, payloadBytes: 400)
         #expect(try PCM16WAV(header: header.header) == header)
@@ -47,10 +102,10 @@ import Testing
         for failure in [CancellationError() as any Error, CocoaError(.fileWriteOutOfSpace)] {
             var checks = 0
             #expect(throws: (any Error).self) {
-                try PCM16WAV.repair(url, blockBytes: 2) {
+                try PCM16WAV.repair(url, blockBytes: 2, check: {
                     checks += 1
                     if checks == 3 { throw failure }
-                }
+                })
             }
             #expect(try Data(contentsOf: url) == bytes)
             #expect(try FileManager.default.contentsOfDirectory(atPath: root.path) == ["original.wav"])

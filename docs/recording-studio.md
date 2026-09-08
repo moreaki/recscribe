@@ -88,9 +88,12 @@ measurements, not a promise for other models, languages, speakers or hardware.
   inside a chunk, silence/noise hallucinations and boundary words need review.
   There are no invented confidence values, speaker names or missing words.
 - Normalize/translate and summary generation remain explicit **post-recording**
-  local-AI stages. Live text is verbatim ASR draft, never silently rewritten.
-- Summary requests require enabled local AI and an installed selected model.
-  Missing configuration produces an actionable message; no automatic download.
+  stages. Since 0.2.2 they support local Ollama or separately consented OpenAI
+  text processing. Live text is never silently rewritten. See
+  [the intelligence workflow](intelligence-workflow.md) for source identity,
+  actionable tabs, credentials, privacy controls and derivation evidence.
+- Missing provider/model configuration produces an actionable message; there is
+  no automatic download, cloud upload or provider fallback.
 - This does not implement simultaneous system/microphone multi-source capture
   (the separately scoped issue #1), persistent model residency or full diarization.
 

@@ -1,5 +1,8 @@
 # WAV vertical slice, v0.1
 
+Historical implementation baseline. For the current local/cloud text-only
+post-processing and VAD validation, see [the 0.2.2 workflow](intelligence-workflow.md).
+
 Implemented locally on the MacBook Air, starting from `4d695ed`.
 The native capture implementation remains unchanged. The pipeline starts from a
 finalized WAV or a file selected for import; it does not attach to live capture.

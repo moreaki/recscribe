@@ -55,8 +55,13 @@ Home Rec already solves the most fragile macOS concerns:
 - stream-failure recovery, permissions and disk-space guardrails;
 - a SwiftUI application, menu-bar workflow, diagnostics and tests.
 
-These behaviours should be retained. The transcription pipeline begins only
-after a recording has been finalized, or when an existing file is imported.
+These behaviours are retained. The authoritative verification, transformation
+and summary pipeline begins after finalization or import. As of the opt-in live
+extension (2026-09-08), a separate utility worker can read complete, already
+written PCM chunks during capture and display an explicitly unverified draft.
+It never runs in the capture callback or alters originals. See
+[Recording Studio and live drafts](recording-studio.md) for lifecycle, limits
+and the distinction between preview evidence and canonical transcripts.
 
 Home Rec is licensed under Apache License 2.0. Its copyright and NOTICE content
 must be retained. Modified upstream files must carry appropriate change notices.
@@ -65,7 +70,7 @@ must be retained. Modified upstream files must carry appropriate change notices.
 
 ```text
 +------------------- Capture plane: existing RecScribe -------------------+
-| SwiftUI UI -> RecordingController -> AudioRecorder -> WAV/FLAC/M4A      |
+| SwiftUI UI -> RecordingController -> AudioRecorder -> PCM/WAV parts    |
 +----------------------------------+---------------------------------------+
                                    | finalized-file event / import
                                    v

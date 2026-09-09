@@ -8,6 +8,7 @@ import numpy as np
 
 from .process import Cancellation, run_local
 from .storage import sha256
+from .channel_windows import CHANNEL_POLICY
 
 
 def inspect_wav(path: Path, cancel: Cancellation) -> dict:
@@ -24,8 +25,10 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
         clipped, nonzero = (np.zeros(channels, dtype=np.int64) for _ in range(2))
         counts = 0
         identical = True
+        window_frames = rate * CHANNEL_POLICY.window_seconds
+        window_start, window_equal, windows = 0, True, []
         scale = 2 ** (8 * width - 1)
-        while data := wav.readframes(65536):
+        while data := wav.readframes(min(65536, window_frames - (counts - window_start))):
             cancel.check()
             if len(data) % (channels * width):
                 raise ValueError("Truncated PCM frame")
@@ -38,13 +41,18 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
             else:
                 samples = np.frombuffer(data, dtype=f"<i{width}")
             samples = samples.reshape(-1, channels)
-            identical = identical and bool(np.all(samples == samples[:, :1]))
+            equal = bool(np.all(samples == samples[:, :1]))
+            identical = identical and equal
+            window_equal = window_equal and equal
             floating = samples.astype(np.float64)
             peaks = np.maximum(peaks, np.max(np.abs(floating), axis=0))
             squares += np.sum(floating * floating, axis=0)
             clipped += np.count_nonzero((samples == -scale) | (samples == scale - 1), axis=0)
             nonzero += np.count_nonzero(samples, axis=0)
             counts += len(data) // (channels * width)
+            if counts - window_start == window_frames or counts == frames:
+                windows.append({"start_frame": window_start, "end_frame": counts, "bit_identical": window_equal})
+                window_start, window_equal = counts, True
         if counts != frames:
             raise ValueError("WAV data is truncated: frame count does not match header")
     final = path.stat()
@@ -56,6 +64,8 @@ def inspect_wav(path: Path, cancel: Cancellation) -> dict:
             "duration_ms": math.ceil(frames * 1000 / rate),
             "channel_layout": "unspecified; channel indices preserved",
             "channels_bit_identical": identical,
+            "channel_windows": {"policy": "exact_pcm_equality_v1", "window_seconds": CHANNEL_POLICY.window_seconds,
+                                "windows": windows},
             "mono_policy": "separate_channels_preserved; no downmix",
             "channel_metrics": [
                 {"channel": c, "peak": float(peaks[c] / scale),

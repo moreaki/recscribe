@@ -13,6 +13,7 @@ from jsonschema import Draft202012Validator
 
 from . import __version__
 from .audio import inspect_wav, prepare_channel
+from .channel_windows import recognition_regions, transcribe_regions
 from .engines import TranscriptEngine
 from .local_ai import process as process_language
 from .process import Cancellation, Cancelled, run_local
@@ -149,17 +150,23 @@ class Job:
                     raw_records.append({"channel": channel, "status": "skipped_digital_silence"})
                     continue
                 path = self.directory / f"working-channel-{channel}.wav"
-                result = engine.transcribe(path, self.directory / f"asr-channel-{channel}",
-                                           self.options["source_language"], self.cancel)
+                regions = recognition_regions(report, channel)
+                if regions is not None:
+                    raw_records.append({"channel": channel, "status": "shared_outside_different_regions",
+                                        "source_channel": 0, "different_regions_frames": regions,
+                                        "policy": "exact_pcm_equality_v1"})
+                    reasons.append("channel_window_reuse; verify_channel_variants_at_region_boundaries")
+                result = transcribe_regions(engine, path, self.directory / f"asr-channel-{channel}",
+                                            self.options["source_language"], self.cancel, report, regions)
                 raw_records.append(self.raw_record(result, channel, "primary"))
                 passes.append(result.provenance)
                 disagreement = False
                 if self.options["profile"] == "verified":
                     if verification_engine is None:
                         raise ValueError("verified requires an explicit second local model")
-                    second = verification_engine.transcribe(
+                    second = transcribe_regions(verification_engine,
                         path, self.directory / f"verify-channel-{channel}",
-                        self.options["source_language"], self.cancel)
+                        self.options["source_language"], self.cancel, report, regions)
                     raw_records.append(self.raw_record(second, channel, "verification"))
                     if result.provenance["model_sha256"] == second.provenance["model_sha256"]:
                         raise ValueError("verified requires two distinct model checksums")
@@ -174,7 +181,7 @@ class Job:
                 for entry in result.segments:
                     self.cancel.check()
                     segment = dict(entry, channel=channel, normalized_text=None,
-                                   translated_text=None, review_reasons=[])
+                                   translated_text=None, review_reasons=list(entry.get("review_reasons", [])))
                     # Whisper can include decoder padding beyond the last real frame.
                     # Preserve the engine time and explicitly mark this derived bound.
                     if (0 <= segment["start_ms"] < report["duration_ms"] < segment["end_ms"]

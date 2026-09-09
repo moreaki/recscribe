@@ -173,8 +173,10 @@ struct TranscriptWorkspace: View {
             }
             if section == .live { LiveTranscriptView(live: live) }
             else if let document {
-                let content = section == .summary ? document.summaryText : section == .review ? document.reviewReasons.joined(separator: "\n\n") : document.text
-                if content.isEmpty {
+                let content = section == .summary ? document.summaryText : section == .review ? document.reviewReasons.joined(separator: "\n\n") : ""
+                if section == .transcript && !document.segments.isEmpty {
+                    TranscriptReadingView(document: document)
+                } else if content.isEmpty {
                     ContentUnavailableView(section == .summary ? "No summary yet" : "No review notes", systemImage: section == .summary ? "sparkles" : "checkmark.shield",
                         description: Text(section == .summary ? "Choose Ollama or OpenAI in Settings → Intelligence, then Generate summary above. Cloud text transfer always asks for confirmation." : "Inspect the transcript before relying on it."))
                 } else {

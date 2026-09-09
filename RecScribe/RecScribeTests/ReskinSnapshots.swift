@@ -233,6 +233,23 @@ struct ReskinSnapshots {
 
     // MARK: - Cases
 
+    @Test func transcriptReading() throws {
+        guard Self.outputDirectory != nil else { return }
+        let document = try ReadingFixtures.preview
+        write("transcript-reading", size: CGSize(width: 680, height: 500), contrast: .standard) {
+            TranscriptReadingView(document: document).padding(GlassSpacing.xl)
+                .background(WorkspaceStyle.background).preferredColorScheme(.dark)
+        }
+        write("transcript-variants-expanded", size: CGSize(width: 680, height: 640), contrast: .standard) {
+            TranscriptReadingView(document: document, expandedGroups: ["s3"]).padding(GlassSpacing.xl)
+                .background(WorkspaceStyle.background).preferredColorScheme(.dark)
+        }
+        write("transcript-all-channels", size: CGSize(width: 680, height: 640), contrast: .standard) {
+            TranscriptReadingView(document: document, mode: .channels).padding(GlassSpacing.xl)
+                .background(WorkspaceStyle.background).preferredColorScheme(.dark)
+        }
+    }
+
     @Test func transcriptNavigation() {
         guard Self.outputDirectory != nil else { return }
         for section in TranscriptWorkspace.Section.allCases {

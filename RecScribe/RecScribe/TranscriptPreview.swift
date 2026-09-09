@@ -4,12 +4,16 @@ import Foundation
 /// changes source text, and absent derived text falls back to the raw words.
 nonisolated struct TranscriptPreview: Decodable, Sendable {
     static let currentSchemaVersion = "1.0"
-    struct Segment: Decodable, Sendable {
+    struct Segment: Decodable, Sendable, Identifiable {
         let id: String
         let sourceText: String
         let normalizedText: String?
         let translatedText: String?
         let needsReview: Bool
+        let startMs: Int64?
+        let endMs: Int64?
+        let channel: Int?
+        let reviewReasons: [String]?
     }
     struct Processing: Decodable, Sendable {
         struct Engine: Decodable, Sendable { let model: String; let detectedLanguage: String? }
@@ -69,13 +73,16 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
 
     var text: String {
         segments.map { segment in
-            let text = switch processing.mode {
-            case .normalize: segment.normalizedText ?? segment.sourceText
-            case .translate: segment.translatedText ?? segment.sourceText
-            case .verbatim: segment.sourceText
-            }
+            let text = displayedText(segment)
             return (segment.needsReview ? "[Review] " : "") + text.trimmingCharacters(in: .whitespacesAndNewlines)
         }.joined(separator: "\n\n")
+    }
+    func displayedText(_ segment: Segment) -> String {
+        switch processing.mode {
+        case .normalize: segment.normalizedText ?? segment.sourceText
+        case .translate: segment.translatedText ?? segment.sourceText
+        case .verbatim: segment.sourceText
+        }
     }
     var summaryText: String {
         summary?.notes.map { "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))" }.joined(separator: "\n\n") ?? ""

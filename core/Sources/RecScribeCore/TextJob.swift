@@ -70,7 +70,7 @@ public struct TextJob: Sendable {
                     "elapsed_seconds": .number(Self.seconds(since: started))]])
                 let fraction = total > 0 ? Double(completed) / Double(total) : 1
                 let progress = Progress.text.lowerBound + fraction * (Progress.text.upperBound - Progress.text.lowerBound)
-                let detail = "Text block \(min(completed + 1, total))/\(total) · \(completed) completed · \(Int(Self.seconds(since: started))) s elapsed"
+                let detail = "Text blocks: \(completed)/\(total) completed · \(Int(Self.seconds(since: started))) s elapsed"
                 try transition("post-processing", progress, detail: detail)
             }
             document["job_id"] = .string(id)

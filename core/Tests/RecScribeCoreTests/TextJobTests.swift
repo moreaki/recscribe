@@ -66,7 +66,7 @@ enum TranscriptFixture {
         #expect(values.map { $0["completed_batches"].integer } == [0, 1, 2])
         #expect(values.allSatisfy { $0["total_batches"] == 3 && $0["state"] == "post-processing" })
         #expect(values.map { $0["progress"].double! } == values.map { $0["progress"].double! }.sorted())
-        #expect(values[1]["detail"].string?.contains("Text block 2/3") == true)
+        #expect(values[1]["detail"].string?.contains("Text blocks: 1/3 completed") == true)
         let final = try read(output, "manifest.json")
         #expect(final["progress"] == 1); #expect(final["detail"] == .null)
         #expect(final["completed_batches"] == 3); #expect(final["batch_timings"].array?.count == 4)

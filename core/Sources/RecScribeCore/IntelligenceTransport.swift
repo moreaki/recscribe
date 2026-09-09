@@ -7,8 +7,16 @@ public struct IntelligencePolicy: Sendable {
     public var discoveryTimeout: TimeInterval = 10
     public var maximumResponseBytes = 4 * 1_024 * 1_024
     public var maximumKeyBytes = 2_048
-    public var maximumBatchSegments = 24
+    public var maximumBatchSegments = 192
+    public var localMaximumBatchSegments = 24
     public var maximumBatchScalars = 12_000
+    /// Full serialized prompt, including IDs/JSON overhead. Not an exact tokenizer.
+    public var maximumBatchPromptBytes = 12_000
+    public var estimatedOutputBytesPerToken = 2
+    public var outputExpansionFactor = 2
+    public var summaryOutputReserveTokens = 1_024
+    /// Local inference stays serial to avoid competing model allocations.
+    public var maximumConcurrentCloudBatches = 2
     public var maximumOutputScalars = 24_000
     public var contextTokens = 8_192
     public var localOutputTokens = 4_096

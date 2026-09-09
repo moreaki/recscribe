@@ -42,14 +42,14 @@ struct WorkspaceCard<Content: View>: View {
     }
 }
 
-enum SettingsSection: String, CaseIterable, Identifiable {
+enum SettingsSection: String, WorkspaceTab, Identifiable {
     case storage = "Recording", transcription = "Transcription", models = "Models", ai = "Intelligence", diagnostics = "Diagnostics"
     var id: Self { self }
     var symbol: String {
         switch self {
-        case .storage: "waveform.circle.fill"
-        case .transcription: "text.bubble.fill"
-        case .models: "cpu.fill"
+        case .storage: "waveform.circle"
+        case .transcription: "text.bubble"
+        case .models: "cpu"
         case .ai: "sparkles"
         case .diagnostics: "chart.xyaxis.line"
         }
@@ -60,23 +60,5 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .transcription, .diagnostics: WorkspaceStyle.blue
         case .models, .ai: WorkspaceStyle.violet
         }
-    }
-}
-
-struct SettingsNavigation: View {
-    @Binding var selection: SettingsSection
-    var body: some View {
-        HStack(spacing: GlassSpacing.xs) {
-            ForEach(SettingsSection.allCases) { section in
-                Button { selection = section } label: {
-                    Label(section.rawValue, systemImage: section.symbol).font(.callout.weight(.medium))
-                        .foregroundStyle(selection == section ? section.tint : .secondary)
-                        .frame(maxWidth: .infinity).frame(height: WorkspaceStyle.navigationHeight)
-                        .background(selection == section ? WorkspaceStyle.selected : .clear,
-                                    in: RoundedRectangle(cornerRadius: GlassRadius.control))
-                        .contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityAddTraits(selection == section ? .isSelected : [])
-            }
-        }.padding(GlassSpacing.xs).background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.control))
     }
 }

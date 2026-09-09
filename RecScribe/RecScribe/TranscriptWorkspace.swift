@@ -127,7 +127,17 @@ struct TranscriptWorkspace: View {
         if section == .live { return live.sourceURL }
         return document?.sourceURL ?? (followLiveSource ? live.sourceURL : library.latestSource ?? live.sourceURL)
     }
-    enum Section: String, CaseIterable { case live = "Live", transcript = "Transcript", summary = "Summary", review = "Review" }
+    enum Section: String, WorkspaceTab {
+        case live = "Live", transcript = "Transcript", summary = "Summary", review = "Review"
+        var symbol: String {
+            switch self {
+            case .live: "waveform"
+            case .transcript: "doc.text"
+            case .summary: "sparkles"
+            case .review: "checkmark.shield"
+            }
+        }
+    }
     init(section: Section = .live) { _section = State(initialValue: section) }
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
@@ -139,9 +149,7 @@ struct TranscriptWorkspace: View {
                 }
                 Spacer()
             }
-            Picker("Text view", selection: $section) {
-                ForEach(Section.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented)
+            WorkspaceTabs(title: "Text view", selection: $section)
             if let source {
                 TranscriptSourceView(source: source,
                     duration: section == .live ? live.audioSeconds : document?.source.map { Double($0.durationMs) / 1_000 },

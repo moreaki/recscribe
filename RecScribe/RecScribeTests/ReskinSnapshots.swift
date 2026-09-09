@@ -233,6 +233,24 @@ struct ReskinSnapshots {
 
     // MARK: - Cases
 
+    @Test func transcriptNavigation() {
+        guard Self.outputDirectory != nil else { return }
+        for section in TranscriptWorkspace.Section.allCases {
+            for width: CGFloat in [560, 340, 220] {
+                write("transcript-tabs-\(section.rawValue)-\(Int(width))", size: CGSize(width: width, height: 72), contrast: .standard) {
+                    WorkspaceTabs(title: "Text view", selection: .constant(section)).padding(GlassSpacing.md)
+                        .background(WorkspaceStyle.background).preferredColorScheme(.dark)
+                }
+            }
+        }
+        for section in SettingsSection.allCases {
+            write("settings-tabs-\(section.rawValue)", size: CGSize(width: 720, height: 72), contrast: .standard) {
+                WorkspaceTabs(title: "Settings", selection: .constant(section)).padding(GlassSpacing.md)
+                    .background(WorkspaceStyle.background).preferredColorScheme(.dark)
+            }
+        }
+    }
+
     @Test func processingLocationSettings() {
         guard Self.outputDirectory != nil else { return }
         let suite = "recscribe-cloud-settings-snapshot-\(UUID())"

@@ -27,7 +27,7 @@ struct ConfigurationView: View {
                 Spacer()
                 Label("Local first", systemImage: "lock.shield").font(.caption).foregroundStyle(WorkspaceStyle.mint)
             }
-            SettingsNavigation(selection: $section)
+            WorkspaceTabs(title: "Settings", selection: $section)
             ScrollView {
                 VStack(alignment: .leading, spacing: GlassSpacing.xl) {
                     switch section {

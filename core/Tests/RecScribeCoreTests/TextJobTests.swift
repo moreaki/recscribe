@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Synchronization
 import Testing
 @testable import RecScribeCore
 
@@ -36,6 +37,40 @@ enum TranscriptFixture {
 }
 
 @Suite struct TextJobTests {
+    @Test func eachBatchPublishesProgressBeforeItsRequestAndPreservesTerminalState() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var document = TranscriptFixture.document
+        document["segments"] = .array((1...3).map { number in
+            var segment = TranscriptFixture.document["segments"].array![0]
+            segment["id"] = .string(String(format: "seg-%06d", number))
+            return segment
+        })
+        let source = root.appendingPathComponent("source.json"), output = root.appendingPathComponent("job")
+        try document.encoded().write(to: source)
+        let snapshots = Mutex<[JSONValue]>([])
+        let transport = MockTransport { request in
+            if request.url?.lastPathComponent == "show" { return ["model_info": ["architecture": "synthetic"]] }
+            let state = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: output.appendingPathComponent("manifest.json")))
+            snapshots.withLock { $0.append(state) }
+            let body = try JSONDecoder().decode(JSONValue.self, from: #require(request.httpBody))
+            let prompt = try JSONDecoder().decode(JSONValue.self, from: Data(try #require(body["prompt"].string).utf8))
+            let result: JSONValue = ["segments": .array((prompt["untrusted_transcript"].array ?? []).map { ["id": $0["id"], "text": "Synthetic improvement"] }), "notes": []]
+            return ["done": true, "response": .string(String(decoding: try result.encoded(), as: UTF8.self))]
+        }
+        var policy = IntelligencePolicy(); policy.maximumBatchSegments = 1
+        try await TextJob(client: IntelligenceClient(transport: transport, policy: policy)).run(source: source, output: output,
+            options: .init(provider: .ollama, model: "synthetic", mode: .normalize, targetLanguage: "de"))
+        let values = snapshots.withLock { $0 }
+        #expect(values.map { $0["completed_batches"].integer } == [0, 1, 2])
+        #expect(values.allSatisfy { $0["total_batches"] == 3 && $0["state"] == "post-processing" })
+        #expect(values.map { $0["progress"].double! } == values.map { $0["progress"].double! }.sorted())
+        #expect(values[1]["detail"].string?.contains("Text block 2/3") == true)
+        let final = try read(output, "manifest.json")
+        #expect(final["progress"] == 1); #expect(final["detail"] == .null)
+        #expect(final["completed_batches"] == 3); #expect(final["batch_timings"].array?.count == 4)
+    }
     @Test func resourceIsExactlyTheAuthoritativeSchema() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         #expect(try Data(contentsOf: CanonicalTranscript.schemaURL) == Data(contentsOf: root.appendingPathComponent("schemas/transcript.schema.json")))

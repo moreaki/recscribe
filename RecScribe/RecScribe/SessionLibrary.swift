@@ -201,7 +201,7 @@ final class SessionLibrary: ObservableObject {
         activity = "Starting local transcription…"
         progress = 0
         progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] value in
-            self?.activity = value.state.label
+            self?.activity = value.displayLabel
             self?.progress = value.progress
         }, failure: { [weak self] message in self?.errorMessage = message })
         defer { progressMonitor.stop() }
@@ -286,7 +286,7 @@ final class SessionLibrary: ObservableObject {
         latestJob = output
         progress = 0
         progressMonitor.start(output.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
-            self?.activity = snapshot.state.label; self?.progress = snapshot.progress
+            self?.activity = snapshot.displayLabel; self?.progress = snapshot.progress
         }, failure: { [weak self] message in self?.errorMessage = message })
         defer { progressMonitor.stop() }
         try await TextJob().run(source: transcript, output: output, options: options, key: key)

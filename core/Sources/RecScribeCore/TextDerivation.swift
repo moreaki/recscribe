@@ -20,7 +20,8 @@ struct TextDerivation {
     let client: IntelligenceClient
     let options: TextDerivationOptions
 
-    func apply(to original: JSONValue, in directory: URL, key: Data?) async throws -> JSONValue {
+    func apply(to original: JSONValue, in directory: URL, key: Data?,
+               progress: (Int, Int) throws -> Void = { _, _ in }) async throws -> JSONValue {
         guard options.mode != .verbatim || options.summarize else { throw CoreFailure("Choose a text transformation or summary") }
         guard options.mode == .verbatim || !(options.targetLanguage ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw CoreFailure("Choose a target language")
@@ -33,6 +34,7 @@ struct TextDerivation {
         let field = options.mode == .normalize ? "normalized_text" : options.mode == .translate ? "translated_text" : nil
         var notes: [JSONValue] = [], derivations: [JSONValue] = []
         let batches = try batch(segments)
+        try progress(0, batches.count)
         for (index, indices) in batches.enumerated() {
             try Task.checkCancellation()
             let prompt: JSONValue = [
@@ -79,6 +81,7 @@ struct TextDerivation {
             if options.summarize {
                 for var note in result["notes"].array ?? [] { note["provenance"] = evidence; notes.append(note) }
             }
+            try progress(index + 1, batches.count)
         }
         document["segments"] = .array(segments)
         if field != nil {

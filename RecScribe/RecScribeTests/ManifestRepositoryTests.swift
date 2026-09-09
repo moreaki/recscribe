@@ -4,6 +4,15 @@ import Testing
 
 @MainActor
 struct ManifestRepositoryTests {
+    @Test func optionalBatchDetailsAreCompatibleAndNeverMaskATerminalState() throws {
+        let decoder = JSONDecoder()
+        let old = try decoder.decode(JobSnapshot.self, from: Data(#"{"schema_version":"1.0","state":"post-processing","progress":0.7}"#.utf8))
+        #expect(old.displayLabel == "post processing")
+        var current = try decoder.decode(JobSnapshot.self, from: Data(#"{"schema_version":"1.0","state":"post-processing","progress":0.4,"detail":"Text block 2/3 · 1 completed"}"#.utf8))
+        #expect(current.displayLabel == "Text block 2/3 · 1 completed")
+        current = .init(schemaVersion: "1.0", state: .completedWithReview, progress: 1, detail: "stale phase")
+        #expect(current.displayLabel == "completed with review")
+    }
     @MainActor final class Gate<Value: Sendable> {
         var pending: [URL: CheckedContinuation<Value, any Error>] = [:]
         func read(_ url: URL) async throws -> Value {

@@ -7,6 +7,11 @@ import os
 public struct TextJob: Sendable {
     public static let version = "swift-core-0.1.0"
     public static let maximumTranscriptBytes = 16 * 1_024 * 1_024
+    private enum Progress {
+        static let text = 0.1...0.75
+        static let validating = 0.8
+        static let rendering = 0.9
+    }
     private let client: IntelligenceClient
     public init(client: IntelligenceClient = .init()) { self.client = client }
 
@@ -22,9 +27,13 @@ public struct TextJob: Sendable {
             "options": ["mode": .string(options.mode.rawValue), "target_language": options.targetLanguage.map(JSONValue.string) ?? .null,
                 "local_only": .bool(options.provider == .ollama), "allow_cloud_text": .bool(options.cloudConsent),
                 "summarize": .bool(options.summarize), "provider": .string(options.provider.rawValue), "model": .string(options.model)]]
-        func transition(_ state: String, _ progress: Double) throws {
+        func transition(_ state: String, _ progress: Double, detail: String? = nil) throws {
             manifest["state"] = .string(state); manifest["progress"] = .number(progress); manifest["updated_at"] = .string(Self.now)
-            manifest["history"] = .array((manifest["history"].array ?? []) + [["state": .string(state), "at": .string(Self.now), "elapsed_seconds": .number(Self.seconds(since: started))]])
+            manifest["detail"] = detail.map(JSONValue.string) ?? .null
+            manifest["elapsed_seconds"] = .number(Self.seconds(since: started))
+            if manifest["history"].array?.last?["state"] != .string(state) {
+                manifest["history"] = .array((manifest["history"].array ?? []) + [["state": .string(state), "at": .string(Self.now), "elapsed_seconds": .number(Self.seconds(since: started))]])
+            }
             try Self.write(manifest.encoded(), named: "manifest.json", in: output)
         }
         do {
@@ -51,8 +60,19 @@ public struct TextJob: Sendable {
                     return entry
                 })
             }
-            try transition("post-processing", 0.7)
-            var document = try await TextDerivation(client: client, options: options).apply(to: inherited, in: output, key: key)
+            try transition("post-processing", Progress.text.lowerBound, detail: "Checking selected AI model…")
+            var document = try await TextDerivation(client: client, options: options).apply(to: inherited, in: output, key: key) { completed, total in
+                try Task.checkCancellation()
+                manifest["completed_batches"] = .integer(Int64(completed))
+                manifest["total_batches"] = .integer(Int64(total))
+                manifest["batch_timings"] = .array((manifest["batch_timings"].array ?? []) + [[
+                    "completed": .integer(Int64(completed)), "total": .integer(Int64(total)),
+                    "elapsed_seconds": .number(Self.seconds(since: started))]])
+                let fraction = total > 0 ? Double(completed) / Double(total) : 1
+                let progress = Progress.text.lowerBound + fraction * (Progress.text.upperBound - Progress.text.lowerBound)
+                let detail = "Text block \(min(completed + 1, total))/\(total) · \(completed) completed · \(Int(Self.seconds(since: started))) s elapsed"
+                try transition("post-processing", progress, detail: detail)
+            }
             document["job_id"] = .string(id)
             var processing = document["processing"].object ?? [:]
             for field in ["openai_model", "ollama_model", "allow_cloud_text"] { processing.removeValue(forKey: field) }
@@ -65,12 +85,12 @@ public struct TextJob: Sendable {
             processing["duration_ms"] = .integer(Int64(Self.seconds(since: started) * 1_000))
             document["processing"] = .object(processing); manifest["options"] = .object(processing)
             try Task.checkCancellation()
-            try transition("validating", 0.8)
+            try transition("validating", Progress.validating)
             let validated = try CanonicalTranscript(document)
             let encoded = try document.encoded()
             guard encoded.count <= Self.maximumTranscriptBytes else { throw CoreFailure("Derived transcript exceeds the supported size limit") }
             try Self.write(encoded, named: "transcript.json", in: output)
-            try transition("rendering", 0.9)
+            try transition("rendering", Progress.rendering)
             for (name, text) in TranscriptRenderer.render(validated) {
                 try Task.checkCancellation()
                 try Self.write(Data(text.utf8), named: name, in: output)

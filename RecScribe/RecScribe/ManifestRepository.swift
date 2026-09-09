@@ -33,7 +33,9 @@ nonisolated struct JobSnapshot: Decodable, Sendable {
     let schemaVersion: String
     let state: JobState
     let progress: Double
-    enum CodingKeys: String, CodingKey { case schemaVersion = "schema_version", state, progress }
+    var detail: String? = nil
+    var displayLabel: String { state.isTerminal ? state.label : detail ?? state.label }
+    enum CodingKeys: String, CodingKey { case schemaVersion = "schema_version", state, progress, detail }
     func validated() throws -> Self {
         guard schemaVersion == Self.currentSchemaVersion, progress.isFinite, (0...1).contains(progress),
               ![JobState.completed, .completedWithReview].contains(state) || progress == 1 else {

@@ -233,6 +233,22 @@ struct ReskinSnapshots {
 
     // MARK: - Cases
 
+    @Test func processingLocationSettings() {
+        guard Self.outputDirectory != nil else { return }
+        let suite = "recscribe-cloud-settings-snapshot-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AppSettings(defaults: defaults)
+        let runtime = RuntimeManager(settings: settings)
+        for location in ProcessingLocation.allCases {
+            settings.values.processingLocation = location
+            write("settings-\(location.rawValue)", size: AppWindow.settings.defaultSize, contrast: .standard) {
+                ConfigurationView(section: .transcription).environmentObject(settings).environmentObject(runtime)
+                    .environmentObject(SessionLibrary()).environmentObject(makeViewModel())
+            }
+        }
+    }
+
     @Test func interruptedStudio() async {
         guard Self.outputDirectory != nil else { return }
         let suite = "recscribe-studio-snapshot-\(UUID())"

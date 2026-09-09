@@ -66,9 +66,11 @@ Current documentation also recommends newer transcription models. This implement
 
 ## Local validation, 2026-09-09
 
-- Release Swift Core: 23 tests passed, including unchanged Python 1.0 schema/semantic validation and byte-for-byte export parity, plus native text derivation of a 1.1 cloud source.
-- Release app: 387 tests in 56 suites passed. Synthetic network failure leaves the recorder writable/finalizable; the cloud worker never retries or invokes local ASR.
+- Release Swift Core: 24 tests passed, including unchanged Python 1.0 schema/semantic validation and byte-for-byte export parity, plus native text derivation of a 1.1 cloud source and per-batch AI progress.
+- Release app: 389 tests in 56 suites passed. Synthetic network failure leaves the recorder writable/finalizable; the cloud worker never retries or invokes local ASR. Local/Hybrid/Cloud settings were rendered with isolated synthetic preferences and visually checked.
 - Python reference: 46 tests passed.
 - `scripts/build-app.sh`: signed local version 0.2.5 (205); Mach-O 64-bit arm64; Swift 6 / complete strict concurrency; hardened runtime; bundle `com.moreaki.recscribe`; team `CDS4KLP8GT`; own Keychain access group; no `get-task-allow`.
 - Signing uses the existing **Apple Development** identity. Signature verification passes. This is a local development release, **not a notarized Developer ID distribution**; the distribution audit correctly rejects that identity.
 - No real paid OpenAI audio request, private recording upload, new model download, or account mutation was performed for testing. Account acceptance and acoustic quality/performance remain unverified.
+- The running user's existing text job was inspected read-only when reported as stuck: ten successful requests completed in 133.7 seconds. It was not rerun. [#12](https://github.com/moreaki/recscribe/issues/12) adds atomic batch counts, elapsed time, batch timing history and visible progress details without changing the existing monitor or timeouts.
+- The prior 0.2.4 app was retained as a recoverable local backup. Version 0.2.5 was opened from `Build/Products/Release/RecScribe.app` after that job completed; its transcript/source persisted and the existing cloud-text preference appeared as Hybrid, with cloud audio off.

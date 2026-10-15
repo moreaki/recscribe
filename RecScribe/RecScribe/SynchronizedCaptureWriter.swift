@@ -15,7 +15,7 @@ nonisolated final class SynchronizedCaptureWriter {
         var maximumEndSkewSeconds = 0.25
     }
     private final class Input {
-        let writer: SessionWAVWriter
+        let writer: SessionWAVWriter?
         let format: AVAudioFormat
         let normalizer: AudioFormatNormalizer
         var pending: AVAudioPCMBuffer?
@@ -24,12 +24,12 @@ nonisolated final class SynchronizedCaptureWriter {
         var end: Int64 = 0
         var receivedFrames: Int64 = 0
         var gaps: Int64 = 0
-        init(writer: SessionWAVWriter, format: AVAudioFormat, output: AVAudioFormat) {
+        init(writer: SessionWAVWriter?, format: AVAudioFormat, output: AVAudioFormat) {
             self.writer = writer; self.format = format
             self.normalizer = AudioFormatNormalizer(outputFormat: output)
         }
     }
-    let mix: SessionWAVWriter
+    let mix: SessionWAVWriter?
     let epoch: Double
     private let options: RecordingStorageOptions
     private let policy: Policy
@@ -47,22 +47,28 @@ nonisolated final class SynchronizedCaptureWriter {
     private let levels: @Sendable () -> RecordingLevels
     private(set) var mixPeak: Float = 0
     private var postPeaks: [CaptureTrack: Float] = [:]
+    private(set) var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
+    private(set) var mixMeter = CapturePeakMeter()
+    private let maximumFrames: Int64?
     var onMix: ((AVAudioPCMBuffer) -> Void)?
 
-    init(mix: SessionWAVWriter, descriptors: [RecordingSession.SourceTrack], epoch: Double,
+    init(mix: SessionWAVWriter? = nil, descriptors: [RecordingSession.SourceTrack], epoch: Double,
          options: RecordingStorageOptions, policy: Policy = .init(),
+         maximumFrames: Int64? = nil,
          levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
-        guard epoch.isFinite, epoch >= 0, (1...CaptureTrack.maximumSources).contains(descriptors.count), Set(descriptors.map(\.role)).count == descriptors.count,
+        guard epoch.isFinite && epoch >= 0, maximumFrames.map({ $0 > 0 }) ?? true,
+              (1...CaptureTrack.maximumSources).contains(descriptors.count), Set(descriptors.map(\.role)).count == descriptors.count,
               descriptors.allSatisfy({ $0.role.valid }),
               policy.mixWindowFrames > 0, policy.blockFrames > 0,
               policy.maximumPacketSeconds > 0 else { throw SessionError.invalid("Invalid mixer policy") }
         self.levels = levels; self.automation = GainAutomation(levels(), tracks: descriptors.map(\.role))
         self.mix = mix; self.descriptors = descriptors; self.epoch = epoch
         self.options = options; self.policy = policy
+        self.maximumFrames = maximumFrames
         left = Array(repeating: 0, count: policy.mixWindowFrames)
         right = left
         try journal()
-        try mix.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
+        try mix?.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
     }
 
     private func frame(_ time: Double) throws -> Int64 {
@@ -75,8 +81,9 @@ nonisolated final class SynchronizedCaptureWriter {
 
     func accept(_ sample: CapturedAudioSample) throws {
         guard !sealed, !failedSources.contains(sample.track), sample.buffer.frameLength > 0 else { return }
+        if let maximumFrames, try frame(sample.presentationTime) >= maximumFrames { return }
         if try automation.update(levels(), at: max(end, head)) {
-            try mix.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
+            try mix?.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
         }
         let format = sample.buffer.format
         guard format.sampleRate.isFinite, (1...384_000).contains(format.sampleRate),
@@ -91,19 +98,23 @@ nonisolated final class SynchronizedCaptureWriter {
             }
             input = existing
         } else {
-            guard let base = mix.audioURL, let id = mix.sessionID,
-                  let index = descriptors.firstIndex(where: { $0.role == sample.track }) else { throw SessionError.invalid("Unknown capture source") }
-            let writer = SessionWAVWriter(options: .init(maximumPartBytes: options.maximumPartBytes))
+            guard let index = descriptors.firstIndex(where: { $0.role == sample.track }) else { throw SessionError.invalid("Unknown capture source") }
+            var writer: SessionWAVWriter?
             let output = try Self.format(channels: format.channelCount)
-            let url = base.deletingPathExtension().appendingPathExtension(sample.track.rawValue + ".wav")
-            try writer.createFile(at: url, sampleRate: 48_000, channels: Int(format.channelCount))
-            var identity = descriptors[index]
-            identity.channels = Int(format.channelCount); identity.nativeSampleRate = format.sampleRate; identity.manifestPath = nil
-            try writer.setParent(id, epoch: epoch, startedAt: mix.startedAt, source: identity)
+            if let mix {
+                guard let base = mix.audioURL, let id = mix.sessionID else { throw SessionError.invalid("Missing recording identity") }
+                let sink = SessionWAVWriter(options: .init(maximumPartBytes: options.maximumPartBytes))
+                let url = base.deletingPathExtension().appendingPathExtension(sample.track.rawValue + ".wav")
+                try sink.createFile(at: url, sampleRate: 48_000, channels: Int(format.channelCount))
+                var identity = descriptors[index]
+                identity.channels = Int(format.channelCount); identity.nativeSampleRate = format.sampleRate; identity.manifestPath = nil
+                try sink.setParent(id, epoch: epoch, startedAt: mix.startedAt, source: identity)
+                writer = sink
+            }
             input = Input(writer: writer, format: format, output: output)
             inputs[sample.track] = input
             Log.capture.notice("Source format role=\(sample.track.rawValue, privacy: .public) native_rate=\(format.sampleRate) channels=\(format.channelCount) saved_rate=48000")
-            descriptors[index].manifestPath = writer.manifestURL?.lastPathComponent
+            descriptors[index].manifestPath = writer?.manifestURL?.lastPathComponent
             descriptors[index].nativeSampleRate = format.sampleRate
             descriptors[index].channels = Int(format.channelCount)
             if let routes = descriptors[index].channelRoutes {
@@ -133,6 +144,13 @@ nonisolated final class SynchronizedCaptureWriter {
         input.time = sample.presentationTime
         input.duration = Double(sample.buffer.frameLength) / format.sampleRate
         input.receivedFrames += Int64(sample.buffer.frameLength)
+        var raw = [Float](repeating: 0, count: Int(format.channelCount))
+        if let data = sample.buffer.floatChannelData {
+            for channel in raw.indices {
+                for frame in 0..<Int(sample.buffer.frameLength) { raw[channel] = max(raw[channel], abs(data[channel][frame])) }
+            }
+        }
+        sourceMeters[sample.track, default: .init()].raw.update(raw)
         try flushAvailable()
     }
 
@@ -144,13 +162,15 @@ nonisolated final class SynchronizedCaptureWriter {
         return AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48_000, interleaved: false, channelLayout: layout)
     }
 
-    private func emit(_ buffer: AVAudioPCMBuffer, frames: Int, start: Int64, input: Input, role: CaptureTrack) throws {
+    private func emit(_ buffer: AVAudioPCMBuffer, frames nominalFrames: Int, start: Int64, input: Input, role: CaptureTrack) throws {
+        let frames = maximumFrames.map { min(nominalFrames, Int(max(0, $0 - start))) } ?? nominalFrames
+        if frames == 0 { return }
         guard frames > 0, frames <= Int(48_000 * policy.maximumPacketSeconds) + 512,
               start >= input.end else { throw SessionError.invalid("Capture audio overlaps its previous interval") }
         if start > input.end {
             if input.end > 0 {
                 input.gaps += start - input.end
-                try mix.addIssue("A source has timestamp gaps; silence preserves its position. Review the source tracks.")
+                try mix?.addIssue("A source has timestamp gaps; silence preserves its position. Review the source tracks.")
             }
             try silence(to: input.writer, frames: start - input.end, channels: buffer.format.channelCount)
         }
@@ -164,7 +184,7 @@ nonisolated final class SynchronizedCaptureWriter {
             // conversion uses each source's persistent AVAudioConverter first.
             for channel in 0..<Int(buffer.format.channelCount) {
                 for frame in 0..<frames {
-                    let position = Double(frame) * Double(buffer.frameLength) / Double(frames)
+                    let position = Double(frame) * Double(buffer.frameLength) / Double(nominalFrames)
                     let lower = min(Int(position), Int(buffer.frameLength) - 1)
                     let upper = min(lower + 1, Int(buffer.frameLength) - 1)
                     let fraction = Float(position - Double(lower))
@@ -173,7 +193,7 @@ nonisolated final class SynchronizedCaptureWriter {
             }
             aligned = result
         }
-        try input.writer.writeBuffer(aligned)
+        try input.writer?.writeBuffer(aligned)
         input.end = start + Int64(frames)
         end = max(end, input.end)
         // Retain source audio even when a callback arrives beyond the mixing
@@ -182,7 +202,7 @@ nonisolated final class SynchronizedCaptureWriter {
             try flush(to: input.end - Int64(policy.mixWindowFrames))
         }
         if start < head {
-            try mix.addIssue("A source arrived too late for the stereo mix; its separate track is preserved. Review the recording.")
+            try mix?.addIssue("A source arrived too late for the stereo mix; its separate track is preserved. Review the recording.")
         }
         guard let data = aligned.floatChannelData else { throw WAVWriterError.invalidFormat }
         guard let slot = descriptors.firstIndex(where: { $0.role == role }) else { throw SessionError.invalid("Unknown source identity") }
@@ -192,6 +212,7 @@ nonisolated final class SynchronizedCaptureWriter {
         let leftCount = max(1, routes.filter { $0.placement != .right }.count)
         let rightCount = max(1, routes.filter { $0.placement != .left }.count)
         var postPeak: Float = 0
+        var channelPeaks = [Float](repeating: 0, count: Int(aligned.format.channelCount))
         for offset in 0..<frames {
             let absolute = start + Int64(offset)
             guard absolute >= head else { continue }
@@ -201,6 +222,7 @@ nonisolated final class SynchronizedCaptureWriter {
             for route in routes {
                 let value = data[route.channel][offset] * event.value(base + route.channel, at: absolute)
                 postPeak = max(postPeak, abs(value))
+                channelPeaks[route.channel] = max(channelPeaks[route.channel], abs(value))
                 if route.placement != .right { l += value / Float(leftCount) }
                 if route.placement != .left { r += value / Float(rightCount) }
             }
@@ -209,13 +231,14 @@ nonisolated final class SynchronizedCaptureWriter {
             right[index] += r / Float(descriptors.count)
         }
         postPeaks[role] = postPeak
+        sourceMeters[role, default: .init()].processed.update(channelPeaks)
     }
 
     private func flushAvailable() throws {
         let active = tracks.filter { !failedSources.contains($0) }
         let earliestEnd = active.map { inputs[$0]?.end ?? 0 }.min() ?? end
         if end - earliestEnd > Int64(policy.sourceStallSeconds * 48_000) {
-            try mix.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
+            try mix?.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
         }
         try flush(to: earliestEnd)
     }
@@ -227,25 +250,28 @@ nonisolated final class SynchronizedCaptureWriter {
             guard let buffer = AVAudioPCMBuffer(pcmFormat: AudioFormatNormalizer.canonical, frameCapacity: AVAudioFrameCount(count)),
                   let data = buffer.floatChannelData else { throw WAVWriterError.invalidFormat }
             buffer.frameLength = AVAudioFrameCount(count)
+            var peaks: [Float] = [0, 0]
             for offset in 0..<count {
                 let index = Int((head + Int64(offset)) % Int64(policy.mixWindowFrames))
                 let absolute = head + Int64(offset)
                 let master = automation.event(at: absolute).value(automation.masterIndex, at: absolute)
                 let l = left[index] * master, r = right[index] * master
                 mixPeak = max(mixPeak, abs(l), abs(r))
+                peaks[0] = max(peaks[0], abs(l)); peaks[1] = max(peaks[1], abs(r))
                 if abs(l) > 1 || abs(r) > 1 { clippedFrames += 1 }
                 data[0][offset] = max(-1, min(1, l))
                 data[1][offset] = max(-1, min(1, r))
                 left[index] = 0; right[index] = 0
             }
             onMix?(buffer)
-            try mix.writeBuffer(buffer)
+            mixMeter.update(peaks)
+            try mix?.writeBuffer(buffer)
             head += Int64(count)
         }
     }
 
-    private func silence(to writer: SessionWAVWriter, frames: Int64, channels: AVAudioChannelCount) throws {
-        guard frames > 0 else { return }
+    private func silence(to writer: SessionWAVWriter?, frames: Int64, channels: AVAudioChannelCount) throws {
+        guard let writer, frames > 0 else { return }
         let format = try Self.format(channels: channels)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(policy.blockFrames)),
               let data = buffer.floatChannelData else { throw WAVWriterError.invalidFormat }
@@ -265,7 +291,7 @@ nonisolated final class SynchronizedCaptureWriter {
                 descriptors[index].gapFrames = input.gaps
             }
         }
-        try mix.setSourceTracks(descriptors, epoch: epoch)
+        try mix?.setSourceTracks(descriptors, epoch: epoch)
     }
 
     func sourceFailed(_ track: CaptureTrack, message: String) throws {
@@ -273,18 +299,18 @@ nonisolated final class SynchronizedCaptureWriter {
         if let input = inputs[track], let pending = input.pending {
             try emit(pending, frames: Int((input.duration * 48_000).rounded()), start: frame(input.time), input: input, role: track)
             input.pending = nil
-            try input.writer.addIssue(message)
+            try input.writer?.addIssue(message)
         }
         failedSources.insert(track)
         descriptors[index].failure = message
-        try mix.addIssue("A selected input failed; other sources continued. Review incomplete source coverage.")
+        try mix?.addIssue("A selected input failed; other sources continued. Review incomplete source coverage.")
         try journal()
         try flushAvailable()
     }
 
     func health(for track: CaptureTrack) -> (written: Int64, peak: Float, postPeak: Float, mixPeak: Float, clipped: Bool) {
         guard let input = inputs[track] else { return (0, 0, 0, mixPeak, clippedFrames > 0) }
-        return (input.writer.frameCount, input.pending.map { AudioRecorder.peak($0) } ?? 0, postPeaks[track] ?? 0, mixPeak, clippedFrames > 0)
+        return (input.writer?.frameCount ?? input.end, input.pending.map { AudioRecorder.peak($0) } ?? 0, postPeaks[track] ?? 0, mixPeak, clippedFrames > 0)
     }
 
     func finish(failure: Error? = nil) throws {
@@ -294,7 +320,7 @@ nonisolated final class SynchronizedCaptureWriter {
         for track in tracks {
             do {
                 guard let input = inputs[track] else {
-                    try mix.addIssue("Selected \(track.rawValue) source delivered no data; coverage is incomplete.")
+                    try mix?.addIssue("Selected \(track.rawValue) source delivered no data; coverage is incomplete.")
                     continue
                 }
                 if let pending = input.pending {
@@ -305,29 +331,29 @@ nonisolated final class SynchronizedCaptureWriter {
         }
         for input in inputs.values {
             if end - input.end > Int64(policy.maximumEndSkewSeconds * 48_000) {
-                try? mix.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
+                try? mix?.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
             }
             do { try silence(to: input.writer, frames: end - input.end, channels: input.format.channelCount) }
             catch { if failureToReport == nil { failureToReport = error } }
         }
         do {
             try flush(to: end)
-            if clippedFrames > 0 { try mix.addIssue("The derived mix clipped; unattenuated source tracks are retained.") }
+            if clippedFrames > 0 { try mix?.addIssue("The derived mix clipped; unattenuated source tracks are retained.") }
             try journal()
         } catch { if failureToReport == nil { failureToReport = error } }
         for (role, input) in inputs {
-            Log.recorder.notice("Source timing role=\(role.rawValue, privacy: .public) received_native_frames=\(input.receivedFrames) saved_timeline_frames=\(input.writer.frameCount) timestamp_gap_frames=\(input.gaps) mix_clipped_frames=\(self.clippedFrames)")
+            Log.recorder.notice("Source timing role=\(role.rawValue, privacy: .public) received_native_frames=\(input.receivedFrames) saved_timeline_frames=\(input.writer?.frameCount ?? input.end) timestamp_gap_frames=\(input.gaps) mix_clipped_frames=\(self.clippedFrames)")
         }
         // Every writer must finalize even if another writer or mixing failed.
         for input in inputs.values {
             do {
-                if let failureToReport { try input.writer.markFailure(failureToReport) }
-                try input.writer.finalize()
+                if let failureToReport { try input.writer?.markFailure(failureToReport) }
+                try input.writer?.finalize()
             } catch { if failureToReport == nil { failureToReport = error } }
         }
         do {
-            if let failureToReport { try mix.markFailure(failureToReport) }
-            try mix.finalize()
+            if let failureToReport { try mix?.markFailure(failureToReport) }
+            try mix?.finalize()
         } catch { if failureToReport == nil { failureToReport = error } }
         if let failureToReport { throw failureToReport }
     }

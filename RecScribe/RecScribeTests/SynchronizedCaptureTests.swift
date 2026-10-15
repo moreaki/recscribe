@@ -64,7 +64,7 @@ struct SynchronizedCaptureTests {
             try writer.accept(sample(.playback, time: Double(index) / 100))
         }
         try writer.finish()
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         #expect(parent.totalFrames == 4_800)
         #expect(parent.schemaVersion == 2)
@@ -92,7 +92,7 @@ struct SynchronizedCaptureTests {
             try writer.accept(sample(.microphone, time: Double(index) * 0.01001, channels: 1))
         }
         try writer.finish()
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         #expect(parent.totalFrames == Int64((0.99 * 1.001 * 48_000).rounded()) + 480)
         #expect(parent.issues.isEmpty)
@@ -110,7 +110,7 @@ struct SynchronizedCaptureTests {
             if index != 2 { try writer.accept(sample(.microphone, time: time, channels: 1)) }
         }
         try writer.finish()
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         #expect(parent.status == .needsReview)
         let descriptor = try #require(parent.sourceTracks?.first { $0.role == .microphone })
@@ -129,7 +129,7 @@ struct SynchronizedCaptureTests {
             try writer.accept(sample(.microphone, time: Double(index) / 100, frames: 441, channels: 1, rate: 44_100))
         }
         try writer.finish()
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         let mix = try decoded(parent, beside: manifest)
         #expect(parent.issues.isEmpty)
@@ -144,7 +144,7 @@ struct SynchronizedCaptureTests {
         for index in 0..<8 { try writer.accept(sample(.playback, time: Double(index) / 100)) }
         for index in 0..<8 { try writer.accept(sample(.microphone, time: Double(index) / 100, channels: 1)) }
         try writer.finish()
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         #expect(parent.status == .needsReview)
         #expect(parent.issues.contains { $0.contains("too late") })
@@ -159,7 +159,7 @@ struct SynchronizedCaptureTests {
         try writer.accept(sample(.microphone, time: 0, channels: 1))
         #expect(throws: SessionError.self) { try writer.accept(sample(.microphone, time: 0.01, channels: 2)) }
         #expect(throws: SessionError.self) { try writer.finish(failure: SessionError.invalid("format changed")) }
-        let manifest = try #require(writer.mix.manifestURL)
+        let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
         #expect(parent.totalFrames == 480)
         #expect(parent.status == .needsReview)
@@ -172,7 +172,7 @@ struct SynchronizedCaptureTests {
             try writer?.accept(sample(.playback, time: Double(index) / 100))
             try writer?.accept(sample(.microphone, time: Double(index) / 100, channels: 1))
         }
-        let manifest = try #require(writer?.mix.manifestURL)
+        let manifest = try #require(writer?.mix?.manifestURL)
         writer = nil // no finish: simulate interrupted, unfinalized WAV headers
         let recovered = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: .init(), recover: true)
         #expect(recovered.status == .needsReview)
@@ -194,7 +194,7 @@ struct SynchronizedCaptureTests {
             try writer?.accept(sample(.microphone, time: Double(index) / 100, channels: 1))
         }
         try writer?.finish()
-        let manifest = try #require(writer?.mix.manifestURL)
+        let manifest = try #require(writer?.mix?.manifestURL)
         writer = nil // release the mix lease before verification
         let parent = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: .init())
         #expect(parent.status == .completed)

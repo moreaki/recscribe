@@ -29,11 +29,16 @@ struct AudioRoutingView: View {
 
     private var source: AudioSource { recorder.audioSource.selectedSource }
     private var inputs: [InputSelection] { source.inputSelections }
-    private var editable: Bool { recorder.state.allowsCaptureSourceChange }
+    private var editable: Bool { recorder.allowsCaptureSourceChange }
     private var eligible: [InputDeviceInfo] { devices.filter { (1...32).contains($0.inputChannels ?? 0) } }
     private var warnings: [String] { InputRouteSafety.warnings(inputs: inputs, devices: devices) }
     private var monitorState: String {
-        monitor.enabled ? (recorder.isRecording ? "Listening" : "Armed · waiting for recording") : "Off"
+        monitor.enabled ? (recorder.isRecording || recorder.audioTest?.isCapturing == true ? "Listening" : "Armed · waiting for capture") : "Off"
+    }
+    private var captureHint: String {
+        if recorder.audioTest?.locksSources == true { return "Audio test · sources and connections locked · adjust gain and listening output below" }
+        if recorder.isRecording { return "Recording · faders stay live · sources and connections locked" }
+        return editable ? "Select a source, mix or output to adjust it · not recording" : "Preparing or finishing capture · sources and connections locked"
     }
 
     var body: some View {
@@ -43,6 +48,10 @@ struct AudioRoutingView: View {
             if source.kind != .multiple {
                 legacySource
             } else {
+                if let test = recorder.audioTest {
+                    AudioTestControls(test: test, enabled: recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording)
+                    Divider()
+                }
                 GeometryReader { geometry in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
@@ -75,7 +84,11 @@ struct AudioRoutingView: View {
         .frame(minWidth: AppWindow.routing.minimumSize.width, minHeight: AppWindow.routing.minimumSize.height)
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onExitCommand { collapsePanel() }
-        .onDisappear { expandedPanel = nil; focusedPanel = nil }
+        .onAppear { recorder.audioTest?.opened() }
+        .onDisappear {
+            expandedPanel = nil; focusedPanel = nil
+            Task { await recorder.audioTest?.close() }
+        }
         .onChange(of: source) { _, next in
             if next.kind != .multiple {
                 expandedPanel = nil; focusedPanel = nil
@@ -98,9 +111,7 @@ struct AudioRoutingView: View {
             WorkspaceIcon(symbol: "point.3.connected.trianglepath.dotted", tint: WorkspaceStyle.mint)
             VStack(alignment: .leading, spacing: 3) {
                 Text("Audio routing").font(.headline)
-                Text(recorder.isRecording ? "Recording · faders stay live · sources and connections locked" : editable
-                     ? "Select a source, mix or output to adjust it · not recording"
-                     : "Preparing or finishing capture · sources and connections locked")
+                Text(captureHint)
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
@@ -147,6 +158,11 @@ struct AudioRoutingView: View {
                            track: .playback) {
                 playbackChooser
                 SourceFader(id: source.playbackLevelID, title: "Playback gain", levels: levels, channels: 2, preservesSources: true)
+                if let test = recorder.audioTest {
+                    DisclosureGroup("Live channel levels") {
+                        AudioTestSourceMeterView(test: test, track: .playback, muted: levels.level(source.playbackLevelID).muted, channels: true)
+                    }.font(.caption)
+                }
             }
             ForEach(inputs) { input in
                 inputCard(input, device: devices.first { $0.uid == input.deviceUID })
@@ -209,6 +225,11 @@ struct AudioRoutingView: View {
             }
             SourceFader(id: id, title: "Input gain", levels: levels,
                         channels: min(32, device?.inputChannels ?? 1), preservesSources: true, context: name)
+            if let test = recorder.audioTest {
+                DisclosureGroup("Live channel levels") {
+                    AudioTestSourceMeterView(test: test, track: .input(input.deviceUID), muted: levels.level(id).muted, channels: true)
+                }.font(.caption)
+            }
             if let device {
                 channelConnections(input, device: device).disabled(!editable)
                 DeviceVolumeView(uid: input.deviceUID, input: true)
@@ -249,10 +270,10 @@ struct AudioRoutingView: View {
                 Text("Selected channels are averaged per side, then across sources for headroom. Gain above 0 dB can clip the mix.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text("\(inputs.count + 1) original source \(inputs.count == 0 ? "track" : "tracks")")
+            Text(recorder.audioTest?.state == .testing ? "\(inputs.count + 1) selected source routes" : "\(inputs.count + 1) original source \(inputs.count == 0 ? "track" : "tracks")")
                 .font(.caption).foregroundStyle(.secondary).padding(.top, 4)
                 .help("Playback and every selected input keep separate files at unity gain, including channels disconnected from the mix. Selected sources can still fail; check capture health while recording.")
-            Text("Separate files · unity gain")
+            Text(recorder.audioTest?.state == .testing ? "Preview only · no files saved" : "Separate files · unity gain")
                 .font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -304,7 +325,7 @@ struct AudioRoutingView: View {
 
     private var footer: some View {
         HStack(alignment: .top, spacing: 16) {
-            Text("Connections and faders affect the mix. Original source tracks stay at unity gain.")
+            Text(recorder.audioTest?.state == .testing ? "Preview only · no files saved. Stop the test before changing sources or channel connections." : "Connections and faders affect the mix. Original source tracks stay at unity gain.")
             Spacer(minLength: 0)
             Text("Monitor: \(monitorState) · Audio stays on your Mac")
         }.font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 12)
@@ -336,6 +357,7 @@ struct AudioRoutingView: View {
                 .accessibilityValue("\(expanded ? "Expanded" : "Collapsed"), \(subtitle), \(value)\(muted ? ", muted" : "")\(warning.map { ", \($0)" } ?? "")")
                 .accessibilityHint("\(expanded ? "Hide" : "Show") controls. Escape collapses the open controls.")
             if let track { sourceMeter(track).padding(.horizontal, 12) }
+            if panel == .mix, let test = recorder.audioTest { AudioTestMixMeterView(test: test).padding(.horizontal, 12) }
             if expanded {
                 VStack(alignment: .leading, spacing: 12) {
                     Divider()
@@ -374,7 +396,10 @@ struct AudioRoutingView: View {
             .background(WorkspaceStyle.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
     @ViewBuilder private func sourceMeter(_ track: CaptureTrack) -> some View {
-        if recorder.isRecording, let item = recorder.sourceHealth.first(where: { $0.id == track.rawValue }) {
+        if let test = recorder.audioTest, !test.health.isEmpty {
+            AudioTestSourceMeterView(test: test, track: track,
+                muted: levels.level(track == .playback ? source.playbackLevelID : inputs.first(where: { CaptureTrack.input($0.deviceUID) == track }).map { "input:" + $0.deviceUID } ?? "").muted)
+        } else if recorder.isRecording, let item = recorder.sourceHealth.first(where: { $0.id == track.rawValue }) {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: Double(min(1, item.health.peak))).accessibilityLabel("\(item.name) raw input level")
                 let status = item.health.status(at: recorder.healthTime)

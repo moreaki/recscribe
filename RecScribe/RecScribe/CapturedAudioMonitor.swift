@@ -51,6 +51,12 @@ final class CapturedAudioMonitor: ObservableObject {
         // Release the output device between takes; never leave queued sound playing.
         setEnabled(false, source: .systemAll)
     }
+    func stopAndWait() async {
+        recordingStopped()
+        await withCheckedContinuation { continuation in
+            queue.async { continuation.resume() }
+        }
+    }
     private func configureOutput(force: Bool = false) {
         guard enabled else { return }
         let settings = levels.value

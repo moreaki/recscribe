@@ -32,9 +32,12 @@ struct RecordingLibraryView: View {
             SessionPlaybackView(playback: playback)
             List(library.entries) { entry in
                 VStack(alignment: .leading, spacing: GlassSpacing.m) {
-                    HStack {
+                    HStack(alignment: .top) {
                         WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
-                        Text(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")).font(.headline)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")).font(.headline)
+                            RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
+                        }
                         Spacer()
                         Text(entry.session.status == .recording && !library.recordingActive ? "Not finalized — verify / recover" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
                     }

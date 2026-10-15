@@ -142,9 +142,16 @@ process-lifetime RSS samples are in
 ## Recording gain and listening volume (#17 / #18)
 
 Expand **Audio levels** in Studio or the menu-bar popover. Source software gain
-and the master saved-recording level range from **−60 to +24 dB**, in 0.5-dB steps,
-with reset to 0 dB. Mix-channel trims have the same range, before the source fader;
-the two gains add in dB. Only channels 1–2 feed a combined stereo mix. Mono inputs
+and channel trims use continuous sliders with one **0 dB** reference. Dragging
+gently snaps to −60, −48, −36, −24, −18, −12, −9, −6, −3, 0, +3, +6, +9, +12,
++18 and +24 dB. The zero stop is slightly stronger; moving farther releases it.
+Hold **Option** to bypass snapping. Arrow keys and accessibility adjustments use
+0.5 dB steps; **Option-arrow** uses 0.1 dB. Reset returns to 0 dB (unchanged gain).
+
+Source software gain and the master saved-recording level range from **−60 to +24 dB**.
+Mix-channel trims have the same range, before the source fader;
+the two gains add in dB. Channel connections choose which native input channels
+feed the multiple-input stereo mix. Mono inputs
 are centered. Mute reduces that source's mix contribution to zero; it does not
 stop capture. With combined capture, every selected source is still saved at
 unity gain in its own session. With a **single source**, the saved WAV is explicitly

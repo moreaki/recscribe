@@ -49,7 +49,9 @@ struct LocalProcessRunnerTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         var runner = LocalProcessRunner(diagnosticsDirectory: root)
-        runner.policy.timeout = 0.1
+        // Parent launch must not race a 100 ms deadline on a loaded CI runner.
+        // The descendant keeps the pipe open longer than the duration assertion.
+        runner.policy.timeout = 10
         runner.policy.terminationGrace = 0.05
         let unrelated = Process()
         unrelated.executableURL = URL(fileURLWithPath: "/bin/sleep")
@@ -57,9 +59,10 @@ struct LocalProcessRunnerTests {
         try unrelated.run()
         defer { unrelated.terminate(); unrelated.waitUntilExit() }
         let parent = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
-            ["-c", "sleep 1 & printf 'parent done'"], cancel: WorkCancellation())
+            ["-c", "sleep 5 & printf 'parent done'"], cancel: WorkCancellation())
         #expect(parent.output == "parent done")
         #expect(parent.durationSeconds < 2)
+        runner.policy.timeout = 0.1
         let timeout = try runner.execute(URL(fileURLWithPath: "/bin/sh"),
             ["-c", "trap '' TERM; while :; do printf 'synthetic output'; done"], cancel: WorkCancellation())
         #expect(timeout.outcome == .timedOut)

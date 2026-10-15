@@ -111,7 +111,7 @@ even when their inclusion in recording was acknowledged.
 
 The bundled Python pipeline is **0.2.3**, reading manifest versions 1–3 and retaining
 source identity in inspection reports. Existing installed Python environments need
-explicit **Set up isolated pipeline runtime** again to receive this update before
+explicit **Reinitialize pipeline…** to receive this update before
 transcribing version-3 groups. Capture does not depend on the Python runtime.
 
 ## Verification and remaining hardware checks

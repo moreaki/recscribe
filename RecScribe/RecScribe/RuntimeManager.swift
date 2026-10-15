@@ -115,7 +115,7 @@ nonisolated final class DownloadProgress: NSObject, URLSessionDownloadDelegate, 
     }
 }
 
-nonisolated enum LocalSoftware: String, Sendable {
+nonisolated enum LocalSoftware: String, Hashable, Sendable {
     case pipeline, ffmpeg, ollama
     case whisperCPP = "whisper-cpp"
 }
@@ -123,13 +123,68 @@ nonisolated enum LocalSoftware: String, Sendable {
 @MainActor
 final class RuntimeManager: ObservableObject {
     private let settings: AppSettings
+    private let aiModels: @Sendable () async throws -> [String]
     var isRecording: () -> Bool = { false }
     @Published private(set) var detectedTools: [String: String] = [:]
+    @Published private(set) var availability: RuntimeAvailability?
+    @Published private(set) var checkingAvailability = false
+    private var availabilityGeneration = UUID()
 
-    init(settings: AppSettings) { self.settings = settings }
+    func dependency(_ software: LocalSoftware) -> RuntimeAvailability.Dependency? {
+        guard availability?.paths == RuntimeAvailability.Paths(settings.values) else { return nil }
+        return availability?.tools[software]
+    }
+    func localModel(_ model: WhisperModel) -> RuntimeAvailability.Model? {
+        guard availability?.paths == RuntimeAvailability.Paths(settings.values) else { return nil }
+        return availability?.models[model.id]
+    }
+    var availabilityCurrent: Bool { availability?.paths == RuntimeAvailability.Paths(settings.values) }
+
+    func refreshAvailability() async {
+        let generation = UUID(); availabilityGeneration = generation
+        checkingAvailability = true
+        defer { if availabilityGeneration == generation { checkingAvailability = false } }
+        let paths = RuntimeAvailability.Paths(settings.values)
+        let probeVersions = !isRecording()
+        let cancel = WorkCancellation()
+        let result = await withTaskCancellationHandler {
+            await Task.detached(priority: .utility) {
+                try? RuntimeAvailability.scan(paths: paths, support: AppSettings.supportDirectory,
+                                              cancel: cancel, probeVersions: probeVersions)
+            }.value
+        } onCancel: { cancel.cancel() }
+        guard !Task.isCancelled, generation == availabilityGeneration,
+              paths == RuntimeAvailability.Paths(settings.values), let result else { return }
+        availability = result
+        detectedTools = Dictionary(uniqueKeysWithValues: [(LocalSoftware.whisperCPP, "whisper-cli"), (.ffmpeg, "ffmpeg")].compactMap { software, name in
+            result.tools[software].map { (name, $0.path) }
+        })
+    }
+
+    func useDependency(_ software: LocalSoftware) {
+        guard !busy, !isRecording(), let found = dependency(software) else { return }
+        switch software {
+        case .ffmpeg: settings.values.ffmpegPath = found.path
+        case .whisperCPP: settings.values.whisperPath = found.path
+        case .pipeline: settings.values.pythonPath = found.path
+        case .ollama: break
+        }
+    }
+
+    func forgetPipelineSelection() {
+        guard !busy, !isRecording() else { return }
+        settings.values.pythonPath = ""
+        availability = nil
+        status = "Pipeline selection cleared; existing environments and jobs are retained."
+    }
+
+    init(settings: AppSettings, aiModels: @escaping @Sendable () async throws -> [String] = {
+        try await IntelligenceClient().models(provider: .ollama)
+    }) { self.settings = settings; self.aiModels = aiModels }
     @Published private(set) var status = "Detection has not run"
     @Published private(set) var diagnostics = ""
     @Published private(set) var localAIModels: [String] = []
+    @Published private(set) var localAIAvailable = false
     @Published private(set) var progress = 0.0
     @Published private(set) var busy = false
     private var task: Task<Void, Never>?
@@ -179,25 +234,37 @@ final class RuntimeManager: ObservableObject {
 
     func detectAI() {
         perform("Detect local AI") { [self] token in
-            let models = try await IntelligenceClient().models(provider: .ollama)
+            localAIAvailable = false
+            let models = try await aiModels()
             try token.check()
+            localAIAvailable = true
             localAIModels = models
             diagnostics = "Ollama · 127.0.0.1:11434\nLocal models: \(localAIModels.joined(separator: ", "))\nRemote/cloud models are excluded; no transcript was sent."
         }
     }
 
-    func install(_ software: LocalSoftware) {
-        guard software != .pipeline else { installPipeline(); return }
+    func install(_ software: LocalSoftware, reinitialize: Bool = false) {
+        guard software != .pipeline else { installPipeline(reinitialize: reinitialize); return }
         let formula = software.rawValue
         perform("Install \(formula) with Homebrew") { [self] token in
+            guard software != .ollama || !localAIAvailable else {
+                throw SessionError.invalid("Ollama is already available at 127.0.0.1:11434. Recheck the local service instead.")
+            }
+            let paths = RuntimeAvailability.Paths(settings.values)
             diagnostics = try await Task.detached(priority: .utility) {
-                try RuntimeInstallation.install(software, cancel: token)
+                guard RuntimeAvailability.toolPath(software, paths: paths) == nil else {
+                    throw SessionError.invalid("\(formula) is already available. Recheck or select the existing executable instead.")
+                }
+                return try RuntimeInstallation.install(software, cancel: token)
             }.value
         }
     }
 
-    func installPipeline() {
+    func installPipeline(reinitialize: Bool = false) {
         perform("Install local pipeline runtime") { [self] token in
+            guard reinitialize || !RuntimeAvailability.executable(settings.values.pythonPath) else {
+                throw SessionError.invalid("A Python runtime is already selected. Recheck it or explicitly reinitialize the pipeline.")
+            }
             guard let archive = Bundle.main.url(forResource: "pipeline", withExtension: "tar.gz") else {
                 throw SessionError.invalid("Bundled pipeline sources are missing; rebuild or reinstall RecScribe")
             }
@@ -211,9 +278,13 @@ final class RuntimeManager: ObservableObject {
 
     func download(_ model: WhisperModel) {
         perform("Download and verify \(model.id)") { [self] token in
+            let paths = RuntimeAvailability.Paths(settings.values)
             let directory = AppSettings.supportDirectory.appendingPathComponent("Models")
             let destination = try await Task.detached(priority: .utility) {
-                try RuntimeInstallation.modelDestination(model, directory: directory, cancel: token)
+                guard RuntimeAvailability.model(model, paths: paths, support: AppSettings.supportDirectory) == nil else {
+                    throw SessionError.invalid("A local \(model.id) model file was found. Select or review the existing file instead.")
+                }
+                return try RuntimeInstallation.modelDestination(model, directory: directory, cancel: token)
             }.value
             try token.check()
             let delegate = DownloadProgress(expectedBytes: model.bytes) { [weak self] fraction in

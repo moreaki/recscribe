@@ -66,7 +66,7 @@ Recordings → More offers playback/transcription of each source independently.
 Playback/normal transcription of the parent uses the mix. Python pipeline 0.2.2
 accepts version-2 manifests and marks recognition of a derived mix for review;
 independent recognition uses a source-session manifest. Existing separately
-installed pipeline environments need **Set up isolated pipeline runtime** again
+installed pipeline environments need **Reinitialize pipeline…**
 in Settings → Transcription to pick up this bundled update. Recording itself does
 not depend on Python, ASR, a model, a network connection or live transcription.
 

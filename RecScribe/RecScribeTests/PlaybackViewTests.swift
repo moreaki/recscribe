@@ -8,7 +8,10 @@ struct PlaybackViewTests {
     func playerViewRenders() throws {
         // Inspect the host executable: importing frameworks in a test bundle
         // must not accidentally hide a missing dependency in the shipped app.
-        let executable = try #require(Bundle.main.executableURL)
+        let launcher = try #require(Bundle.main.executableURL)
+        // Xcode 26 Debug builds can put app code and framework links in a dylib.
+        let debugLibrary = launcher.appendingPathExtension("debug.dylib")
+        let executable = FileManager.default.fileExists(atPath: debugLibrary.path) ? debugLibrary : launcher
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/otool")

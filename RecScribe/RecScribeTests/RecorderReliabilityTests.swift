@@ -11,7 +11,7 @@ struct RecorderReliabilityTests {
         // several seconds. These deadlines protect the test harness, not a
         // production latency budget; the fake encoder must stay blocked until
         // the test explicitly releases it.
-        semaphore.wait(timeout: .now() + 15) == .success
+        semaphore.wait(timeout: .now() + 60) == .success
     }
     /// Only the encoding queue mutates counters; assertions read after stop.
     private nonisolated final class Encoder: AudioFileEncoder, @unchecked Sendable {
@@ -33,7 +33,7 @@ struct RecorderReliabilityTests {
             writes += 1
             if blockWrite && writes == 1 {
                 entered.signal()
-                _ = release.wait(timeout: .now() + 30)
+                _ = release.wait(timeout: .now() + 90)
             }
             if failWrite { throw WriteFailure() }
         }
@@ -41,7 +41,7 @@ struct RecorderReliabilityTests {
             finalizes += 1
             if blockFinalize {
                 entered.signal()
-                _ = release.wait(timeout: .now() + 30)
+                _ = release.wait(timeout: .now() + 90)
             }
         }
         func waitUntilEntered() async -> Bool {

@@ -14,6 +14,7 @@ struct MenuBarPopoverView: View {
     @State private var contentHeight: CGFloat = WorkspaceStyle.previewHeight
 
     var body: some View {
+        VStack(spacing: 0) {
         ScrollView {
         VStack(alignment: .leading, spacing: 12) {
             // Header: logo, with secondary actions collected under "•••" (BL-110)
@@ -179,8 +180,11 @@ struct MenuBarPopoverView: View {
         .frame(width: WorkspaceStyle.popoverWidth)
         .background(GeometryReader { geometry in Color.clear.preference(key: PopoverContentHeight.self, value: geometry.size.height) })
         }
-        .frame(width: WorkspaceStyle.popoverWidth, height: min(max(contentHeight, WorkspaceStyle.previewHeight), min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80)))
+        .frame(width: WorkspaceStyle.popoverWidth, height: min(max(contentHeight, WorkspaceStyle.previewHeight), min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80) - 51))
         .onPreferenceChange(PopoverContentHeight.self) { contentHeight = $0 }
+        Divider()
+        footer
+        }
         // The same ground as the window, deliberately. This was a flat opaque
         // fill first, reasoning that an NSPopover already draws its own vibrancy
         // and a second material would read as mud. What an opaque fill actually
@@ -188,6 +192,28 @@ struct MenuBarPopoverView: View {
         // than the window it belongs to — the app looking like two apps.
         .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
+    }
+
+    /// Match Quantivane's persistent footer; quitting uses the app delegate's
+    /// existing asynchronous recording finalization and cleanup.
+    private var footer: some View {
+        HStack {
+            Spacer()
+            Button {
+                NSApp.terminate(nil)
+            } label: {
+                Label("Quit", systemImage: "power")
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 9)
+                    .frame(height: 30)
+                    .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: 7))
+            }
+            .buttonStyle(.plain)
+            .help("Quit RecScribe")
+            .accessibilityIdentifier("popover-quit")
+        }
+        .padding(.horizontal, 14)
+        .frame(width: WorkspaceStyle.popoverWidth, height: 50)
     }
 }
 

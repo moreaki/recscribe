@@ -20,6 +20,7 @@ struct MultipleInputsView: View {
                 Text("Connect apps and inputs, adjust channels, and choose a monitor output.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            AudioMuteSummary(source: source)
         }.font(.callout)
     }
 }

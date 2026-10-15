@@ -27,7 +27,9 @@ struct RecorderView: View {
             StatusBar(state: viewModel.state, duration: viewModel.formattedDuration, statusText: viewModel.statusText)
             CaptureHealthView(recorder: viewModel)
             MultipleInputsView(recorder: viewModel)
-            RecordingLevelsView(recorder: viewModel)
+            if viewModel.audioSource.selectedSource.kind != .multiple {
+                RecordingLevelsView(recorder: viewModel)
+            }
             if case .error = viewModel.state {
                 Button("Review saved recordings", systemImage: "waveform.path.badge.exclamationmark") {
                     openWindow(id: AppWindow.recordings.rawValue)

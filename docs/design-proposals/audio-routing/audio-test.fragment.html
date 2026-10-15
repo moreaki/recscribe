@@ -1,0 +1,73 @@
+<div id="rc-test-preview" class="viz-dotted-background">
+ <section class="at-window" aria-label="RecScribe test audio proposal">
+  <header><div><h2>Test audio</h2><div class="at-sub">Simulated proposal · no microphone or audio output</div></div></header>
+  <div class="at-toolbar"><button type="button" class="cursor-interaction" data-start>Start test demo</button><label>Demo signal <select data-sample><option value="normal">Normal speech</option><option value="loud">Loud phrase</option><option value="silent">Silence</option></select></label></div>
+  <div class="at-content">
+   <section class="at-source"><div class="at-title"><i data-lucide="mic" aria-hidden="true"></i><h3>Studio Display Microphone</h3></div><div data-meter="raw"></div><div data-meter="source"></div><label class="at-label">Input gain <output data-value="input"></output><input type="range" min="-24" max="24" step="0.5" data-gain="input" aria-label="Microphone input gain"></label><label class="at-check"><input type="checkbox" data-mute="input">Mute microphone in mix</label></section>
+   <section class="at-source"><div class="at-title"><i data-lucide="sliders-horizontal" aria-hidden="true"></i><h3>Stereo recording mix</h3></div><div data-meter="mix"></div><div class="at-sub at-target">dBFS · 0 = digital ceiling</div><label class="at-label">Master gain <output data-value="master"></output><input type="range" min="-30" max="12" step="0.1" data-gain="master" aria-label="Master mix gain"></label><label class="at-check"><input type="checkbox" data-mute="master">Mute recording mix</label></section>
+  </div>
+  <div class="at-result" role="status" aria-live="polite" data-result></div>
+  <details class="at-listening"><summary class="cursor-interaction">Headphone check</summary><div class="at-sub">Proposed: opt in to hear the mix. This demo produces no sound.</div><label class="at-label">Listening volume <output data-volume-label></output><input type="range" min="0" max="100" step="1" data-volume aria-label="Headphone listening volume"></label><div class="at-sub">Listening volume changes what you hear; input and master gain change the recording mix.</div></details>
+  <footer><span data-state>Test stopped</span><span>Original source tracks stay at unity gain</span></footer>
+ </section>
+</div>
+<style>
+#rc-test-preview {color-scheme:light dark;--at-bg:light-dark(#f6f7f9,#111318);--at-panel:light-dark(#fff,#1c1f27);--at-text:light-dark(#242831,#e6e8ed);--at-muted:light-dark(#626b78,#a6afbd);--at-line:light-dark(#dce1e7,#30353f);--at-blue:light-dark(#2460b6,#87b8fb);--at-soft:light-dark(#e6eaf0,#2b303a);--at-ok:light-dark(#187361,#8bd6c6);--at-warn:light-dark(#89530b,#edb96b);--at-clip:light-dark(#b22235,#ff8797);padding:12px 0;}
+#rc-test-preview .at-window {background:var(--at-bg);color:var(--at-text);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;border:1px solid var(--at-line);border-radius:14px;}
+#rc-test-preview .at-window * {box-sizing:border-box;}
+#rc-test-preview header {padding:16px 102px 14px 18px;border-bottom:1px solid var(--at-line);}
+#rc-test-preview h2 {font-size:16px;font-weight:500;margin:0 0 3px;}
+#rc-test-preview h3 {font-size:13px;font-weight:500;margin:0;}
+#rc-test-preview .at-sub {font-size:11px;color:var(--at-muted);}
+#rc-test-preview .at-toolbar {display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 18px;}
+#rc-test-preview button,#rc-test-preview select {font:inherit;color:var(--at-text);background:var(--at-soft);border:1px solid var(--at-line);border-radius:6px;padding:6px 9px;}
+#rc-test-preview .at-toolbar label {display:flex;gap:7px;align-items:center;font-size:12px;flex-wrap:wrap;}
+#rc-test-preview .at-content {display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 18px;}
+#rc-test-preview .at-source {background:var(--at-panel);border:1px solid var(--at-line);border-radius:10px;padding:13px;min-width:0;}
+#rc-test-preview .at-title {display:flex;gap:8px;align-items:center;margin-bottom:14px;}
+#rc-test-preview .at-title svg {width:16px;height:16px;flex:none;color:var(--at-muted);}
+#rc-test-preview .at-meter {margin-bottom:12px;}
+#rc-test-preview .at-meter-head {display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:11px;color:var(--at-muted);margin-bottom:4px;}
+#rc-test-preview output {font-variant-numeric:tabular-nums;}
+#rc-test-preview .at-track {height:9px;background:var(--at-soft);border-radius:3px;overflow:hidden;}
+#rc-test-preview .at-fill {height:100%;background:var(--at-ok);width:0;}
+#rc-test-preview .at-fill[data-clipped="true"] {background:var(--at-clip);}
+#rc-test-preview .at-scale {display:flex;justify-content:space-between;color:var(--at-muted);font-size:11px;}
+#rc-test-preview .at-target {margin:0 0 10px;}
+#rc-test-preview .at-label {display:flex;justify-content:space-between;gap:4px;flex-wrap:wrap;margin-top:13px;font-size:12px;}
+#rc-test-preview .at-label input {width:100%;margin:4px 0;accent-color:var(--at-blue);}
+#rc-test-preview .at-check {display:flex;align-items:center;gap:7px;font-size:12px;margin-top:8px;}
+#rc-test-preview input[type="checkbox"] {accent-color:var(--at-blue);margin:0;}
+#rc-test-preview .at-result {padding:13px 18px;color:var(--at-warn);font-size:12px;}
+#rc-test-preview .at-listening {border-top:1px solid var(--at-line);padding:12px 18px;font-size:12px;}
+#rc-test-preview .at-listening summary {margin-bottom:6px;}
+#rc-test-preview footer {border-top:1px solid var(--at-line);padding:11px 18px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;color:var(--at-muted);font-size:11px;}
+@media(max-width:560px) {#rc-test-preview .at-content {grid-template-columns:1fr;padding:0 12px;}#rc-test-preview .at-toolbar {padding:12px;}#rc-test-preview header {padding-left:12px;} }
+@media(pointer:coarse) {#rc-test-preview button,#rc-test-preview select {min-height:44px;}#rc-test-preview .at-check {min-height:44px;}}
+</style>
+<script>
+(()=>{
+ const root=document.getElementById('rc-test-preview');
+ const state={input:0,master:-25.9,inputMuted:false,masterMuted:true,volume:45,sample:'normal',running:false};
+ const labels={raw:'Source · before software gain',source:'Source · after gain / mute',mix:'Final mix · L / R'};
+ const fmt=v=>`${v>=0?'+':''}${v.toFixed(1)} dB`;
+ function restore(saved){if(!saved||typeof saved!=='object')return;for(const key of ['input','master','volume'])if(typeof saved[key]==='number'&&Number.isFinite(saved[key]))state[key]=Math.max(key==='volume'?0:key==='input'?-24:-30,Math.min(key==='volume'?100:key==='input'?24:12,saved[key]));for(const key of ['inputMuted','masterMuted'])if(typeof saved[key]==='boolean')state[key]=saved[key];if(['normal','loud','silent'].includes(saved.sample))state.sample=saved.sample;}
+ function persist(){window.openai?.setWidgetState?.({modelContent:{proposal:'Test audio with source and mix meters',gain:state.input,master:state.master,masterMuted:state.masterMuted},privateContent:state})?.catch(()=>{});}
+ root.querySelectorAll('[data-meter]').forEach(el=>{const id=el.dataset.meter;el.innerHTML=`<div class="at-meter"><div class="at-meter-head"><span>${labels[id]}</span><output data-db="${id}">—</output></div><div class="at-track" role="meter" aria-label="${labels[id]} peak dBFS" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60"><div class="at-fill"></div></div><div class="at-scale" aria-hidden="true"><span>−60</span><span>−30</span><span>0</span></div></div>`;});
+ function render(){
+  const raw=state.running&&state.sample!=='silent'?(state.sample==='loud'?-4:-18):-Infinity;
+  const source=state.inputMuted?-Infinity:raw+state.input;
+  const mix=state.masterMuted?-Infinity:source+state.master;
+  for(const [key,db] of Object.entries({raw,source,mix})){const el=root.querySelector(`[data-meter="${key}"]`);el.querySelector('[data-db]').textContent=Number.isFinite(db)?`${db.toFixed(1)} dBFS${db>=0?' · CLIP':''}`:state.running?'−∞ dBFS':'—';el.querySelector('.at-fill').style.width=`${Math.max(0,Math.min(100,(db+60)/60*100))}%`;el.querySelector('.at-fill').dataset.clipped=String(db>=0);el.querySelector('[role="meter"]').setAttribute('aria-valuenow',String(Math.max(-60,Math.min(0,Number.isFinite(db)?db:-60))));}
+  for(const key of ['input','master']){root.querySelector(`[data-value="${key}"]`).textContent=fmt(state[key]);root.querySelector(`[data-gain="${key}"]`).value=state[key];root.querySelector(`[data-mute="${key}"]`).checked=state[key+'Muted'];}
+  root.querySelector('[data-volume]').value=state.volume;root.querySelector('[data-volume-label]').textContent=`${state.volume}%`;root.querySelector('[data-sample]').value=state.sample;
+  root.querySelector('[data-start]').textContent=state.running?'Stop test demo':'Start test demo';root.querySelector('[data-state]').textContent=state.running?'Sample snapshot · simulated':'Test stopped';
+  root.querySelector('[data-result]').textContent=!state.running?'Start the demo to inspect signal flow.':state.masterMuted?'Master is muted → the recording mix is silent.':state.inputMuted?'Microphone is muted → no contribution to the mix.':raw===-Infinity?'No signal in this sample.':source>=0?'Source exceeds the digital ceiling after gain. Reduce input gain.':mix>=0?'Final mix exceeds the digital ceiling. Reduce master or source gain.':`Mix peak ${mix.toFixed(1)} dBFS · ${(0-mix).toFixed(1)} dB below the ceiling.`;
+ }
+ root.addEventListener('click',event=>{if(event.target.closest('[data-start]')){state.running=!state.running;render();persist();}});
+ root.addEventListener('input',event=>{const el=event.target;if(!el.dataset.gain&&!el.hasAttribute('data-volume'))return;if(el.dataset.gain)state[el.dataset.gain]=Number(el.value);if(el.hasAttribute('data-volume'))state.volume=Number(el.value);render();});
+ root.addEventListener('change',event=>{const el=event.target;if(el.dataset.mute)state[el.dataset.mute+'Muted']=el.checked;if(el.hasAttribute('data-sample'))state.sample=el.value;render();persist();});
+ restore(window.openai?.widgetState?.privateContent);render();
+ window.addEventListener('openai:set_globals',event=>{restore(event.detail?.globals?.widgetState?.privateContent);render();});
+})();
+</script>

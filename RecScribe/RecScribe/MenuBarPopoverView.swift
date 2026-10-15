@@ -60,6 +60,7 @@ struct MenuBarPopoverView: View {
             }
 
             CaptureHealthView(recorder: viewModel)
+            RecordingLevelsView(recorder: viewModel)
 
             // Inline error with recovery action
             if case .error = viewModel.state, let message = viewModel.errorMessage {

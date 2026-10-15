@@ -87,6 +87,8 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     var sourceTracks: [SourceTrack]?
     var parentSessionID: UUID?
     var captureEpoch: Double?
+    var gainAutomation: [GainEvent]?
+    var gainScope: String?
     struct SourceTrack: Codable, Sendable {
         var role: CaptureTrack
         var name: String
@@ -163,6 +165,13 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
                     let child = try Self.safeURL(path, beside: url)
                     guard child != url, path.hasSuffix(".recscribe.json"), references.insert(path).inserted else { throw SessionError.invalid("Invalid source manifest reference") }
                 }
+            }
+        }
+        if let events = gainAutomation {
+            guard !events.isEmpty, events.count <= 2048, events.allSatisfy({ $0.valid }), events.first?.frame == 0,
+                  zip(events, events.dropFirst()).allSatisfy({ $0.frame <= $1.frame }),
+                  ["derived_mix", "processed_single_source"].contains(gainScope ?? "") else {
+                throw SessionError.invalid("Invalid recording gain automation")
             }
         }
         _ = try session.options.validated()
@@ -275,6 +284,11 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
     var startedAt: Date? { session?.startedAt }
     var hasIssues: Bool { session?.issues.isEmpty == false }
     var frameCount: Int64 { session?.totalFrames ?? 0 }
+    func setGainAutomation(_ events: [GainEvent], scope: String) throws {
+        session?.gainAutomation = events
+        session?.gainScope = scope
+        if let manifestURL { try session?.save(manifestURL) }
+    }
     func setSourceTracks(_ tracks: [RecordingSession.SourceTrack], epoch: Double) throws {
         session?.schemaVersion = RecordingSession.currentSchemaVersion
         session?.sourceTracks = tracks

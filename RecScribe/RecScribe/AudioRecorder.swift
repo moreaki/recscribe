@@ -46,6 +46,16 @@ final class AudioRecorder: AudioFileWriting {
     nonisolated private static let trace = OSSignposter(logger: Log.recorder)
     private var interval: OSSignpostIntervalState?
     private var stopping = false
+    nonisolated(unsafe) private var monitor: CapturedAudioMonitor?
+    private var gainSource: AudioSource?
+    nonisolated(unsafe) private var gain: SingleSourceGain? // encoding queue only
+    nonisolated(unsafe) private var levelProvider: (@Sendable () -> RecordingLevels)? // configured before admission
+    func configureLevels(source: AudioSource, levels: AudioLevels) {
+        guard !recording else { return }
+        monitor = .shared
+        gainSource = source
+        levelProvider = { levels.snapshot(for: source) }
+    }
 
     private nonisolated struct State {
         var id = UUID()
@@ -80,7 +90,19 @@ final class AudioRecorder: AudioFileWriting {
         try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
         sessionManifestURL = (encoder as? SessionWAVWriter)?.manifestURL
         actualAudioURL = (encoder as? SessionWAVWriter)?.audioURL ?? url
-        queue.sync { self.encoder = encoder }
+        let initial = levelProvider?()
+        let microphone = gainSource?.microphoneUID != nil
+        do {
+            if let initial { try (encoder as? SessionWAVWriter)?.setGainAutomation(GainAutomation(initial).events, scope: "processed_single_source") }
+        } catch {
+            try? (encoder as? SessionWAVWriter)?.markFailure(error)
+            try? encoder.finalize()
+            throw error
+        }
+        queue.sync {
+            self.encoder = encoder
+            self.gain = initial.map { SingleSourceGain(levels: $0, microphone: microphone) }
+        }
         let waveform = onWaveformData
         let failure = onWriteError
         state.withLock {
@@ -151,7 +173,12 @@ final class AudioRecorder: AudioFileWriting {
                     if let failure = self.state.withLock({ $0.error }) {
                         try? (self.encoder as? SessionWAVWriter)?.markFailure(failure)
                     }
-                    do { try self.encoder?.finalize() } catch { finalError = error }
+                    if self.gain?.clipped == true {
+                        do { try (self.encoder as? SessionWAVWriter)?.addIssue("The gain-processed recording clipped. Reduce recording gain; this single-source file has no separate raw track.") }
+                        catch { finalError = error }
+                    }
+                    do { try self.encoder?.finalize() } catch { if finalError == nil { finalError = error } }
+                    self.gain = nil
                     self.encoder = nil
                     let completionError = finalError
                     let snapshot = self.state.withLock { s -> (RecorderMetrics, Error?, UUID) in
@@ -216,7 +243,15 @@ final class AudioRecorder: AudioFileWriting {
         defer { state.withLock { $0.buffers -= 1; $0.bytes -= bytes } }
         guard !state.withLock({ $0.writeFailed }), let encoder else { return }
         do {
-            try autoreleasepool { try encoder.writeBuffer(buffer) }
+            try autoreleasepool {
+                if let gain, let levelProvider {
+                    let output = try gain.process(buffer, levels: levelProvider(), writer: encoder as? SessionWAVWriter)
+                    let postPeak = gain.postPeak, clipped = gain.clipped
+                    monitor?.submit(output)
+                    try encoder.writeBuffer(output)
+                    state.withLock { $0.health.postPeak = postPeak; $0.health.mixPeak = postPeak; $0.health.clipped = clipped }
+                } else { try encoder.writeBuffer(buffer) }
+            }
             let elapsed = Self.ms(start.duration(to: .now))
             let frames = Int64(buffer.frameLength)
             state.withLock {

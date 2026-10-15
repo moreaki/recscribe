@@ -29,7 +29,7 @@ struct RecordingLibraryView: View {
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
             if playback.loading { ProgressView("Loading session…") }
-            if let player = playback.player { VideoPlayer(player: player).frame(height: theme.metrics.controlHeightLarge * 2) }
+            SessionPlaybackView(playback: playback)
             List(library.entries) { entry in
                 VStack(alignment: .leading, spacing: GlassSpacing.m) {
                     HStack {

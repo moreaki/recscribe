@@ -33,6 +33,7 @@ final class MultiSourceRecorder {
     private(set) var manifestURL: URL?
     private(set) var audioURL: URL?
     private var descriptors: [RecordingSession.SourceTrack] = []
+    nonisolated private let monitor: CapturedAudioMonitor
     nonisolated let onError: @MainActor @Sendable (String) -> Void
     nonisolated let onWaveform: (@MainActor @Sendable ([Float]) -> Void)?
 
@@ -40,12 +41,14 @@ final class MultiSourceRecorder {
          onWaveform: (@MainActor @Sendable ([Float]) -> Void)? = nil,
          maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256) {
         precondition(maximumBytes > 0 && maximumBuffers > 0)
+        self.monitor = .shared
         self.maximumBytes = maximumBytes; self.maximumBuffers = maximumBuffers
         self.onError = onError; self.onWaveform = onWaveform
     }
 
     func start(at url: URL, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
-               epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds) throws {
+               epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
+               levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
         let mix = SessionWAVWriter(options: options)
         try mix.createFile(at: url, sampleRate: 48_000, channels: 2)
@@ -57,8 +60,8 @@ final class MultiSourceRecorder {
             for track in CaptureTrack.allCases { s.health[track] = .init(startedAt: now) }
         }
         do {
-            let worker = try SynchronizedCaptureWriter(mix: mix, descriptors: descriptors, epoch: epoch, options: options)
-            worker.onMix = { [weak self] in self?.publishWaveform($0) }
+            let worker = try SynchronizedCaptureWriter(mix: mix, descriptors: descriptors, epoch: epoch, options: options, levels: levels)
+            worker.onMix = { [weak self] in self?.monitor.submit($0); self?.publishWaveform($0) }
             queue.sync { writer = worker }
         } catch {
             try? mix.markFailure(error); try? mix.finalize()
@@ -109,6 +112,9 @@ final class MultiSourceRecorder {
                         s.health[track]?.lastWrittenAt = ProcessInfo.processInfo.systemUptime
                     }
                     s.health[track]?.peak = health.peak
+                    s.health[track]?.postPeak = health.postPeak
+                    s.health[track]?.mixPeak = health.mixPeak
+                    if health.clipped { s.health[track]?.clipped = true }
                 }
             }
         } catch { state.withLock { $0.failedTracks.insert(sample.track); fail(error, state: &$0) } }
@@ -171,7 +177,7 @@ final class MultiSourceRecorder {
                         state.withLock { $0.health[track]?.writtenFrames = frames }
                     }
                     if resultError == nil, writer?.mix.hasIssues == true {
-                        resultError = SessionError.invalid("The recording has timing gaps or incomplete source coverage. Review the preserved source tracks and mix.")
+                        resultError = SessionError.invalid("The recording has clipping, timing gaps or incomplete source coverage. Review the preserved source tracks and mix.")
                     }
                     let finalizeMS = Self.milliseconds(finalizeStarted.duration(to: .now))
                     let timings = state.withLock { ($0.writeMS, $0.maxWriteMS, $0.maxQueueMS, $0.peakBytes) }

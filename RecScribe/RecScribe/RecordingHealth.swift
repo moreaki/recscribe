@@ -30,6 +30,9 @@ nonisolated struct RecordingHealth: Sendable, Equatable {
     var writtenFrames: Int64 = 0
     var sampleRate: Double?
     var channels: Int?
+    var postPeak: Float?
+    var mixPeak: Float?
+    var clipped = false
     var peak: Float = 0
     var failed = false
 

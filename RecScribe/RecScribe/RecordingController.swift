@@ -25,6 +25,7 @@ class RecordingController: RecordingControlling {
     private let sessionLibrary: SessionLibrary?
     private let liveTranscription: LiveTranscription?
     private let activity: RecordingActivity
+    private let levels: AudioLevels
 
     private var currentRecordingURL: URL?
     private var activeSourceName = "Selected source"
@@ -48,8 +49,10 @@ class RecordingController: RecordingControlling {
         sessionLibrary: SessionLibrary? = nil,
         liveTranscription: LiveTranscription? = nil,
         activity: RecordingActivity? = nil,
+        levels: AudioLevels? = nil,
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
+        self.levels = levels ?? .shared
         self.storageOptions = storageOptions
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
         self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
@@ -81,11 +84,12 @@ class RecordingController: RecordingControlling {
         defer { starting = false }
         sessionLibrary?.setRecording(true)
         var started = false
-        defer { if !started { activity.stop(); sessionLibrary?.setRecording(false) } }
+        defer { if !started { CapturedAudioMonitor.shared.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
         try await audioSource.validate(source)
+        if CapturedAudioMonitor.shared.enabled { CapturedAudioMonitor.shared.setEnabled(true, source: source) }
         if let uid = source.microphoneUID { activeSourceName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Input" }
         else if let bundle = source.appBundleID { activeSourceName = audioSource.knownAppName(forBundleID: bundle) ?? bundle }
         else { activeSourceName = "System playback" }
@@ -113,7 +117,7 @@ class RecordingController: RecordingControlling {
                 try recorder.start(at: fileURL, descriptors: [
                     .init(role: .playback, name: playbackName, bundleID: bundle),
                     .init(role: .microphone, name: micName, deviceUID: uid)
-                ], options: storageOptions())
+                ], options: storageOptions(), levels: { [levels] in levels.snapshot(for: source) })
                 try await captureManager.setupMultiCapture(source: source) { recorder.accept($0) }
                 try await captureManager.startCapture()
                 guard !activity.interrupted else { throw ScreenCaptureAudioError.interruptedBySleep }
@@ -130,6 +134,7 @@ class RecordingController: RecordingControlling {
             started = true
             return actual
         }
+        (audioRecorder as? AudioRecorder)?.configureLevels(source: source, levels: levels)
         try audioRecorder.startRecording(to: fileURL, format: .wav)
 
         // Set up capture with audio callback
@@ -163,6 +168,7 @@ class RecordingController: RecordingControlling {
     func stopRecording() async throws {
         var needsReview = false
         defer {
+            CapturedAudioMonitor.shared.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: needsReview)
             sessionLibrary?.setRecording(false)
@@ -224,6 +230,7 @@ class RecordingController: RecordingControlling {
     /// preserves the audio captured before the failure as a playable file.
     func finalizeAfterFailure() async {
         defer {
+            CapturedAudioMonitor.shared.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: true)
             sessionLibrary?.setRecording(false)

@@ -28,13 +28,13 @@ struct TranscriptSourceView: View {
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
                     if let entry { playback.play(entry) }
-                    else if source.pathExtension.lowercased() == "wav" { NSWorkspace.shared.open(source) }
+                    else if source.pathExtension.lowercased() == "wav" { playback.playFile(source) }
                 }.disabled(recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }
             }
             if playback.loading { ProgressView("Loading audio…").controlSize(.small) }
-            if let player = playback.player {
-                VideoPlayer(player: player).frame(height: GlassTheme.standard.metrics.controlHeightLarge * 2)
+            if playback.player != nil {
+                SessionPlaybackView(playback: playback)
                 Button("Stop playback") { playback.stop() }
             }
             if let message = error ?? playback.errorMessage { Text(message).font(.caption).foregroundStyle(.orange) }

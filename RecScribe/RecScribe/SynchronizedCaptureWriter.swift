@@ -41,17 +41,24 @@ nonisolated final class SynchronizedCaptureWriter {
     private var end: Int64 = 0
     private var clippedFrames: Int64 = 0
     private var sealed = false
+    private let automation: GainAutomation
+    private let levels: @Sendable () -> RecordingLevels
+    private(set) var mixPeak: Float = 0
+    private var postPeaks: [CaptureTrack: Float] = [:]
     var onMix: ((AVAudioPCMBuffer) -> Void)?
 
     init(mix: SessionWAVWriter, descriptors: [RecordingSession.SourceTrack], epoch: Double,
-         options: RecordingStorageOptions, policy: Policy = .init()) throws {
+         options: RecordingStorageOptions, policy: Policy = .init(),
+         levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
         guard epoch.isFinite, epoch >= 0, descriptors.count == 2, Set(descriptors.map(\.role)).count == 2,
               policy.mixWindowFrames > 0, policy.blockFrames > 0,
               policy.maximumPacketSeconds > 0 else { throw SessionError.invalid("Invalid mixer policy") }
+        self.levels = levels; self.automation = GainAutomation(levels())
         self.mix = mix; self.descriptors = descriptors; self.epoch = epoch
         self.options = options; self.policy = policy
         left = Array(repeating: 0, count: policy.mixWindowFrames)
         right = left
+        try mix.setGainAutomation(automation.events, scope: "derived_mix")
         try journal()
     }
 
@@ -65,6 +72,9 @@ nonisolated final class SynchronizedCaptureWriter {
 
     func accept(_ sample: CapturedAudioSample) throws {
         guard !sealed, sample.buffer.frameLength > 0 else { return }
+        if try automation.update(levels(), at: max(end, head)) {
+            try mix.setGainAutomation(automation.events, scope: "derived_mix")
+        }
         let format = sample.buffer.format
         guard format.sampleRate.isFinite, (1...384_000).contains(format.sampleRate),
               (1...32).contains(Int(format.channelCount)),
@@ -105,7 +115,7 @@ nonisolated final class SynchronizedCaptureWriter {
             // the shared timestamp clock. Small rate differences are smoothly
             // time-scaled; a real gap remains silence and is reported.
             let frames = drift <= policy.maximumDriftFraction ? Int(interval) : Int(nominal)
-            try emit(previous, frames: frames, start: start, input: input)
+            try emit(previous, frames: frames, start: start, input: input, role: sample.track)
         }
         guard let normalized = input.normalizer.normalize(sample.buffer) else {
             throw SessionError.invalid("Source audio could not be normalized")
@@ -125,7 +135,7 @@ nonisolated final class SynchronizedCaptureWriter {
         return AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48_000, interleaved: false, channelLayout: layout)
     }
 
-    private func emit(_ buffer: AVAudioPCMBuffer, frames: Int, start: Int64, input: Input) throws {
+    private func emit(_ buffer: AVAudioPCMBuffer, frames: Int, start: Int64, input: Input, role: CaptureTrack) throws {
         guard frames > 0, frames <= Int(48_000 * policy.maximumPacketSeconds) + 512,
               start >= input.end else { throw SessionError.invalid("Capture audio overlaps its previous interval") }
         if start > input.end {
@@ -166,14 +176,22 @@ nonisolated final class SynchronizedCaptureWriter {
             try mix.addIssue("A source arrived too late for the stereo mix; its separate track is preserved. Review the recording.")
         }
         guard let data = aligned.floatChannelData else { throw WAVWriterError.invalidFormat }
+        var postPeak: Float = 0
         for offset in 0..<frames {
             let absolute = start + Int64(offset)
             guard absolute >= head else { continue }
             let index = Int(absolute % Int64(policy.mixWindowFrames))
-            // -6 dB per route gives two sources headroom. Source tracks are unity.
-            left[index] += 0.5 * data[0][offset]
-            right[index] += 0.5 * data[buffer.format.channelCount == 1 ? 0 : 1][offset]
+            let event = automation.event(at: absolute)
+            let base = role == .microphone ? 32 : 0
+            let rightChannel = buffer.format.channelCount == 1 ? 0 : 1
+            let l = data[0][offset] * event.value(base, at: absolute)
+            let r = data[rightChannel][offset] * event.value(base + rightChannel, at: absolute)
+            postPeak = max(postPeak, abs(l), abs(r))
+            // Fixed -6.02 dB routing headroom, independent of source faders.
+            left[index] += 0.5 * l
+            right[index] += 0.5 * r
         }
+        postPeaks[role] = postPeak
     }
 
     private func flushAvailable() throws {
@@ -185,6 +203,7 @@ nonisolated final class SynchronizedCaptureWriter {
     }
 
     private func flush(to target: Int64) throws {
+        if head < target { mixPeak = 0 }
         while head < target {
             let count = min(policy.blockFrames, Int(target - head))
             guard let buffer = AVAudioPCMBuffer(pcmFormat: AudioFormatNormalizer.canonical, frameCapacity: AVAudioFrameCount(count)),
@@ -192,14 +211,18 @@ nonisolated final class SynchronizedCaptureWriter {
             buffer.frameLength = AVAudioFrameCount(count)
             for offset in 0..<count {
                 let index = Int((head + Int64(offset)) % Int64(policy.mixWindowFrames))
-                if abs(left[index]) > 1 || abs(right[index]) > 1 { clippedFrames += 1 }
-                data[0][offset] = max(-1, min(1, left[index]))
-                data[1][offset] = max(-1, min(1, right[index]))
+                let absolute = head + Int64(offset)
+                let master = automation.event(at: absolute).value(64, at: absolute)
+                let l = left[index] * master, r = right[index] * master
+                mixPeak = max(mixPeak, abs(l), abs(r))
+                if abs(l) > 1 || abs(r) > 1 { clippedFrames += 1 }
+                data[0][offset] = max(-1, min(1, l))
+                data[1][offset] = max(-1, min(1, r))
                 left[index] = 0; right[index] = 0
             }
+            onMix?(buffer)
             try mix.writeBuffer(buffer)
             head += Int64(count)
-            onMix?(buffer)
         }
     }
 
@@ -227,9 +250,9 @@ nonisolated final class SynchronizedCaptureWriter {
         try mix.setSourceTracks(descriptors, epoch: epoch)
     }
 
-    func health(for track: CaptureTrack) -> (written: Int64, peak: Float) {
-        guard let input = inputs[track] else { return (0, 0) }
-        return (input.writer.frameCount, input.pending.map { AudioRecorder.peak($0) } ?? 0)
+    func health(for track: CaptureTrack) -> (written: Int64, peak: Float, postPeak: Float, mixPeak: Float, clipped: Bool) {
+        guard let input = inputs[track] else { return (0, 0, 0, mixPeak, clippedFrames > 0) }
+        return (input.writer.frameCount, input.pending.map { AudioRecorder.peak($0) } ?? 0, postPeaks[track] ?? 0, mixPeak, clippedFrames > 0)
     }
 
     func finish(failure: Error? = nil) throws {
@@ -243,7 +266,7 @@ nonisolated final class SynchronizedCaptureWriter {
                     continue
                 }
                 if let pending = input.pending {
-                    try emit(pending, frames: Int((input.duration * 48_000).rounded()), start: frame(input.time), input: input)
+                    try emit(pending, frames: Int((input.duration * 48_000).rounded()), start: frame(input.time), input: input, role: track)
                     input.pending = nil
                 }
             } catch { if failureToReport == nil { failureToReport = error } }

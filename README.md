@@ -144,3 +144,11 @@ to the user before audio leaves the Mac.
 RecScribe currently remains under the Apache License 2.0. It includes software derived
 from Home Rec, Copyright 2026 Melissa de Britto. See [`LICENSE`](LICENSE),
 [`NOTICE`](NOTICE), and [`docs/licensing.md`](docs/licensing.md).
+
+
+Audio levels are available in the Studio and menu-bar popover: input/source gain,
+channel trims, recording master and mute; separate playback and optional headphone
+monitor volume/mute/output-device controls. Combined source tracks remain at unity
+gain; single-source WAVs contain the applied gain. See
+[recording gain and listening volume](docs/capture-sources.md#recording-gain-and-listening-volume-17--18)
+for control scope, hardware-volume support and monitoring limits.

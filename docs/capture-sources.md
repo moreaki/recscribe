@@ -59,8 +59,8 @@ native device format. Source channel identity is not speaker identity.
 The stereo mix uses channels 1–2 of each source; mono is centered. Higher input
 channels remain in the source session and are deliberately excluded from this mix
 because interfaces may place playback loopback there. Each route contributes at
-0.5 gain (about -6 dB) for headroom; source files have unity gain. User-adjustable
-input gain/mix faders and playback/monitor volume remain separate tickets #17/#18.
+0.5 gain (−6.02 dB) for headroom; source files have unity gain. Source faders,
+channel trims and the master then determine the derived mix, as described below.
 
 Recordings → More offers playback/transcription of each source independently.
 Playback/normal transcription of the parent uses the mix. Python pipeline 0.2.2
@@ -137,3 +137,84 @@ claim. Combined-writer throughput samples (two source files plus the mix) are al
 retained, labelled as observations alongside focused tests. Raw timing and
 process-lifetime RSS samples are in
 [`benchmarks/recorder/capture-20261015.json`](../benchmarks/recorder/capture-20261015.json).
+
+
+## Recording gain and listening volume (#17 / #18)
+
+Expand **Audio levels** in Studio or the menu-bar popover. Source software gain
+and the master saved-recording level range from **−60 to +24 dB**, in 0.5-dB steps,
+with reset to 0 dB. Mix-channel trims have the same range, before the source fader;
+the two gains add in dB. Only channels 1–2 feed a combined stereo mix. Mono inputs
+are centered. Mute reduces that source's mix contribution to zero; it does not
+stop capture. With combined capture, every selected source is still saved at
+unity gain in its own session. With a **single source**, the saved WAV is explicitly
+**gain-processed**, with no additional raw-source file. The UI describes this scope
+before recording. Unity defaults preserve existing single-source audio behavior.
+
+Meters show the input peak before gain, the peak after the source fader, and the
+saved-mix peak before PCM clipping. In single-source mode the post-gain reading
+includes the master. A clipping warning latches for the take when the saved mix
+exceeds ±1. The derived/processed file is hard-clipped, without an implicit limiter
+or normalization; clipping marks it for review. Lower gain cannot repair clipping
+that happened in the ADC. Combined source files retain their original unity signal
+and may themselves clip if the captured signal exceeds PCM16 range.
+
+Changes use 480-sample (10-ms at 48 kHz) linear-amplitude ramps, including mute.
+The worker journals optional `gainScope` and `gainAutomation` fields in the session
+manifest before applying a change. Each event contains its timeline frame and
+65 start/target amplitudes: playback channels 0–31, input channels 32–63, master
+64. Initial values take effect at frame 0 without a fade-in. A later event ramps
+from the previous ramp's amplitude at that frame. Combined changes begin at the
+writer's current timeline end, so reordered source callbacks use the same
+sample-based automation. Raw source manifests have no gain processing metadata.
+Reconstruction from PCM16 source tracks is subject to their quantization; mixing
+uses float samples before their PCM16 conversion. There is a bounded limit of
+2048 automation events per take; exceeding it explicitly preserves and stops the
+take rather than silently losing automation. DSP and journaling run on the serial
+writer queue, and meter UI continues to refresh at 10 Hz.
+
+Both playback surfaces use one shared audio transport, volume, mute and output
+selector. Playback volume is **0–100%**, defaults/resets to 100%, and persists
+across player recreation and app restarts. It never changes recording levels or
+files. **Follow system output** passes nil to `AVPlayer.audioOutputDeviceUniqueID`;
+explicit routing uses the selected Core Audio UID. This is app-local routing, not
+a change to macOS's default device. Device availability and the effective route
+are refreshed every two seconds. An unplugged explicit output temporarily follows
+the system output, with a visible message; the UID remains selected for reconnection.
+
+Hardware input/output level controls are under separate **system-wide** disclosures.
+They appear only for available writable scalar properties, using a device's master
+control when exposed, otherwise its individual channel controls. A device without
+such controls gets a hardware-control explanation and a Sound Settings button.
+Software faders and listening volume work regardless of hardware volume support.
+
+Optional **Monitor recording through headphones** uses an output-only
+AVAudioEngine/AVAudioPlayerNode fed by copied captured mix buffers, rather than the
+old second-input-engine `MonitorController` prototype. It never starts a second mic
+stream. Enable it explicitly for a take; it starts off on every launch and turns
+off at stop/failure. Monitor listening volume/mute/route are separate preferences,
+initially/reset to 50%. It plays only while the capture writer produces audio, and
+follows the recording faders. System capture excludes RecScribe's own output.
+Virtual/aggregate input or monitor-output routes are rejected to avoid direct
+loopback recapture; physical speakers can still feed a microphone acoustically,
+so use headphones. Its independent queue admits at most 12,000 stereo frames
+(250 ms / 96 KiB PCM), including scheduled frames until playback completion.
+Overload or engine/route failure disables monitoring with a warning and leaves the
+recording running. Output-device UID and nominal-rate changes rebuild only the
+monitor graph; the capture pipeline is not restarted.
+
+The existing second-microphone-engine design is not enabled by the UI. Synthetic
+checks establish gain/mute/ramp/file semantics, not headphone latency or concurrent
+hardware quality. Signed-Release checks of Studio Display plus browser balancing,
+headphone monitoring, output unplug/replug/Bluetooth changes, actual writable
+hardware controls, and CPU/latency versus the old prototype remain manual
+acceptance work. Do not infer a measured hardware latency from the queue limit.
+
+Level-control validation: the full Release suite passed **427 tests**, with three
+skipped; the focused Thread Sanitizer suite passed **25** without reported races.
+Additional focused Release checks cover imported-WAV app playback and live player
+updates. The shared playback controls render at 360- and 640-point widths. The
+10-second synthetic two-source workload took 100–104 ms wall time alongside the
+full suite with unity levels and monitoring off; this is throughput, not live
+latency or isolated CPU usage. Measurements and limitations are recorded in
+[`benchmarks/recorder/levels-20261015.json`](../benchmarks/recorder/levels-20261015.json).

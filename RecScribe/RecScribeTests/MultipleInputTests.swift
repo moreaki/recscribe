@@ -80,12 +80,14 @@ struct MultipleInputTests {
         tap.receive(input, time: time)
         input.floatChannelData![3][0] = 0.9
         tap.finish(); tap.receive(input, time: time)
+        #expect(tap.receivedFrames == 441)
         let saved = received.withLock { $0 }
         try #require(saved.count == 1)
         #expect(saved[0].track == .input("native"))
         #expect(abs(saved[0].presentationTime - 123) < 0.00001)
         #expect(saved[0].buffer.format.channelCount == 4 && saved[0].buffer.floatChannelData![3][0] == 0.4)
         tap.begin(format: input.format)
+        #expect(tap.receivedFrames == 0)
         tap.receive(input, time: AVAudioTime(sampleTime: 0, atRate: 44_100))
         for _ in 0..<100 where failures.withLock({ $0 }) == 0 { await Task.yield() }
         #expect(failures.withLock { $0 } == 1)

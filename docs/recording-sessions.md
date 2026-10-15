@@ -43,6 +43,39 @@ of the complete manifest/parts/archives, and opt-in transcription. Export verifi
 copied hashes before publishing its manifest. Incomplete exports retain their
 files without a success manifest for inspection.
 
+## Selected input configuration changes
+
+Each selected input has its own `AVAudioEngine`, bound to the device's Core Audio
+UID. A configuration notification alone is not evidence that the device was
+unplugged. On the Studio Display microphone, startup delivers a queued notification
+while the selected engine is already running with the original device and format.
+Previously that notification immediately stopped the input, before its first PCM
+callback, producing a zero-frame source track.
+
+The handler now checks device identity, availability, format and engine state.
+An unchanged, running engine continues. A stopped engine can restart at most twice
+within three seconds of startup, only before any PCM has been accepted. A real
+disconnect, device substitution, format change or later interruption still marks
+that source incomplete while other sources continue. Session generations reject
+queued notifications from a stopped engine. Teardown runs on the main actor after
+notification delivery, rather than inside the engine's notification callback.
+See Apple's [configuration-change contract](https://developer.apple.com/documentation/foundation/nsnotification/name-swift.struct/avaudioengineconfigurationchange).
+
+Hardware check on 2026-10-15: the signed Release build captured a live mono 48 kHz
+signal from a Studio Display microphone on an M2 Ultra, alongside the system-audio
+route. Device identity and format remained unchanged through the startup
+notification. Input gain and mute changed the routed contribution while the raw
+input meter continued. Physical unplug/replug and other device models were not
+tested by this check.
+
+Three consecutive capture starts (preview and two room-sound samples) delivered
+input without the previous zero-frame failure. The second sample finalized with
+480,000 mono input frames at 48 kHz (10 seconds), peak −19.2 dBFS, and 480,000
+stereo mix frames at peak −25.22 dBFS. The system playback track was silent during
+this check. Both source manifests and the mix completed. The user was accessing
+the Mac remotely, so this does not establish nearby speech quality or user-verified
+playback. No private audio is included in the repository.
+
 ## Settings and local intelligence
 
 The separate native settings window uses compact section navigation and grouped

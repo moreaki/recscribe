@@ -141,6 +141,15 @@ process-lifetime RSS samples are in
 
 ## Recording gain and listening volume (#17 / #18)
 
+Muted faders display an orange speaker-slash badge and a dimmed slider;
+muted source/mix cards also have an orange border. A mute summary remains
+visible beside the routing entry point in Studio, the popover and Settings,
+and above the routing workspace, even when **Audio levels** is closed.
+It distinguishes a muted recording mix/input from muted monitor or file-playback
+output. Listening volume at exactly 0% has its own label and does not imply
+that the recording was muted. These indicators follow the existing settings;
+they never change gain, mute, capture selection or system device volume.
+
 Expand **Audio levels** in Studio or the menu-bar popover. Source software gain
 and channel trims use continuous sliders with one **0 dB** reference. Dragging
 gently snaps to −60, −48, −36, −24, −18, −12, −9, −6, −3, 0, +3, +6, +9, +12,

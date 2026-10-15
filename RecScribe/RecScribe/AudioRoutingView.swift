@@ -30,6 +30,8 @@ struct AudioRoutingView: View {
                 Spacer()
                 Button("Close") { dismissWindow(id: AppWindow.routing.rawValue) }
             }.padding(24)
+            AudioMuteSummary(source: source)
+                .padding(.horizontal, 24).padding(.bottom, 12)
             Divider()
             if source.kind != .multiple {
                 VStack(alignment: .leading, spacing: 12) {
@@ -86,7 +88,7 @@ struct AudioRoutingView: View {
                     Button("Remove all inputs") { save([]) }.disabled(inputs.isEmpty)
                 } label: { Label("Add input", systemImage: "plus") }.disabled(!editable)
             }
-            routingCard {
+            routingCard(muted: levels.level(source.playbackLevelID).muted) {
                 Label(source.appBundleID.map { recorder.audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio", systemImage: "app.connected.to.app.below.fill")
                     .font(.headline)
                 Text(source.appBundleID == nil ? "All system playback → L / R" : "Application playback → L / R")
@@ -140,7 +142,7 @@ struct AudioRoutingView: View {
             let rate = device.sampleRate.map { String(format: "%.0f Hz", $0) } ?? "Rate unavailable"
             return "\(device.kindLabel) · \(channels) \(channels == 1 ? "channel" : "channels") · \(rate)"
         } ?? input.deviceUID
-        return routingCard {
+        return routingCard(muted: levels.level("input:" + input.deviceUID).muted) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(device?.name ?? "Unavailable input", systemImage: "mic.fill").font(.headline)
@@ -185,7 +187,7 @@ struct AudioRoutingView: View {
     private var mixColumn: some View {
         VStack(alignment: .leading, spacing: 16) {
             columnTitle("Recording mix", symbol: "slider.horizontal.3")
-            routingCard {
+            routingCard(muted: levels.level("master").muted) {
                 Text("Stereo output").font(.headline)
                 HStack(spacing: 8) {
                     outputPort("1 · Left")
@@ -237,11 +239,11 @@ struct AudioRoutingView: View {
         Text(title).font(.caption.monospaced().bold()).frame(maxWidth: .infinity).padding(.vertical, 12)
             .background(WorkspaceStyle.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
-    private func routingCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+    private func routingCard<Content: View>(muted: Bool = false, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12, content: content)
             .padding(16).frame(maxWidth: .infinity, alignment: .leading)
             .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(muted ? Color.orange.opacity(0.6) : Color.primary.opacity(0.08)))
     }
     @ViewBuilder private func sourceMeter(_ track: CaptureTrack) -> some View {
         if recorder.isRecording, let item = recorder.sourceHealth.first(where: { $0.id == track.rawValue }) {

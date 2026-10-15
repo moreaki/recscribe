@@ -59,8 +59,14 @@ struct SourceFader: View {
                 Text(String(format: "%+.1f dB", value.decibels)).monospacedDigit()
                 Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(context.map { "\($0) \(title)" } ?? title)")
             }
+            if value.muted {
+                AudioMuteBadge(title: preservesSources
+                    ? (id == "master" ? "Recording mix muted" : "Muted in mix · source still saved")
+                    : "Saved recording muted")
+            }
             GainSlider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }),
                        label: context.map { "\($0) \(title)" } ?? title).frame(height: 30)
+                .opacity(value.muted ? 0.5 : 1)
             Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
                 .font(.caption).fixedSize(horizontal: false, vertical: true)
                 .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
@@ -95,12 +101,20 @@ struct ListeningControls: View {
                 Text("\(Int((levels.value.volume * 100).rounded()))%").monospacedDigit()
                 Button("Reset") { levels.set(.init(volume: title == "Live monitor output" ? 0.5 : 1)) }.controlSize(.mini).accessibilityLabel("Reset \(title)")
             }
+            if levels.value.muted {
+                AudioMuteBadge(title: "Output muted · recording unchanged")
+            } else if levels.value.volume == 0 {
+                AudioMuteBadge(title: "Output volume 0% · recording unchanged")
+            }
             HStack {
                 Button { change { $0.muted.toggle() } } label: {
                     Image(systemName: levels.value.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .foregroundStyle(levels.value.muted ? Color.orange : Color.primary)
                 }.accessibilityLabel("\(levels.value.muted ? "Unmute" : "Mute") \(title)")
+                    .help(levels.value.muted ? "Output is muted. Saved recording levels are unchanged." : "Mute this listening output without changing the saved recording.")
                 Slider(value: Binding(get: { Double(levels.value.volume) }, set: { v in change { $0.volume = Float(v) } }), in: 0...1)
                     .accessibilityLabel("\(title) volume").accessibilityValue("\(Int(levels.value.volume * 100)) percent")
+                    .opacity(levels.value.muted ? 0.5 : 1)
             }
             Picker("Output device", selection: Binding(get: { levels.value.outputUID ?? "" }, set: { uid in change { $0.outputUID = uid.isEmpty ? nil : uid } })) {
                 Text("Follow system output").tag("")

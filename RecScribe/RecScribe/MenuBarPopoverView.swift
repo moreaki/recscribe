@@ -63,7 +63,9 @@ struct MenuBarPopoverView: View {
 
             CaptureHealthView(recorder: viewModel)
             MultipleInputsView(recorder: viewModel)
-            RecordingLevelsView(recorder: viewModel)
+            if viewModel.audioSource.selectedSource.kind != .multiple {
+                RecordingLevelsView(recorder: viewModel)
+            }
 
             // Inline error with recovery action
             if case .error = viewModel.state, let message = viewModel.errorMessage {

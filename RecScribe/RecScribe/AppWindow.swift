@@ -15,7 +15,7 @@ enum AppWindow: String {
         case .studio: CGSize(width: 940, height: 600)
         case .settings: CGSize(width: 800, height: 580)
         case .recordings: CGSize(width: 780, height: 500)
-        case .routing: CGSize(width: 1000, height: 620)
+        case .routing: CGSize(width: 760, height: 420)
         }
     }
     var defaultSize: CGSize {
@@ -23,7 +23,7 @@ enum AppWindow: String {
         case .studio: CGSize(width: 1060, height: 700)
         case .settings: CGSize(width: 840, height: 700)
         case .recordings: CGSize(width: 960, height: 680)
-        case .routing: CGSize(width: 1120, height: 780)
+        case .routing: CGSize(width: 1120, height: 500)
         }
     }
 }

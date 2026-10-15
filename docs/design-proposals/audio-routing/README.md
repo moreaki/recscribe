@@ -36,7 +36,46 @@ Review window sizing and behaviour with large channel counts before choosing.
 
 Alternative: the compact graph stays above one shared detail panel. This gives
 multichannel interfaces more space, with additional distance between each row
-and its controls. The user has not yet selected a final variant.
+and its controls. The implementation starts with the recommended inline variant;
+this alternative is retained as a design reference.
+
+### Native implementation of #26
+
+The routing editor opens with source, mix and output details collapsed. A summary
+button opens one panel at a time; selecting it again, **Done**, or Escape closes
+the panel. Done/Escape returns keyboard focus to that summary. The existing
+faders, channel routing, source picker and advanced hardware controls stay inside
+the selected card. Expanding a card changes only presentation state.
+
+The initial window is 1120 × 500 points, with a 760 × 420 minimum. At narrower
+widths, sources span the window above the mix and outputs. Expanded content uses
+the existing scroll area; the window does not move or resize itself. Mute, device
+identity, channel contributions, unavailable-output fallback, and capture health
+remain visible in the summaries. Hardware and screen-reader acceptance remains
+a human check.
+
+In multi-input mode, the Studio and menu-bar panel retain capture health, mute
+summaries and the routing entry point, and omit their duplicate **Audio levels**
+disclosure. Legacy single-source/combined modes retain those controls because
+the routing workspace still requires explicit conversion to multiple-input mode.
+
+This layout work does not implement #27's preview capture or test recordings.
+Opening the editor still acquires no audio and enables no monitor.
+
+Native previews, rendered offscreen using synthetic inputs and isolated level
+settings (the output name is discovered read-only from the local Mac):
+
+![Native compact routing](native/compact-overview.png)
+
+[Expanded input](native/input-expanded.png) · [Narrow overview](native/narrow-overview.png)
+
+Validation: signed Release build and strict signature verification; 18 focused
+tests passed (19 executions including the 1/32-channel cases). Native rendering
+covers all six panel types at 1120 and 760 points, and checks that only the
+selected gain control is constructed, source selection/levels remain unchanged,
+and no recording or monitoring is started. Keyboard activation, Escape/focus
+return, VoiceOver and physical-device acceptance still need human verification;
+offscreen rendering does not establish those interactions.
 
 ## Test audio
 

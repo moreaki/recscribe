@@ -289,8 +289,11 @@ struct AudioFileRecoveryTests {
     @Test("Every implemented format has a recovery handler")
     func implementedFormatsHaveRecovery() {
         for format in AudioFormat.available {
-            #expect(format.recovery != nil, "\(format) is selectable but has no recovery handler")
+            // Avoid passing an existential metatype through #expect's value capture.
+            let hasRecovery = format.recovery != nil
+            #expect(hasRecovery, "\(format) is selectable but has no recovery handler")
         }
-        #expect(AudioFormat.mp3.recovery == nil)
+        let mp3HasNoRecovery = AudioFormat.mp3.recovery == nil
+        #expect(mp3HasNoRecovery)
     }
 }

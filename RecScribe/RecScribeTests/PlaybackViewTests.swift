@@ -22,7 +22,10 @@ struct PlaybackViewTests {
         process.waitUntilExit()
         try #require(process.terminationStatus == 0)
         try #require(dependencies.contains("/AVKit.framework/"))
-        try #require(NSClassFromString("AVPlayerView") != nil)
+        // Capturing an Objective-C metatype inside #require crashes the Swift
+        // Testing runtime on the CI toolchain. Pass only the evaluated Boolean.
+        let playerViewAvailable = NSClassFromString("AVPlayerView") != nil
+        try #require(playerViewAvailable, "AVKit must provide AVPlayerView at runtime")
 
         let player = AVPlayer()
         player.isMuted = true

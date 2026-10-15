@@ -27,10 +27,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        # Adjust to an installed Xcode whose SDK matches the project. List with:
-        #   ls /Applications | grep Xcode
+        # The shared core requires Swift 6.2; the image default is Xcode 16.4.
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
           xcodebuild -version
           swift --version
 
@@ -122,7 +121,7 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
           xcodebuild -version
 
       - name: Release build

@@ -15,7 +15,7 @@ def inspect_session(path, cancel):
     digest = sha256(path, cancel.check)
     manifest = json.loads(path.read_text())
     rate, channels = manifest["sampleRate"], manifest["channels"]
-    if (manifest["schemaVersion"] != 1 or manifest["bitDepth"] != 16
+    if (manifest["schemaVersion"] not in (1, 2, 3) or manifest["bitDepth"] != 16
             or type(rate) is not int or not 1 <= rate <= 384000
             or type(channels) is not int or not 1 <= channels <= 32
             or len(manifest["channelMap"]) != channels):
@@ -55,6 +55,12 @@ def inspect_session(path, cancel):
               "duration_ms": math.ceil(end * 1000 / rate), "size_bytes": sum(p["sizeBytes"] for p in parts),
               "channel_metrics": [], "session_id": manifest["id"], "parts": parts,
               "channel_layout": manifest["channelMap"], "kind": "multipart_session"}
+    if manifest.get("sourceIdentity"):
+        report["capture_source"] = manifest["sourceIdentity"]
+    if manifest.get("sourceTracks"):
+        report["kind"] = "derived_capture_mix"
+        report["capture_source_tracks"] = manifest["sourceTracks"]
+        reasons.append("derived_mix:source_tracks_preserved_separately;select_source_session_for_independent_recognition")
     for channel in range(channels):
         metrics = [(p["report"]["channel_metrics"][channel], p["frames"]) for p in parts if p["report"]]
         count = sum(n for _, n in metrics)

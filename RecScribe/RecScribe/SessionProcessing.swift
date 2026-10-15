@@ -38,6 +38,21 @@ nonisolated enum SessionProcessing {
         // restart must never inherit an old 'completed' stamp from this attempt.
         session.status = .finalized
         try session.save(manifest)
+        for track in session.sourceTracks ?? [] {
+            try cancel.check()
+            do {
+                let child = try LinkedSourceSessions.read(track, parent: session, at: manifest)
+                let result = try process(child.id, ffmpeg: ffmpeg, cancel: cancel, recover: recover)
+                if !result.issues.isEmpty || result.status == .needsReview {
+                    let message = "\(track.role.rawValue) source needs review"
+                    if !session.issues.contains(message) { session.issues.append(message) }
+                }
+            } catch is CancellationError { throw CancellationError() }
+            catch {
+                let message = "\(track.role.rawValue) source: \(error.localizedDescription)"
+                if !session.issues.contains(message) { session.issues.append(message) }
+            }
+        }
         for index in session.parts.indices {
             try cancel.check()
             let part = session.parts[index]

@@ -29,7 +29,7 @@ struct RecordingLibraryView: View {
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
             if playback.loading { ProgressView("Loading session…") }
-            if let player = playback.player { VideoPlayer(player: player).frame(height: theme.metrics.controlHeightLarge * 2) }
+            SessionPlaybackView(playback: playback)
             List(library.entries) { entry in
                 VStack(alignment: .leading, spacing: GlassSpacing.m) {
                     HStack {
@@ -47,6 +47,17 @@ struct RecordingLibraryView: View {
                             Button("Transcribe & summarize", systemImage: "sparkles") {
                                 library.transcribe(entry.id, summarize: true)
                                 openWindow(id: AppWindow.studio.rawValue)
+                            }
+                            ForEach(entry.session.sourceTracks ?? [], id: \.role) { source in
+                                Menu(source.name) {
+                                    Button("Play source track") { playback.playSource(source, parent: entry) }
+                                    Button("Transcribe source track") {
+                                        if let path = source.manifestPath,
+                                           let url = try? RecordingSession.safeURL(path, beside: entry.id) {
+                                            library.transcribe(url); openWindow(id: AppWindow.studio.rawValue)
+                                        }
+                                    }
+                                }.disabled(source.manifestPath == nil)
                             }
                             Button("Verify / Recover", systemImage: "checkmark.shield") { library.enqueue(entry.id, recover: true) }
                             Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }

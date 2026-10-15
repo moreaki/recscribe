@@ -20,6 +20,8 @@ class RecorderViewModel: ObservableObject {
 
     /// Single source of truth for the recording lifecycle. The UI derives from this.
     @Published private(set) var state: RecordingState = .idle
+    @Published private(set) var sourceHealth: [SourceRecordingHealth] = []
+    @Published private(set) var healthTime = ProcessInfo.processInfo.systemUptime
     @Published var duration: TimeInterval = 0
     @Published var errorMessage: String?
     @Published var showError = false
@@ -388,7 +390,7 @@ class RecorderViewModel: ObservableObject {
         // never changed. The user got a button that did nothing, for ever, with
         // one log line as the only trace. `.starting → .error` is legal, so the
         // error now reaches `presentError`. Do not move this back above.
-        if case .mic = audioSource.selectedSource {
+        if audioSource.selectedSource.requiresMicrophone {
             guard await requestMicrophoneAccess() else {
                 transition(to: .error(.microphoneDenied))
                 return
@@ -412,6 +414,7 @@ class RecorderViewModel: ObservableObject {
             transition(to: .recording)
 
             // Start duration timer
+            refreshCaptureHealth()
             startTimer()
 
             // If the chosen save folder was unavailable, the recording fell back to
@@ -460,7 +463,8 @@ class RecorderViewModel: ObservableObject {
 
         } catch {
             Log.recorder.error("Failed to stop recording: \(error.localizedDescription, privacy: .public)")
-            transition(to: .error(.stopFailed(error.localizedDescription)))
+            if case SessionError.noAudio = error { transition(to: .error(.noAudio)) }
+            else { transition(to: .error(.stopFailed(error.localizedDescription))) }
         }
     }
 
@@ -529,7 +533,7 @@ class RecorderViewModel: ObservableObject {
     /// without it the status line would keep naming the previous source until
     /// some unrelated state change happened to redraw the view.
     func setCaptureSource(_ source: AudioSource) {
-        guard source != audioSource.selectedSource else { return }
+        guard state.allowsCaptureSourceChange, source != audioSource.selectedSource else { return }
         objectWillChange.send()
         audioSource.setSelectedSource(source)
     }
@@ -538,6 +542,13 @@ class RecorderViewModel: ObservableObject {
     /// `nil` for all-system-audio, which needs no qualifier.
     var captureSourceName: String? {
         switch audioSource.selectedSource {
+        case .multiple(let bundle, let inputs, _):
+            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+            return "\(playback) + \(inputs.count) inputs"
+        case .mixed(let bundle, let uid):
+            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+            let mic = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
+            return "\(playback) + \(mic)"
         case .systemAll:
             return nil
         case .app(let bundleID):
@@ -804,11 +815,27 @@ class RecorderViewModel: ObservableObject {
         clock.startTicking(every: 0.1) { [weak self] in
             guard let self, let startTime = self.recordingStartTime else { return }
             self.duration = self.clock.now.timeIntervalSince(startTime)
+            self.refreshCaptureHealth()
             if !self.longRecordingWarned && self.duration >= DiskSpace.longRecordingThreshold {
                 self.longRecordingWarned = true
                 self.showLongRecordingWarning = true
             }
         }
+    }
+
+    func refreshCaptureHealth() {
+        healthTime = ProcessInfo.processInfo.systemUptime
+        sourceHealth = controller.sourceHealth
+    }
+
+    var captureSourceHint: String {
+        if case .multiple = audioSource.selectedSource { return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically." }
+        if audioSource.selectedSource.isMixed { return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture." }
+        if case .systemAll = audioSource.selectedSource {
+            return "System playback only · microphone excluded"
+        }
+        if case .app = audioSource.selectedSource { return "Selected app playback only · microphone excluded" }
+        return "Selected input only · system playback excluded"
     }
 
     /// Stop duration timer

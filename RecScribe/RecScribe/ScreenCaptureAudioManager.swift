@@ -63,6 +63,12 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var stream: SCStream?
     private var isCapturing = false
     private var output: AudioCaptureOutput?
+    private var deviceInputs: [CaptureTrack: DeviceInputCapture] = [:]
+    private var pendingInputs: [InputSelection] = []
+    private var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
+    private var inputGeneration = UUID()
+    private var deviceWatch: Task<Void, Never>?
+    var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     private var stopTask: Task<Void, Error>?
 
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
@@ -77,8 +83,25 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     /// - Throws: ScreenCaptureAudioError if setup fails, or `.appNotRunning` if `source`
     ///   is `.app` and no running app matches its bundle ID.
     func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
+        pendingInputs = []; inputCallback = nil
+        try await configure(source: source, audioCallback: audioCallback, sampleCallback: nil)
+    }
+
+    func setupMultiCapture(source: AudioSource, sampleCallback: @escaping @Sendable (CapturedAudioSample) -> Void) async throws {
+        guard source.valid else { throw SessionError.invalid("Invalid multi-input selection") }
+        if case .multiple(let bundle, let inputs, _) = source {
+            pendingInputs = inputs; inputCallback = sampleCallback
+            try await configure(source: bundle.map { .app(bundleID: $0) } ?? .systemAll, audioCallback: { _ in }, sampleCallback: sampleCallback)
+        } else {
+            pendingInputs = []; inputCallback = nil
+            try await configure(source: source, audioCallback: { _ in }, sampleCallback: sampleCallback)
+        }
+    }
+
+    private func configure(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
+                           sampleCallback: (@Sendable (CapturedAudioSample) -> Void)?) async throws {
         let id = UUID()
-        let output = AudioCaptureOutput(id: id, audioCallback: audioCallback) { [weak self] message in
+        let output = AudioCaptureOutput(id: id, audioCallback: audioCallback, sampleCallback: sampleCallback) { [weak self] message in
             guard let self, self.output?.id == id else { return }
             self.onStreamError?(message)
         }
@@ -99,8 +122,8 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         // Note: ScreenCaptureKit requires video to be captured alongside audio
         let config = SCStreamConfiguration()
 
-        // Audio configuration. For a mic source we want *only* the mic: mixing
-        // mic and system audio into one file is a stated non-goal for v1.
+        // Single-input mode excludes playback. Combined mode delivers both
+        // outputs with source identity and timestamps to independent writers.
         //
         // ⚠️ `sampleRate`/`channelCount` govern the `.audio` output ONLY. A
         // `.microphone` buffer arrives in the device's native format regardless
@@ -113,7 +136,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         config.sampleRate = 48000  // 48kHz
         config.channelCount = 2    // Stereo
 
-        if case .mic(let deviceUID) = source {
+        if let deviceUID = source.microphoneUID {
             config.captureMicrophone = true
             // "This deviceID is the uniqueID from AVCaptureDevice" (SCStream.h),
             // which is precisely what `InputDeviceEnumerator` returns.
@@ -131,9 +154,10 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         // Content filter: all display audio, or a single app's audio (BL-100).
         let filter: SCContentFilter
         switch source {
-        case .systemAll:
+        case .multiple: throw SessionError.invalid("Multiple inputs require the multi-source capture path")
+        case .mixed(nil, _), .systemAll:
             filter = SCContentFilter(display: display, excludingWindows: [])
-        case .app(let bundleID):
+        case .mixed(let bundleID?, _), .app(let bundleID):
             guard let app = content.applications.first(where: { $0.bundleIdentifier == bundleID }) else {
                 Log.capture.error("Selected app not running for per-app capture")
                 throw ScreenCaptureAudioError.appNotRunning(bundleID)
@@ -163,7 +187,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
         try stream.addStreamOutput(output, type: .audio, sampleHandlerQueue: output.queue)
 
-        if isMicSource {
+        if source.microphoneUID != nil {
             try stream.addStreamOutput(output, type: .microphone, sampleHandlerQueue: output.queue)
         }
 
@@ -178,19 +202,56 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         }
 
         do {
+            inputGeneration = UUID()
+            let generation = inputGeneration
+            if let inputCallback {
+                for selection in pendingInputs {
+                    let track = CaptureTrack.input(selection.deviceUID)
+                    let input = DeviceInputCapture(uid: selection.deviceUID, callback: inputCallback) { [weak self] message in
+                        self?.inputFailed(track, message: message, generation: generation)
+                    }
+                    deviceInputs[track] = input
+                    try input.start()
+                }
+            }
             try await stream.startCapture()
             isCapturing = true
+            if !deviceInputs.isEmpty {
+                deviceWatch = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(1))
+                        guard !Task.isCancelled, let self, isCapturing, inputGeneration == generation else { return }
+                        let connected = Set(InputDeviceEnumerator().availableInputDevices().map(\.uid))
+                        for (track, input) in deviceInputs where !connected.contains(input.uid) {
+                            inputFailed(track, message: "Input disconnected; its track is incomplete. Other sources continue.", generation: generation)
+                        }
+                    }
+                }
+            }
             Log.capture.info("Capture started")
         } catch {
+            for input in deviceInputs.values { input.stop() }
+            deviceInputs = [:]
             Log.recordFailure(error, operation: "start_stream")
             throw ScreenCaptureAudioError.startCaptureFailed(error)
         }
+    }
+
+    private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID) {
+        guard inputGeneration == generation, let input = deviceInputs.removeValue(forKey: track) else { return }
+        input.stop()
+        onSourceFailure?(track, message)
     }
 
     /// Stop audio capture
     func stopCapture() async throws {
         if let stopTask { return try await stopTask.value }
         guard let stream else { return }
+        deviceWatch?.cancel(); deviceWatch = nil
+        for (track, input) in deviceInputs {
+            if let message = input.stop() { onSourceFailure?(track, message) }
+        }
+        deviceInputs = [:]
         let shouldStop = isCapturing, output = output
         isCapturing = false
         let task = Task {
@@ -214,6 +275,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         try? await stopCapture()
         stream = nil
         output = nil
+        pendingInputs = []; inputCallback = nil
     }
 
     var capturing: Bool {
@@ -250,6 +312,7 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
     let queue = DispatchQueue(label: "com.moreaki.recscribe.audio.capture", qos: .userInitiated)
     private let audioCallback: @Sendable (AVAudioPCMBuffer) -> Void
     private let audioNormalizer = AudioFormatNormalizer()
+    private let sampleCallback: (@Sendable (CapturedAudioSample) -> Void)?
     private var hasLoggedConversionFailure = false
     private var hasLoggedNormalizeFailure = false
     private var accepting = true
@@ -259,9 +322,11 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
     private let onError: @MainActor @Sendable (String) -> Void
 
     init(id: UUID = UUID(), audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
+         sampleCallback: (@Sendable (CapturedAudioSample) -> Void)? = nil,
          onError: @escaping @MainActor @Sendable (String) -> Void = { _ in }) {
         self.id = id
         self.audioCallback = audioCallback
+        self.sampleCallback = sampleCallback
         self.onError = onError
     }
 
@@ -291,10 +356,8 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         // Ignore video samples (we only need audio). No logging here: this
         // fires per audio buffer on the capture queue — the hot path.
         //
-        // `.microphone` is a distinct output type from `.audio` (BL-130), and
-        // only one of them is ever configured at a time — a mic source sets
-        // `capturesAudio = false`, so no `.audio` buffers arrive to interleave
-        // with it. Both are normalised by the same converter on the same queue.
+        // Single-source callbacks use the legacy canonical converter. Combined
+        // callbacks transfer native PCM and timestamps to separate source state.
         dispatchPrecondition(condition: .onQueue(queue))
         guard accepting, type == .audio || type == .microphone else { return }
         guard CMSampleBufferGetNumSamples(sampleBuffer) > 0 else { return }
@@ -318,6 +381,22 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         // and the only symptom was "No audio was captured for this recording"
         // at the end. The format is logged once per session — this is the hot
         // path, so it must not log per buffer.
+        if sampleCallback != nil {
+            let frames = CMSampleBufferGetNumSamples(sampleBuffer)
+            let description = CMSampleBufferGetFormatDescription(sampleBuffer)
+                .flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
+            guard let description, description.mSampleRate.isFinite,
+                  (1...384_000).contains(description.mSampleRate),
+                  (1...32).contains(description.mChannelsPerFrame),
+                  Double(frames) <= description.mSampleRate * 0.25,
+                  UInt64(frames) * UInt64(description.mChannelsPerFrame) * 4 <= 4 * 1_024 * 1_024 else {
+                if !hasLoggedConversionFailure {
+                    hasLoggedConversionFailure = true
+                    Task { @MainActor [onError] in onError("Capture packet exceeded the format or memory budget; partial audio is preserved") }
+                }
+                return
+            }
+        }
         guard let pcmBuffer = AudioSampleConverter.makePCMBuffer(from: sampleBuffer) else {
             if !hasLoggedConversionFailure {
                 hasLoggedConversionFailure = true
@@ -328,6 +407,19 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
                 Log.capture.error("Dropping buffers: unsupported capture format — \(desc, privacy: .public)")
                 Task { @MainActor [onError] in onError("Capture audio could not be converted; the partial recording is preserved") }
             }
+            return
+        }
+        if let sampleCallback {
+            let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            guard time.isNumeric, time.seconds.isFinite else {
+                if !hasLoggedNormalizeFailure {
+                    hasLoggedNormalizeFailure = true
+                    Task { @MainActor [onError] in onError("Capture timestamps are invalid; source tracks are preserved") }
+                }
+                return
+            }
+            sampleCallback(.init(track: type == .microphone ? .microphone : .playback,
+                                 presentationTime: time.seconds, buffer: pcmBuffer))
             return
         }
         guard let normalized = audioNormalizer.normalize(pcmBuffer) else {

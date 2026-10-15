@@ -11,8 +11,10 @@ struct MenuBarPopoverView: View {
 
     @EnvironmentObject var viewModel: RecorderViewModel
     var live: LiveTranscription?
+    @State private var contentHeight: CGFloat = WorkspaceStyle.previewHeight
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 12) {
             // Header: logo, with secondary actions collected under "•••" (BL-110)
             HStack(alignment: .top) {
@@ -58,6 +60,10 @@ struct MenuBarPopoverView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            CaptureHealthView(recorder: viewModel)
+            MultipleInputsView(recorder: viewModel)
+            RecordingLevelsView(recorder: viewModel)
 
             // Inline error with recovery action
             if case .error = viewModel.state, let message = viewModel.errorMessage {
@@ -169,6 +175,10 @@ struct MenuBarPopoverView: View {
         }
         .padding(WorkspaceStyle.contentPadding)
         .frame(width: WorkspaceStyle.popoverWidth)
+        .background(GeometryReader { geometry in Color.clear.preference(key: PopoverContentHeight.self, value: geometry.size.height) })
+        }
+        .frame(width: WorkspaceStyle.popoverWidth, height: min(max(contentHeight, WorkspaceStyle.previewHeight), min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80)))
+        .onPreferenceChange(PopoverContentHeight.self) { contentHeight = $0 }
         // The same ground as the window, deliberately. This was a flat opaque
         // fill first, reasoning that an NSPopover already draws its own vibrancy
         // and a second material would read as mud. What an opaque fill actually
@@ -177,4 +187,9 @@ struct MenuBarPopoverView: View {
         .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
     }
+}
+
+private struct PopoverContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

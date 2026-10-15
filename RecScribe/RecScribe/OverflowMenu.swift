@@ -163,8 +163,36 @@ enum OverflowMenu {
             )),
             .submenu(perAppSubmenu(context)),
             .submenu(microphoneSubmenu(context)),
+            .submenu(mixedSubmenu(context)),
+            .action(OverflowAction(id: "sourceMultiple", title: "Multiple inputs + playback…", isChecked: context.selectedSource.kind == .multiple, isSourceRow: true, perform: {
+                let current = context.selectedSource
+                if current.kind == .multiple { openWindow(.settings); return }
+                let inputs = current.inputSelections.map { selection in
+                    context.inputDevices.first { $0.uid == selection.deviceUID }.map(InputSelection.init(device:)) ?? selection
+                }
+                onSelectSource(.multiple(appBundleID: current.appBundleID, inputs: inputs))
+                openWindow(.settings)
+            })),
             .separator
         ]
+    }
+
+    static func mixedSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
+        let selected = context.selectedSource
+        let bundle = selected.appBundleID
+        let playback = bundle.map { context.selectedAppName ?? $0 } ?? "System audio"
+        var entries: [OverflowEntry] = [.disabledNotice("Separate source tracks + stereo mix; use headphones")]
+        if let uid = selected.microphoneUID, selected.isMixed,
+           !context.inputDevices.contains(where: { $0.uid == uid }) {
+            entries.append(.disabledNotice("Selected input is not connected"))
+        }
+        if context.inputDevices.isEmpty { entries.append(.disabledNotice("No inputs found")) }
+        entries += context.inputDevices.map { device in
+            .action(OverflowAction(id: "sourceMixed:\(device.uid)", title: "\(playback) + \(device.name)",
+                isChecked: selected == .mixed(appBundleID: bundle, deviceUID: device.uid), isSourceRow: true,
+                perform: { onSelectSource(.mixed(appBundleID: bundle, deviceUID: device.uid)) }))
+        }
+        return OverflowSubmenu(id: "sourceMixed", title: "Playback + microphone", isChecked: selected.kind == .mixed, entries: entries)
     }
 
     /// The microphone root row (BL-130).

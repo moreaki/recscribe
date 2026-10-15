@@ -23,6 +23,7 @@ final class MockAudioCapturing: AudioCapturing {
     var onStart: (() -> Void)?
     /// The source passed to the most recent `setupCapture`, for assertions (BL-100).
     private(set) var lastSource: AudioSource?
+    private var sampleCallback: (@Sendable (CapturedAudioSample) -> Void)?
     private var audioCallback: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
     func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
@@ -31,6 +32,14 @@ final class MockAudioCapturing: AudioCapturing {
         lastSource = source
         self.audioCallback = audioCallback
     }
+
+    func setupMultiCapture(source: AudioSource, sampleCallback: @escaping @Sendable (CapturedAudioSample) -> Void) async throws {
+        setupCount += 1
+        if let setupError { throw setupError }
+        lastSource = source
+        self.sampleCallback = sampleCallback
+    }
+    func emit(_ sample: CapturedAudioSample) { sampleCallback?(sample) }
 
     func startCapture() async throws {
         startCount += 1
@@ -48,6 +57,7 @@ final class MockAudioCapturing: AudioCapturing {
         cleanupCount += 1
         capturing = false
         audioCallback = nil
+        sampleCallback = nil
     }
 
     /// Simulate the capture stream dying unexpectedly.

@@ -23,12 +23,15 @@ enum SampleBufferFixtures {
         interleaved: Bool,
         fill: (_ channel: Int, _ frame: Int) -> Float
     ) -> AVAudioPCMBuffer {
-        let format = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: AVAudioChannelCount(channels),
-            interleaved: interleaved
-        )!
+        let format: AVAudioFormat
+        if channels > 2 {
+            let layout = AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | AVAudioChannelCount(channels))!
+            format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
+                                  interleaved: interleaved, channelLayout: layout)
+        } else {
+            format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
+                                  channels: AVAudioChannelCount(channels), interleaved: interleaved)!
+        }
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(max(frames, 1)))!
         buffer.frameLength = AVAudioFrameCount(frames)
 

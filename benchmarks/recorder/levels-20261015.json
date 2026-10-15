@@ -1,0 +1,10 @@
+{
+  "environment": {"machine": "Mac Studio M2 Ultra, 64 GiB", "os": "macOS 26.6.2 (25G83)", "xcode": "27.0 (27A266a)", "configuration": "Release arm64, testability enabled"},
+  "workload": "CaptureBenchmarkTests.combinedCaptureThroughput: 10 seconds synthetic stereo at 48 kHz, two source files and derived mix, 100-ms packets, 1-MiB rollover, unity faders, monitor disabled",
+  "context": "Observed alongside the full Release app suite. Includes fixture generation, conversion, journaling and file I/O. Not real-time capture or monitoring latency, not an isolated CPU measurement.",
+  "base_commit": "2cd8b050637a626150b771c77bc4c269d3005e5b",
+  "wall_seconds": [0.103576, 0.101342792, 0.100108542],
+  "process_lifetime_peak_rss_bytes": [277889024, 277889024, 277889024],
+  "rss_note": "Whole test host lifetime high-water mark; not app-owned PCM or standalone feature memory.",
+  "monitor": {"hardware_latency_ms": null, "concurrent_hardware_cpu_percent": null, "second_input_engine_comparison": null, "note": "Headphone/physical-route verification remains pending. UI uses captured-buffer output-only monitoring; old second-input-engine prototype is not enabled."}
+}

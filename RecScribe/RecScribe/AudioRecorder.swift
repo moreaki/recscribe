@@ -15,6 +15,8 @@ enum AudioRecorderError: Error, LocalizedError {
 
 /// Fixed-size aggregate telemetry, never audio or paths.
 nonisolated struct RecorderMetrics: Sendable {
+    var receivedFrames: Int64 = 0
+    var writtenFrames: Int64 = 0
     var accepted = 0
     var written = 0
     var rejected = 0
@@ -44,6 +46,16 @@ final class AudioRecorder: AudioFileWriting {
     nonisolated private static let trace = OSSignposter(logger: Log.recorder)
     private var interval: OSSignpostIntervalState?
     private var stopping = false
+    nonisolated(unsafe) private var monitor: CapturedAudioMonitor?
+    private var gainSource: AudioSource?
+    nonisolated(unsafe) private var gain: SingleSourceGain? // encoding queue only
+    nonisolated(unsafe) private var levelProvider: (@Sendable () -> RecordingLevels)? // configured before admission
+    func configureLevels(source: AudioSource, levels: AudioLevels) {
+        guard !recording else { return }
+        monitor = .shared
+        gainSource = source
+        levelProvider = { levels.snapshot(for: source) }
+    }
 
     private nonisolated struct State {
         var id = UUID()
@@ -54,6 +66,7 @@ final class AudioRecorder: AudioFileWriting {
         var error: Error?
         var writeFailed = false
         var metrics = RecorderMetrics()
+        var health = RecordingHealth()
         var waveform: [Float]?
         var waveformScheduled = false
         var onWaveform: (@MainActor @Sendable ([Float]) -> Void)?
@@ -69,6 +82,7 @@ final class AudioRecorder: AudioFileWriting {
     }
 
     var recording: Bool { stopping || state.withLock { $0.active } }
+    var healthSnapshot: RecordingHealth { state.withLock { $0.health } }
 
     func startRecording(to url: URL, format: AudioFormat) throws {
         guard !recording else { throw AudioRecorderError.alreadyRecording }
@@ -76,11 +90,24 @@ final class AudioRecorder: AudioFileWriting {
         try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
         sessionManifestURL = (encoder as? SessionWAVWriter)?.manifestURL
         actualAudioURL = (encoder as? SessionWAVWriter)?.audioURL ?? url
-        queue.sync { self.encoder = encoder }
+        let initial = levelProvider?()
+        let microphone = gainSource?.microphoneUID != nil
+        do {
+            if let initial { try (encoder as? SessionWAVWriter)?.setGainAutomation(GainAutomation(initial).events, scope: "processed_single_source") }
+        } catch {
+            try? (encoder as? SessionWAVWriter)?.markFailure(error)
+            try? encoder.finalize()
+            throw error
+        }
+        queue.sync {
+            self.encoder = encoder
+            self.gain = initial.map { SingleSourceGain(levels: $0, microphone: microphone) }
+        }
         let waveform = onWaveformData
         let failure = onWriteError
         state.withLock {
             $0 = State()
+            $0.health.startedAt = ProcessInfo.processInfo.systemUptime
             $0.active = true
             $0.accepting = true
             $0.onWaveform = waveform
@@ -91,7 +118,15 @@ final class AudioRecorder: AudioFileWriting {
     }
 
     nonisolated func processAudioSample(_ buffer: AVAudioPCMBuffer) {
+        guard buffer.frameLength > 0 else { return }
         let bytes = Int(buffer.frameCapacity) * Int(buffer.format.channelCount) * MemoryLayout<Float>.size
+        guard state.withLock({ $0.accepting }) else { return }
+        // Meter the owned samples before transferring them to the writer. No
+        // worker dereferences capture storage after the encoder consumes it.
+        let peak = bytes <= maxBytes ? Self.peak(buffer) : 0
+        let frames = Int64(buffer.frameLength)
+        let rate = buffer.format.sampleRate
+        let channels = Int(buffer.format.channelCount)
         let submitted = ContinuousClock.now
         let transferred = TransferredPCMBuffer(value: buffer)
         // Submission and stop's barrier share this lock, including queue.async.
@@ -105,6 +140,13 @@ final class AudioRecorder: AudioFileWriting {
             s.buffers += 1
             s.bytes += bytes
             s.metrics.accepted += 1
+            s.metrics.receivedFrames += frames
+            s.health.receivedFrames += frames
+            s.health.peak = peak
+            s.health.sampleRate = rate
+            s.health.channels = channels
+            s.health.lastReceivedAt = ProcessInfo.processInfo.systemUptime
+            if s.health.firstReceivedAt == nil { s.health.firstReceivedAt = s.health.lastReceivedAt }
             s.metrics.peakBuffers = max(s.metrics.peakBuffers, s.buffers)
             s.metrics.peakBytes = max(s.metrics.peakBytes, s.bytes)
             queue.async { self.write(transferred.value, bytes: bytes, submitted: submitted) }
@@ -131,24 +173,49 @@ final class AudioRecorder: AudioFileWriting {
                     if let failure = self.state.withLock({ $0.error }) {
                         try? (self.encoder as? SessionWAVWriter)?.markFailure(failure)
                     }
-                    do { try self.encoder?.finalize() } catch { finalError = error }
+                    if self.gain?.clipped == true {
+                        do { try (self.encoder as? SessionWAVWriter)?.addIssue("The gain-processed recording clipped. Reduce recording gain; this single-source file has no separate raw track.") }
+                        catch { finalError = error }
+                    }
+                    do { try self.encoder?.finalize() } catch { if finalError == nil { finalError = error } }
+                    self.gain = nil
                     self.encoder = nil
                     let completionError = finalError
                     let snapshot = self.state.withLock { s -> (RecorderMetrics, Error?, UUID) in
                         s.metrics.drainMS = Self.ms(stop.duration(to: finalize))
                         s.metrics.finalizeMS = Self.ms(finalize.duration(to: .now))
+                        if s.error != nil || completionError != nil { s.health.failed = true }
                         s.active = false
                         s.waveform = nil
                         return (s.metrics, s.error ?? completionError, s.id)
                     }
                     let m = snapshot.0
-                    Log.recorder.notice("Recording ended id=\(snapshot.2.uuidString, privacy: .public) failed=\(snapshot.1 != nil) accepted=\(m.accepted) written=\(m.written) rejected=\(m.rejected) peak_buffers=\(m.peakBuffers) peak_pcm_bytes=\(m.peakBytes) max_queue_ms=\(m.maxQueueMS) write_ms=\(m.writeMS) max_write_ms=\(m.maxWriteMS) drain_ms=\(m.drainMS) finalize_ms=\(m.finalizeMS)")
+                    Log.recorder.notice("Recording ended id=\(snapshot.2.uuidString, privacy: .public) failed=\(snapshot.1 != nil) received_frames=\(m.receivedFrames) written_frames=\(m.writtenFrames) accepted=\(m.accepted) written=\(m.written) rejected=\(m.rejected) peak_buffers=\(m.peakBuffers) peak_pcm_bytes=\(m.peakBytes) max_queue_ms=\(m.maxQueueMS) write_ms=\(m.writeMS) max_write_ms=\(m.maxWriteMS) drain_ms=\(m.drainMS) finalize_ms=\(m.finalizeMS)")
                     continuation.resume(returning: snapshot.1)
                 }
             }
         }
         lastMetrics = state.withLock { $0.metrics }
         if let error { throw error }
+    }
+
+    nonisolated static func peak(_ buffer: AVAudioPCMBuffer) -> Float {
+        // Keep the owner alive throughout raw-pointer reads, including the last
+        // read after the compiler has finished querying format/length/stride.
+        withExtendedLifetime(buffer) {
+            guard let data = buffer.floatChannelData else { return 0 }
+            let frames = Int(buffer.frameLength)
+            let channels = Int(buffer.format.channelCount)
+            let stride = buffer.stride
+            let interleaved = buffer.format.isInterleaved
+            var peak: Float = 0
+            for channel in 0..<channels {
+                for frame in 0..<frames {
+                    peak = max(peak, abs(data[interleaved ? 0 : channel][frame * stride + (interleaved ? channel : 0)]))
+                }
+            }
+            return peak
+        }
     }
 
     nonisolated private static func ms(_ duration: Duration) -> Double {
@@ -159,6 +226,7 @@ final class AudioRecorder: AudioFileWriting {
     nonisolated private func fail(_ error: Error, state s: inout State) {
         guard s.error == nil else { return }
         s.error = error
+        s.health.failed = true
         s.accepting = false
         let id = s.id
         let callback = s.onError
@@ -175,10 +243,22 @@ final class AudioRecorder: AudioFileWriting {
         defer { state.withLock { $0.buffers -= 1; $0.bytes -= bytes } }
         guard !state.withLock({ $0.writeFailed }), let encoder else { return }
         do {
-            try autoreleasepool { try encoder.writeBuffer(buffer) }
+            try autoreleasepool {
+                if let gain, let levelProvider {
+                    let output = try gain.process(buffer, levels: levelProvider(), writer: encoder as? SessionWAVWriter)
+                    let postPeak = gain.postPeak, clipped = gain.clipped
+                    monitor?.submit(output)
+                    try encoder.writeBuffer(output)
+                    state.withLock { $0.health.postPeak = postPeak; $0.health.mixPeak = postPeak; $0.health.clipped = clipped }
+                } else { try encoder.writeBuffer(buffer) }
+            }
             let elapsed = Self.ms(start.duration(to: .now))
+            let frames = Int64(buffer.frameLength)
             state.withLock {
                 $0.metrics.written += 1
+                $0.metrics.writtenFrames += frames
+                $0.health.writtenFrames += frames
+                $0.health.lastWrittenAt = ProcessInfo.processInfo.systemUptime
                 $0.metrics.maxQueueMS = max($0.metrics.maxQueueMS, Self.ms(submitted.duration(to: start)))
                 $0.metrics.writeMS += elapsed
                 $0.metrics.maxWriteMS = max($0.metrics.maxWriteMS, elapsed)

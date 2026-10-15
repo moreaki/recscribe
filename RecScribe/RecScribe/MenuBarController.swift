@@ -129,14 +129,14 @@ class MenuBarController: NSObject {
     private func currentContext() -> OverflowContext {
         let selected = viewModel.audioSource.selectedSource
         var selectedAppName: String?
-        if case .app(let bundleID) = selected {
+        if let bundleID = selected.appBundleID {
             selectedAppName = viewModel.audioSource.knownAppName(forBundleID: bundleID)
         }
         // Devices are enumerated eagerly, unlike apps: it is synchronous, cheap,
         // and raises no permission dialog, so there is nothing to defer.
         let devices = viewModel.audioSource.availableInputDevices()
         var selectedMicName: String?
-        if case .mic(let uid) = selected {
+        if let uid = selected.microphoneUID {
             selectedMicName = devices.first { $0.uid == uid }?.name
         }
 

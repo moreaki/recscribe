@@ -91,6 +91,7 @@ struct RecorderReliabilityTests {
         #expect(encoder.writes == 1)
         #expect(encoder.finalizes == 1)
         #expect(recorder.lastMetrics.written == 0)
+        #expect(recorder.healthSnapshot.failed)
     }
 
     @Test("Async stop frees MainActor; cancellation drains and prevents overlapping starts")

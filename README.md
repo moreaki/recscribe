@@ -9,7 +9,10 @@ independent application for precise, private, high-performance transcription.
 ## Status
 
 RecScribe is in active development. The current codebase provides system-audio,
-per-application, and microphone recording with WAV, FLAC, and M4A output. The local
+per-application, microphone, and simultaneous playback + selected-input recording.
+Combined capture retains separate source tracks and a derived stereo mix with
+per-source recording health; see [capture sources](docs/capture-sources.md).
+WAV originals support FLAC, Opus and M4A archive export. The local
 WAV transcription CLI now provides a tested local vertical slice with a
 whisper.cpp adapter, versioned canonical JSON and deterministic text/subtitle
 exports. Text normalization, translation and source-linked summaries now use a
@@ -141,3 +144,18 @@ to the user before audio leaves the Mac.
 RecScribe currently remains under the Apache License 2.0. It includes software derived
 from Home Rec, Copyright 2026 Melissa de Britto. See [`LICENSE`](LICENSE),
 [`NOTICE`](NOTICE), and [`docs/licensing.md`](docs/licensing.md).
+
+
+Audio levels are available in the Studio and menu-bar popover: input/source gain,
+channel trims, recording master and mute; separate playback and optional headphone
+monitor volume/mute/output-device controls. Combined source tracks remain at unity
+gain; single-source WAVs contain the applied gain. See
+[recording gain and listening volume](docs/capture-sources.md#recording-gain-and-listening-volume-17--18)
+for control scope, hardware-volume support and monitoring limits.
+
+To capture multiple microphones/interfaces together with playback, expand **Capture
+inputs** in Studio or the menu-bar popover and choose **Use multiple inputs +
+playback**. Select up to eight devices and configure their mix channels. Each device
+gets a separate synchronized source recording, gain controls and a derived stereo
+mix. See [multiple-input recording](docs/multiple-inputs.md) for routing, failure
+handling, resource limits and hardware verification status.

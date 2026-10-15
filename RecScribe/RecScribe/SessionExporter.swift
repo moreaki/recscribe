@@ -35,8 +35,21 @@ nonisolated struct SessionExporter {
         let staging = destination.appendingPathExtension("partial")
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
 
-        let files = session.parts.map { ($0.path, $0.sha256) }
+        var files = session.parts.map { ($0.path, $0.sha256) }
             + session.artifacts.map { ($0.path, Optional($0.sha256)) }
+        var sourceLeases: [SessionLease] = []
+        defer { withExtendedLifetime(sourceLeases) {} }
+        for track in session.sourceTracks ?? [] {
+            let child = try LinkedSourceSessions.read(track, parent: session, at: manifest)
+            sourceLeases.append(try SessionLease(child.id))
+            guard !child.session.parts.isEmpty, child.session.parts.allSatisfy({ $0.status == .verified }) else {
+                throw SessionError.invalid("Verify all source tracks before export")
+            }
+            files += child.session.parts.map { ($0.path, $0.sha256) }
+                + child.session.artifacts.map { ($0.path, Optional($0.sha256)) }
+            files.append((child.id.lastPathComponent, try hash(child.id, checkCancellation: checkCancellation)))
+        }
+        guard Set(files.map { $0.0 }).count == files.count else { throw SessionError.invalid("Session files overlap") }
         for (name, expectedHash) in files {
             try checkCancellation()
             let source = try RecordingSession.safeURL(name, beside: manifest)

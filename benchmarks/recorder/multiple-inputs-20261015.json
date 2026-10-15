@@ -1,0 +1,86 @@
+{
+  "environment": {
+    "machine": "Mac Studio M2 Ultra, 64 GiB",
+    "os": "macOS 26.6.2 (25G83)",
+    "xcode": "27.0 (27A266a)",
+    "configuration": "Release arm64, testability enabled"
+  },
+  "base_commit": "b5ed7a0",
+  "workload": "10 seconds synthetic constant Float32 stereo at 48 kHz, 100-ms packets, each source saved plus derived stereo mix, 1-MiB part rollover, unity source/master gain, monitoring off",
+  "context": "Observed alongside full Release app suite. Includes synthetic fixture creation, normalization, journaling, rollover and file I/O. This is not a physical-device run, isolated CPU measurement or end-to-end latency benchmark. RSS is whole test-host lifetime high water, not owned PCM.",
+  "samples": [
+    {
+      "inputs": 2,
+      "sources": 3,
+      "iteration": 0,
+      "audio_seconds": 10,
+      "wall_seconds": 0.096168417,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 2,
+      "sources": 3,
+      "iteration": 1,
+      "audio_seconds": 10,
+      "wall_seconds": 0.100329916,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 2,
+      "sources": 3,
+      "iteration": 2,
+      "audio_seconds": 10,
+      "wall_seconds": 0.098214834,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 4,
+      "sources": 5,
+      "iteration": 0,
+      "audio_seconds": 10,
+      "wall_seconds": 0.144487458,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 4,
+      "sources": 5,
+      "iteration": 1,
+      "audio_seconds": 10,
+      "wall_seconds": 0.141238084,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 4,
+      "sources": 5,
+      "iteration": 2,
+      "audio_seconds": 10,
+      "wall_seconds": 0.155282583,
+      "process_lifetime_peak_rss_bytes": 289406976
+    },
+    {
+      "inputs": 8,
+      "sources": 9,
+      "iteration": 0,
+      "audio_seconds": 10,
+      "wall_seconds": 0.241263458,
+      "process_lifetime_peak_rss_bytes": 289603584
+    },
+    {
+      "inputs": 8,
+      "sources": 9,
+      "iteration": 1,
+      "audio_seconds": 10,
+      "wall_seconds": 0.2484125,
+      "process_lifetime_peak_rss_bytes": 289669120
+    },
+    {
+      "inputs": 8,
+      "sources": 9,
+      "iteration": 2,
+      "audio_seconds": 10,
+      "wall_seconds": 0.265167458,
+      "process_lifetime_peak_rss_bytes": 289783808
+    }
+  ],
+  "hardware_verification": "Pending: Studio Display plus USB/interface, Bluetooth, virtual/aggregate devices, disconnect, input/output latency and concurrent engine CPU/queues"
+}

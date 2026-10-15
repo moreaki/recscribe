@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-15",
+  "machine": "Mac Studio, M2 Ultra, 64 GiB",
+  "os": "macOS 26.6.2 (25G83)",
+  "xcode": "27.0 (27A266a)",
+  "baseline_commit": "9fc52c2",
+  "build": "Release with ENABLE_TESTABILITY=YES; no ASR or capture hardware",
+  "caveats": [
+    "Three samples each with uncontrolled cache/system load; not end-to-end capture latency or a statistically established speedup.",
+    "RSS is test-host lifetime peak, not app-owned PCM.",
+    "Combined samples ran alongside focused tests, so they are throughput observations rather than an isolated comparison."
+  ],
+  "baseline": [
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=0 audio_s=10 wall_s=0.159953458 process_lifetime_peak_rss_bytes=208011264",
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=1 audio_s=10 wall_s=0.144809834 process_lifetime_peak_rss_bytes=208011264",
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=2 audio_s=10 wall_s=0.133747166 process_lifetime_peak_rss_bytes=208027648",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=0 audio_s=10 wall_s=0.007252125 process_lifetime_peak_rss_bytes=208027648",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=1 audio_s=10 wall_s=0.007769458 process_lifetime_peak_rss_bytes=208027648",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=2 audio_s=10 wall_s=0.006224458 process_lifetime_peak_rss_bytes=208044032",
+    "RECORDER_BENCH format=wav iteration=0 audio_s=10 wall_s=0.003889458 process_lifetime_peak_rss_bytes=208060416",
+    "RECORDER_BENCH format=wav iteration=1 audio_s=10 wall_s=0.003732833 process_lifetime_peak_rss_bytes=208191488",
+    "RECORDER_BENCH format=wav iteration=2 audio_s=10 wall_s=0.00352675 process_lifetime_peak_rss_bytes=208207872",
+    "RECORDER_BENCH format=m4a iteration=0 audio_s=10 wall_s=0.093172959 process_lifetime_peak_rss_bytes=215810048",
+    "RECORDER_BENCH format=m4a iteration=1 audio_s=10 wall_s=0.073816291 process_lifetime_peak_rss_bytes=215891968",
+    "RECORDER_BENCH format=m4a iteration=2 audio_s=10 wall_s=0.07516625 process_lifetime_peak_rss_bytes=218791936",
+    "RECORDER_BENCH format=flac iteration=0 audio_s=10 wall_s=0.042969 process_lifetime_peak_rss_bytes=220463104",
+    "RECORDER_BENCH format=flac iteration=1 audio_s=10 wall_s=0.041795666 process_lifetime_peak_rss_bytes=220545024",
+    "RECORDER_BENCH format=flac iteration=2 audio_s=10 wall_s=0.043235125 process_lifetime_peak_rss_bytes=220545024"
+  ],
+  "combined_observation": [
+    "MULTISOURCE_BENCH iteration=0 audio_s=10 sources=2 wall_s=0.076819292 process_lifetime_peak_rss_bytes=197214208",
+    "MULTISOURCE_BENCH iteration=1 audio_s=10 sources=2 wall_s=0.073717959 process_lifetime_peak_rss_bytes=197312512",
+    "MULTISOURCE_BENCH iteration=2 audio_s=10 sources=2 wall_s=0.075420667 process_lifetime_peak_rss_bytes=197312512"
+  ],
+  "current": [
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=0 audio_s=10 wall_s=0.137963541 process_lifetime_peak_rss_bytes=201621504",
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=1 audio_s=10 wall_s=0.117915583 process_lifetime_peak_rss_bytes=201752576",
+    "RECORDER_BENCH format=wav_session_1MiB_importantUsage iteration=2 audio_s=10 wall_s=0.120626958 process_lifetime_peak_rss_bytes=201752576",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=0 audio_s=10 wall_s=0.006705792 process_lifetime_peak_rss_bytes=201752576",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=1 audio_s=10 wall_s=0.007412084 process_lifetime_peak_rss_bytes=201752576",
+    "RECORDER_BENCH format=wav_session_1MiB_statfs iteration=2 audio_s=10 wall_s=0.006358 process_lifetime_peak_rss_bytes=201752576",
+    "RECORDER_BENCH format=wav iteration=0 audio_s=10 wall_s=0.004769542 process_lifetime_peak_rss_bytes=201768960",
+    "RECORDER_BENCH format=wav iteration=1 audio_s=10 wall_s=0.004703666 process_lifetime_peak_rss_bytes=201900032",
+    "RECORDER_BENCH format=wav iteration=2 audio_s=10 wall_s=0.004770625 process_lifetime_peak_rss_bytes=201900032",
+    "RECORDER_BENCH format=m4a iteration=0 audio_s=10 wall_s=0.089609458 process_lifetime_peak_rss_bytes=209207296",
+    "RECORDER_BENCH format=m4a iteration=1 audio_s=10 wall_s=0.070272167 process_lifetime_peak_rss_bytes=209223680",
+    "RECORDER_BENCH format=m4a iteration=2 audio_s=10 wall_s=0.072449 process_lifetime_peak_rss_bytes=209240064",
+    "RECORDER_BENCH format=flac iteration=0 audio_s=10 wall_s=0.042297708 process_lifetime_peak_rss_bytes=210894848",
+    "RECORDER_BENCH format=flac iteration=1 audio_s=10 wall_s=0.042317 process_lifetime_peak_rss_bytes=210976768",
+    "RECORDER_BENCH format=flac iteration=2 audio_s=10 wall_s=0.041538416 process_lifetime_peak_rss_bytes=210993152"
+  ]
+}

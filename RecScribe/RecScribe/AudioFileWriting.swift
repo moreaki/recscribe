@@ -15,6 +15,7 @@ protocol AudioFileWriting: AnyObject, Sendable {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
     var onWriteError: (@MainActor @Sendable (String) -> Void)? { get set }
     var recording: Bool { get }
+    var healthSnapshot: RecordingHealth { get }
     var sessionManifestURL: URL? { get }
     var actualAudioURL: URL? { get }
     /// Begin writing to `fileURL`, encoding in `format` (BL-015). The format is
@@ -25,6 +26,7 @@ protocol AudioFileWriting: AnyObject, Sendable {
 }
 
 extension AudioFileWriting {
+    var healthSnapshot: RecordingHealth { .init() }
     var sessionManifestURL: URL? { nil }
     var actualAudioURL: URL? { nil }
 }

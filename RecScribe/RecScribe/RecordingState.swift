@@ -3,8 +3,8 @@
 //  RecScribe
 //
 //  Single source of truth for the recording lifecycle. The view model owns
-//  one RecordingState and the UI derives entirely from it, so "UI says
-//  recording while nothing is written" is no longer representable.
+//  one RecordingState. Separate capture-health telemetry distinguishes an active
+//  stream from audio reception and successful disk writes.
 //
 
 import Foundation
@@ -27,6 +27,7 @@ enum RecorderError: Error, Equatable, Sendable {
     /// returns false **immediately and without prompting**, so offering "try
     /// again" here is an infinite loop. Settings is the only way out.
     case microphoneDenied
+    case noAudio
     case stopFailed(String)
     case streamFailed(String)
     case diskFull
@@ -40,6 +41,7 @@ enum RecorderError: Error, Equatable, Sendable {
             return detail
         case .sourceUnavailable(let error):
             return error.errorDescription ?? "capture source unavailable"
+        case .noAudio: return "no captured audio frames"
         case .microphoneDenied:
             return "microphone access denied"
         case .diskFull:
@@ -53,13 +55,15 @@ enum RecorderError: Error, Equatable, Sendable {
     nonisolated var message: String {
         switch self {
         case .startFailed:
-            return "RecScribe couldn't start recording. Make sure some audio is playing, then try again."
+            return "RecScribe couldn't start recording. Check the selected sources and their recording permissions, then try again."
         case .sourceUnavailable(let error):
             // Already written for the specific cause — the app that quit, or the
             // microphone that was unplugged.
             return error.errorDescription ?? "The capture source you chose isn't available."
         case .microphoneDenied:
             return "RecScribe doesn't have permission to use the microphone."
+        case .noAudio:
+            return "No audio data was captured. Check the selected sources and their permissions, then record again."
         case .stopFailed:
             return "RecScribe couldn't finish saving the recording. Open Recordings to verify or recover the saved parts."
         case .streamFailed:
@@ -87,7 +91,7 @@ enum RecorderError: Error, Equatable, Sendable {
             return nil
         case .saveLocationUnavailable:
             return .chooseFolder
-        case .stopFailed, .diskFull:
+        case .noAudio, .stopFailed, .diskFull:
             return nil
         }
     }
@@ -130,6 +134,7 @@ enum RecordingState: Equatable, Sendable {
         case .stopping: return "Saving recording…"
         case .recovering: return "Recovering recording…"
         case .error(.streamFailed): return "Recording interrupted"
+        case .error(.noAudio): return "No audio captured"
         case .error(.stopFailed): return "Recording needs review"
         case .error: return "Recording unavailable"
         }

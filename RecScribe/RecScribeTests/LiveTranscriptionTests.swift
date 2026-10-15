@@ -179,19 +179,67 @@ struct LiveTranscriptionTests {
     @Test(arguments: [
         #"[{"offsets":{"from":-1,"to":100},"text":"speech"}]"#,
         #"[{"offsets":{"from":200,"to":100},"text":"speech"}]"#,
-        #"[{"offsets":{"from":100,"to":100},"text":"speech"}]"#,
         #"[{"offsets":{"from":500,"to":700},"text":"first"},{"offsets":{"from":400,"to":800},"text":"second"}]"#,
         #"[{"offsets":{"from":-1,"to":0},"text":"[BLANK_AUDIO]"}]"#,
         #"[{"offsets":{"from":2,"to":1},"text":"[BLANK_AUDIO]"}]"#,
         #"[{"offsets":{"from":10000,"to":11000},"text":"outside audio"}]"#,
-        #"[{"offsets":{"from":0,"to":0},"text":"[UNKNOWN]"}]"#,
-        #"[{"offsets":{"from":0,"to":0},"text":"[BLANK_AUDIO] spoken words"}]"#,
+        #"[{"offsets":{"from":10001,"to":10001},"text":"outside audio"}]"#,
         #"[{"text":"missing offsets"}]"#,
         #"[{"offsets":{"from":0,"to":null},"text":"speech"}]"#,
         "not-json"
     ])
     func malformedWhisperOutputStillFailsExplicitly(entries: String) throws {
         #expect(throws: LiveWhisperOutputError.self) { try parseEntries(entries) }
+    }
+
+    @Test func zeroDurationSpeechRetainsWordsAndExactPointWithReviewFlag() throws {
+        let parsed = try parseEntries(#"[{"offsets":{"from":0,"to":4000},"text":"first"},{"offsets":{"from":4000,"to":5000},"text":"word"},{"offsets":{"from":5000,"to":5000},"text":"word"},{"offsets":{"from":9000,"to":10000},"text":"last"}]"#)
+        #expect(parsed.map(\.text) == ["first", "word", "word", "last"])
+        #expect(parsed[2].startSeconds == 5 && parsed[2].endSeconds == 5)
+        #expect(parsed.map(\.timingIssue) == [nil, nil, .missingDuration, nil])
+        let saved = try JSONDecoder().decode([LiveSegment].self, from: JSONEncoder().encode(parsed))
+        #expect(saved == parsed)
+    }
+
+    @Test(arguments: ["speech", "[UNKNOWN]", "[BLANK_AUDIO] spoken words"])
+    func zeroDurationSpeechIsRetainedAtWindowEdgesAndInOverlap(text: String) throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let raw = root.appendingPathComponent("raw.json")
+        let entries = [0, 1000, 11000].map { "{\"offsets\":{\"from\":\($0),\"to\":\($0)},\"text\":\"\(text)\"}" }.joined(separator: ",")
+        let bytes = Data("{\"transcription\":[\(entries)]}".utf8)
+        try bytes.write(to: raw)
+        let slice = LiveAudioReader.Slice(file: raw, startFrame: 479_000, endFrame: 490_000,
+            availableFrames: 500_000, sampleRate: 1000, channels: 2, identicalChannels: false)
+        for channel in 0..<2 {
+            let parsed = try LiveWhisperTranscriber.parse(raw, slice: slice, cursor: 480_000, channel: channel)
+            #expect(parsed.map(\.text) == Array(repeating: text, count: 3))
+            #expect(parsed.map(\.startSeconds) == [479, 480, 490])
+            #expect(parsed.allSatisfy { $0.endSeconds == $0.startSeconds && $0.timingIssue == .missingDuration && $0.channel == channel })
+        }
+        #expect(try Data(contentsOf: raw) == bytes)
+    }
+
+    @Test func olderSegmentsRemainDecodableWithoutTimingIssue() throws {
+        let bytes = Data(#"{"id":"00000000-0000-0000-0000-000000000001","startSeconds":1,"endSeconds":2,"channel":0,"text":"speech"}"#.utf8)
+        let segment = try JSONDecoder().decode(LiveSegment.self, from: bytes)
+        #expect(segment.timingIssue == nil)
+        #expect(segment.text == "speech")
+    }
+
+    @Test func timingReviewDoesNotStopControllerOrLoseSpeech() async throws {
+        let segments = try parseEntries(#"[{"offsets":{"from":5000,"to":5000},"text":"retained"},{"offsets":{"from":9000,"to":10000},"text":"following"}]"#)
+        let live = LiveTranscription(work: { _, directory, cursor, _, _, _ in
+            guard cursor == 0 else { return nil }
+            return .init(startFrame: 0, endFrame: 10_000, availableFrames: 10_000, sampleRate: 1000,
+                         durationSeconds: 0.01, segments: segments, directory: directory)
+        })
+        live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
+        live.recordingStopped()
+        live.setEnabled(true)
+        await waitUntil("timing review checkpoint") { !live.busy }
+        #expect(live.cursor == 10_000 && live.errorMessage == nil)
+        #expect(live.segments == segments && live.segments.first?.timingIssue == .missingDuration)
+        await live.shutdown()
     }
 
     @Test func equalTextInSeparateChannelsIsNotDiscarded() throws {

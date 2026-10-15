@@ -159,6 +159,7 @@ nonisolated enum LiveWhisperTranscriber {
         var segments: [LiveSegment] = []
         var previousStart = -1
         var skippedMarkers = 0
+        var untimedSpeech = 0
         for entry in raw.transcription {
             guard entry.offsets.from >= 0, entry.offsets.to >= entry.offsets.from else {
                 throw LiveWhisperOutputError.invalidTimestamps
@@ -169,11 +170,21 @@ nonisolated enum LiveWhisperTranscriber {
                 skippedMarkers += 1
                 continue
             }
-            guard entry.offsets.to > entry.offsets.from, entry.offsets.from >= previousStart else {
+            guard entry.offsets.from >= previousStart else {
                 throw LiveWhisperOutputError.invalidSpeechTimestamps
             }
             previousStart = entry.offsets.from
             let start = offset + Double(entry.offsets.from) / 1_000
+            if entry.offsets.to == entry.offsets.from {
+                guard start <= end else { throw LiveWhisperOutputError.invalidSpeechTimestamps }
+                // Keep every word and the exact reported point, including overlap
+                // context and the window's end. With no duration we cannot safely
+                // assign ownership or deduplicate against a neighbouring segment.
+                segments.append(LiveSegment(id: UUID(), startSeconds: start, endSeconds: start,
+                    channel: channel, language: raw.result?.language, text: text, timingIssue: .missingDuration))
+                untimedSpeech += 1
+                continue
+            }
             let stop = min(end, offset + Double(entry.offsets.to) / 1_000)
             guard start < end else { throw LiveWhisperOutputError.invalidSpeechTimestamps }
             // Context-only segments never appear twice. A straddling segment is
@@ -184,6 +195,9 @@ nonisolated enum LiveWhisperTranscriber {
         }
         if skippedMarkers > 0 {
             logger.notice("Ignored non-speech markers cursor_frame=\(cursor) channel=\(channel) count=\(skippedMarkers)")
+        }
+        if untimedSpeech > 0 {
+            logger.notice("Retained speech requiring timing review cursor_frame=\(cursor) channel=\(channel) count=\(untimedSpeech)")
         }
         return segments
     }

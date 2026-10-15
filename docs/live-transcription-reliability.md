@@ -22,10 +22,18 @@ transcripts are read-only diagnostic inputs, not test fixtures or repository dat
   case-insensitive) and whitespace-only output are skipped. A marker embedded in
   speech is not removed. Marker-only chunks are successful empty results, not
   proof of digital silence; `asrRuns` continues to distinguish those cases.
-- Negative or reversed offsets fail even on markers. Zero-duration speech,
-  speech whose start moves backwards, and speech beginning beyond the audio
-  window fail explicitly. Context-only speech is still excluded, and straddling
-  segments retain the existing clipping/review semantics. No times are invented.
+- Negative or reversed offsets fail even on markers. Speech whose start moves
+  backwards or begins beyond the audio window still fails explicitly.
+- Zero-duration speech is retained with its exact recognizer-supplied point and
+  optional `timingIssue: "missingDuration"` metadata in the live checkpoint. The
+  preview explicitly labels its time range as unclear. No duration is inferred
+  from adjacent segments or token offsets. Repeated words and separate channels
+  remain intact. Such points are retained even in the overlap or at the window
+  end: without a duration we cannot safely determine interval ownership. They may
+  consequently repeat and require review. Older checkpoints remain decodable.
+- Positive-duration context-only speech is still excluded, and straddling
+  segments retain the existing clipping/review semantics. No times are invented
+  to repair zero-duration speech.
 - Malformed JSON and invalid speech timestamps use a dedicated error type. Only
   this type permits one local retry (`maximumLocalChunkAttempts = 2`).
 - Each attempt retains any raw output it produced. A failed chunk cannot move the
@@ -39,8 +47,8 @@ transcripts are read-only diagnostic inputs, not test fixtures or repository dat
 
 ## Read-only historical evidence
 
-The reported recording's saved outputs contain two zero-duration `[BLANK_AUDIO]`
-markers and no zero-duration speech. Language labels across the raw files are
+The original reported failure's saved outputs contain two zero-duration
+`[BLANK_AUDIO]` markers and no zero-duration speech. Language labels across those raw files are
 50 German, 14 English, 2 Japanese and 2 Korean. Those are recognizer guesses,
 not established spoken-language ground truth.
 
@@ -61,23 +69,72 @@ No majority-vote lock or quality guarantee is introduced without language-labell
 evaluation audio. The saved Tiny results motivate investigation, not a filename-
 or byte-count-based prohibition of a model family.
 
+## Subsequent full-recording replay: 480-second failure
+
+A fresh local replay passed the original 340-second failure but stopped at the
+480–490-second window. Channel 0 contained four speech entries; the third had
+equal 5,000 ms offsets (absolute source point 484 s including input overlap).
+Its token offsets also had zero duration, and some following token offsets ran
+backwards. They cannot justify a repaired speech interval. The second attempt
+reproduced the failure. The new policy retains all four entries, including the
+repeated word, and flags only the zero-duration entry for timing review. Raw ASR
+files are unchanged. Completion of processing does not imply timing or word
+accuracy has been verified.
+
 ## Regression coverage
 
 Synthetic tests cover valid speech plus the exact terminal marker shape, marker-
-only results, empty text, malformed JSON, negative/reversed/zero/out-of-window
-speech times, backwards speech order, unknown markers, whitespace/region language
+only results, empty text, malformed JSON, negative/reversed/out-of-window
+speech times, flagged zero-duration speech, backwards speech order, unknown markers, whitespace/region language
 arguments, mixed-language chunks, sample-distinct stereo, and equal text on
 different channels. Worker tests cover bounded retries, unchanged committed
 cursor and earlier text, manual resumption, recovered empty chunks, cancellation,
 and immediate stop for non-retryable source errors. Existing capture, cloud,
 pipeline, export and core tests remain part of the verification run.
+Additional regressions verify unchanged zero-duration text and points at overlap,
+cursor and window-end boundaries, both channels, checkpoint round-tripping and
+older-checkpoint decoding, plus successful controller advancement with timing
+review flags and following speech intact.
 
 No private audio is sent to any service, no models are downloaded, and no
 historical transcripts are rewritten. Real multilingual/dialect accuracy and
 crosstalk attribution remain unverified; these changes fix control-flow and
 parsing correctness rather than claim recognition-quality improvements.
 
-## Verification
+## Full local replay verification (480-second follow-up)
+
+- Replayed the complete 1,541.6-second recording through the actual
+  `LiveTranscription` controller, native audio preparation and local whisper.cpp:
+  existing Tiny model, automatic language, 10-second windows, one-second overlap,
+  two threads. No model downloads, cloud calls or user settings changes.
+- Completed all 73,996,800 frames in 295.741 seconds: 155 contiguous checkpoints,
+  156 worker calls (including the final EOF check), no retry or skipped chunk.
+  This is completed-file replay, not a simultaneous hardware-recording test or
+  an accuracy benchmark.
+- An independent comparison of 307 raw JSON files against checkpoints confirmed
+  all 553 owned speech entries, preserving words, channel attribution and the
+  existing overlap rules. Exactly one zero-duration speech entry was retained
+  with `missingDuration`; its point remained 484 s. The 480-second window's four
+  channel-0 entries exactly match the previously failed attempt's text and offsets.
+- Before/after SHA-256 checks matched for all 105 protected source, manifest and
+  historical diagnostic files. New results and the one-off test harness are in
+  a fresh private `LiveReplay-480Fix-20261015-*` application-support directory;
+  even process-log retention was isolated in its own test home. No private
+  recordings, text or diagnostic artifacts are included in the repository.
+- Targeted live suite: 28 tests passed. Native core: 31 tests passed, including
+  Python-reference parity. Python pipeline: 54 tests passed.
+- Full Release app suite: 472 tests / 71 suites in 47.213 seconds (471 passed,
+  one opt-in signed Keychain test skipped). Together with core and pipeline,
+  556 tests passed; the separate real-recording acceptance replay also passed.
+  Logs: `Build/live-point-{targeted,all-app,core,python}-tests.log`.
+  The running 0.2.9 app was not replaced or interrupted by this test-only replay.
+- Origin advanced to `72c930b` during verification. The fix was rebased without
+  conflicts; the replayed live code and audio reader were unchanged. The combined
+  Release suite passed again: 482 tests / 73 suites in 43.228 seconds (481 passed,
+  the same Keychain opt-in skipped), bringing the app/core/pipeline total to 566
+  passing tests. Log: `Build/live-point-rebased-app-tests.log`.
+
+## Earlier verification (0.2.9)
 
 - Targeted live suite: 24 tests passed, including parameterized invalid-output
   and language cases (`Build/live-fix-targeted-tests.log`).

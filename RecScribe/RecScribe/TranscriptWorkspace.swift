@@ -53,6 +53,10 @@ struct LiveTranscriptView: View {
                                 MarkdownReadingText(text: segment.text)
                                 Text("\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")")
                                     .font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                                if let issue = segment.timingIssue {
+                                    Label(issue.label, systemImage: "exclamationmark.triangle")
+                                        .font(.caption).foregroundStyle(.orange)
+                                }
                             }
                             .id(segment.id)
                         }

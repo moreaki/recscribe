@@ -16,6 +16,10 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- Live Whisper speech with a zero-duration timestamp is retained at the reported
+  point with an explicit timing-review flag and visible warning. It no longer
+  stops the chunk; no words are deduplicated or durations fabricated. Invalid
+  negative, reversed or out-of-window speech times still fail explicitly.
 - Live Whisper previews ignore known non-speech markers, including zero-length
   `[BLANK_AUDIO]`, without discarding valid speech in the same chunk. Malformed
   local recognizer output retries once at the committed cursor, then stops

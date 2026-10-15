@@ -21,12 +21,21 @@ nonisolated enum LiveTranscriptionPolicy {
 }
 
 nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
+    enum TimingIssue: String, Codable, Sendable {
+        case missingDuration
+
+        var label: String { "Time range unclear · recognizer returned no duration" }
+    }
+
     let id: UUID
     let startSeconds: Double
     let endSeconds: Double
     let channel: Int
     let language: String?
     let text: String
+    /// Optional for older checkpoints. Equal times retain the recognizer's point,
+    /// not a measured speech interval; never infer a duration from nearby words.
+    var timingIssue: TimingIssue? = nil
 }
 
 nonisolated struct LiveChunkResult: Codable, Sendable {

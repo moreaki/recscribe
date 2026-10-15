@@ -47,6 +47,8 @@ jobs:
             -scheme RecScribe \
             -destination 'platform=macOS' \
             -only-testing:RecScribeTests \
+            -parallel-testing-enabled NO \
+            -parallel-testing-worker-count 1 \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 120 \
             -resultBundlePath TestResults-functional.xcresult \
@@ -77,11 +79,26 @@ jobs:
             -only-testing:RecScribeTests \
             -skip-testing:RecScribeTests/M4AEncoderTests \
             -skip-testing:RecScribeTests/FLACEncoderTests \
+            -parallel-testing-enabled NO \
+            -parallel-testing-worker-count 1 \
             -enableThreadSanitizer YES \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 300 \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Export test diagnostics
+        if: always()
+        run: |
+          for bundle in TestResults-functional.xcresult TestResults.xcresult; do
+            if [ -d "$bundle" ]; then
+              stem="${bundle%.xcresult}"
+              xcrun xcresulttool get test-results summary --path "$bundle" > "$stem.json" \
+                || echo "::warning::Could not export summary for $bundle"
+              xcrun xcresulttool export diagnostics --path "$bundle" --output-path "$stem-diagnostics" \
+                || echo "::warning::Could not export diagnostics for $bundle"
+            fi
+          done
 
       - name: Upload test results
         if: always()
@@ -91,6 +108,8 @@ jobs:
           path: |
             TestResults.xcresult
             TestResults-functional.xcresult
+            TestResults*.json
+            TestResults*-diagnostics/
           if-no-files-found: ignore
 
   release-build:

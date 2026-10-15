@@ -10,11 +10,18 @@ struct ConfigurationView: View {
     @State private var section: SettingsSection
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
+    @State private var availabilityRefresh = 0
     init(section: SettingsSection = .storage) { _section = State(initialValue: section) }
     private enum Layout {
         static let numericFieldWidth: CGFloat = 100
         static let progressWidth: CGFloat = 90
     }
+    private var availabilityKey: [String] {
+        [settings.values.ffmpegPath, settings.values.whisperPath, settings.values.pythonPath,
+         settings.values.modelPath, settings.values.verificationModelPath,
+         section.rawValue, String(availabilityRefresh), String(runtime.busy), String(library.recordingActive), String(library.liveWorkActive)]
+    }
+    private var runtimeActionsDisabled: Bool { runtime.busy || library.recordingActive || library.liveWorkActive }
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
@@ -56,15 +63,60 @@ struct ConfigurationView: View {
             idealHeight: AppWindow.settings.defaultSize.height)
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onChange(of: library.recordingActive) { _, active in if active { runtime.cancel() } }
-        .confirmationDialog("Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
-            Button("Install") { if let name = installation { runtime.install(name) }; installation = nil }
+        .task(id: availabilityKey) {
+            guard !runtime.busy else { return }
+            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+            await runtime.refreshAvailability()
+        }
+        .confirmationDialog(installation == .pipeline && runtime.dependency(.pipeline) != nil ? "Reinitialize pipeline runtime?" : "Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
+            Button(installation == .pipeline && runtime.dependency(.pipeline) != nil ? "Reinitialize" : "Install") {
+                if let name = installation { runtime.install(name, reinitialize: name == .pipeline && runtime.dependency(.pipeline) != nil) }
+                installation = nil
+            }
         } message: {
-            Text(installation == .pipeline ? "Creates a private Python environment and downloads the pipeline’s package dependencies. No models or audio are uploaded." : "Runs brew install \(installation?.rawValue ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
+            Text(installation == .pipeline ? "Creates a new private Python environment and downloads the pipeline’s package dependencies. Existing environments, models and jobs are retained. No models or audio are uploaded." : "Runs brew install \(installation?.rawValue ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
         }
         .confirmationDialog("Download Whisper model?", isPresented: Binding(get: { download != nil }, set: { if !$0 { download = nil } })) {
             Button("Download and verify") { if let model = download { runtime.download(model) }; download = nil }
         } message: {
             Text("\(download?.id ?? "") · \(ByteCountFormatter.string(fromByteCount: download?.bytes ?? 0, countStyle: .file)) from ggerganov/whisper.cpp on Hugging Face. SHA-256 is checked before selection. No audio is uploaded.")
+        }
+    }
+
+    @ViewBuilder private func dependencyStatus(_ software: LocalSoftware, name: String) -> some View {
+        if software == .ollama, runtime.localAIAvailable {
+            Label("Ollama service detected · 127.0.0.1:11434", systemImage: "checkmark.circle.fill")
+                .font(.callout).foregroundStyle(WorkspaceStyle.mint)
+            Button("Recheck local AI") { runtime.detectAI() }.disabled(runtimeActionsDisabled)
+        } else if let found = runtime.dependency(software) {
+            Label("\(name) found\(found.version.map { " · \($0)" } ?? "")", systemImage: found.issue == nil ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(found.issue == nil ? WorkspaceStyle.mint : theme.colors.statusWarning)
+            Text(found.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            if software == .ffmpeg && !settings.values.ffmpegPath.isEmpty && settings.values.ffmpegPath != found.path
+                || software == .whisperCPP && !settings.values.whisperPath.isEmpty && settings.values.whisperPath != found.path {
+                Text("The configured path is unavailable. Select the detected executable to use it.")
+                    .font(.caption).foregroundStyle(theme.colors.statusWarning)
+            }
+            if let issue = found.issue { Text(issue).font(.caption).foregroundStyle(theme.colors.statusWarning) }
+            HStack {
+                Button("Recheck") { availabilityRefresh += 1 }
+                Button("Reveal executable") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: found.path)]) }
+                if software == .pipeline {
+                    Button("Reinitialize pipeline…") { installation = .pipeline }
+                    Button("Forget selection") { runtime.forgetPipelineSelection() }
+                        .help("Clears the selected Python path. Existing environments, models and jobs are retained.")
+                } else if software == .ffmpeg && settings.values.ffmpegPath != found.path
+                            || software == .whisperCPP && settings.values.whisperPath != found.path {
+                    Button("Use detected executable") { runtime.useDependency(software) }
+                }
+            }.disabled(runtimeActionsDisabled || runtime.checkingAvailability)
+        } else if runtime.availabilityCurrent && !runtime.checkingAvailability {
+            HStack {
+                Button(software == .pipeline ? "Set up isolated pipeline runtime…" : "Install \(name)…") { installation = software }
+                Button("Recheck") { availabilityRefresh += 1 }
+            }.disabled(runtimeActionsDisabled)
+        } else {
+            Text("Checking local \(name) availability…").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -129,7 +181,7 @@ struct ConfigurationView: View {
                     Picker("Bitrate", selection: $settings.values.storage.bitrateKbps) { ForEach(RecordingStorageOptions.bitrateChoices, id: \.self) { Text("\($0) kbps").tag($0) } }
                 }
                 file("FFmpeg executable", value: $settings.values.ffmpegPath)
-                Button("Install FFmpeg…") { installation = .ffmpeg }.disabled(runtime.busy)
+                dependencyStatus(.ffmpeg, name: "FFmpeg")
             }
         }
     }
@@ -186,7 +238,7 @@ struct ConfigurationView: View {
                 Button("Clear optional VAD model") { settings.values.vadModelPath = "" }
             }
             file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
-            Button("Set up isolated pipeline runtime…") { installation = .pipeline }.disabled(runtime.busy)
+            dependencyStatus(.pipeline, name: "Pipeline")
             Text("Completed local audio jobs use this runtime. AI text actions and cloud live transcription run natively in Swift. Setup retains previous versions.").font(.caption).foregroundStyle(.secondary)
             Text("Normalize/translate require AI post-processing. Cloud text processing is always a separate, confirmed action in the Studio; automatic recognition never uploads text.").font(.caption).foregroundStyle(.secondary)
         }
@@ -205,11 +257,33 @@ struct ConfigurationView: View {
                     Button("Use detected tool paths") { runtime.useDetectedTools() }
                         .disabled(library.recordingActive)
                 }
-                HStack { Button("Detect Whisper & Metal") { runtime.detect() }; Button("Install whisper.cpp…") { installation = .whisperCPP } }.disabled(runtime.busy || library.recordingActive)
+                Button("Detect Whisper & Metal") { runtime.detect() }.disabled(runtimeActionsDisabled)
+                dependencyStatus(.whisperCPP, name: "whisper.cpp")
             }
             card("Model library", detail: "Choose the memory/accuracy trade-off explicitly. Downloads are optional and verified against the published model checksum.") {
+                Button("Recheck local model files") { availabilityRefresh += 1 }.disabled(runtimeActionsDisabled)
                 ForEach(WhisperModel.catalog) { model in
-                    HStack { Text(model.id).fontWeight(.medium); Spacer(); Text(ByteCountFormatter.string(fromByteCount: model.bytes, countStyle: .file)).foregroundStyle(.secondary); Button("Download…") { download = model } }.disabled(runtime.busy || library.recordingActive)
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            Text(model.id).fontWeight(.medium)
+                            Spacer()
+                            Text(ByteCountFormatter.string(fromByteCount: model.bytes, countStyle: .file)).foregroundStyle(.secondary)
+                            if let found = runtime.localModel(model) {
+                                Label(found.expectedSize ? "Found locally" : "File needs review", systemImage: found.expectedSize ? "checkmark.circle" : "exclamationmark.triangle")
+                                if found.expectedSize && settings.values.modelPath != found.path {
+                                    Button("Select") { settings.values.modelPath = found.path }
+                                }
+                                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: found.path)]) }
+                            } else if runtime.availabilityCurrent && !runtime.checkingAvailability {
+                                Button("Download…") { download = model }
+                            } else { Text("Checking…").foregroundStyle(.secondary) }
+                        }
+                        if let found = runtime.localModel(model) {
+                            Text(found.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                            Text(found.expectedSize ? "Local file detected; this scan does not verify its SHA-256." : "Existing file size differs from the catalog. Review the file before selecting or replacing it.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }.disabled(runtimeActionsDisabled)
                 }
             }
         }
@@ -225,7 +299,7 @@ struct ConfigurationView: View {
         card("Intelligence", detail: "Improve text, translate or summarize a finished transcript. Every action creates a new, source-linked version; audio and raw recognition stay unchanged.") {
             IntelligenceSettingsView()
             if settings.values.aiProvider == .ollama {
-                Button("Install Ollama…") { installation = .ollama }.disabled(runtime.busy || library.recordingActive)
+                dependencyStatus(.ollama, name: "Ollama")
             }
         }
     }

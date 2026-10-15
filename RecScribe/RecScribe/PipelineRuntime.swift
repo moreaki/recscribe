@@ -4,7 +4,7 @@ import Foundation
 /// Fail with an upgrade action instead of sending new arguments to an old CLI.
 nonisolated enum PipelineRuntime {
     static let minimumVersion = "0.2.1"
-    static let upgradeMessage = "Update the pipeline in Settings → Transcription → Set up isolated pipeline runtime. Existing environments and jobs are retained."
+    static let upgradeMessage = "Check Pipeline in Settings → Transcription. Reinitialize the existing runtime, or set one up if missing. Existing environments and jobs are retained."
     static func supportsTextActions(_ version: String) -> Bool {
         version.range(of: #"^\d+\.\d+\.\d+$"#, options: .regularExpression) != nil
             && version.compare(minimumVersion, options: .numeric) != .orderedAscending

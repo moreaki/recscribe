@@ -24,7 +24,9 @@ struct IntelligenceSettingsView: View {
                     Text(settings.values.ollamaModel.isEmpty ? "Choose a model" : settings.values.ollamaModel).tag(settings.values.ollamaModel)
                     ForEach(runtime.localAIModels.filter { $0 != settings.values.ollamaModel }, id: \.self) { Text($0).tag($0) }
                 }
-                Text("127.0.0.1:11434 only. Start Ollama and install a local model separately. Remote Ollama models are refused.")
+                Text(runtime.localAIModels.isEmpty
+                     ? "127.0.0.1:11434 only. Detect available models; if none are found, start Ollama and add a local model separately. Remote Ollama models are refused."
+                     : "\(runtime.localAIModels.count) local models detected at 127.0.0.1:11434. Remote Ollama models are refused.")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
                 Label("OpenAI connection", systemImage: "key.fill").font(.headline)

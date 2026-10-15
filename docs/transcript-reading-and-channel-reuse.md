@@ -79,7 +79,7 @@ and `Build/channel-reading-*.log`.
 
 App 0.2.8 requires pipeline 0.2.1 for new completed-recording jobs, to avoid silently
 using an older installed backend. Update through Settings → Transcription →
-Set up isolated pipeline runtime when prompted. Existing environments and jobs
+Reinitialize pipeline when prompted (or set it up if missing). Existing environments and jobs
 are retained. Reading existing transcripts does not require this runtime update.
 
 ## Local release verification

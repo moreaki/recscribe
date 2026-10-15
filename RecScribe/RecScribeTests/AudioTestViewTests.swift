@@ -22,7 +22,10 @@ struct AudioTestViewTests {
         provider.availableInputDevicesResult = [device]
         let test = AudioTestController(capture: capture, source: provider, permissions: MockPermissionProviding(.granted),
             levels: levels, monitor: monitor, playback: SessionPlayback(activate: { $0.pause() }, levels: listening),
-            temporaryRoot: directory, saveDirectory: { directory }, sampleSeconds: 0.05)
+            // Use the production timeline, then stop explicitly after feeding.
+            // A 50-ms cap can expire during writer setup on a busy CI runner;
+            // duration caps and automatic stopping have separate controller tests.
+            temporaryRoot: directory, saveDirectory: { directory })
         let recorder = RecorderViewModel(controller: MockRecordingControlling(), permissions: MockPermissionProviding(.granted),
             clock: ManualClock(), audioSource: provider, defaults: defaults, audioTest: test)
         recorder.permissionStatus = .granted

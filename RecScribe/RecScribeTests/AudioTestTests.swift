@@ -122,7 +122,8 @@ struct AudioTestTests {
         #expect(sample.entry.session.totalFrames <= 2_400 && sample.entry.session.totalFrames > 0)
         #expect(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).allSatisfy { !$0.lastPathComponent.hasSuffix(".recscribe.json") })
         test.playSample()
-        for _ in 0..<200 where playback.loading { try await Task.sleep(for: .milliseconds(5)) }
+        await waitUntil("verified sample playback load") { !playback.loading }
+        #expect(playback.errorMessage == nil)
         #expect(playback.player != nil && !capture.capturing)
         await test.keepSample()
         #expect(test.sample == nil && !FileManager.default.fileExists(atPath: sample.folder.path))
@@ -206,7 +207,7 @@ struct AudioTestTests {
         capture.onSourceFailure?(.input("mic"), "Test microphone disconnected")
         let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         for index in 0..<8 { capture.emit(.init(track: .playback, presentationTime: epoch + Double(index) / 100, buffer: pcm(0.4))) }
-        for _ in 0..<400 where test.state != .ready { try await Task.sleep(for: .milliseconds(5)) }
+        await waitUntil("automatic sample finalization") { test.state == .ready }
         let sample = try #require(test.sample)
         #expect(test.state == .ready && !capture.capturing && capture.stopCount == 1)
         #expect(sample.warnings.contains { $0.contains("Test microphone") && $0.contains("disconnected") })

@@ -6,7 +6,10 @@ struct RecordingLibraryView: View {
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.glassTheme) private var theme
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
     @StateObject private var playback = SessionPlayback()
+    @State private var recordingToDelete: SessionEntry?
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
@@ -56,6 +59,11 @@ struct RecordingLibraryView: View {
                                     catch { library.errorMessage = error.localizedDescription } }
                             }
                         }
+                        Button("Delete…", systemImage: "trash", role: .destructive) {
+                            recordingToDelete = entry
+                            showingDeleteConfirmation = true
+                        }
+                            .disabled(!library.canDeleteRecording)
                     }.buttonStyle(.borderless).disabled(library.recordingActive || library.liveWorkActive)
                     ForEach(entry.session.issues, id: \.self) { Text($0).font(.caption).foregroundStyle(theme.colors.statusWarning) }
                 }.padding(.vertical, GlassSpacing.s)
@@ -73,6 +81,8 @@ struct RecordingLibraryView: View {
                 Spacer()
                 if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
                 Button("Cancel work") { library.cancel() }
+                Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
+                    .help("Close the Recordings window; background processing continues.")
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
         }.padding(GlassSpacing.xxl).frame(minWidth: AppWindow.recordings.minimumSize.width, minHeight: AppWindow.recordings.minimumSize.height)
@@ -82,6 +92,15 @@ struct RecordingLibraryView: View {
             }
             .onDisappear { playback.stop(); library.cancelRefresh() }
             .onChange(of: library.recordingActive) { _, active in playback.setRecording(active) }
+            .confirmationDialog("Move recording to Trash?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible, presenting: recordingToDelete) { entry in
+                Button("Move to Trash", role: .destructive) {
+                    playback.stop()
+                    library.moveToTrash(entry)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { entry in
+                Text("\(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")) and its audio parts and archives will be moved to Trash together. You can restore the folder from Trash. Existing transcripts and exports are kept.")
+            }
     }
     private func reload() { library.load(URL(fileURLWithPath: recorder.saveLocationPath)) }
 }

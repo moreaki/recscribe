@@ -90,6 +90,25 @@ final class SessionLibrary: ObservableObject {
         refreshTask = nil
         refreshing = false
     }
+    var canDeleteRecording: Bool {
+        !shuttingDown && !recordingActive && !liveWorkActive && task == nil
+    }
+
+    func moveToTrash(_ entry: Entry) {
+        guard canDeleteRecording else {
+            errorMessage = "Wait for capture/background work to finish before deleting"
+            return
+        }
+        cancelRefresh()
+        errorMessage = nil
+        do {
+            try SessionDeletion.moveToTrash(entry.id)
+            pending.removeAll { $0.manifest == entry.id }
+            entries.removeAll { $0.id == entry.id }
+            activity = "Recording moved to Trash"
+        } catch { errorMessage = error.localizedDescription }
+        load(entry.id.deletingLastPathComponent())
+    }
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active { cancellation?.cancel(); task?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }

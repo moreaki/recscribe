@@ -2,11 +2,28 @@ import AVFoundation
 import Foundation
 import os
 
+/// Only malformed recognizer output is eligible for a bounded local retry.
+/// Missing tools, source/audio errors and cancellation must not be retried here.
+nonisolated enum LiveWhisperOutputError: LocalizedError {
+    case malformedJSON
+    case invalidTimestamps
+    case invalidSpeechTimestamps
+
+    var errorDescription: String? {
+        switch self {
+        case .malformedJSON: "Malformed Whisper output"
+        case .invalidTimestamps: "Invalid Whisper timestamps"
+        case .invalidSpeechTimestamps: "Invalid Whisper timestamps for speech"
+        }
+    }
+}
+
 /// Native preparation + the existing replaceable whisper.cpp executable. No
 /// Python launch, model hashing or version probe per chunk. One ASR child at a
 /// time leaves capture headroom; Metal remains whisper.cpp's default backend.
 nonisolated enum LiveWhisperTranscriber {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
+    private static let nonSpeechMarkers: Set<String> = ["[blank_audio]", "[silence]", "[no_speech]"]
 
     static func step(manifest: URL, directory: URL, cursor: Int64, finished: Bool,
                      settings: AppSettings.Values, cancel: WorkCancellation) throws -> LiveChunkResult? {
@@ -47,9 +64,7 @@ nonisolated enum LiveWhisperTranscriber {
                 continue
             }
             let output = attempt.appendingPathComponent("channel-\(channel).raw")
-            let language = settings.sourceLanguage == "auto" ? "auto" : String(settings.sourceLanguage.split(separator: "-").first ?? "auto")
-            let arguments = ["-m", settings.modelPath, "-f", audio.path, "-l", language,
-                             "-ojf", "-of", output.path, "-t", String(settings.liveThreads), "-tp", "0", "-mc", "0"]
+            let arguments = arguments(audio: audio, output: output, settings: settings)
             _ = try LocalProcessRunner.run(URL(fileURLWithPath: settings.whisperPath), arguments,
                                           in: attempt, cancel: cancel, timeout: LiveTranscriptionPolicy.timeout)
             asrRuns += 1
@@ -68,6 +83,15 @@ nonisolated enum LiveWhisperTranscriber {
         try encoder.encode(result).write(to: directory.appendingPathComponent("latest.json"), options: .atomic)
         logger.notice("Live chunk operation=\(cancel.id) start_frame=\(cursor) end_frame=\(slice.endFrame) channels=\(channels.count) asr_runs=\(asrRuns) elapsed_s=\(seconds) audio_s=\(Double(slice.endFrame - cursor) / Double(slice.sampleRate))")
         return result
+    }
+
+    /// Regional language choices use whisper.cpp's base language code. `auto`
+    /// stays explicit and is re-evaluated for every chunk and independent channel.
+    static func arguments(audio: URL, output: URL, settings: AppSettings.Values) -> [String] {
+        let configured = settings.sourceLanguage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let language = configured.split(separator: "-", maxSplits: 1).first.map { $0.lowercased() } ?? "auto"
+        return ["-m", settings.modelPath, "-f", audio.path, "-l", language,
+                "-ojf", "-of", output.path, "-t", String(settings.liveThreads), "-tp", "0", "-mc", "0"]
     }
 
     /// One converter owns one bounded input stream; flushes its tail at EOF.
@@ -122,21 +146,46 @@ nonisolated enum LiveWhisperTranscriber {
         defer { try? input.close() }
         let bytes = try input.read(upToCount: LiveTranscriptionPolicy.maximumResultBytes + 1) ?? Data()
         guard bytes.count <= LiveTranscriptionPolicy.maximumResultBytes else { throw SessionError.invalid("Whisper result exceeds the live preview limit") }
-        let raw = try JSONDecoder().decode(Raw.self, from: bytes)
+        let raw: Raw
+        do { raw = try JSONDecoder().decode(Raw.self, from: bytes) }
+        catch is DecodingError { throw LiveWhisperOutputError.malformedJSON }
+        guard slice.sampleRate > 0, slice.startFrame >= 0, slice.endFrame > slice.startFrame,
+              cursor >= slice.startFrame, cursor < slice.endFrame else {
+            throw SessionError.invalid("Invalid live audio window")
+        }
         let offset = Double(slice.startFrame) / Double(slice.sampleRate)
         let boundary = Double(cursor) / Double(slice.sampleRate)
         let end = Double(slice.endFrame) / Double(slice.sampleRate)
-        return try raw.transcription.compactMap { entry in
-            guard entry.offsets.from >= 0, entry.offsets.to > entry.offsets.from else { throw SessionError.invalid("Invalid Whisper timestamps") }
+        var segments: [LiveSegment] = []
+        var previousStart = -1
+        var skippedMarkers = 0
+        for entry in raw.transcription {
+            guard entry.offsets.from >= 0, entry.offsets.to >= entry.offsets.from else {
+                throw LiveWhisperOutputError.invalidTimestamps
+            }
+            let text = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Match complete, known markers only; bracketed speech stays speech.
+            if text.isEmpty || nonSpeechMarkers.contains(text.lowercased()) {
+                skippedMarkers += 1
+                continue
+            }
+            guard entry.offsets.to > entry.offsets.from, entry.offsets.from >= previousStart else {
+                throw LiveWhisperOutputError.invalidSpeechTimestamps
+            }
+            previousStart = entry.offsets.from
             let start = offset + Double(entry.offsets.from) / 1_000
             let stop = min(end, offset + Double(entry.offsets.to) / 1_000)
-            let text = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard start < end else { throw LiveWhisperOutputError.invalidSpeechTimestamps }
             // Context-only segments never appear twice. A straddling segment is
             // clipped in time, not guessed word-by-word: the draft needs review.
-            guard stop > boundary, stop > start, !text.isEmpty else { return nil }
-            return LiveSegment(id: UUID(), startSeconds: max(boundary, start), endSeconds: stop,
-                               channel: channel, language: raw.result?.language, text: text)
+            guard stop > boundary else { continue }
+            segments.append(LiveSegment(id: UUID(), startSeconds: max(boundary, start), endSeconds: stop,
+                                        channel: channel, language: raw.result?.language, text: text))
         }
+        if skippedMarkers > 0 {
+            logger.notice("Ignored non-speech markers cursor_frame=\(cursor) channel=\(channel) count=\(skippedMarkers)")
+        }
+        return segments
     }
 }
 

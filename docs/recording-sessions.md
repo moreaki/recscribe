@@ -151,7 +151,14 @@ without a separately authorized local model.
 - True per-language VAD segmentation, persistent concurrent transcriber workers,
   Swift-native normalization, WhisperKit and MLX adapters are not implemented by
   this slice. Auto language detection currently applies per part/channel ASR pass;
-  it is not verified code-switch detection. No near-real-time claim is made.
+  it is not verified code-switch detection. Live auto detection remains per
+  chunk/channel, without locking subsequent chunks to an earlier guess. Explicit
+  source-language choices also apply to live chunks (`de-CH` becomes `de`).
+  Known non-speech markers do not disable live transcription; malformed local
+  recognizer output is retried once at the same cursor before a visible stop.
+  See [live transcription reliability](live-transcription-reliability.md) for
+  the retained-stash review, error policy and regression coverage.
+  No near-real-time claim is made.
 - Summaries are bounded source-linked notes, not an independently fact-checked
   editorial document. No cloud provider integration is enabled.
 - Active-capture multi-source routing remains tracked in GitHub issue #1.

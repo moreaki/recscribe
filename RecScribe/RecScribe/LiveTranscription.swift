@@ -16,6 +16,8 @@ nonisolated enum LiveTranscriptionPolicy {
     static let maximumResultBytes = 4 * 1_024 * 1_024
     static let timeout: TimeInterval = 300
     static let pollInterval: Duration = .seconds(1)
+    /// Retry malformed local ASR output once, always at the committed cursor.
+    static let maximumLocalChunkAttempts = 2
 }
 
 nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
@@ -64,6 +66,7 @@ nonisolated struct LiveChunkTiming: Sendable {
 /// before opt-in. The retained UI preview is bounded; raw chunks stay on disk.
 @MainActor
 final class LiveTranscription: ObservableObject {
+    private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
     struct CloudRequest: Identifiable {
         let id: UUID
         let source: URL
@@ -232,6 +235,7 @@ final class LiveTranscription: ObservableObject {
         onBusyChange(true)
         task = Task { [weak self] in
             var cloudJobCreated = false
+            var attempt = 0
             do {
                 if let cloud {
                     try await CloudTranscriptArtifacts.begin(directory, source: manifest, consent: cloud.consent)
@@ -242,13 +246,29 @@ final class LiveTranscription: ObservableObject {
                 }
                 while let self, enabled, generation == id {
                     let final = !capturing, position = cursor
-                    let result: LiveChunkResult?
-                    if let cloud {
-                        result = try await cloud.step(manifest: manifest, directory: directory, cursor: position,
-                            finished: final, settings: values, cancel: token) { [weak self] segment in
-                                await self?.updateCloudPreview(segment, generation: id)
-                            }
-                    } else { result = try await work(manifest, directory, position, final, values, token) }
+                    var result: LiveChunkResult?
+                    attempt = 0
+                    while true {
+                        try token.check()
+                        attempt += 1
+                        let started = ContinuousClock.now
+                        do {
+                            if let cloud {
+                                result = try await cloud.step(manifest: manifest, directory: directory, cursor: position,
+                                    finished: final, settings: values, cancel: token) { [weak self] segment in
+                                        await self?.updateCloudPreview(segment, generation: id)
+                                    }
+                            } else { result = try await work(manifest, directory, position, final, values, token) }
+                            break
+                        } catch {
+                            try token.check()
+                            guard cloud == nil, error is LiveWhisperOutputError,
+                                  attempt < LiveTranscriptionPolicy.maximumLocalChunkAttempts else { throw error }
+                            let elapsed = started.duration(to: .now)
+                            Self.logger.error("Retrying malformed live output operation=\(token.id) cursor_frame=\(position) attempt=\(attempt) elapsed=\(String(describing: elapsed), privacy: .public)")
+                            status = "Retrying live chunk · attempt \(attempt + 1)/\(LiveTranscriptionPolicy.maximumLocalChunkAttempts) · recording is unaffected"
+                        }
+                    }
                     try token.check()
                     guard generation == id else { break }
                     if let result {
@@ -256,6 +276,9 @@ final class LiveTranscription: ObservableObject {
                             throw SessionError.invalid("Invalid live transcription cursor")
                         }
                         cursor = result.endFrame
+                        if attempt > 1 {
+                            Self.logger.notice("Recovered live chunk operation=\(token.id) start_frame=\(position) end_frame=\(self.cursor) attempts=\(attempt)")
+                        }
                         let finalIDs = Set(result.segments.map(\.id))
                         segments = Self.preview(segments.filter { !finalIDs.contains($0.id) } + result.segments)
                         modelName = result.model.map { URL(fileURLWithPath: $0).lastPathComponent }
@@ -281,6 +304,8 @@ final class LiveTranscription: ObservableObject {
             catch {
                 if cloudJobCreated { await CloudTranscriptArtifacts.interrupted(directory, source: manifest, cancelled: false) }
                 if let self, generation == id {
+                    let kind = String(describing: type(of: error))
+                    Self.logger.error("Stopped live transcription operation=\(token.id) cursor_frame=\(self.cursor) attempts=\(attempt) error_type=\(kind, privacy: .public)")
                     errorMessage = error.localizedDescription
                     status = capturing ? "Live transcription needs attention · recording is unaffected" : "Live transcription needs attention · draft is incomplete"
                     enabled = false

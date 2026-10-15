@@ -151,14 +151,195 @@ struct LiveTranscriptionTests {
         #expect(saved.asrRuns == 0)
     }
 
+    private func parseEntries(_ entries: String, channel: Int = 0) throws -> [LiveSegment] {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let raw = root.appendingPathComponent("raw.json")
+        let bytes = Data("{\"result\":{\"language\":\"de\"},\"transcription\":\(entries)}".utf8)
+        try bytes.write(to: raw)
+        let slice = LiveAudioReader.Slice(file: raw, startFrame: 0, endFrame: 10_000, availableFrames: 10_000,
+                                          sampleRate: 1_000, channels: 2, identicalChannels: false)
+        let segments = try LiveWhisperTranscriber.parse(raw, slice: slice, cursor: 0, channel: channel)
+        #expect(try Data(contentsOf: raw) == bytes)
+        return segments
+    }
+
+    @Test func nonSpeechMarkersDoNotDiscardValidSpeech() throws {
+        let parsed = try parseEntries(#"[{"offsets":{"from":0,"to":800},"text":"Gültige Sprache"},{"offsets":{"from":10000,"to":10000},"text":" [BLANK_AUDIO]"}]"#)
+        #expect(parsed.map(\.text) == ["Gültige Sprache"])
+        #expect(parsed.first?.startSeconds == 0)
+        #expect(parsed.first?.endSeconds == 0.8)
+        #expect(parsed.first?.language == "de")
+    }
+
+    @Test(arguments: [" [BLANK_AUDIO]", "[silence]", "[NO_SPEECH]", " "])
+    func markerOnlyResultsAreValidEmptyChunks(marker: String) throws {
+        #expect(try parseEntries("[{\"offsets\":{\"from\":0,\"to\":10000},\"text\":\"\(marker)\"},{\"offsets\":{\"from\":10000,\"to\":10000},\"text\":\"\(marker)\"}]").isEmpty)
+    }
+
+    @Test(arguments: [
+        #"[{"offsets":{"from":-1,"to":100},"text":"speech"}]"#,
+        #"[{"offsets":{"from":200,"to":100},"text":"speech"}]"#,
+        #"[{"offsets":{"from":100,"to":100},"text":"speech"}]"#,
+        #"[{"offsets":{"from":500,"to":700},"text":"first"},{"offsets":{"from":400,"to":800},"text":"second"}]"#,
+        #"[{"offsets":{"from":-1,"to":0},"text":"[BLANK_AUDIO]"}]"#,
+        #"[{"offsets":{"from":2,"to":1},"text":"[BLANK_AUDIO]"}]"#,
+        #"[{"offsets":{"from":10000,"to":11000},"text":"outside audio"}]"#,
+        #"[{"offsets":{"from":0,"to":0},"text":"[UNKNOWN]"}]"#,
+        #"[{"offsets":{"from":0,"to":0},"text":"[BLANK_AUDIO] spoken words"}]"#,
+        #"[{"text":"missing offsets"}]"#,
+        #"[{"offsets":{"from":0,"to":null},"text":"speech"}]"#,
+        "not-json"
+    ])
+    func malformedWhisperOutputStillFailsExplicitly(entries: String) throws {
+        #expect(throws: LiveWhisperOutputError.self) { try parseEntries(entries) }
+    }
+
+    @Test func equalTextInSeparateChannelsIsNotDiscarded() throws {
+        let entries = #"[{"offsets":{"from":0,"to":800},"text":"[BLANK_AUDIO] spoken words"}]"#
+        let left = try parseEntries(entries, channel: 0), right = try parseEntries(entries, channel: 1)
+        #expect(left.count == 1 && right.count == 1)
+        #expect(left.first?.text == right.first?.text)
+        #expect(left.first?.channel == 0 && right.first?.channel == 1)
+    }
+
+    @Test func nearlyIdenticalChannelsRemainSeparate() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let writer = try recording(root, seconds: 1, identical: true)
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 2))
+        let frame = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1))
+        frame.frameLength = 1
+        frame.floatChannelData![0][0] = 0
+        frame.floatChannelData![1][0] = 0.25
+        try writer.writeBuffer(frame)
+        try writer.finalize()
+        let manifest = try #require(writer.manifestURL)
+        let slice = try #require(try LiveAudioReader.copy(manifest: manifest, cursor: 0,
+            seconds: 10, overlapSeconds: 1, finished: true, to: root.appendingPathComponent("chunk.wav"), cancel: WorkCancellation()))
+        #expect(!slice.identicalChannels)
+        #expect(slice.channels == 2)
+    }
+
+    @Test(arguments: [("de-CH", "de"), (" EN-us ", "en"), (" AUTO ", "auto"), ("", "auto")])
+    func configuredLanguageReachesWhisperArguments(configured: String, expected: String) throws {
+        var settings = AppSettings.Values()
+        settings.sourceLanguage = configured
+        let arguments = LiveWhisperTranscriber.arguments(audio: URL(fileURLWithPath: "/audio.wav"),
+            output: URL(fileURLWithPath: "/result"), settings: settings)
+        let index = try #require(arguments.firstIndex(of: "-l"))
+        #expect(arguments[index + 1] == expected)
+    }
+
     @MainActor final class Worker {
         var requests: [(Int64, Bool)] = []
+        var requestedLanguages: [String] = []
         var pending: [CheckedContinuation<LiveChunkResult?, any Error>] = []
         func run(cursor: Int64, final: Bool) async throws -> LiveChunkResult? {
             requests.append((cursor, final))
             return try await withCheckedThrowingContinuation { pending.append($0) }
         }
         func finish(_ result: LiveChunkResult?) { pending.removeFirst().resume(returning: result) }
+        func fail(_ error: any Error) { pending.removeFirst().resume(throwing: error) }
+        func recordLanguage(_ language: String) { requestedLanguages.append(language) }
+    }
+
+    @Test func corruptChunksRetryOnceAtLastSuccessfulCursorAndCanResume() async {
+        let worker = Worker()
+        let source = URL(fileURLWithPath: "/synthetic.wav")
+        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        live.setEnabled(true)
+        live.recordingStarted(source)
+        await waitUntil("first chunk") { worker.pending.count == 1 }
+        let speech = LiveSegment(id: UUID(), startSeconds: 0, endSeconds: 10, channel: 0, language: "de", text: "speech")
+        worker.finish(.init(startFrame: 0, endFrame: 10, availableFrames: 20, sampleRate: 1,
+                            durationSeconds: 0.01, segments: [speech], directory: source))
+        await waitUntil("next chunk") { worker.pending.count == 1 }
+        worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
+        await waitUntil("bounded retry") { worker.pending.count == 1 && worker.requests.count == 3 }
+        #expect(worker.requests.map(\.0) == [0, 10, 10])
+        #expect(live.cursor == 10 && live.enabled)
+        #expect(live.status.contains("Retrying"))
+        worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
+        await waitUntil("retry budget exhausted") { !live.busy }
+        #expect(worker.requests.count == 1 + LiveTranscriptionPolicy.maximumLocalChunkAttempts)
+        #expect(live.cursor == 10 && !live.enabled)
+        #expect(live.segments == [speech])
+        #expect(live.errorMessage?.contains("Whisper timestamps") == true)
+        #expect(live.status.contains("recording is unaffected"))
+        live.setEnabled(true)
+        await waitUntil("manual retry") { worker.pending.count == 1 }
+        #expect(worker.requests.last?.0 == 10)
+        live.setEnabled(false)
+        worker.finish(nil)
+        await live.shutdown()
+    }
+
+    @Test func recoveredMarkerOnlyChunkAdvancesCursorWithoutDisablingLiveWork() async {
+        let worker = Worker()
+        let source = URL(fileURLWithPath: "/synthetic.wav")
+        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        live.setEnabled(true)
+        live.recordingStarted(source)
+        await waitUntil("first attempt") { worker.pending.count == 1 }
+        worker.fail(LiveWhisperOutputError.malformedJSON)
+        await waitUntil("retry") { worker.pending.count == 1 && worker.requests.count == 2 }
+        live.recordingStopped()
+        worker.finish(.init(asrRuns: 1, startFrame: 0, endFrame: 10, availableFrames: 10, sampleRate: 1,
+                            durationSeconds: 0.01, segments: [], directory: source))
+        await waitUntil("tail") { worker.pending.count == 1 }
+        #expect(live.cursor == 10 && live.enabled)
+        worker.finish(nil)
+        await waitUntil("drained") { !live.busy }
+        #expect(worker.requests.map(\.0) == [0, 0, 10])
+        #expect(live.segments.isEmpty && live.errorMessage == nil)
+        #expect(live.status == "Live draft ready · verify before use")
+        await live.shutdown()
+    }
+
+    @Test func sourceFailuresAreNotRetried() async {
+        let worker = Worker()
+        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        live.setEnabled(true)
+        live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
+        await waitUntil("source read") { worker.pending.count == 1 }
+        worker.fail(SessionError.diskFull)
+        await waitUntil("source failure") { !live.busy }
+        #expect(worker.requests.count == 1)
+        #expect(live.cursor == 0 && !live.enabled)
+        await live.shutdown()
+    }
+
+    @Test func cancellationDuringRetryCannotCommitOrStartAnotherAttempt() async {
+        let worker = Worker()
+        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        live.setEnabled(true)
+        live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
+        await waitUntil("first attempt") { worker.pending.count == 1 }
+        worker.fail(LiveWhisperOutputError.invalidTimestamps)
+        await waitUntil("retry") { worker.pending.count == 1 && worker.requests.count == 2 }
+        live.setEnabled(false)
+        worker.fail(LiveWhisperOutputError.invalidTimestamps)
+        await live.shutdown()
+        #expect(worker.requests.count == 2)
+        #expect(live.cursor == 0 && live.errorMessage == nil)
+    }
+
+    @Test func automaticLanguageRemainsAutomaticAcrossSpeechChunks() async {
+        let worker = Worker()
+        let live = LiveTranscription(work: { _, _, cursor, _, settings, _ in
+            await worker.recordLanguage(settings.sourceLanguage)
+            guard cursor < 4 else { return nil }
+            let segment = LiveSegment(id: UUID(), startSeconds: Double(cursor), endSeconds: Double(cursor + 1),
+                                      channel: 0, language: cursor < 3 ? "de" : "en", text: "speech")
+            return .init(startFrame: cursor, endFrame: cursor + 1, availableFrames: 4, sampleRate: 1,
+                         durationSeconds: 0.01, segments: [segment], directory: URL(fileURLWithPath: "/synthetic"))
+        })
+        live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
+        live.recordingStopped()
+        live.setEnabled(true)
+        await waitUntil("mixed language draft") { !live.busy }
+        #expect(worker.requestedLanguages == Array(repeating: "auto", count: 5))
+        #expect(live.segments.map(\.language) == ["de", "de", "de", "en"])
+        await live.shutdown()
     }
 
     @Test func optInIsSerialAndCancelledResultsCannotAdvanceCursor() async {

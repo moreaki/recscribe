@@ -214,7 +214,7 @@ struct ConfigurationView: View {
                 .disabled(settings.values.processingLocation == .cloud)
             Text(settings.values.processingLocation == .cloud
                  ? "Each window uses an isolated Realtime connection. Shorter windows reduce the initial wait, but increase connection overhead. No history is uploaded when enabling mid-recording."
-                 : "Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto language detection runs per chunk; mixed-language boundaries require review.")
+                 : "Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto detects language per chunk and channel; mixed-language boundaries require review. For a known language, set Source language below (for example de-CH).")
                 .font(.caption).foregroundStyle(.secondary)
         }
         card("Completed recordings", detail: "Capture works without Whisper, Python or AI. The full verification, normalization and summary pipeline runs after recording or file import, independently of live drafts.") {

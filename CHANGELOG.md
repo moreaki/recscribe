@@ -16,6 +16,14 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- Live Whisper previews ignore known non-speech markers, including zero-length
+  `[BLANK_AUDIO]`, without discarding valid speech in the same chunk. Malformed
+  local recognizer output retries once at the committed cursor, then stops
+  visibly without skipping audio. Cancellation and source/configuration failures
+  are not retried; raw evidence and separate audio channels are preserved.
+- Live source-language arguments now trim whitespace and normalize regional
+  choices such as `de-CH` to `de`. Automatic detection remains per chunk/channel
+  instead of silently locking later speech to an earlier language.
 - Established RecScribe as an independent application based on Home Rec.
 - Renamed the Xcode project, application target, test targets, source directories,
   product strings, diagnostics, and bundle identifiers.

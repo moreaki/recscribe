@@ -156,7 +156,7 @@ struct ReskinSnapshots {
     // MARK: - Stubbed state
 
     private static let windowSize = CGSize(width: 450, height: 450)
-    private static let popoverSize = CGSize(width: 280, height: 240)
+    private static let popoverSize = CGSize(width: WorkspaceStyle.popoverWidth, height: 720)
 
     /// Local stand-in for the suite's `private` TestError.
     private struct SnapshotError: Error {

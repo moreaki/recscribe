@@ -15,6 +15,7 @@ protocol RecordingControlling: AnyObject {
     /// Called when the underlying capture stream fails unexpectedly mid-recording.
     var onStreamError: (@MainActor (String) -> Void)? { get set }
     var isRecording: Bool { get }
+    var sourceHealth: [SourceRecordingHealth] { get }
     var recordingURL: URL? { get }
     /// Start recording in the given output `format` (BL-015), returning the file URL.
     /// The format is captured here, at start, and fixed for the recording.
@@ -23,4 +24,8 @@ protocol RecordingControlling: AnyObject {
     /// Finalize after an unexpected capture failure: best-effort capture teardown
     /// plus finalizing the partial recording so captured audio is preserved.
     func finalizeAfterFailure() async
+}
+
+extension RecordingControlling {
+    var sourceHealth: [SourceRecordingHealth] { [] }
 }

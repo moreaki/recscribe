@@ -64,6 +64,8 @@ actor ManifestRepository {
             } catch { result.failures.append(ManifestFailure(id: url, message: error.localizedDescription)) }
         }
         try Task.checkCancellation()
+        let roots = Set(result.entries.filter { $0.session.parentSessionID == nil }.map { $0.session.id })
+        result.entries.removeAll { $0.session.parentSessionID.map { roots.contains($0) } ?? false }
         result.entries.sort { $0.session.startedAt > $1.session.startedAt }
         result.failures.sort { $0.id.lastPathComponent < $1.id.lastPathComponent }
         return result

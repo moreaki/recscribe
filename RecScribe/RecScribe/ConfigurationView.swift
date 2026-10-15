@@ -91,6 +91,20 @@ struct ConfigurationView: View {
     }
     private var storage: some View {
         Group {
+            card("Capture sources", detail: recorder.captureSourceHint) {
+                Text(recorder.captureSourceName ?? "All system audio").font(.headline)
+                Text("Use the capture menu to choose an app. Add an input below to record both sides of a meeting. Source files retain all input channels; the stereo mix uses channels 1–2 (mono is centered). Interface loopback channels can duplicate playback.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Button("System playback only") { recorder.setCaptureSource(.systemAll) }
+                    OverflowMenuButton()
+                }
+                ForEach(recorder.audioSource.availableInputDevices()) { device in
+                    Button("\(recorder.audioSource.selectedSource.appBundleID == nil ? "System playback" : "Selected app") + \(device.name)") {
+                        recorder.setCaptureSource(.mixed(appBundleID: recorder.audioSource.selectedSource.appBundleID, deviceUID: device.uid))
+                    }
+                }
+            }.disabled(!recorder.state.allowsCaptureSourceChange)
             card("Capture safely", detail: "Recording always writes 16-bit PCM WAV. Parts share one session and a continuous sample timeline. Changes apply to the next recording.") {
                 HStack {
                     Text("Maximum WAV part size (MiB)"); Spacer()

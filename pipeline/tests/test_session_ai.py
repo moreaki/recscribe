@@ -40,6 +40,21 @@ class SessionAITests(unittest.TestCase):
         job = Job(self.root / "job", self.source, dict(self.options, **options))
         return job, job.run(SyntheticEngine(), FFMPEG)
 
+    def test_v2_capture_mix_keeps_source_identity_and_requires_review(self):
+        self.manifest["schemaVersion"] = 2
+        self.manifest["sourceTracks"] = [
+            {"role": "playback", "name": "System playback", "manifestPath": "playback.recscribe.json"},
+            {"role": "microphone", "name": "Test input", "deviceUID": "test-device", "manifestPath": "input.recscribe.json"},
+        ]
+        write_json(self.source, self.manifest)
+        report, reasons = inspect_session(self.source, self.cancel)
+        self.assertEqual(report["kind"], "derived_capture_mix")
+        self.assertEqual(report["capture_source_tracks"][1]["deviceUID"], "test-device")
+        self.assertTrue(any("derived_mix" in reason for reason in reasons))
+        _, document = self.run_job()
+        self.assertEqual(document["status"], "completed_with_review")
+        validate(document)
+
     def test_continuous_timeline_all_artifacts_and_boundaries(self):
         job, document = self.run_job()
         self.assertEqual([s["start_ms"] for s in document["segments"]], [0, 1000, 2000])

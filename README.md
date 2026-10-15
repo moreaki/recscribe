@@ -9,7 +9,10 @@ independent application for precise, private, high-performance transcription.
 ## Status
 
 RecScribe is in active development. The current codebase provides system-audio,
-per-application, and microphone recording with WAV, FLAC, and M4A output. The local
+per-application, microphone, and simultaneous playback + selected-input recording.
+Combined capture retains separate source tracks and a derived stereo mix with
+per-source recording health; see [capture sources](docs/capture-sources.md).
+WAV originals support FLAC, Opus and M4A archive export. The local
 WAV transcription CLI now provides a tested local vertical slice with a
 whisper.cpp adapter, versioned canonical JSON and deterministic text/subtitle
 exports. Text normalization, translation and source-linked summaries now use a

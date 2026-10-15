@@ -80,7 +80,7 @@ struct CaptureSourceMenuTests {
         }
         // System audio (a compile-time singleton) plus one submenu per
         // runtime-enumerated kind: apps and microphones.
-        #expect(shape(many) == ["action", "submenu", "submenu"])
+        #expect(shape(many) == ["action", "submenu", "submenu", "submenu"])
         #expect(shape(none) == shape(many))
     }
 

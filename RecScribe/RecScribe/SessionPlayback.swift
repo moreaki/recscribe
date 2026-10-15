@@ -86,6 +86,22 @@ final class SessionPlayback: ObservableObject {
             if self?.generation == id { self?.loading = false; self?.task = nil }
         }
     }
+    func playSource(_ source: RecordingSession.SourceTrack, parent: SessionEntry) {
+        stop()
+        guard !recordingActive else { return }
+        let id = generation
+        loading = true
+        task = Task { [weak self] in
+            do {
+                let entry = try await Task.detached(priority: .utility) {
+                    try LinkedSourceSessions.read(source, parent: parent.session, at: parent.id)
+                }.value
+                guard !Task.isCancelled, let self, generation == id else { return }
+                play(entry)
+            } catch { if self?.generation == id { self?.loading = false; self?.errorMessage = error.localizedDescription } }
+        }
+    }
+
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active { stop() }

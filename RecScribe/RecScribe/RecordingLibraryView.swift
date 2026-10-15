@@ -48,6 +48,17 @@ struct RecordingLibraryView: View {
                                 library.transcribe(entry.id, summarize: true)
                                 openWindow(id: AppWindow.studio.rawValue)
                             }
+                            ForEach(entry.session.sourceTracks ?? [], id: \.role) { source in
+                                Menu(source.name) {
+                                    Button("Play source track") { playback.playSource(source, parent: entry) }
+                                    Button("Transcribe source track") {
+                                        if let path = source.manifestPath,
+                                           let url = try? RecordingSession.safeURL(path, beside: entry.id) {
+                                            library.transcribe(url); openWindow(id: AppWindow.studio.rawValue)
+                                        }
+                                    }
+                                }.disabled(source.manifestPath == nil)
+                            }
                             Button("Verify / Recover", systemImage: "checkmark.shield") { library.enqueue(entry.id, recover: true) }
                             Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
                         } label: { Label("More", systemImage: "ellipsis.circle") }

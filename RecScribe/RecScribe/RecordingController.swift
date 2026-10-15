@@ -27,6 +27,10 @@ class RecordingController: RecordingControlling {
     private let activity: RecordingActivity
 
     private var currentRecordingURL: URL?
+    private var activeSourceName = "Selected source"
+    private var starting = false
+    private var multiRecorder: MultiSourceRecorder?
+    private let storageOptions: () -> RecordingStorageOptions
 
     /// Callback for waveform visualization data
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
@@ -46,6 +50,7 @@ class RecordingController: RecordingControlling {
         activity: RecordingActivity? = nil,
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
+        self.storageOptions = storageOptions
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
         self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
             SessionWAVWriter(options: storageOptions())
@@ -71,7 +76,9 @@ class RecordingController: RecordingControlling {
     /// - Throws: Error if recording cannot start
     @MainActor
     func startRecording(format: AudioFormat) async throws -> URL {
-        guard !audioRecorder.recording else { throw AudioRecorderError.alreadyRecording }
+        guard !starting, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
+        starting = true
+        defer { starting = false }
         sessionLibrary?.setRecording(true)
         var started = false
         defer { if !started { activity.stop(); sessionLibrary?.setRecording(false) } }
@@ -79,6 +86,9 @@ class RecordingController: RecordingControlling {
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
         try await audioSource.validate(source)
+        if let uid = source.microphoneUID { activeSourceName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Input" }
+        else if let bundle = source.appBundleID { activeSourceName = audioSource.knownAppName(forBundleID: bundle) ?? bundle }
+        else { activeSourceName = "System playback" }
 
         // Generate file path (extension follows the chosen format).
         let fileURL = generateFilePath(format: .wav)
@@ -94,6 +104,32 @@ class RecordingController: RecordingControlling {
 
         // Start audio recorder first (creates the file in the chosen format).
         activity.start()
+        if case .mixed(let bundle, let uid) = source {
+            let micName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
+            let playbackName = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
+            let recorder = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) }, onWaveform: onWaveformData)
+            multiRecorder = recorder
+            do {
+                try recorder.start(at: fileURL, descriptors: [
+                    .init(role: .playback, name: playbackName, bundleID: bundle),
+                    .init(role: .microphone, name: micName, deviceUID: uid)
+                ], options: storageOptions())
+                try await captureManager.setupMultiCapture(source: source) { recorder.accept($0) }
+                try await captureManager.startCapture()
+                guard !activity.interrupted else { throw ScreenCaptureAudioError.interruptedBySleep }
+            } catch {
+                await captureManager.cleanup()
+                try? await recorder.stop(failure: error)
+                if let manifest = recorder.manifestURL { sessionLibrary?.enqueue(manifest, issue: error.localizedDescription) }
+                multiRecorder = nil
+                throw error
+            }
+            let actual = recorder.audioURL ?? fileURL
+            currentRecordingURL = actual
+            liveTranscription?.recordingStarted(actual)
+            started = true
+            return actual
+        }
         try audioRecorder.startRecording(to: fileURL, format: .wav)
 
         // Set up capture with audio callback
@@ -135,6 +171,19 @@ class RecordingController: RecordingControlling {
         var captureError: Error?
         do { try await captureManager.stopCapture() } catch { captureError = error }
 
+        if let recorder = multiRecorder {
+            var failure = captureError
+            do { try await recorder.stop(failure: captureError) } catch { if failure == nil { failure = error } }
+            await captureManager.cleanup()
+            currentRecordingURL = nil
+            multiRecorder = nil
+            needsReview = failure != nil || activity.interrupted
+            if let manifest = recorder.manifestURL {
+                sessionLibrary?.enqueue(manifest, issue: failure?.localizedDescription)
+            }
+            if let failure { throw failure }
+            return
+        }
         // Finalize the file, but capture the error rather than rethrowing here:
         // the teardown below must run either way, or a failed finalize would leak
         // the capture session and leave a stale recording URL behind. (BL-016 —
@@ -180,6 +229,15 @@ class RecordingController: RecordingControlling {
             sessionLibrary?.setRecording(false)
         }
         try? await captureManager.stopCapture()
+        if let recorder = multiRecorder {
+            let failure = SessionError.invalid("Capture interrupted; review the preserved source tracks and mix")
+            try? await recorder.stop(failure: failure)
+            await captureManager.cleanup()
+            if let manifest = recorder.manifestURL { sessionLibrary?.enqueue(manifest, issue: failure.localizedDescription) }
+            multiRecorder = nil
+            currentRecordingURL = nil
+            return
+        }
         // Keep the original interruption visible, but don't lose a secondary
         // finalization failure: record it in diagnostics and the session issue.
         var issue = "Capture stopped unexpectedly; review the end of this session"
@@ -195,6 +253,11 @@ class RecordingController: RecordingControlling {
             sessionLibrary?.enqueue(manifest, issue: issue)
         }
         Log.recorder.error("Recording finalized after stream failure")
+    }
+
+    var sourceHealth: [SourceRecordingHealth] {
+        if let multiRecorder { return multiRecorder.sourceHealth }
+        return [.init(id: "capture", name: activeSourceName, health: audioRecorder.healthSnapshot)]
     }
 
     /// Check if currently recording

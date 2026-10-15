@@ -184,6 +184,9 @@ final class AudioSourceManager: AudioSourceProviding {
 
     func validate(_ source: AudioSource) async throws {
         switch source {
+        case .mixed(let bundle, let uid):
+            if let bundle { try await validate(.app(bundleID: bundle)) }
+            try await validate(.mic(deviceUID: uid))
         case .systemAll:
             return
         case .app(let bundleID):
@@ -228,7 +231,7 @@ final class AudioSourceManager: AudioSourceProviding {
         // with it — leaving the menu implying something they never picked.
         var keep: Set<String>?
         if var audioCapable {
-            if case .app(let selectedBundleID) = selectedSource {
+            if let selectedBundleID = selectedSource.appBundleID {
                 audioCapable.insert(selectedBundleID)
             }
             keep = audioCapable

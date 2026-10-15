@@ -59,6 +59,8 @@ struct MenuBarPopoverView: View {
                 }
             }
 
+            CaptureHealthView(recorder: viewModel)
+
             // Inline error with recovery action
             if case .error = viewModel.state, let message = viewModel.errorMessage {
                 VStack(alignment: .leading, spacing: 6) {

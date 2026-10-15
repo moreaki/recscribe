@@ -12,7 +12,11 @@ struct PlaybackViewTests {
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/otool")
-        process.arguments = ["-L", executable.path]
+        // Xcode's Debug executable may be a loader shim; the actual app's
+        // dependencies then belong to its adjacent debug dylib, not this test bundle.
+        let debugLibrary = executable.deletingLastPathComponent().appendingPathComponent("RecScribe.debug.dylib")
+        let linkedApp = FileManager.default.fileExists(atPath: debugLibrary.path) ? debugLibrary : executable
+        process.arguments = ["-L", linkedApp.path]
         process.standardOutput = output
         try process.run()
         let dependencies = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)

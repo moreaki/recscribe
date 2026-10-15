@@ -10,7 +10,15 @@ nonisolated enum SessionDeletion {
         let session = try RecordingSession.read(manifest)
         let manager = FileManager.default
         var files: [URL] = []
-        for name in Set(session.parts.map(\.path) + session.artifacts.map(\.path)) {
+        var names = session.parts.map(\.path) + session.artifacts.map(\.path)
+        var sourceLeases: [SessionLease] = []
+        defer { withExtendedLifetime(sourceLeases) {} }
+        for track in session.sourceTracks ?? [] where track.manifestPath != nil {
+            let child = try LinkedSourceSessions.read(track, parent: session, at: manifest)
+            sourceLeases.append(try SessionLease(child.id))
+            names += child.session.parts.map(\.path) + child.session.artifacts.map(\.path) + [child.id.lastPathComponent]
+        }
+        for name in Set(names) {
             let file = try RecordingSession.safeURL(name, beside: manifest)
             // Incomplete recordings can reference parts that were never created.
             guard manager.fileExists(atPath: file.path) else { continue }

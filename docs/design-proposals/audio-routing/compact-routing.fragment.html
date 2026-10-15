@@ -1,0 +1,197 @@
+<div id="recscribe-compact-proposal">
+  <div class="viz-carousel" aria-label="Compact audio routing proposals">
+    <section data-variant="Inline expansion" aria-label="Inline expansion proposal">
+      <div class="proposal-stage"><div class="rc-window" data-layout="inline" aria-label="RecScribe audio routing with inline expansion"></div></div>
+    </section>
+    <section data-variant="Focused inspector" aria-label="Focused inspector proposal" hidden>
+      <div class="proposal-stage"><div class="rc-window" data-layout="inspector" aria-label="RecScribe audio routing with focused inspector"></div></div>
+    </section>
+  </div>
+</div>
+<style>
+#recscribe-compact-proposal { color-scheme:light dark; --rc-bg:light-dark(#f6f7f9,#111318); --rc-panel:light-dark(#ffffff,#1c1f27); --rc-soft:light-dark(#e9edf1,#272c35); --rc-text:light-dark(#242831,#e6e8ed); --rc-muted:light-dark(#626b78,#a6afbd); --rc-line:light-dark(#dce1e7,#30353f); --rc-blue:light-dark(#2460b6,#87b8fb); --rc-mint:light-dark(#187361,#8bd6c6); --rc-warn:light-dark(#89530b,#edb96b); --rc-select:light-dark(#eaf1fc,#26364d); --rc-font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+#recscribe-compact-proposal .proposal-stage { min-height:var(--rc-stage-height,360px); padding:2px 0 8px; }
+#recscribe-compact-proposal .rc-window { font-family:var(--rc-font); font-size:13px; line-height:1.45; font-weight:400; color:var(--rc-text); background:var(--rc-bg); border:1px solid var(--rc-line); border-radius:14px; overflow:clip; }
+#recscribe-compact-proposal .rc-window * { box-sizing:border-box; }
+#recscribe-compact-proposal .rc-window button,#recscribe-compact-proposal .rc-window input,#recscribe-compact-proposal .rc-window select { font:inherit; color:inherit; }
+#recscribe-compact-proposal .rc-chrome { display:flex; align-items:center; gap:12px; padding:16px 104px 16px 18px; border-bottom:1px solid var(--rc-line); }
+#recscribe-compact-proposal .rc-logo { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; background:var(--rc-soft); color:var(--rc-mint); flex:none; }
+#recscribe-compact-proposal .rc-title { font-size:16px; font-weight:500; }
+#recscribe-compact-proposal .rc-subtitle { color:var(--rc-muted); font-size:11px; margin-top:2px; }
+#recscribe-compact-proposal .rc-board { display:grid; grid-template-columns:minmax(0,1.6fr) 20px minmax(0,1fr) 20px minmax(0,1.15fr); gap:10px; padding:18px; align-items:start; }
+#recscribe-compact-proposal .rc-column { min-width:0; }
+#recscribe-compact-proposal .rc-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; margin:0 0 10px; font-size:12px; font-weight:500; color:var(--rc-muted); }
+#recscribe-compact-proposal .rc-list { display:grid; gap:var(--rc-gap,8px); }
+#recscribe-compact-proposal .rc-flow { color:var(--rc-mint); padding-top:49px; text-align:center; }
+#recscribe-compact-proposal .rc-node { background:var(--rc-panel); border:1px solid var(--rc-line); border-radius:10px; min-width:0; }
+#recscribe-compact-proposal .rc-node[data-active="true"] { border-color:var(--rc-blue); }
+#recscribe-compact-proposal .rc-summary { display:flex; align-items:center; width:100%; gap:9px; text-align:left; background:transparent; border:0; border-radius:10px; padding:var(--rc-row-padding,12px); }
+#recscribe-compact-proposal .rc-node-icon { color:var(--rc-muted); flex:none; width:16px; height:16px; }
+#recscribe-compact-proposal .rc-copy { flex:1; min-width:0; }
+#recscribe-compact-proposal .rc-name { display:block; font-weight:500; overflow-wrap:anywhere; }
+#recscribe-compact-proposal .rc-meta { display:block; color:var(--rc-muted); font-size:11px; margin-top:2px; }
+#recscribe-compact-proposal .rc-gain { white-space:nowrap; color:var(--rc-muted); font-size:11px; font-variant-numeric:tabular-nums; }
+#recscribe-compact-proposal .rc-chevron { flex:none; width:13px; height:13px; color:var(--rc-muted); }
+#recscribe-compact-proposal .rc-summary[aria-expanded="true"] .rc-chevron { transform:rotate(180deg); }
+#recscribe-compact-proposal .rc-muted-badge { display:inline-block; color:var(--rc-muted); font-size:11px; margin-right:5px; }
+#recscribe-compact-proposal .rc-warning-text { color:var(--rc-warn); }
+#recscribe-compact-proposal .rc-small-note { color:var(--rc-muted); font-size:11px; margin-top:11px; }
+#recscribe-compact-proposal .rc-details { padding:0 12px 14px; }
+#recscribe-compact-proposal .rc-details-inner { border-top:1px solid var(--rc-line); padding-top:12px; display:grid; gap:13px; }
+#recscribe-compact-proposal .rc-field-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:5px; margin-bottom:5px; font-size:12px; }
+#recscribe-compact-proposal .rc-field-head output { font-variant-numeric:tabular-nums; color:var(--rc-muted); }
+#recscribe-compact-proposal .rc-range { width:100%; margin:0; accent-color:var(--rc-blue); }
+#recscribe-compact-proposal .rc-range-wrap { position:relative; padding-bottom:13px; }
+#recscribe-compact-proposal .rc-zero { position:absolute; left:calc(8px + (100% - 16px)*.7142857); bottom:0; width:1px; height:6px; background:var(--rc-muted); pointer-events:none; }
+#recscribe-compact-proposal .rc-zero::after { content:"0 dB"; position:absolute; left:5px; top:-3px; font-size:11px; white-space:nowrap; color:var(--rc-muted); }
+#recscribe-compact-proposal .rc-check { display:flex; align-items:flex-start; gap:7px; font-size:12px; }
+#recscribe-compact-proposal .rc-check input { accent-color:var(--rc-blue); margin:3px 0 0; }
+#recscribe-compact-proposal .rc-channels { display:grid; grid-template-columns:minmax(0,1fr) 30px 30px; align-items:center; gap:6px; font-size:12px; }
+#recscribe-compact-proposal .rc-channels .rc-channel-head { color:var(--rc-muted); text-align:center; font-size:11px; }
+#recscribe-compact-proposal .rc-patch { background:var(--rc-soft); border:0; border-radius:6px; padding:5px; }
+#recscribe-compact-proposal .rc-patch[aria-pressed="true"] { background:var(--rc-select); color:var(--rc-mint); }
+#recscribe-compact-proposal .rc-patch-dot { display:block; width:9px; height:9px; margin:auto; border-radius:50%; background:currentColor; opacity:.35; }
+#recscribe-compact-proposal .rc-patch[aria-pressed="true"] .rc-patch-dot { opacity:1; }
+#recscribe-compact-proposal .rc-button { background:var(--rc-soft); color:var(--rc-blue); border:0; border-radius:6px; padding:6px 9px; font-size:12px; }
+#recscribe-compact-proposal .rc-link { background:transparent; color:var(--rc-blue); border:0; padding:0; font-size:11px; text-align:left; }
+#recscribe-compact-proposal .rc-select { background:var(--rc-soft); border:1px solid var(--rc-line); border-radius:6px; padding:6px; width:100%; }
+#recscribe-compact-proposal .rc-advanced { color:var(--rc-muted); font-size:11px; }
+#recscribe-compact-proposal .rc-advanced summary { padding:2px 0; }
+#recscribe-compact-proposal .rc-advanced p { margin:8px 0 0; }
+#recscribe-compact-proposal .rc-footer { padding:11px 18px; border-top:1px solid var(--rc-line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-size:11px; color:var(--rc-muted); }
+#recscribe-compact-proposal .rc-footer button { background:transparent; border:0; color:var(--rc-warn); padding:0; font-size:11px; text-align:left; }
+#recscribe-compact-proposal .rc-inspector { margin:0 18px 18px; background:var(--rc-panel); border:1px solid var(--rc-line); border-radius:10px; }
+#recscribe-compact-proposal .rc-inspector-head { padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+#recscribe-compact-proposal .rc-inspector-head strong { font-weight:500; }
+#recscribe-compact-proposal .rc-inspector .rc-details { padding:0 14px 14px; }
+#recscribe-compact-proposal .rc-inspector .rc-details-inner { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px 28px; }
+#recscribe-compact-proposal .rc-inspector .rc-advanced,#recscribe-compact-proposal .rc-inspector .rc-check { align-self:start; }
+#recscribe-compact-proposal .rc-source-menu { position:relative; font-size:11px; }
+#recscribe-compact-proposal .rc-source-menu summary { color:var(--rc-blue); list-style:none; }
+#recscribe-compact-proposal .rc-source-options { position:absolute; top:22px; right:0; width:230px; background:var(--rc-panel); border:1px solid var(--rc-line); border-radius:8px; padding:12px; display:grid; gap:9px; z-index:3; }
+@media(max-width:720px) { #recscribe-compact-proposal .rc-board { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; } #recscribe-compact-proposal .rc-column:first-child { grid-column:1/-1; } #recscribe-compact-proposal .rc-flow { display:none; } }
+@media(max-width:420px) { #recscribe-compact-proposal .rc-board { grid-template-columns:minmax(0,1fr); padding:12px; } #recscribe-compact-proposal .rc-chrome { padding-left:12px; padding-right:94px; } #recscribe-compact-proposal .rc-gain { white-space:normal; text-align:right; max-width:50px; } #recscribe-compact-proposal .rc-inspector { margin-left:12px; margin-right:12px; } #recscribe-compact-proposal .rc-inspector .rc-details-inner { grid-template-columns:1fr; } }
+@media(pointer:coarse) { #recscribe-compact-proposal .rc-patch,#recscribe-compact-proposal .rc-button { min-width:44px; min-height:44px; } #recscribe-compact-proposal .rc-check { min-height:44px; align-items:center; } }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('recscribe-compact-proposal');
+  const defaults = () => ({ selected:null, gain:{system:0,mic:0,teams:0,mix:0}, muted:{system:true,mic:true,teams:false,mix:false}, monitor:false, volume:50, playback:100, output:'Studio Display Speakers', playbackOutput:'Studio Display Speakers', left:{mic:true,teams:true}, right:{mic:true,teams:true}, acknowledged:false, inputs:{mic:true,teams:true} });
+  const state = { inline:defaults(), inspector:defaults() };
+  const design = { density:'Compact', showFormat:false };
+  const names = {system:'System audio',mic:'Studio Display Microphone',teams:'Microsoft Teams Audio',mix:'Stereo recording mix',monitor:'Headphone monitor',playback:'Recording playback'};
+  const icons = {system:'app-window',mic:'mic',teams:'audio-lines',mix:'sliders-horizontal',monitor:'headphones',playback:'circle-play'};
+  const formatGain = value => `${value >= 0 ? '+' : ''}${Number(value).toFixed(1)} dB`;
+  const layouts = [...root.querySelectorAll('.rc-window')];
+  let focusAfterRender = null;
+  function restore(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    for (const layout of ['inline','inspector']) {
+      const incoming = saved[layout];
+      if (!incoming || typeof incoming !== 'object') continue;
+      if (incoming.selected === null || Object.hasOwn(names,incoming.selected)) state[layout].selected=incoming.selected;
+      for(const key of ['gain','muted','left','right','inputs']) {
+        for(const member of Object.keys(state[layout][key])) {
+          const value=incoming[key]?.[member];
+          if(key==='gain' && typeof value==='number' && Number.isFinite(value) && value>=-60 && value<=24) state[layout][key][member]=value;
+          if(key!=='gain' && typeof value==='boolean') state[layout][key][member]=value;
+        }
+      }
+      for(const key of ['monitor','acknowledged']) if(typeof incoming[key]==='boolean') state[layout][key]=incoming[key];
+      for(const key of ['volume','playback']) if(typeof incoming[key]==='number' && incoming[key]>=0 && incoming[key]<=100) state[layout][key]=incoming[key];
+      for(const key of ['output','playbackOutput']) if(['Studio Display Speakers','Headphones'].includes(incoming[key])) state[layout][key]=incoming[key];
+    }
+  }
+  function persist() {
+    if (!window.openai?.setWidgetState) return;
+    window.openai.setWidgetState({modelContent:{proposal:'Compact audio routing',inlineExpanded:state.inline.selected,inspectorExpanded:state.inspector.selected},privateContent:{inline:state.inline,inspector:state.inspector}}).catch(()=>{});
+  }
+  function meta(id,s) {
+    if(id==='system') return 'All system playback → L / R';
+    if(id==='mix') return 'L / R · 48 kHz WAV';
+    if(id==='monitor') return `${s.monitor?'Armed':'Off'} · ${s.output}`;
+    if(id==='playback') return s.playbackOutput;
+    const route = s.left[id] && s.right[id] ? 'L + R' : s.left[id] ? 'Left' : s.right[id] ? 'Right' : 'Original track only';
+    return `${id==='teams'?'Virtual input':'Microphone'} · ${route}${design.showFormat?' · 1 ch · 48 kHz':''}`;
+  }
+  function summaryValue(id,s) { return id==='monitor'?`${s.volume}%`:id==='playback'?`${s.playback}%`:formatGain(s.gain[id]); }
+  function node(id,layout,s) {
+    const expanded=s.selected===id;
+    return `<section class="rc-node" data-node="${id}" data-active="${expanded}"><button class="rc-summary cursor-interaction" type="button" data-select="${id}" id="${layout}-${id}-summary" aria-expanded="${expanded}" aria-controls="${layout}-${layout==='inline'?id+'-detail':'inspector'}"><i class="rc-node-icon" data-lucide="${icons[id]}" aria-hidden="true"></i><span class="rc-copy"><span class="rc-name">${names[id]}</span><span class="rc-meta" data-meta="${id}">${id==='teams'&&!s.acknowledged?'<span class="rc-warning-text">Review loopback · </span>':''}${meta(id,s)}</span></span><span class="rc-gain"><span class="rc-muted-badge" data-muted-summary="${id}">${s.muted[id]?'Muted':''}</span><span data-value="${id}">${summaryValue(id,s)}</span></span><i class="rc-chevron" data-lucide="chevron-down" aria-hidden="true"></i></button>${layout==='inline'?`<div class="rc-details" id="${layout}-${id}-detail" role="region" aria-label="${names[id]} controls" ${expanded?'':'hidden'}>${expanded?controls(id,layout,s):''}</div>`:''}</section>`;
+  }
+  function gainControl(id,layout,s) {
+    return `<div><label class="rc-field-head" for="${layout}-${id}-gain"><span>${id==='mix'?'Master gain':id==='system'?'Playback gain':'Input gain'}</span><output data-gain-label="${id}">${formatGain(s.gain[id])}</output></label><div class="rc-range-wrap"><input class="rc-range" type="range" min="-60" max="24" step="0.1" value="${s.gain[id]}" id="${layout}-${id}-gain" data-gain="${id}" aria-label="${names[id]} gain"><span class="rc-zero" aria-hidden="true"></span></div></div><label class="rc-check"><input type="checkbox" data-mute="${id}" ${s.muted[id]?'checked':''}>Mute in recording mix</label>`;
+  }
+  function controls(id,layout,s) {
+    let html='';
+    if(['system','mic','teams','mix'].includes(id)) html+=gainControl(id,layout,s);
+    if(['mic','teams'].includes(id)) {
+      html+=`<div><div class="rc-field-head">Channel connections</div><div class="rc-channels"><span class="rc-meta">Input channel</span><span class="rc-channel-head">L</span><span class="rc-channel-head">R</span><span>Channel 1</span>${['left','right'].map(side=>`<button type="button" class="rc-patch cursor-interaction" data-route="${side}" data-source="${id}" aria-pressed="${s[side][id]}" aria-label="${names[id]} channel 1 to ${side}"><span class="rc-patch-dot" aria-hidden="true"></span></button>`).join('')}</div><div class="rc-small-note">All native channels stay in the original track.</div></div>`;
+      if(id==='teams') html+=`<label class="rc-check rc-warning-text"><input type="checkbox" data-ack ${s.acknowledged?'checked':''}>Include this possible duplicate / loopback route</label>`;
+      html+=`<details class="rc-advanced"><summary>Hardware input level</summary><p>System-wide hardware controls appear here when the device supports them.</p></details>`;
+    }
+    if(id==='system') html+=`<details class="rc-advanced"><summary>Mix channel trims</summary><p>Channel 1: ${formatGain(0)} · Channel 2: ${formatGain(0)}</p></details><div class="rc-small-note">Original playback is saved at unity gain.</div>`;
+    if(id==='mix') html+=`<div class="rc-small-note">Stereo derived mix. Source recordings retain every native channel at unity gain.</div>`;
+    if(id==='monitor'||id==='playback') {
+      const key=id==='monitor'?'volume':'playback';
+      const outputKey=id==='monitor'?'output':'playbackOutput';
+      if(id==='monitor') html+=`<label class="rc-check"><input type="checkbox" data-monitor ${s.monitor?'checked':''} ${s.inputs.teams?'disabled':''}>Listen while recording</label>${s.inputs.teams?'<div class="rc-small-note rc-warning-text">Monitoring is unavailable with virtual inputs selected.</div>':''}`;
+      html+=`<div><label class="rc-field-head" for="${layout}-${id}-volume"><span>Listening volume</span><output data-volume-label="${id}">${s[key]}%</output></label><input id="${layout}-${id}-volume" class="rc-range" type="range" min="0" max="100" value="${s[key]}" data-volume="${id}"></div><div><label class="rc-field-head" for="${layout}-${id}-output">Output device</label><select id="${layout}-${id}-output" class="rc-select" data-output="${outputKey}">${['Studio Display Speakers','Headphones'].map(name=>`<option ${s[outputKey]===name?'selected':''}>${name}</option>`).join('')}</select></div><details class="rc-advanced"><summary>Hardware output volume</summary><p>System-wide hardware controls are separate from this listening level.</p></details>`;
+    }
+    return `<div class="rc-details-inner">${html}</div>`;
+  }
+  function renderWindow(windowElement) {
+    const layout=windowElement.dataset.layout,s=state[layout];
+    const visible=['system',...['mic','teams'].filter(id=>s.inputs[id])];
+    if(s.selected && ['mic','teams'].includes(s.selected) && !s.inputs[s.selected]) s.selected=null;
+    windowElement.innerHTML=`<header class="rc-chrome"><span class="rc-logo"><i data-lucide="waypoints" aria-hidden="true"></i></span><div><div class="rc-title">Audio routing</div><div class="rc-subtitle">RecScribe · Design proposal · Not recording</div></div></header><div class="rc-board"><section class="rc-column"><h2 class="rc-heading"><span>Sources</span><details class="rc-source-menu"><summary class="cursor-interaction">+ Add input</summary><div class="rc-source-options">${['mic','teams'].map(id=>`<label class="rc-check"><input type="checkbox" data-input="${id}" ${s.inputs[id]?'checked':''}>${names[id]}</label>`).join('')}</div></details></h2><div class="rc-list">${visible.map(id=>node(id,layout,s)).join('')}</div></section><span class="rc-flow" aria-hidden="true">→</span><section class="rc-column"><h2 class="rc-heading">Recording mix</h2><div class="rc-list">${node('mix',layout,s)}</div><div class="rc-small-note">${visible.length} original source tracks retained</div></section><span class="rc-flow" aria-hidden="true">→</span><section class="rc-column"><h2 class="rc-heading">Outputs</h2><div class="rc-list">${node('monitor',layout,s)}${node('playback',layout,s)}</div></section></div>${layout==='inspector'?`<section class="rc-inspector" id="inspector-inspector" aria-label="Selected item controls" ${s.selected?'':'hidden'}>${s.selected?`<div class="rc-inspector-head"><strong>${names[s.selected]}</strong><button class="rc-button cursor-interaction" type="button" data-close>Done</button></div><div class="rc-details">${controls(s.selected,layout,s)}</div>`:''}</section>`:''}<footer class="rc-footer"><span>${s.inputs.teams?`<button class="cursor-interaction" type="button" data-review>${s.acknowledged?'Loopback reviewed':'⚠ Review possible loopback'}</button>`:'Original source channels preserved'}</span><span>Monitoring ${s.monitor?'armed for recording':'off'} · Audio stays on your Mac</span></footer>`;
+  }
+  function render() {
+    layouts.forEach(renderWindow);
+    if(globalThis.lucide) lucide.createIcons({attrs:{width:16,height:16}});
+    if(focusAfterRender) { root.querySelector(focusAfterRender)?.focus(); focusAfterRender=null; }
+  }
+  function updateSummaries(windowElement) {
+    const s=state[windowElement.dataset.layout];
+    windowElement.querySelectorAll('[data-value]').forEach(el=>el.textContent=summaryValue(el.dataset.value,s));
+    windowElement.querySelectorAll('[data-muted-summary]').forEach(el=>el.textContent=s.muted[el.dataset.mutedSummary]?'Muted':'');
+    windowElement.querySelectorAll('[data-meta]').forEach(el=>{const id=el.dataset.meta;el.innerHTML=`${id==='teams'&&!s.acknowledged?'<span class="rc-warning-text">Review loopback · </span>':''}${meta(id,s)}`;});
+    windowElement.querySelectorAll('[data-gain-label]').forEach(el=>el.textContent=formatGain(s.gain[el.dataset.gainLabel]));
+    windowElement.querySelectorAll('[data-volume-label]').forEach(el=>el.textContent=`${s[el.dataset.volumeLabel==='monitor'?'volume':'playback']}%`);
+  }
+  root.addEventListener('click',event=>{
+    const button=event.target.closest('button'),windowElement=event.target.closest('.rc-window');
+    if(!button||!windowElement) return;
+    const layout=windowElement.dataset.layout,s=state[layout];
+    if(button.dataset.select) {const id=button.dataset.select;s.selected=s.selected===id?null:id;focusAfterRender=`#${layout}-${id}-summary`;render();persist();}
+    if(button.hasAttribute('data-close')) {const id=s.selected;s.selected=null;focusAfterRender=`#${layout}-${id}-summary`;render();persist();}
+    if(button.hasAttribute('data-review')) {s.selected='teams';focusAfterRender=`#${layout}-teams-summary`;render();persist();}
+    if(button.dataset.route) {const side=button.dataset.route,id=button.dataset.source;s[side][id]=!s[side][id];button.setAttribute('aria-pressed',String(s[side][id]));updateSummaries(windowElement);persist();}
+  });
+  root.addEventListener('input',event=>{
+    const input=event.target,windowElement=input.closest('.rc-window');if(!windowElement) return;
+    const s=state[windowElement.dataset.layout];
+    if(input.dataset.gain) {let value=Number(input.value);if(!event.altKey){const stops=[-60,-48,-36,-24,-18,-12,-9,-6,-3,0,3,6,9,12,18,24];const nearest=stops.reduce((a,b)=>Math.abs(b-value)<Math.abs(a-value)?b:a);if(Math.abs(nearest-value)<.7)value=nearest;}s.gain[input.dataset.gain]=value;input.value=String(value);updateSummaries(windowElement);}
+    if(input.dataset.volume) {s[input.dataset.volume==='monitor'?'volume':'playback']=Number(input.value);updateSummaries(windowElement);}
+  });
+  root.addEventListener('change',event=>{
+    const input=event.target,windowElement=input.closest('.rc-window');if(!windowElement) return;
+    const layout=windowElement.dataset.layout,s=state[layout];
+    if(input.dataset.mute) {s.muted[input.dataset.mute]=input.checked;updateSummaries(windowElement);}
+    if(input.dataset.input) {s.inputs[input.dataset.input]=input.checked;if(s.inputs.teams)s.monitor=false;render();}
+    if(input.dataset.output) {s[input.dataset.output]=input.value;updateSummaries(windowElement);}
+    if(input.hasAttribute('data-monitor')) {s.monitor=input.checked;focusAfterRender=`[data-layout="${layout}"] [data-monitor]`;render();}
+    if(input.hasAttribute('data-ack')) {s.acknowledged=input.checked;focusAfterRender=`[data-layout="${layout}"] [data-ack]`;render();}
+    persist();
+  });
+  root.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const windowElement=event.target.closest('.rc-window');if(!windowElement)return;const layout=windowElement.dataset.layout,s=state[layout],id=s.selected;if(!id)return;event.preventDefault();s.selected=null;focusAfterRender=`#${layout}-${id}-summary`;render();persist();});
+  restore(window.openai?.widgetState?.privateContent);
+  render();
+  window.addEventListener('openai:set_globals',event=>{const saved=event.detail?.globals?.widgetState;if(saved){restore(saved.privateContent);render();}});
+  function applyDesign(){root.style.setProperty('--rc-row-padding',design.density==='Compact'?'11px':'16px');root.style.setProperty('--rc-gap',design.density==='Compact'?'8px':'12px');render();}
+  if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:applyDesign});tweak.addSelect(design,'density',{label:'Row spacing',options:['Compact','Comfortable']});tweak.addToggle(design,'showFormat',{label:'Show input format in overview'});}
+  const measured=new Map();
+  const observer=new ResizeObserver(entries=>{for(const entry of entries){if(entry.contentRect.height>0)measured.set(entry.target,entry.target.getBoundingClientRect().height);}const height=Math.max(0,...measured.values());root.style.setProperty('--rc-stage-height',`${Math.ceil(height)+10}px`);});
+  layouts.forEach(windowElement=>observer.observe(windowElement));
+})();
+</script>

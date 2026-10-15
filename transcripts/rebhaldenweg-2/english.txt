@@ -1,0 +1,423 @@
+Rebhaldenweg 2 — English transcript
+
+Lightly edited automatic English transcript of the supplied recording (1:51:02.741). Timestamps refer to the original audio. Square brackets mark uncertain wording, names, numbers, pauses, or indistinct audio. See preparation and review notes in README.md.
+
+[00:00:00–00:00:07]
+
+I will give you an extra two minutes for more people to join the workshop. Please type this in the chat box if you can hear us clearly.
+
+[00:00:30–00:00:59]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:01:00–00:01:29]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:01:30–00:02:15]
+
+Ladies and gentlemen, and I hope you are all doing well. It's our great pleasure to welcome you all today on the behalf of the Federal Tax Authority. My name is Harla Al-Mazmi [name uncertain]. I'm an Awareness and Education Principal Executive, and I will be your emcee for today's workshop. Today's session will focus on the basics of tax as outlined by us, and we're pleased to have you join us for the informative webinar and we hope you find it valuable and engaging. Before we begin, kindly ensure that the audio settings on your device, whether it's laptop or mobile, are properly set up. We will allow you a minute or two for audio setup, after which the session will start.
+
+[00:02:26–00:02:56]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:02:56–00:03:26]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:03:26–00:04:22]
+
+Okay, so before we begin the session, I would like to briefly go and walk you through today's agenda. But before we do that, kindly scan the QR code that is available on screen for the pre-workshop questionnaire to test your knowledge. The survey link will also be added in the chat box in case you cannot be scanning the QR code that is on screen right now. So we will give you two minutes to do the pre-questionnaire survey.
+
+[00:04:26–00:04:56]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:04:56–00:05:44]
+
+I would like to also note for the participants who just joined to complete the survey that is on the screen right now because only participants who complete both the pre and post survey will get the certificate of attendance so please kindly scan the qr code that is available on screen right now or please use the link that is in the chat box to do the pre-workshops questionnaire
+
+[00:05:55–00:06:25]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:06:25–00:06:55]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:06:55–00:07:25]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:07:25–00:08:46]
+
+Okay with that being set let's move on with today's agenda agenda we'll start with an overview of the UAE's tax structure moving on with the part of the session that is related to value added tax and then we will be also explaining more about corporate tax and details and then lastly the part that will be covered accessing and reviewing the guides as well as an informative video regarding e-invoicing that will be shown at the end of the session we will also have a q a a part of the session at the end uh and that will be at the end of the session the last part would be have in the post uh survey which as i mentioned you will be needing to do the pre and post session survey to get the certificate of attendance with that being said let's start with um today's session so uh and now that we've went through today's agenda and now that we know that we what we will be covering in today's session let's take let's take one step back and look at the bigger picture
+
+[00:08:46–00:09:35]
+
+So before we dive into the details of value-added tax and corporate tax it's very important to start with an overview of the UAE's tax structure i know the word tax can feel a bit intimidating especially if you are a new business owner so let me reassure you from the start the UAE tax system is structured it's transparent and it's designed to support businesses not to overwhelm them the UAE does not have dozens of different taxes. Instead, it has a small number of clearly defined federal taxes, each with a specific purpose. So let's start this section with a very common question, especially for new business owners. Is the UAE a tax-free country?
+
+[00:09:35–00:10:24]
+
+So for many years, the UAE was known as a low-tax environment. And that's one of the reasons it became such an attractive place to live and do business. But as the country grew and the economy expanded, there was a need for a sustainable way to support public services and future development. Taxes are a source of revenue for governments. They help support public services and maintain a high quality of life for everyone living and doing business in the country. Not just for today, but for future generations as well. So in the UAE, taxes were introduced gradually and with a clear purpose. First, as part of the GCC-wide initiative to modernize and strengthen economic framework across the region.
+
+[00:10:24–00:11:25]
+
+Second, to support the long-term sustainability of the UAE's economy. And third, to diversify the government revenue by reducing reliance on oil and hydrocarbons. So while the UAE is often described as tax-free, a more accurate way to describe it is that the UAE has a limited, targeted, and business-friendly tax system. There is no personal income tax, and businesses are only subject to certain taxes when specific conditions and thresholds are met. With that understanding of why taxes were introduced, the next step is to look at what the UAE tax structure actually looks like. And you'll see that it's much more simpler than many people expect. Now that we understand why taxes were introduced, the next natural question is, who actually manages taxes in the UAE?
+
+[00:11:26–00:12:17]
+
+So at the federal level, there are two main government entities, and it's important to clearly understand the role of each one. First, we have the Ministry of Finance. The Ministry of Finance is the legislator. This means they are responsible for issuing most of the tax laws and setting the overall tax policy in the UAE. So in simple terms, they decide what the rules are. Second, we have the Federal Tax Authority. The FTA is responsible for administering and enforcing those laws. This includes registration, filing returns, collecting taxes, issuing guidance, and supporting taxpayers. So to keep it very simple, the Ministry of Finance creates the rules, and the Federal Tax Authority implements and applies them.
+
+[00:12:18–00:13:09]
+
+As a business owner, almost all of your interactions will be with the Federal Tax Authority, mainly through its online platform, which is EmaraTax. So before we move on into the taxes themselves, it is important to quickly understand where the tax rules actually come from. In the UAE, tax legislation follows a clear legal hierarchy. At the top, we have the Federal Decree Laws. These are issued by the President of the UAE and form the main legal foundation for each tax, such as value-added tax or corporate tax. Supporting those laws are cabinet decisions. These are issued by the UAE cabinet and provide more detailed rules and conditions, helping explain how the law should be applied in practice.
+
+[00:13:10–00:14:11]
+
+Then we have ministerial decisions issued by the Minister of Finance. These usually deal with specific technical or administrative matters related to tax implementation. On the implementation side, the Federal Tax Authority issues FTA decisions, which are formal decisions approved by the FTA Board of Directors to support the application of tax laws. To help businesses comply, the FTA also publishes FTA guides. These are practical user-friendly documents that explain tax topics in simple terms and show how the legislation works in real-life scenarios. Finally, there are FTA public clarifications. These are issued when new legislation is introduced or when there is need to clarify how certain rules should be applied in practice. So the key takeaway here is that the tax system is structured, it's transparent, and supported by guidance.
+
+[00:14:11–00:14:59]
+
+Meaning businesses are not expected to figure things out on their own. With that clarity, we can now move on to understanding the actual taxes that apply in the UAE. So now let's quickly understand the types of taxes, because this will make VAT and CT much easier to grasp. In general, taxes are divided into two categories: direct taxes and indirect taxes. Direct taxes are imposed directly on a person or a business and are usually linked to income or profit. These taxes are paid straight to the government by the person or entity on whom the tax is imposed. An example relevant to the UAE would be corporate tax.
+
+[00:15:00–00:16:25]
+
+Just to clarify, the UAE does not have personal income tax. On the other hand, indirect taxes are imposed on transactions rather than on income. These taxes are usually collected by businesses, but they are ultimately borne by the consumer. The businesses act as a middleman, collecting the tax and then paying it to the government. The most common example, often indirect tax in the UAE, is value-added tax. Another example is excise tax this distinction is important because VAT is an indirect tax which means businesses don't pay it from their own pocket they collect it on the behalf of the government now let's bring everything together and look at the actual taxes that exist in the UAE as you can see on screen there are three main federal taxes and each one serves a different purpose the first is excise tax excise tax was introduced in 2017 and applies to specific goods that are considered harmful to human health or the environment such as tobacco products energy drinks and certain sugary beverages. This is an indirect tax and it mainly affects businesses that
+
+[00:16:25–00:17:48]
+
+Produce, import, or stockpile these goods. The second and most common tax for businesses is value-added tax, mostly known as VAT. VAT was introduced in the UAE at the year 2018. It is an indirect tax imposed on the supply of goods and services in the UAE, as well as on imports. Businesses registered for value-added tax collected from its customers and paid to the government. So for most new businesses, VAT is usually the first tax they deal with in practice, which is why we'll be focusing on it in detail. The third is corporate tax. Corporate tax was introduced more recently and came into effect for financial years starting on or after the 1st of June of the year 2023. Corporate tax is a direct tax imposed on the taxable income of businesses and cooperations subject to certain rules, exemptions, and thresholds. So to summarize it simply, excise tax applies to specific goods, VAT applies to transactions, and corporate tax apply to business profits it's clear picture of the taxes in the UAE we can now zoom in on VAT
+
+[00:17:48–00:19:14]
+
+And walk through how it works when registration is required and what does it mean for your business day to day let me quickly walk you through what we'll be covering in the VAT section first we start with a simple overview of VAT what it is how it works and why it applies to certain businesses then we move on to VAT registration where we explain who needs to register when the registration becomes mandatory and what the process looks like after that we'll talk about VAT compliance this includes issuing tax invoices keeping records filing VAT returns on time and understanding your ongoing obligations once you're registered we'll also briefly cover VAT refunds explaining when a business may be eligible to claim VAT back and how the refund process works. Finally, we will touch on VAT deregistration, which applies when a business no longer meets the registration requirements or stops making taxable supplies by the end of this section you should have a clear practical understanding of VAT and what you need to do to stay compliant as a business in the UAE all right now we're moving on
+
+[00:19:14–00:20:35]
+
+To the overview VAT section and this part is all about you uh all about giving you a clear practical understanding of VAT as i mentioned let's start with the most basic question what is VAT. VAT stands for value added tax. It's a tax that applies to the supply of goods and services as well as to imports when certain conditions are met of course. VAT is charged at each stage of the supply chain, from production to distribution, all the way to the final consumer. But the important thing to understand is that the final consumer is the one who ultimately bears the cost For businesses, VAT is a transaction-based indirect tax. This means that VAT-registered businesses don't usually pay VAT from their own pocket instead they collect VAT from customers account for it and then pay it to the federal tax authority VAT applies to taxable supplies and imports where the place of supply is in the UAE and the standard VAT rate is five percent so in simple terms businesses charge VAT they collect VAT and they report VAT
+
+[00:20:36–00:21:38]
+
+But the cost of VAT is passed on to the customer and before we go further there are a few key uh key VAT terms we keep hearing throughout the session so let's quickly explain them in simple language. A taxable person is any person or business that is registered or required to register for VAT and the UAE. The tax registration number, or the TRN, is the unique number issued to a business once it's registered for VAT. This number must appear on tax invoices and official VAT documents. An exempt supply is a supply of goods or services where no VAT is charged. In most cases, VAT paid on expenses related to exempt supplies cannot be recovered. A taxable supply is a supply of goods or services made for consideration in the UAE where VAT does not apply [as heard; wording needs review].
+
+[00:21:38–00:22:37]
+
+This includes standard rated and zero rated supplies, but it does not include exempt supplies. Input tax is the VAT that the business pays on its purchases or expenses or when importing goods or services. As for output tax, it is the VAT that a business charges to its customers on taxable supplies. These definitions will keep coming up as we move through registration, invoicing, and VAT returns, so keep them in mind as we go forward. Now, let's look at VAT rates because not every supply is treated the same. The first and most common is the standard rate. In the UAE, taxable supplies of goods and services are generally subject to VAT at a standard rate of 5% unless a zero rate or an exemption applies.
+
+[00:22:38–00:23:39]
+
+For example, if a VAT-registered cafe sells a takeaway coffee, VAT at 5% is charged to the customer. The second category, zero-rated supplies. These are still taxable supplies, but VAT is charged at 0%. This rate applies only to specific goods and services listed in the legislation. A common example is that the export of goods outside the UAE. Even though VAT is charged at 0%, the supply remains taxable, which means the business can usually recover the input VAT related to it. The third category is exempt supplies. Exempt supplies are outside the scope of VAT charging, meaning no VAT is charged on the supply. However, in most cases, input VAT related to exempt supplies cannot be recovered.
+
+[00:23:39–00:24:35]
+
+An example would be the supply of bare land or certain financial services. So the key thing to remember is this: 5% is the standard rate, 0% applies to specific taxable supplies, and exempt supplies have no VAT charged. So up to now, we've been talking about VAT as if each business is treated separately. But in reality, many businesses operate through more than one legal entity. This is where the concept of VAT group comes in. A VAT group allows two or more persons to be treated as one taxable, one single taxable person for VAT purposes. In simple terms, instead of dealing with VAT separately for each entity, the group is treated as one business from a VAT perspective.
+
+[00:24:36–00:25:41]
+
+When a VAT group is created, the group is issued one VAT registration number or one TRN which is used by all group members. As a result, only one VAT return is filed for the entire group. One of the main advantages of VAT grouping is that the transactions between members of the same group are generally ignored for VAT purposes. This helps avoid unnecessary VAT cash flow issues and eliminates VAT costs that might otherwise arise on internal transactions between group companies. It also reduces VAT risks on large intra-group transactions. With that being said, VAT grouping is not a planning or tax invoice avoidance tool. It's purely an administrative simplification measure, which is why there are strict conditions that must be met before a VAT group can be approved.
+
+[00:25:42–00:26:36]
+
+So to form a VAT group, an application must be submitted to the FTA. The FTA will then issue its decision to approve or reject the application within 20 business days. If approved, the registration takes effect from the first day of the tax period following the tax period in which the application was submitted. So VAT grouping can be very helpful for certain businesses, but it only applies where the legal requirements are met. Now that we've covered VAT grouping, let's move on to VAT registration and see when a business is actually required to register. So, the next question is a very common one, which is who actually is required to register for VAT?
+
+[00:26:37–00:27:36]
+
+In the UAE, VAT registration is not limited to a specific type of business. Any person, whether a natural person or a legal person, may be required to register if they are considered a taxable person under the VAT law. This means VAT registration can apply to a wide range of entities, including individual and sole establishments, partnerships, limited liability companies, clubs and associations, government entities, non-profit organizations, and even universities and schools. What's important to understand is that VAT registration is not based on the type of entity, and it's not about how big or small the business is. VAT registration is based on taxable activity and turnover. If the conditions are met, registration is required regardless of the business structure.
+
+[00:27:36–00:28:57]
+
+In the next slide, we'll look at when registration becomes mandatory and when a business can register voluntarily. Now, this is a very important slide because it explains when VAT registration is mandatory and when it is optional. VAT registration is assessed based on turnover and expenses and is measured over specific time periods. Starting with mandatory registration, a person is required to register for value-added tax If their total taxable turnover exceeds 375,000 dirhams during the previous 12 months. Or if they expect their taxable turnover to exceed 375,000 dirhams within the next 30 days. In these cases, registration is not optional. It becomes a legal obligation. Moving on to voluntary registration. A person may choose to register voluntarily if their taxable turnover exceeds 187,500 dirhams [number uncertain] in the previous 12 months or if they expect to exceed 187,500 dirhams [number uncertain] within the next 30 days.
+
+[00:28:57–00:30:03]
+
+Voluntary registration may also be available where taxable expenses exceed the amount, provided the conditions under the VAT legislation are met. It's very important to highlight the note, which is that a UAE resident is not automatically eligible for voluntary VAT registration, just because they incur taxable expenses. The person must be carrying on a business in the UAE and must be able to demonstrate an intention to make taxable supplies. So the key takeaway here is that 375,000 dirhams [number uncertain] triggers mandatory registration, and 187,500 dirhams [number uncertain] allows voluntary registration. Now, some of you may be operating more than one location or have branches under the same business. So it's important to understand how VAT registration works when a business has branches.
+
+[00:30:03–00:31:24]
+
+Under the UAE VAT legislation, a branch is not treated as a separate legal entity from its head office. Because of that, a branch cannot apply for VAT registration on its own. This rule applies regardless of location, whether the branch and head office are in the same emirates, in different emirates or even if one is outside the UAE as long as there is a place of residence in the UAE as a result only one VAT registration is required and the application must be submitted in the name of the head office it's also important to understand that a business may hold multiple trade licenses for example one for each branch however having multiple licenses does not mean that separate VAT registrations are needed or allowed and just to add if the business is part of a VAT group then the head office and all its branches are treated as members of that VAT group. So the key takeaway is simple: one legal entity means one VAT registration, no matter how many branches you have so far we've looked at who needs to register
+
+[00:31:27–00:33:03]
+
+When registration becomes mandatory or voluntary and how registration works if you have branches once you've confirmed that registration applies to you the next step is very practical what do you actually need to submit registration for VAT VAT registration is done through the EmaraTax platform and during the application you'll be asked to provide supporting information and documents so the federal tax authority can assist your request the exact document can vary depending on your situation but generally they include details of the business emirates id and passport copies, the trade licence, bank account details, authorized signatory information, and where applicable the memorandum of association or power of attorney you'll also need to provide turnover information whether that's actual revenue from the past or expected revenue going forward the key thing here is accuracy submitting complete and correct information help avoid delays in the registration process and just to keep in mind even after submission the federal tax authority may request additional information or documents before issuing the decision on the VAT registration application now that we've seen what documents and information
+
+[00:33:03–00:34:06]
+
+Are required the next question is where does it all actually get submitted this is where EmaraTax comes in EmaraTax is the federal tax authority's online platform it's the main place where business interact with the FTA for all tax related services Through EmaraTax, you can register for VAT, file VAT returns, settle tax payable, apply for refunds, and manage your tax account in general. It's basically your one-stop shop for VAT and other federal taxes. The platform also provides guidance on how to use the system, including user guides, frequently asked questions, and educational videos, which are especially helpful for new business owners. EmaraTax is integrated with UAE PASS and the UAE Central Bank, which helps streamline the process and improve the overall user experience.
+
+[00:34:06–00:35:09]
+
+So once you've confirmed that you need to register and that you've prepared your documents, EmaraTax is the platform you'll use to complete the process. Once you're ready to start, the first step is simply logging in to EmaraTax. You can log in two ways, the first option is using your registered email address and password. If this is your first time using EmaraTax, you need to click sign up and create an account. If you have already registered but cannot remember your password, you can use the forget password option to reset it. The second option is logging in using UAE Pass. If you choose this, you will be redirected to UAE Pass for authentication and once that's done, you'll automatically return to the EmaraTax Dashboard.
+
+[00:35:09–00:36:43]
+
+So whether you're logging in using email and password or UAE pass, once you're in, you'll have access to all FTA services including VAT registration, filing and account management. In the next step, we'll look at what you actually see inside EmaraTax and how to start the VAT registration application. Once you are logged into EmaraTax, this is where you start the VAT registration process. From your dashboard, you select the Value Added Tax tab and then click on Register. That's the point where the VAT registration application begins. The system will guide you step by step to complete the application and upload the required information and documents we just discussed. If at any point you feel like you need more guidance on how to register or on each step of the process, you can always refer to the FTA website where you will find user guides and instructions. You can also follow us on social media where we regularly announce upcoming VAT registration workshops. In those workshops and sessions, we go through the full VAT registration process step by step in detail. So up to this point, we've walked through
+
+[00:36:44–00:38:08]
+
+When VAT registration applies, how to register, and where to do it on EmaraTax. But registering for value-added tax is really just a starting point. Once a business is registered, the next step of this journey is to stay compliant when it comes to VAT in other words what you need to do on ongoing basis to stay compliant this section is about the day-to-day VAT responsibilities after registration: how you charge VAT, keep records, file returns, and meet your obligations. So now that registration is done let's move on to VAT compliance once a business becomes VAT registered a few important things happen first the business is issued a tax registration number mostly known as TRN this number officially identifies the business as a VAT registrant and must be used for all VAT related purposes. From that point onwards the business must comply with VAT record keeping and reporting requirements. This includes keeping proper records and issuing tax invoices that meet the requirements set out in the VAT legislation.
+
+[00:38:09–00:39:32]
+
+The business is also required to submit VAT returns within the deadline specified by the legislation usually on a periodic basis through the EmaraTax portal along with filing returns the registrants must also settle any VAT payment by the applicable deadlines at the same time VAT registration also comes with specific rights such as the ability to recover a legitimate input VAT provided that the conditions in the registration are met of course the VAT registration isn't just about charging VAT it creates ongoing obligations but it also gives businesses clear rights and protections under the VAT law now let's break those compliance obligations down one by one starting with tax invoices let's start VAT compliant with tax invoices because this is one of the most important day-to-day obligations a tax invoice is basically a written or electronic document that records the details of a taxable supply it shows what was supplied when it was supplied the value of supply and the VAT charge one very important point to be clear on only VAT registered businesses are
+
+[00:39:32–00:40:27]
+
+Allowed to charge VAT on taxable supplies. Charging VAT when you are not registered is not just a mistake. It is treated as a serious violation under the tax law and it can lead to penalties or other legal consequences. So once you're registered for VAT, issuing proper tax invoices is not optional. It's a core compliance requirement and it's the starting point for correct VAT reporting and recovery. Next, we'll look at what information must be included on a tax invoice to make it valid under the VAT legislation. Let's look at what makes a tax invoice valid under the VAT legislation. A proper tax invoice must be clearly shown in the words tax invoice on it.
+
+[00:40:27–00:41:26]
+
+So it's obvious what type of document it is. It must include the date the invoice was issued and if the date of the supply is different. That also needs to be shown. The invoice must clearly state the name, address, and TRN of the supplier, and the name and the address of the customer. If the customer is VAT registered, their TRN must also be included. There should also be a clear description of the goods or services supplied, along with a sequential invoice number that uniquely identifies the invoice. In addition, the quantity or volume supplied must be shown and all amount must be expressed in UAE dirham. If a foreign currency is used, it must be converted using the UAE Central Bank exchange rate on the date of supply.
+
+[00:41:27–00:41:44]
+
+The key takeaway here is that issuing a tax invoice is not just about charging VAT. It's about issuing a document that meets all legal requirements because this affects both your compliance and your customer ability to recover VAT.
+
+[00:41:45–00:42:14]
+
+[Pause or unclear audio; the recognition passes did not recover a complete sentence here.]
+
+[00:42:14–00:43:50]
+
+Through this feature, a registrant can update key information such as entity details, identification and trade license information, eligibility criteria, business relationships, contact details, and authorized signatory declarations, all in one central place. It's important to keep this information up to date because the VAT legislation requires registrants to notify the FTA of certain changes within specific time frames, usually within 20 business days. Failing to update these details on time can result in administrative penalties. The VAT compliance isn't only about invoices and returns. It also includes making sure your registered details and EmaraTax are always accurate next we move on to VAT returns and see how reporting works in practice so once your business details are correct and up-to-date and EmaraTax the next compliance key step is VAT return filing a VAT return is basically the document where a business reports its VAT activity for a specific tax period it summarizes the total value of supplies and purchases made during that period and shows whether the business has VAT payment to the FTA or a VAT refund position in simple terms the VAT return brings
+
+[00:43:50–00:44:51]
+
+Everything together. The VAT you charge on your sales, the VAT you paid on your expenses, and the final position for that tax period. This return is submitted online through EmaraTax and it must be filed within the deadline set in the registration. So after registration, invoicing, and keeping your details updated, VAT returns are the main recurring obligation or a VAT registered business. Once you know what a VAT return is, the next thing to understand is when it needs to be filed. VAT return must be filed electronically through EmaraTax on or before the 28th day of the month following the end of the tax period. So for example, if your tax period ends at the end of March, the VAT return must be submitted by the 28th of April.
+
+[00:44:52–00:45:48]
+
+There is also an important practical point to remember. If the 28th falls on a weekend or a federal public holiday, the deadline moves to the first business day after that. Beating this deadline is very important because late submission can result in administrative penalties. Now that we know when the VAT return must be filed the next step is to look at what actually goes into the VAT return now let's look at the information that is actually reported in the VAT return the VAT return captures a summary of the business's VAT activity for the tax period This includes the registrant's details, such as the name, address, and TRN, and the tax period that the return relates to.
+
+[00:45:48–00:46:44]
+
+The return then covers the value of taxable supplies, and the VAT due, as well as zero-rated supplies and exempt supplies, which still need to be reported, even though VAT may not be charged. It also includes supplies covered under Article 48 of the VAT Decree Law, which mainly relate to certain imports of goods and services, [unclear audio] where the registrant is responsible for declaring VAT due. On the recovery side, the return shows the value of expenses for which the business is claiming recoverable input VAT and then calculates the total VAT due or recoverable for that tax period. At the end of the return, there is a result in either payable VAT or excess VAT for the period.
+
+[00:46:44–00:47:40]
+
+Just to highlight an important legislation point here, under Article 74 of the VAT Decree Law from the 1st of January of the year 2026, excess recoverable input tax can only be carried forward for a maximum of five years from the tax period in which it arose. If that excess input VAT is not claimed as a refund or used to offset future VAT liabilities within that period, the right to claim it will expire. So it's important not just to report VAT correctly, but also to monitor excess VAT balances and take action where needed. Now that we've seen how VAT is reported in the return, the next thing is to understand is what happens if a mistake is discovered after submission.
+
+[00:47:41–00:48:36]
+
+That's where voluntary disclosure comes in. Now let's talk about voluntary disclosure which is basically the safety net in the VAT system. A voluntary disclosure is the way a VAT registrant informs the FTA that there was an error or omission whether in a VAT return, a tax assessment or a VAT refund application. In simple terms, it is what you use when you realize a mistake after submission and need to fix it properly. Voluntary disclosure is used in three main situations. First, if an incorrect VAT return was submitted and needs to be corrected. Second, if there is an incorrect tax assessment issued by the FTA. And third, if an incorrect VAT refund application was submitted.
+
+[00:48:37–00:49:34]
+
+There is one important point to be aware of here. If a taxpayer discovers an error or omission in a VAT return that does not affect the amount of VAT due, the correction must be made to a voluntary disclosure in the cases specified under FTA Decision No. 8 of the year 2024. For example, a business submits its VAT return and later realizes that some information was entered incorrectly. The sales amount are correct and the total VAT payable has not changed, but the wrong emirate was selected in the return. Or some sales were reported under zero rated or exempt supplies instead of standard rated supplies. So even though the VAT return is correct and there is no impact on VAT payable, this is still considered an error in the VAT return.
+
+[00:49:35–00:50:37]
+
+In such cases, the mistake cannot be ignored. A voluntary disclosure must be submitted to correct the information. In all other cases where the VAT due is affected, the correction is done by submitting a voluntary disclosure rather than amending the return directly. The key message here is simple. If you spot a mistake, please do not ignore it. The VAT system allows you to correct errors through voluntary disclosure, and doing so proactively helps reduce risks and potential penalties. Now that we understand how voluntary disclosure works, the next step is to look at what happens when VAT payable is reported incorrectly, specifically cases where VAT is understated or overstated. Now, let's look at the same concept, but this time in relation to VAT refunds.
+
+[00:50:37–00:51:26]
+
+Starting with an understated VAT refund, this happens when the amount of refund claimed is less than what the person is actually entitled to. In this case, a voluntary disclosure may be submitted to correct the position. If a voluntary disclosure is submitted, it must be done within 20 business days from the date the error is discovered. It's also important to note that voluntary disclosures relating to refunds are subject to a five-year limit, meaning the right to correct or claim the refund does not remain open indefinitely. Now, moving on to an overstated VAT refund. This occurs when the amount of refunds claimed is more than what the person is actually intended to.
+
+[00:51:28–00:52:42]
+
+In this situation, a voluntary disclosure must be submitted. The registrant is required to submit the voluntary disclosure within 20 business days from the date the error is discovered. There is one exception to be aware of. If the error relates to an incorrect VAT return or tax assessment, the 10,000 dirhams threshold route applies, and the correction may be made through the VAT return instead. Now let's have a look regarding VAT deregistration. There are two types of VAT deregistration: mandatory deregistration and voluntary deregistration. Starting with mandatory deregistration, a business must apply for a deregistration in two main situations. First, if the business stops making taxable supplies, for example, if the business is closed or the trade license is cancelled, in this case, the application must be submitted within 20 business days from the date the business stops making taxable supplies.
+
+[00:52:42–00:53:52]
+
+Second, if the business turnover and taxable expenses fall below the voluntary threshold over the past 12 months. Now moving on to voluntary deregistration. A business can choose to deregister if its turnover the past 12 months is below the mandatory registration threshold, but still above the voluntary threshold. Finally, an important point to keep in mind, if a business registered for VAT on a voluntary basis, it cannot apply for deregistration within the first 12 months of registration. So, in summary, mandatory deregistration is required in specific cases. Voluntary deregistration is optional if threshold allows and timing rules must also be followed. The completion of deregistration, there are certain steps and things to be followed in that regards. As part of the deregistration process and following approval by the FTA of the deregistration, the person must submit a final VAT return.
+
+[00:53:52–00:54:49]
+
+A business will not be deregistered unless they have paid all tax and administrative penalties due and filed all tax returns. The FTA will notify the person of the effective date of the deregistration, and the deregistration does not remove the right of the FTA to perform a tax audit and impose penalties in respect of the errors and offenses that occurred during the period the person was registered for VAT. Tax deregistration shall not absolve a person from having to comply with all of the VAT obligations, including filing another or a new VAT registration application when the requirements for mandatory VAT registration are met. So even after submitting your deregistration, if the obligations to register for VAT rises again, then you need to register for VAT.
+
+[00:54:52–00:56:16]
+
+With that being said, let's quickly test your understanding regarding the first part of the session. So my question for you is, when can a business apply for VAT deregistration in the UAE? You can look at the options on screen and have the right answer in the chat box. Is it A, when taxable supplies exceed 375,000 dirhams; B, when taxable supplies fall below 187,500 dirhams [number uncertain], or the business ceases making taxable supplies; or is it C, at any time without conditions, or D, only after five years of registration. So, go ahead and think about the right answer, and type it in the chat box. I see a lot of A and B, okay so the right and correct answer is actually option B which is when taxable supplies fall below 187,500 dirhams [number uncertain], or the business ceases making taxable supplies.
+
+[00:56:21–00:57:17]
+
+With that being said thank you so much for your attention for the first part of the session and we will give you a break for 15 minutes and then we will be back to continue the session with the second part which will be related to everything regarding corporate tax so please come back on time so and stay in the session and be present after the 15 minutes break so we can continue the part related to corporate tax uh i will be handing the mic back to my colleague who will be covering the part related to corporate tax. Thank you.
+
+[00:57:30–00:58:00]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[00:58:00–00:59:07]
+
+Good morning everyone. This is Hessa [name uncertain] from the Taxpayer Services Department, and I will guide you through the key corporate tax topics that are most relevant for new business owners. We will start with the corporate tax overview, where I will explain what corporate tax is, why it was introduced in the UAE, and who it applies to, in a simple and practical way. Then we will look at free zones and tax groups. This will help you understand how corporate tax applies to different business structures, especially if you operate in a free zone or as a part of a group. After that, we will cover reliefs and elections. These are important because they can reduce the tax burden in certain cases, and it's useful to be aware of that early when planning your business.
+
+[00:59:07–01:00:24]
+
+We will also explain corporate tax registration, including when registration is required, and what steps you need to take. Finally, I will walk you through the corporate tax return, so you will have a clear idea of what needs to be submitted and when. By the end of the session, you should have a solid understanding of corporate tax basics and feel more confident about your responsibilities. Let's start with the corporate tax overview. So, what is corporate tax? Corporate tax, or CT, is a direct tax on business profit. This means it is a tax on the net income that a business makes. In simple words, if a business makes profit, corporate tax may apply. In some other countries, corporate tax is also called corporate income tax or business profit tax. In the UAE, corporate tax applies to businesses and companies, not to personal income like salaries don't worry if your business is new or if you are not registered yet in the next slides i will explain who needs to register and when corporate tax applies let's continue
+
+[01:00:25–01:01:50]
+
+Now that we understand what corporate tax is let's take the next step and look at how corporate tax works in practice starting with the rates applied in the UAE and the UAE corporate tax applies to a taxable person which generally means a business or a company corporate tax is charged on taxable income which simply means the profit your business makes the UAE applies to corporate tax rates designed to support small and growing businesses the first rate is zero percent on taxable income up to 375,000 the second rate is nine percent on taxable income exceeding 375,000 it's important to know that if you are a taxable person you are required to register for corporate tax regardless of your revenue or profit we will explain who is considered as a taxable person in more detail in the upcoming slides what this means in simple term is if your business profit is 375,000 or less you pay zero percent corporate tax if your profit is more than 375,000 only the amount above
+
+[01:01:50–01:02:56]
+
+This threshold is taxed at 9%. Let's look at a quick example. If a company has a taxable income of 500,000 dirhams, the first 375,000 dirhams is taxed at 0%. So, there is no tax on this portion. The remaining 125,000 is taxed at 9%, which equals 11,250 dirhams. So total corporate tax payable by the company would be 11,250 dirhams. In addition to this rate, corporate tax law also provides exemptions and relief. But these apply only when certain conditions are met. This brings us to the benefits available under the corporate tax law, particularly for businesses operating in free zones. A qualifying taxable person operating in a qualifying free zone may benefit from a 0% corporate tax rate on a qualifying income.
+
+[01:02:57–01:04:01]
+
+This 0% rate applies only to specific qualifying activities and transactions. Any income that is not considered qualifying income will be subject to corporate tax at the 9% rate. Qualifying income is determined in accordance with Cabinet Decision No. 55 of 2023, and we will explain what qualifying free zones mean later in the presentation. Now that we've looked at corporate tax rates, the next important question is, who is considered a taxable person for corporate tax purposes? Simply put, a taxable person is someone who is required to register for corporate tax and comply with the corporate tax rules. There are four categories. First, a resident person who is a juridical person. This usually means a company or business established in the UAE such as an LLC or a free zone company.
+
+[01:04:02–01:04:56]
+
+Second, a resident person who is a natural person. This refers to an individual such as a sole establishment owner or a freelancer when they conduct business or commercial activities. Third, a non-resident person who is a juridical person. This usually means a foreign company that has business activities or a presence in the UAE. Fourth category is a non-resident person who is a natural person. This refers to a foreign individual carrying out business activities in the UAE. At this stage, you don't need to remember all the details. The purpose of this slide is to give you the big picture. In the next slide, you will go through each category one by one using clear examples so you can easily understand which category applies to you and your business.
+
+[01:04:59–01:06:15]
+
+Now let's talk about natural persons and how corporate tax applies to an individual. A natural person simply means an individual such as a sole establishment owner, freelancer, or self-employed person. The key point to remember is this a natural person is subject to corporate tax only if two conditions are met first the individual must be conducting a business or business activity in the UAE second the total turnover from the business must exceed 1 million dirhams in a calendar year from 1st of january to 31st of december so if an individual earn 1.2 million in revenue from a business activity they fall within the scope of corporate tax if the turnover is 1 million or less corporate tax does not apply now let's look at the corporate tax base meaning what income is considered taxable. A natural person is taxable on income from business activities in the UAE and income earned outside the UAE if it's related to the business activities conducted in the UAE.
+
+[01:06:16–01:07:45]
+
+For example, if an individual is based in the UAE and provides services to clients abroad, that income is still considered taxable because it relates to the business activity carried out in the UAE. When calculating whether the one-million-dirham turnover threshold is exceeded, it is important to know that not all income is included. The following are excluded from this calculation: salaries and wages, personal investment income, real estate investment income. Finally, it's important to note that whether an individual lives inside or outside the UAE, they conduct a business or business activity in the UAE they are treated as a resident person for corporate tax purposes. Now that we've covered natural person let's move on to the next common category which is juridical person. A juridical person simply means a company or legal entity rather than an individual for corporate tax purposes a resident person includes a company that is incorporated established or recognized under the UAE laws in simple terms this means companies registered in the UAE, including mainland and free zone companies. A resident person can also include a foreign
+
+[01:07:45–01:09:12]
+
+Company in certain cases this applies when a company is incorporated under foreign laws but is effectively managed and controlled in the UAE let's now look at the corporate tax base for resident juridical person resident juridical person are subject to corporate tax on their worldwide income this means income earned inside UAE and outside UAE whether a foreign company is considered to be effectively managed and controlled in the UAE on the facts and circumstances the key factor is where important management and commercial decisions are regularly and mainly made for example if the board of directors meets in the UAE and the main strategic decisions are taken here the company would generally be considered to be managed and controlled in the UAE and therefore treated as a resident person for corporate tax purposes now that we've covered resident juridical person let's move on to the final category non-resident juridical person a non-resident person is a company that is not considered a resident person in the UAE for corporate tax purposes even though the company is not resident
+
+[01:09:12–01:10:13]
+
+In the UAE, it may still fall within the scope of corporate tax if certain conditions are met. The first situation is where the company has a permanent establishment in the UAE. A fixed place permanent establishment generally means a physical place in the UAE where core business activities are carried out with a certain level of permanence, usually around six months. A dependent agent permanent establishment exists when a person in the UAE regularly negotiates or concludes contracts on behalf of the foreign company. The second situation is where the company earns income from immovable property in the UAE, such as real estate. This is referred to as having nexus in the UAE. The third situation is where the company earns a state-sourced income from the UAE, meaning income generated from UAE resources.
+
+[01:10:14–01:11:13]
+
+However, if a non-resident person does not have a permanent establishment and does not have a nexus in the UAE, then there is no requirement to register for corporate tax or file corporate tax return. Now that we've explained who is subject to corporate tax, the next step is to understand when corporate tax is reported. This brings us to the tax period. The tax period is important because it determines the period for which a taxable person must prepare financial accounts and file a corporate tax return. Simply put, every taxable person must file one corporate tax return for each tax period. This ensures that income is reported correctly and that the Federal Tax Authority receives accurate information about taxable profits.
+
+[01:11:14–01:12:06]
+
+In most cases, the tax period is the financial year of the business. This can be the Gregorian calendar year from 1st of January to 31st of December or a 12-month accounting period for which the business requires its financial statements. While the standard tax period is 12 months, a corporate tax law allows some flexibility. A taxable person may apply to the federal tax authority to use a different tax period. If approved, this could include an extended first tax period of up to 18 months or a shorter tax period such as 6 to 12 months. You may refer back to Article 57 and 58 from the Federal Decree Law No. 47 of 2022 on the taxation of corporations and businesses.
+
+[01:12:08–01:13:17]
+
+Now that we have covered the overview of corporate tax, we will move on to the next important topics, which are free zones and corporate tax groups. This part is especially relevant for businesses operating in free zones, all businesses that are part of a group structure. Let's start with free zones. Let's clarify an important point that often causes confusion, the difference between a free zone for corporate tax purposes and a designated zone. This distinction is important because not all zones are treated the same way when it comes to corporate tax obligations. First, let's talk about free zones for corporate tax purposes. A free zone is a designated and defined geographic area within the UAE, established to encourage investments and business activities for corporate tax purposes.
+
+[01:13:17–01:14:42]
+
+A zone is considered a free zone only if it's recognized as such under a cabinet decision. Operating in a free zone does not automatically mean that a business benefits from 0% corporate tax rate. The business must also meet the conditions set out in the corporate tax law, which we will explain in the upcoming slides. Now let's look at designated zones. A designated zone is a zone that is treated as a designated zone for VAT purposes under Cabinet Decision No. 59 of 2017. However a designated zone may or may not be considered a free zone for corporate tax purposes because of this it is very important that all taxable persons check with their respective free zone authority to confirm whether they are operating in a free zone for corporate tax purposes now that we've explained what a free zone is for corporate tax purposes the next question is when can a free zone business benefit from the zero percent corporate tax rate to benefit from the zero percent corporate tax rate a free zone must
+
+[01:14:44–01:16:08]
+
+A free zone person must qualify as a qualifying person and to be a qualifying free zone person all six conditions shown on this on this slide must be met if even one condition is not met the business will not be eligible for the zero percent rate let's go through them briefly first the business must maintain adequate substance in the free zone This means the business must generally operate from a free zone with appropriate people, premises and resources. Second, the business must derive qualifying income. This means the income must must come from activities that are recognized by the law as qualifying third the free zone person must not elect to be subject to corporate tax at the nine percent rate in other words the business must not choose to be taxed under the standard corporate tax regime fourth the business must comply with transfer pricing rules and maintain the required documentation this applies when the free zone business deals with related parties for example if a free zone company sells goods or services to its
+
+[01:16:08–01:17:39]
+
+Parent or related company abroad the pricing must be at arm's length meaning at market value and proper documentation must be [unclear]. Fifth, the business must prepare audited financial statements every year regardless of its size or level of revenue finally the business must meet the de minimis requirement this means that any non-qualified income must not exceed the lower of a five million or five percent of the total revenue the key takeaway from this slide is simply a free zone person is treated as qualifying free zone person by default but it will lose this zero percent corporate tax benefit if it fails to meet even one of these conditions now that we've covered freezone and their corporate tax treatment let's move on to another important concept that applies to businesses with more than one company which is corporate tax groups a corporate tax group allows two or more related companies to be treated as one single taxable person for corporate tax purposes this can simplify tax compliance by allowing the group to submit one corporate tax return instead of separate
+
+[01:17:39–01:19:17]
+
+Returns for each company however to form a corporate tax group certain conditions must be met first all group members must be resident juridical person in simple terms this means the company must be UAE resident companies Second, the parent company must own at least 95% of the share capital. Sorry the second the parent company must own at least 95 percent of the share capital and voting right in each subsidiary third the parent company must also be entitled to at least 95 percent of the profits and net assets of the group members four the group members cannot be exempt persons or qualifying free zone persons, this means that companies benefiting from specific tax exemptions or the 0% free zone regime cannot join a corporate tax group. Finally, all group members must follow the same financial year and use the same accounting standards. If all of these conditions are met, The companies may apply to the federal tax authority to form a corporate tax group.
+
+[01:19:26–01:20:28]
+
+And once a corporate tax group is formed, the parent company takes on a central role in managing the group's corporate tax obligations and acts as the main point of contact with the FTA, and is accountable for the group's corporate tax compliance. Forming a corporate tax group is optional, but it comes with several practical benefits to simplify corporate tax compliance and reduce administrative burden for businesses that operate through multiple companies. The next part of this session focuses on reliefs and elections, which are designed to provide flexibility and support to businesses under the corporate tax law. This section explains situations where businesses may be able to reduce their tax burden or choose specific tax treatments, depending on their structure and activities.
+
+[01:20:29–01:21:27]
+
+We'll go through these concepts in a clear and practical way, Focusing on when they apply and what they mean for you as a business owner. Let's clarify what we mean by relief and elections under the corporate tax law. A relief is a corporate tax benefit that can reduce or, in some cases, eliminate corporate tax, provided certain conditions are met. An election is a choice that a business can make to apply a specific corporate tax treatment depending on its circumstances. To make this clear, let's look at some common examples. First, small business relief, also known as SBR. If your revenue is 3 million or less, you may be eligible for this relief.
+
+[01:21:28–01:22:29]
+
+Next, the realization basis election. This election applies to businesses that prepare their financial statement using the accrual basis. When this election is made, gains and losses are taxed only when they are realized. A realization event occurs when an asset is sold or a liability is settled, meaning corporate tax does not apply to unrealized gains or losses. Next, the Transitional Rules Election. This election supports businesses when corporate tax is applied for the first time. It allows you to exclude gains or losses that relate to period before your corporate tax period. This applies where qualifying assets or liabilities were held at the start of the first tax period and were recorded using the historical cost method.
+
+[01:22:29–01:23:44]
+
+If they were not recorded at historical cost, this election cannot be applied. Moving on to transfer within a qualifying group. This election allows certain [unclear audio; sentence incomplete]. It supports internal group restructure without triggering corporate tax. Next, business restructuring relief. This relief applies when a business or part of a business is transferred to another taxable person. If the conditions are met, the transfer takes place without corporate tax on gains or losses, supporting business reorganizations. Finally, the foreign permanent establishment exemptions. A UAE resident person may operate branches or permanent establishments outside the UAE. With this election, the income and expenses of those foreign operations can be excluded from corporate tax, helping to avoid double taxation.
+
+[01:23:45–01:24:50]
+
+Each relief or election has specific conditions and businesses should carefully assess their situation before applying. One of the most commonly used reliefs, especially for new businesses, is the small business relief. This relief is designed to reduce the corporate tax burden for eligible businesses and simplify compliance. First, let's look at who can elect for small business relief. This relief is available to resident persons including natural persons and juridical persons such as companies. Next, let's focus on the key conditions. To qualify for small business relief, the election must be made for each tax period and the business revenue must not exceed 3 million dirhams. And the current tax period and all previous tax periods.
+
+[01:24:51–01:25:55]
+
+If these conditions are met, let's see what the relief actually provides. When small business relief is applied, the business is treated as not having derived any taxable income for that tax period. This means no corporate taxes payable for that period. However, no other exemptions, relief, or deduction can be claimed for the same tax period. In addition, transfer pricing documentation is not required when this relief is applied. That said, the arm's length principle must still be followed. It's also important to understand who cannot elect for small business relief. The relief is not available to a qualifying free zone person or a member of a multinational group where the consolidated group revenue exceeds 3.15 billion dirhams.
+
+[01:25:56–01:26:53]
+
+The key takeaway from this slide is this. If you are a small business with revenue of 3 million dirhams or less, small business relief may allow you to simplify compliance and reduce your corporate tax obligations provided the conditions are made. One of the most important steps under the corporate tax system is registration. In this section, we will explain who needs to register for corporate tax and when, focusing on natural person and juridical persons. We will break this down in a clear and practical way so you can easily understand whether registration applies to you and what actions you need to take. Let's start by looking at corporate tax registration requirements for natural persons.
+
+[01:26:54–01:28:01]
+
+These deadlines apply only to individuals such as sole establishment owner or freelancers whose revenue exceeds 1 million dirhams. For a resident natural person, if you conduct business in 2024 or later and your revenue exceeds the CT threshold, you must submit a corporate tax registration application by 31st of March of the following calendar year. For a non-resident natural person, if you conduct business in 2024 or later and your turnover exceeds the CT threshold, you must submit a CT registration application within three months from the day to meet the CT requirements. Let's move on to corporate tax registration requirements for resident juridical person, meaning companies such as LLCs, free zone companies, branches of foreign companies, and public or private shareholding companies.
+
+[01:28:01–01:29:25]
+
+If a company is incorporated or established in the UAE, it must apply for corporate tax registration within three months from the date of incorporation establishment or recognition if a company is incorporated under foreign laws but effectively managed and controlled in the UAE it must apply for corporate tax registration within three months from the end of its financial year. Please remember, corporate tax registration is mandatory for juridical persons. Finally, let's look at non-resident juridical person as the rules are slightly different for foreign companies. If a foreign company has a permanent establishment in UAE, it must apply for corporate tax registration within six months from the date of the permanent establishment exists. If a foreign company has a nexus in the UAE, it must apply for CT registration within three months from the date the nexus is established. If there is no permanent establishment and no nexus, there is no requirement to register for corporate tax. You can refer to Federal Tax Authority decision number three of 2024 on the corporate tax registration timeline.
+
+[01:29:28–01:30:33]
+
+Once you know when you are required to register, the next step is understanding how the registration is done. All corporate tax services, including registration, are completed through the EmaraTax portal, which is the Federal Tax Authority online platform. To begin, log in to your EmaraTax account. If you do not already have an account, you will need to create one first. After logging in you must create or access your taxable person profile and from the main overview page select corporate tax registration and click on register. You will then be guided through the application. It's important to ensure that all information is accurate and complete before submitting the application. Please remember that all tax-related services are available through the EmaraTax portal, including registration, returns, and updates to your details.
+
+[01:30:34–01:31:36]
+
+If you would like more guidance on how to use EmaraTax, you can access the user guides available on the FTA website, and look out for upcoming EmaraTax workshops where the platform is explained step-by-step. Most importantly, make sure to register within the required timeline to avoid administrative penalties. Up to this point, we've taken you through the corporate tax journey step by step from understanding who is subject to corporate tax to when registration is required and how to complete it through EmaraTax. The next and final step in this journey is the corporate tax return. This is where everything comes together. The corporate tax return is how you effectively report your business results for the tax period and confirm your corporate tax position to the federal tax authority.
+
+[01:31:37–01:33:04]
+
+Even for new businesses and even in cases where no corporate tax is paid filing the corporate tax return is an essential compliance step. A corporate tax return must be submitted by the taxable person or by someone authorized to submit it on their behalf. This can include a tax agent, a legal representative, or the parent company of a tax group. The corporate tax return must be completed and filed online through EmaraTax it must be submitted within nine months from the end of the tax period if your accounting records are kept in a currency other than UAE the amounts must be converted to UAE derhams using the central bank exchange rates the order used is spot rate, then average monthly rate, then average annual rate. The CT return consists of nine main steps. Through the return, the taxable person reports taxable income and includes any adjustments such as exemptions and reliefs. Please note that the Ministry of Finance and the Federal Tax Authority launched an initiative to waive late registration penalties. This applies to a taxable
+
+[01:33:04–01:34:34]
+
+Persons and certain exempt persons who are required to register for corporate tax. To benefit the CT return or annual declaration for the first tax period must be submitted within seven months from the end of that first tax period, and full compliance with the CT law is required. Once you understand what the corporate tax return is and when it must be filed the next step is knowing what information needs to be included in the return the corporate tax return must include as applicable the tax period the taxable person's details including the tax registration number which is TRN the taxable income for the for the period any tax loss relief claim and tax losses transferred, any available tax credits, and the corporate tax payable for the tax period. In addition, the taxable person must provide the federal tax authority with any information documents or records that are reasonably required to apply the provision of the corporate tax law in certain cases the fta may also request additional information or specific declarations depending
+
+[01:34:34–01:35:42]
+
+On these circumstances and it's important to note that you should not file your corporate tax return if any key details are incorrect this includes an incorrect entity type For example, being registered as a natural person instead of a juridical person or an incorrect tax period. If any of these details are incorrect, you must apply through EmaraTax to update the entity type or tax period first. You should only file the corporate tax return after the federal tax authority has approved and updated these details. The next important step is knowing who is required to file the return. For corporate tax purposes, taxable persons fall into six main categories, and the category you belong to determines how your corporate tax return is submitted.
+
+[01:35:42–01:36:57]
+
+Go through them briefly first juridical person that and this is refers to companies or legal entities whether they are resident or non-resident this category also includes free zone persons that choose not to be qualifying free zone person or that do not meet the conditions to be treated as a qualifying free zone person second natural person this includes individuals with a resident or non-resident who carry on a business or commercial activity in the UAE third qualifying free zone persons these are free zone businesses that need all the required conditions to benefit from the zero percent corporate tax rate on qualifying income. Fourth is tax groups. Fifth, unincorporated partnerships. Where an unincorporated partnership is treated as a separate taxable person the partner must appoint one partner to carry out the corporate tax procedures on behalf of the partnership.
+
+[01:36:57–01:38:31]
+
+Finally, certain exempt persons with a taxable business. Examples include a family foundation, an unincorporated partnership, or a qualifying public benefit entity. These persons are required to submit a declaration to the federal tax authority. These are the key categories of taxable persons that determine how and by whom the corporate tax return is filed. Up to this point, we focused on corporate tax return. However, it's important to know that not everyone submits a corporate tax return. Persons are classified as exempt persons under the corporate tax law these persons are not required to submit a corporate tax return. Instead, exempt persons must submit an annual declaration. The purpose of the annual declaration is to confirm that the person continues to meet the conditions required to remain exempt from the from a corporate tax so while this is not a corporate tax return it is a still mandatory compliance requirement in simple term exemption from corporate tax does not mean exemption from reporting examples of exempt person include qualifying public benefit entities public and private pension or social security funds
+
+[01:38:31–01:40:08]
+
+Qualifying investment funds entities that are wholly owned and controlled by certain persons these persons are required to submit the annual declaration confirming that they still meet the exemption conditions for the relevant period. Now let's pause for a quick knowledge check here is the question which relief allows eligible business to be treated as having no taxable income under UAE corporate tax take a moment and think about it. I will give you a few options to choose from. A, free zone relief; b participation exemption c small business relief d foreign tax credit go ahead and pick your answer you can write it in the chat box Okay, so I see a lot of Cs, and the correct answer is C, small business relief. This relief is designed to support qualifying smaller businesses by allowing them subject to meeting the prescribed conditions and revenue threshold, to be treated as having no taxable income for corporate tax purposes and small business relief allows eligible taxable persons to be treated as having no taxable income for corporate tax purposes this relief is available if revenue
+
+[01:40:08–01:41:39]
+
+Does not exceed 3 million per year. Well done everyone, and with that we have reached the end of the corporate tax section we hope this part of the session has helped you helped give you a clear and practical understanding of the key corporate tax requirements for registration and filing to return and declarations of course we understand that corporate tax can feel overwhelming at first, especially for new businesses. That is why the Federal Tax Authority provides official guides and resources to support you beyond today's session in the next part we will show you how to access these official guides on the fta website where you can find clear explanation step-by-step guidance and the most up-to-date information to support your compliance journey these guides are available are valuable reference you can return to at any time as your business growth let's take a look at how to access the FTA guides so starting by visiting the FTA website at tax.gov.ae from the main menu go to the taxes section you will then see a list of different taxes from this list select corporate tax
+
+[01:41:40–01:42:50]
+
+Once you are on the corporate tax page scroll down and look for the section title guides references and public clarifications this section contains the official FTA guides explanations and clarifications related to corporate tax. These resources are designed to help you understand the rules in more details and provide guidance on specific situations you may face as a business owner If you would like to look up information related to value-added tax, VAT, you can follow the same process. Simply select VAT from the list of taxes instead of corporate tax. We strongly encourage you to refer to these guides whenever you need clarifications as they are official up-to-date and reliable resources of information and before we conclude we will show you a brief video about e-invoicing, highlighting the key information you need to know and explaining the main aspects of implementing e-invoicing.
+
+[01:42:50–01:43:48]
+
+Let's talk about e-invoicing. And no, it is not just emailing a PDF. E-invoicing means invoices are created, sent and received in a fully digital format. A format systems can read automatically. No printing, no scanning, no manual data entry. Instead of someone typing in your details into your company's software, the data flows straight from one system to another: fast, clean, accurate. In the UAE, all e-invoices must be sent through an accredited service provider. This ensures everything is secure and follows government rules. The invoices also flow directly to the federal tax authority, securely and automatically. This helps keep tax reporting accurate from day one, no extra steps for the business. This is one part of the UAE digital agenda led by the Ministry of Finance.
+
+[01:43:48–01:44:43]
+
+The program sets the national framework, defines the standards, and drives the UAE's move to a fully digital and transparent financial ecosystem. With phased implementation ahead, now is the time to prepare and be part of the shift toward a fully digital economy. So why does e-invoicing matter? First, speed. Invoices are delivered instantly. Are processed faster, payments happen sooner, cash flow improves. Second, fewer errors. No re-keying means fewer mistakes, fewer rejected invoices, less back and forth. Third, lower costs, no paper, no postage, less manual work, teams save time, businesses save money. And finally, compliance and visibility. E-invoicing helps businesses stay aligned with the tax regulation. It also makes tracking and auditing easier.
+
+[01:44:44–01:45:54]
+
+So what does a business need to do? First, understand the e-invoicing process and data requirements. You can check the guide on the Ministry of Finance website [spoken URL unclear]. Second, choose an accredited service provider, ASP, and sign a contract with them. Make sure the ASP is listed on the Ministry of Finance website. Third, onboard your ASP on the EmaraTax System through the Federal Tax Authority. Check the FTA website for the onboarding guide [wording uncertain]. Fourth, work with your selected ASP to conduct testing for e-invoice creation, validation, and submission. Finally, your selected ASP exchanges e-invoices between supplier and buyer and reports tax data to the FTA. In short, e-invoicing helps businesses work smarter, get paid faster, and stay compliant with less effort.
+
+[01:46:04–01:47:19]
+
+Okay i would like to thank my colleague as well for the valuable information that she has shared with us today we hope that all of the participants that attended today's session has benefited from the topics that were covered and discussed in today's session with that i would uh like to uh say and ask uh ask from you really kindly to scan the qr code available on screen to do the post session survey you can scan the qr code available on the screen as well as the link will be shared with you in a minute Now that the link has been shared in the chat box, we'll give everyone two minutes to do the post-session survey.
+
+[01:47:19–01:47:41]
+
+Please take two minutes just to submit everything that is required in the post-session survey. And after that please feel free to submit all of the questions that you have related to today's session's topics in the chat box, and our expert Mr. Khamis Jabbouri [name uncertain] will be answering those questions. Thank you.
+
+[01:48:09–01:48:39]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[01:48:39–01:49:31]
+
+Again please scan the qr code that is available on screen or you could use the link that is in the chat box to submit the post-session survey. And please also welcome Mr. Khamis Jabbouri [name uncertain], who is an SME service senior specialist who can answer your questions in the chat box. So if you have any questions related to today's session topics, please submit them in the chat box and they will be answered by our expert.
+
+[01:49:38–01:50:08]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[01:50:08–01:50:38]
+
+[Pause or indistinct audio; short recognition uncertain.]
+
+[01:50:38–01:51:02]
+
+[Pause or indistinct audio; short recognition uncertain.]

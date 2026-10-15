@@ -55,6 +55,9 @@ struct RecScribeApp: App {
         Window("Recordings", id: AppWindow.recordings.rawValue) {
             RecordingLibraryView().environmentObject(services.recorder).environmentObject(services.library)
         }.defaultSize(AppWindow.recordings.defaultSize).windowResizability(.contentMinSize)
+        Window("Audio Routing", id: AppWindow.routing.rawValue) {
+            AudioRoutingView().environmentObject(services.recorder)
+        }.defaultSize(AppWindow.routing.defaultSize).windowResizability(.contentMinSize)
     }
 }
 
@@ -66,6 +69,7 @@ private struct OpenRecordingsCommand: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Button("Recording Studio") { openWindow(id: AppWindow.studio.rawValue) }.keyboardShortcut("1")
+        Button("Audio Routing…") { openWindow(id: AppWindow.routing.rawValue) }.keyboardShortcut("2")
         Button("Recordings & Import…") { openWindow(id: AppWindow.recordings.rawValue) }.keyboardShortcut("o")
     }
 }

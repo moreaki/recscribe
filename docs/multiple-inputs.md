@@ -1,24 +1,26 @@
 # Multiple input devices with playback
 
-Choose **Capture inputs → Use multiple inputs + playback** in Studio or the
-menu-bar popover, or **Multiple inputs + playback…** in the capture menu. The same
-picker is in Settings → Storage. Select devices individually or use **Select all
-available inputs**. That action snapshots the eligible devices currently connected;
-new or reconnected devices are never added to a running take. **Deselect all**
+Open **Audio routing…** in Studio, the menu-bar popover or Settings → Storage,
+or use **⌘2**. Choose **Use multiple inputs + playback** if needed. The capture
+menu's **Multiple inputs + playback…** opens the same workspace. In **Sources**,
+use **Add input** to select devices individually or **Select all available inputs**.
+That action snapshots the eligible devices currently connected;
+new or reconnected devices are never added to a running take. **Remove all inputs**
 records playback alone. The explicit policy limit is eight inputs plus one playback
 source, with 1–32 native channels per input.
 
-Playback defaults to all system audio. To capture one app instead, select it in the
-capture menu before choosing multiple-input mode. System and per-app playback are
+Playback defaults to all system audio. To capture one app instead, use
+**Choose application…** on the playback source card. System and per-app playback are
 mutually exclusive, avoiding duplicate playback capture. RecScribe's own output is
 excluded from ScreenCaptureKit system/app capture. The app never changes macOS's
 default input/output, installs a loopback driver or creates a permanent aggregate.
 
-For each device, **Mix channels** chooses channels for the derived stereo mix and
-places them left, center or right. Mono is centered. New multichannel selections
+For each device, **Channel connections** provides L/R buttons for the derived
+stereo mix: left only, right only, both (center), or neither. Mono is centered.
+New multichannel selections
 initially route only channels 1–2; additional channels require explicit inclusion
 because interfaces may expose playback loopback there. **Every native input channel
-is saved in the separate source session**, including channels unchecked in the mix.
+is saved in the separate source session**, including channels disconnected from the mix.
 A source with no mix channels is still recorded separately. Source and channel names
 are retained with the source's UID identity; device identity does not identify a
 speaker. The picker shows native channel counts, labels, nominal rates and
@@ -32,7 +34,8 @@ this check. Hardware drivers do not always expose semantic channel identities, s
 unknown hardware loopback cannot be inferred reliably from a channel number. Check
 the interface's routing. Use headphones to avoid acoustic recapture of speakers.
 
-Expand **Audio levels** for a separate fader/mute and channel trims for every chosen
+Each source card has its own fader/mute and channel trims; compact **Audio levels**
+controls are also available in Studio and the popover. Controls apply to every chosen
 input, plus playback gain and the recording master. Gains persist by device UID,
 shared with previous single-input choices. Mute affects the mix, not source files.
 Channels routed to each side are averaged on that side; source contributions are

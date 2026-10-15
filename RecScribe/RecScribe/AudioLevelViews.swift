@@ -42,12 +42,13 @@ struct RecordingLevelsView: View {
     }
 }
 
-private struct SourceFader: View {
+struct SourceFader: View {
     let id: String
     let title: String
     @ObservedObject var levels: AudioLevels
     let channels: Int
     var preservesSources = false
+    var context: String? = nil
     private var value: SourceLevel { levels.level(id) }
     private func change(_ body: (inout SourceLevel) -> Void) { var next = value; body(&next); levels.set(id, next) }
     var body: some View {
@@ -56,19 +57,21 @@ private struct SourceFader: View {
                 Text(title).fontWeight(.medium)
                 Spacer()
                 Text(String(format: "%+.1f dB", value.decibels)).monospacedDigit()
-                Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(title)")
+                Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(context.map { "\($0) \(title)" } ?? title)")
             }
             Slider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }), in: -60...24, step: 0.5)
-                .accessibilityLabel(title).accessibilityValue(String(format: "%+.1f decibels", value.decibels))
-            Toggle(preservesSources ? "Mute in derived mix (source still saved)" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
-                .font(.caption)
+                .accessibilityLabel(context.map { "\($0) \(title)" } ?? title).accessibilityValue(String(format: "%+.1f decibels", value.decibels))
+            Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
+                .font(.caption).fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
+                .help(preservesSources ? "Only the derived mix is muted. Original source tracks are still saved at unity gain." : "Muted audio is saved in this single-source recording.")
             if channels > 1 {
                 DisclosureGroup("Mix channel trims (dB)") {
                     ForEach(0..<min(32, channels), id: \.self) { ch in
                         HStack {
                             Text("Ch \(ch + 1)")
                             Slider(value: Binding(get: { value.channelTrims[ch] ?? 0 }, set: { newValue in change { $0.channelTrims[ch] = newValue } }), in: -60...24, step: 0.5)
-                                .accessibilityLabel("\(title) channel \(ch + 1) trim")
+                                .accessibilityLabel("\(context ?? title) channel \(ch + 1) trim")
                             Text(String(format: "%+.1f", value.channelTrims[ch] ?? 0)).monospacedDigit().frame(width: 45)
                         }
                     }
@@ -120,7 +123,7 @@ struct ListeningControls: View {
     }
 }
 
-private struct DeviceVolumeView: View {
+struct DeviceVolumeView: View {
     let uid: String?
     let input: Bool
     @State private var controls: [AudioDeviceControls.Volume] = []

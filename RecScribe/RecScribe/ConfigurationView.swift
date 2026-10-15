@@ -99,6 +99,7 @@ struct ConfigurationView: View {
                     Button("System playback only") { recorder.setCaptureSource(.systemAll) }
                     OverflowMenuButton()
                 }
+                MultipleInputsView(recorder: recorder)
                 ForEach(recorder.audioSource.availableInputDevices()) { device in
                     Button("\(recorder.audioSource.selectedSource.appBundleID == nil ? "System playback" : "Selected app") + \(device.name)") {
                         recorder.setCaptureSource(.mixed(appBundleID: recorder.audioSource.selectedSource.appBundleID, deviceUID: device.uid))

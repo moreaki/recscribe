@@ -35,6 +35,7 @@ nonisolated struct RecordingHealth: Sendable, Equatable {
     var clipped = false
     var peak: Float = 0
     var failed = false
+    var failureMessage: String?
 
     func status(at now: TimeInterval, policy: Policy = .init()) -> Status {
         if failed { return .failed }

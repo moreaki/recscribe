@@ -13,6 +13,7 @@ final class MultiSourceRecorder {
         var active = false
         var accepting = false
         var failedTracks: Set<CaptureTrack> = []
+        var closedSources: Set<CaptureTrack> = []
         var bytes = 0
         var buffers = 0
         var peakBytes = 0
@@ -20,6 +21,8 @@ final class MultiSourceRecorder {
         var maxWriteMS = 0.0
         var maxQueueMS = 0.0
         var failure: Error?
+        var tracks: [CaptureTrack] = []
+        var continueOnSourceFailure = false
         var health: [CaptureTrack: RecordingHealth] = [:]
         var waveform: [Float]?
         var waveformScheduled = false
@@ -48,7 +51,7 @@ final class MultiSourceRecorder {
 
     func start(at url: URL, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
                epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
-               levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
+               levels: @escaping @Sendable () -> RecordingLevels = { .init() }, continueOnSourceFailure: Bool = false) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
         let mix = SessionWAVWriter(options: options)
         try mix.createFile(at: url, sampleRate: 48_000, channels: 2)
@@ -57,7 +60,8 @@ final class MultiSourceRecorder {
         let now = ProcessInfo.processInfo.systemUptime
         state.withLock { s in
             s = State(); s.active = true; s.accepting = true
-            for track in CaptureTrack.allCases { s.health[track] = .init(startedAt: now) }
+            s.tracks = descriptors.map(\.role); s.continueOnSourceFailure = continueOnSourceFailure
+            for track in s.tracks { s.health[track] = .init(startedAt: now) }
         }
         do {
             let worker = try SynchronizedCaptureWriter(mix: mix, descriptors: descriptors, epoch: epoch, options: options, levels: levels)
@@ -78,7 +82,7 @@ final class MultiSourceRecorder {
         let rate = sample.buffer.format.sampleRate
         let channels = Int(sample.buffer.format.channelCount)
         state.withLock { s in
-            guard s.accepting else { return }
+            guard s.accepting, s.tracks.contains(sample.track), !s.closedSources.contains(sample.track), !s.failedTracks.contains(sample.track) else { return }
             guard s.buffers < maximumBuffers, bytes <= maximumBytes - s.bytes else {
                 fail(AudioRecorderError.bufferLimit, state: &s); return
             }
@@ -101,7 +105,7 @@ final class MultiSourceRecorder {
             try autoreleasepool { try writer.accept(sample) }
             let writeMS = Self.milliseconds(started.duration(to: .now))
             let queueMS = Self.milliseconds(submitted.duration(to: started))
-            let snapshot = CaptureTrack.allCases.map { ($0, writer.health(for: $0)) }
+            let snapshot = state.withLock { $0.tracks }.map { ($0, writer.health(for: $0)) }
             state.withLock { s in
                 s.writeMS += writeMS
                 s.maxWriteMS = max(s.maxWriteMS, writeMS)
@@ -117,13 +121,38 @@ final class MultiSourceRecorder {
                     if health.clipped { s.health[track]?.clipped = true }
                 }
             }
-        } catch { state.withLock { $0.failedTracks.insert(sample.track); fail(error, state: &$0) } }
+        } catch {
+            if case SessionError.invalid = error, state.withLock({ $0.continueOnSourceFailure }) {
+                let message = "Input timing or format changed; other sources continue. " + error.localizedDescription
+                do {
+                    try writer.sourceFailed(sample.track, message: message)
+                    state.withLock {
+                        $0.failedTracks.insert(sample.track); $0.closedSources.insert(sample.track)
+                        $0.health[sample.track]?.failed = true; $0.health[sample.track]?.failureMessage = message
+                    }
+                } catch { state.withLock { fail(error, state: &$0) } }
+            } else { state.withLock { $0.failedTracks.insert(sample.track); fail(error, state: &$0) } }
+        }
+    }
+
+    nonisolated func sourceFailed(_ track: CaptureTrack, message: String) {
+        state.withLock { s in
+            guard s.accepting, s.tracks.contains(track), !s.closedSources.contains(track) else { return }
+            s.closedSources.insert(track)
+            s.health[track]?.failed = true
+            s.health[track]?.failureMessage = message
+            queue.async { [self] in
+                state.withLock { _ = $0.failedTracks.insert(track) }
+                do { try writer?.sourceFailed(track, message: message) }
+                catch { state.withLock { fail(error, state: &$0) } }
+            }
+        }
     }
 
     nonisolated private func fail(_ error: Error, state s: inout State) {
         guard s.failure == nil else { return }
         s.failure = error; s.accepting = false
-        for track in CaptureTrack.allCases { s.health[track]?.failed = true }
+        for track in s.tracks { s.health[track]?.failed = true }
         let id = s.id
         DispatchQueue.main.async { [self] in
             guard state.withLock({ $0.id == id && $0.active && $0.failure != nil }) else { return }
@@ -172,7 +201,7 @@ final class MultiSourceRecorder {
                     let drainMS = Self.milliseconds(stopStarted.duration(to: finalizeStarted))
                     var resultError = failure ?? state.withLock { $0.failure }
                     do { try writer?.finish(failure: resultError) } catch { if resultError == nil { resultError = error } }
-                    for track in CaptureTrack.allCases {
+                    for track in state.withLock({ $0.tracks }) {
                         let frames = writer?.health(for: track).written ?? 0
                         state.withLock { $0.health[track]?.writtenFrames = frames }
                     }
@@ -185,7 +214,7 @@ final class MultiSourceRecorder {
                     writer = nil
                     state.withLock { $0.active = false }
                     let snapshot = state.withLock { ($0.health, $0.peakBytes) }
-                    for track in CaptureTrack.allCases {
+                    for track in state.withLock({ $0.tracks }) {
                         let h = snapshot.0[track] ?? .init()
                         Log.recorder.notice("Source drained role=\(track.rawValue, privacy: .public) received_frames=\(h.receivedFrames) written_frames=\(h.writtenFrames) peak_queued_pcm_bytes=\(snapshot.1)")
                     }

@@ -102,13 +102,13 @@ struct AudioLevelsTests {
         try mix.createFile(at: folder.appendingPathComponent("mix.wav"), sampleRate: 48_000, channels: 2)
         let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: [.init(role: .playback, name: "playback"), .init(role: .microphone, name: "mic")], epoch: 100, options: .init(), levels: { current.withLock { $0 } })
         for index in 0..<4 {
-            for role in CaptureTrack.allCases {
+            for role in CaptureTrack.legacyPair {
                 try writer.accept(.init(track: role, presentationTime: 100 + Double(index) * 0.02, buffer: buffer()))
             }
         }
         current.withLock { $0.master.decibels = 24; $0.microphone.muted = false }
         for index in 4..<8 {
-            for role in CaptureTrack.allCases {
+            for role in CaptureTrack.legacyPair {
                 try writer.accept(.init(track: role, presentationTime: 100 + Double(index) * 0.02, buffer: buffer()))
             }
         }

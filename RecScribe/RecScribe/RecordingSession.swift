@@ -67,7 +67,7 @@ nonisolated enum SessionError: Error, LocalizedError {
 }
 
 nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
     static let singleSourceSchemaVersion = 1
     static let maximumManifestBytes = 16 * 1_024 * 1_024
     var schemaVersion = singleSourceSchemaVersion
@@ -89,6 +89,8 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     var captureEpoch: Double?
     var gainAutomation: [GainEvent]?
     var gainScope: String?
+    var gainTracks: [CaptureTrack]?
+    var sourceIdentity: SourceTrack?
     struct SourceTrack: Codable, Sendable {
         var role: CaptureTrack
         var name: String
@@ -100,6 +102,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         var mixChannels: [Int] = []
         var receivedFrames: Int64 = 0
         var gapFrames: Int64 = 0
+        var channelRoutes: [InputChannelRoute]?
+        var failure: String?
+        var channelLabels: [String]?
     }
 
 
@@ -147,11 +152,12 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         guard (Self.singleSourceSchemaVersion...Self.currentSchemaVersion).contains(session.schemaVersion), (1...32).contains(session.channels),
               (1...384000).contains(session.sampleRate), session.bitDepth == PCM16WAV.bitDepth,
               session.channelMap.count == session.channels else { throw SessionError.invalid("Unsupported session schema or audio format") }
-        guard schemaVersion != 2 || sourceTracks != nil else { throw SessionError.invalid("Version 2 requires a source track group") }
+        guard schemaVersion < 2 || sourceTracks != nil else { throw SessionError.invalid("Version 2 requires a source track group") }
         if let epoch = captureEpoch, !epoch.isFinite || epoch < 0 { throw SessionError.invalid("Invalid capture clock") }
         if let tracks = sourceTracks {
-            guard schemaVersion == Self.currentSchemaVersion, captureEpoch != nil, tracks.count == 2, Set(tracks.map(\.role)).count == 2,
-                  parentSessionID == nil else { throw SessionError.invalid("Invalid source track group") }
+            guard (2...Self.currentSchemaVersion).contains(schemaVersion), captureEpoch != nil,
+                  (1...CaptureTrack.maximumSources).contains(tracks.count), schemaVersion != 2 || tracks.count == 2,
+                  Set(tracks.map(\.role)).count == tracks.count, tracks.allSatisfy({ $0.role.valid }), parentSessionID == nil else { throw SessionError.invalid("Invalid source track group") }
             var references = Set<String>()
             for track in tracks {
                 guard track.receivedFrames >= 0, track.gapFrames >= 0 else { throw SessionError.invalid("Invalid source frame counts") }
@@ -161,6 +167,10 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
                     }
                 }
                 if let rate = track.nativeSampleRate, !rate.isFinite || !(1...384000).contains(rate) { throw SessionError.invalid("Invalid source rate") }
+                if let routes = track.channelRoutes {
+                    guard routes.count <= 32, Set(routes.map(\.channel)).count == routes.count,
+                          routes.allSatisfy({ (0..<(track.channels ?? 32)).contains($0.channel) }) else { throw SessionError.invalid("Invalid source channel routing") }
+                }
                 if let path = track.manifestPath {
                     let child = try Self.safeURL(path, beside: url)
                     guard child != url, path.hasSuffix(".recscribe.json"), references.insert(path).inserted else { throw SessionError.invalid("Invalid source manifest reference") }
@@ -168,11 +178,20 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
             }
         }
         if let events = gainAutomation {
-            guard !events.isEmpty, events.count <= 2048, events.allSatisfy({ $0.valid }), events.first?.frame == 0,
+            guard !events.isEmpty, events.count <= 2048, events.allSatisfy({ $0.valid && $0.to.count == events.first?.to.count }), events.first?.frame == 0,
                   zip(events, events.dropFirst()).allSatisfy({ $0.frame <= $1.frame }),
                   ["derived_mix", "processed_single_source"].contains(gainScope ?? "") else {
                 throw SessionError.invalid("Invalid recording gain automation")
             }
+        }
+        if let identity = sourceIdentity {
+            guard parentSessionID != nil, sourceTracks == nil, identity.role.valid,
+                  identity.channels == channels, identity.manifestPath == nil else { throw SessionError.invalid("Invalid source identity") }
+        }
+        if let gainTracks {
+            guard (1...CaptureTrack.maximumSources).contains(gainTracks.count), Set(gainTracks).count == gainTracks.count,
+                  gainTracks.allSatisfy(\.valid), gainAutomation?.first?.to.count == gainTracks.count * 32 + 1,
+                  sourceTracks?.map(\.role) == gainTracks else { throw SessionError.invalid("Invalid gain source mapping") }
         }
         _ = try session.options.validated()
         var end: Int64 = 0
@@ -284,18 +303,21 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
     var startedAt: Date? { session?.startedAt }
     var hasIssues: Bool { session?.issues.isEmpty == false }
     var frameCount: Int64 { session?.totalFrames ?? 0 }
-    func setGainAutomation(_ events: [GainEvent], scope: String) throws {
+    func setGainAutomation(_ events: [GainEvent], scope: String, tracks: [CaptureTrack]? = nil) throws {
+        session?.gainTracks = tracks
         session?.gainAutomation = events
         session?.gainScope = scope
         if let manifestURL { try session?.save(manifestURL) }
     }
     func setSourceTracks(_ tracks: [RecordingSession.SourceTrack], epoch: Double) throws {
-        session?.schemaVersion = RecordingSession.currentSchemaVersion
+        session?.schemaVersion = tracks.count == 2 && tracks.allSatisfy({ CaptureTrack.legacyPair.contains($0.role) }) ? 2 : RecordingSession.currentSchemaVersion
         session?.sourceTracks = tracks
         session?.captureEpoch = epoch
         if let manifestURL { try session?.save(manifestURL) }
     }
-    func setParent(_ id: UUID, epoch: Double, startedAt: Date? = nil) throws {
+    func setParent(_ id: UUID, epoch: Double, startedAt: Date? = nil, source: RecordingSession.SourceTrack? = nil) throws {
+        session?.sourceIdentity = source
+        if let labels = source?.channelLabels, labels.count == session?.channels { session?.channelMap = labels }
         if let startedAt {
             session?.startedAt = startedAt
             for index in session?.parts.indices ?? 0..<0 {

@@ -18,7 +18,7 @@ struct CaptureBenchmarkTests {
                 .init(role: .playback, name: "Synthetic playback"), .init(role: .microphone, name: "Synthetic input")
             ], epoch: 100, options: .init(maximumPartBytes: 1_048_576))
             for index in 0..<100 {
-                for role in CaptureTrack.allCases {
+                for role in CaptureTrack.legacyPair {
                     let buffer = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 4_800, interleaved: false) { channel, frame in
                         Float(sin(Double(frame) * 2 * .pi * Double(channel == 0 ? 440 : 660) / 48_000)) * 0.2
                     }

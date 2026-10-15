@@ -218,3 +218,9 @@ updates. The shared playback controls render at 360- and 640-point widths. The
 full suite with unity levels and monitoring off; this is throughput, not live
 latency or isolated CPU usage. Measurements and limitations are recorded in
 [`benchmarks/recorder/levels-20261015.json`](../benchmarks/recorder/levels-20261015.json).
+
+Multiple independently selected input devices are now available through **Capture
+inputs**. Variable groups use version-3 manifests; each device has its own routes,
+gain, source recording and health. See [multiple-input recording](multiple-inputs.md)
+for the new path, version-3 gain mapping, resource bounds and remaining hardware
+checks. The two-role version-2 path described above remains supported.

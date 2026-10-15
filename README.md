@@ -152,3 +152,10 @@ monitor volume/mute/output-device controls. Combined source tracks remain at uni
 gain; single-source WAVs contain the applied gain. See
 [recording gain and listening volume](docs/capture-sources.md#recording-gain-and-listening-volume-17--18)
 for control scope, hardware-volume support and monitoring limits.
+
+To capture multiple microphones/interfaces together with playback, expand **Capture
+inputs** in Studio or the menu-bar popover and choose **Use multiple inputs +
+playback**. Select up to eight devices and configure their mix channels. Each device
+gets a separate synchronized source recording, gain controls and a derived stereo
+mix. See [multiple-input recording](docs/multiple-inputs.md) for routing, failure
+handling, resource limits and hardware verification status.

@@ -26,7 +26,7 @@ final class CapturedAudioMonitor: ObservableObject {
         }
     }
     func setEnabled(_ enabled: Bool, source: AudioSource) {
-        if enabled, let uid = source.microphoneUID, Self.isLoopback(uid) {
+        if enabled, source.inputSelections.contains(where: { Self.isLoopback($0.deviceUID) }) {
             setEnabled(false, source: .systemAll)
             warning = "Monitoring is unavailable for virtual or aggregate inputs to avoid audio feedback. Recording is unaffected."
             return

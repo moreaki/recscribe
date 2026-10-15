@@ -13,13 +13,22 @@ import AVFoundation
 import CoreAudio
 
 /// One input device the picker can offer.
-struct InputDeviceInfo: Identifiable, Sendable, Equatable {
+nonisolated struct InputDeviceInfo: Identifiable, Sendable, Equatable {
     /// `AVCaptureDevice.uniqueID`, passed straight to `microphoneCaptureDeviceID`.
     var id: String { uid }
     let uid: String
     let name: String
     var inputChannels: Int? = nil
     var sampleRate: Double? = nil
+    var transport: UInt32 = 0
+    var channelLabels: [String] = []
+    var aggregateMembers: [String] = []
+    var isAggregate: Bool { transport == kAudioDeviceTransportTypeAggregate }
+    var isVirtual: Bool { transport == kAudioDeviceTransportTypeVirtual }
+    var mayLoopBack: Bool {
+        isVirtual || ["loopback", "blackhole", "soundflower", "vb-cable"].contains { name.localizedCaseInsensitiveContains($0) }
+    }
+    var kindLabel: String { isAggregate ? "Aggregate" : (isVirtual ? "Virtual / possible loopback" : "Hardware input") }
 }
 
 @MainActor
@@ -87,8 +96,32 @@ final class InputDeviceEnumerator: InputDeviceEnumerating {
             var count = UInt32(MemoryLayout<Float64>.size)
             address.mSelector = kAudioDevicePropertyNominalSampleRate; address.mScope = kAudioObjectPropertyScopeGlobal
             let status = AudioObjectGetPropertyData(device, &address, 0, nil, &count, &rate)
+            var transport: UInt32 = 0
+            var property = AudioDeviceControls.address(kAudioDevicePropertyTransportType)
+            bytes = UInt32(MemoryLayout<UInt32>.size)
+            _ = AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, &transport)
+            var labels: [String] = []
+            for channel in 1...min(channels, 32) {
+                var nameProperty = AudioDeviceControls.address(kAudioObjectPropertyElementName, input: true, element: UInt32(channel))
+                var label: CFString = "" as CFString
+                bytes = UInt32(MemoryLayout<CFString>.size)
+                let result = withUnsafeMutablePointer(to: &label) { AudioObjectGetPropertyData(device, &nameProperty, 0, nil, &bytes, $0) }
+                labels.append(result == noErr && !(label as String).isEmpty ? label as String : "Channel \(channel)")
+            }
+            var members: [String] = []
+            if transport == kAudioDeviceTransportTypeAggregate {
+                property = AudioDeviceControls.address(kAudioAggregateDevicePropertyActiveSubDeviceList)
+                bytes = 0
+                if AudioObjectGetPropertyDataSize(device, &property, 0, nil, &bytes) == noErr {
+                    var ids = [AudioDeviceID](repeating: 0, count: Int(bytes) / MemoryLayout<AudioDeviceID>.size)
+                    if AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, &ids) == noErr {
+                        members = ids.compactMap { AudioDeviceControls.string($0, kAudioDevicePropertyDeviceUID) }
+                    }
+                }
+            }
             return InputDeviceInfo(uid: uid, name: name, inputChannels: channels,
-                sampleRate: status == noErr && rate.isFinite && rate > 0 ? rate : nil)
+                sampleRate: status == noErr && rate.isFinite && rate > 0 ? rate : nil,
+                transport: transport, channelLabels: labels, aggregateMembers: members)
         }
     }
 }

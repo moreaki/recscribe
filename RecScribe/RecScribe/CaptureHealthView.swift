@@ -11,6 +11,7 @@ struct CaptureHealthView: View {
                     VStack(alignment: .leading, spacing: GlassSpacing.xs) {
                         Text("\(source.name): \(status.label)")
                             .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
+                        if let message = source.health.failureMessage { Text(message).foregroundStyle(.orange) }
                         if let rate = source.health.sampleRate, let channels = source.health.channels {
                             Text("\(channels) input channels · \(rate.formatted(.number.precision(.fractionLength(0)))) Hz · \(source.health.peak >= 1 ? "clipping" : "peak " + String(format: "%.1f dBFS", 20 * log10(max(0.000_001, source.health.peak))))")
                                 .foregroundStyle(.secondary)

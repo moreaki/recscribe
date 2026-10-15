@@ -61,7 +61,8 @@ struct MultiSourceLifecycleTests {
         let capture = MockAudioCapturing()
         let source = AudioSource.mixed(appBundleID: "test.browser", deviceUID: "test.mic")
         let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: directory),
-            audioSource: MockAudioSourceProviding(selectedSource: source))
+            audioSource: MockAudioSourceProviding(selectedSource: source),
+            levels: AudioLevels(defaults: UserDefaults(suiteName: "combined-controller-" + UUID().uuidString)!))
         let audio = try await controller.startRecording(format: .wav)
         let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         for index in 0..<10 {

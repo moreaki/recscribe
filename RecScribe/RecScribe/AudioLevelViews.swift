@@ -15,12 +15,18 @@ struct RecordingLevelsView: View {
                     SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
                                 channels: source.isMixed ? 2 : (recorder.sourceHealth.first?.health.channels ?? 2), preservesSources: source.isMixed)
                 }
-                if source.microphoneUID != nil {
+                if source.kind == .multiple {
+                    ForEach(source.inputSelections) { selection in
+                        let device = recorder.audioSource.availableInputDevices().first { $0.uid == selection.deviceUID }
+                        SourceFader(id: "input:" + selection.deviceUID, title: device?.name ?? "Unavailable input", levels: levels,
+                                    channels: min(32, device?.inputChannels ?? 1), preservesSources: true)
+                    }
+                } else if source.microphoneUID != nil {
                     SourceFader(id: source.microphoneLevelID, title: "Microphone / input gain", levels: levels,
                                 channels: min(2, recorder.audioSource.availableInputDevices().first { $0.uid == source.microphoneUID }?.inputChannels ?? 1), preservesSources: source.isMixed)
                 }
                 SourceFader(id: "master", title: source.isMixed ? "Master recording mix" : "Master saved recording", levels: levels, channels: 0, preservesSources: source.isMixed)
-                Text(source.isMixed ? "Faders and mute affect the derived mix. Separate source tracks are still saved at unity gain. Each route has −6.02 dB of mix headroom; peaks above 0 dBFS are hard-clipped in the mix." : "Software gain and mute affect the saved recording. Single-source mode does not save a separate raw track. Peaks above 0 dBFS are hard-clipped.")
+                Text(source.isMixed ? "Faders and mute affect the derived mix. Separate source tracks are still saved at unity gain. The mix averages source contributions for headroom; peaks above 0 dBFS are hard-clipped in the mix." : "Software gain and mute affect the saved recording. Single-source mode does not save a separate raw track. Peaks above 0 dBFS are hard-clipped.")
                     .font(.caption).foregroundStyle(.secondary)
                 if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true) }
                 Divider()

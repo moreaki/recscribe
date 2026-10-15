@@ -63,6 +63,12 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var stream: SCStream?
     private var isCapturing = false
     private var output: AudioCaptureOutput?
+    private var deviceInputs: [CaptureTrack: DeviceInputCapture] = [:]
+    private var pendingInputs: [InputSelection] = []
+    private var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
+    private var inputGeneration = UUID()
+    private var deviceWatch: Task<Void, Never>?
+    var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     private var stopTask: Task<Void, Error>?
 
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
@@ -77,11 +83,19 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     /// - Throws: ScreenCaptureAudioError if setup fails, or `.appNotRunning` if `source`
     ///   is `.app` and no running app matches its bundle ID.
     func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
+        pendingInputs = []; inputCallback = nil
         try await configure(source: source, audioCallback: audioCallback, sampleCallback: nil)
     }
 
     func setupMultiCapture(source: AudioSource, sampleCallback: @escaping @Sendable (CapturedAudioSample) -> Void) async throws {
-        try await configure(source: source, audioCallback: { _ in }, sampleCallback: sampleCallback)
+        guard source.valid else { throw SessionError.invalid("Invalid multi-input selection") }
+        if case .multiple(let bundle, let inputs, _) = source {
+            pendingInputs = inputs; inputCallback = sampleCallback
+            try await configure(source: bundle.map { .app(bundleID: $0) } ?? .systemAll, audioCallback: { _ in }, sampleCallback: sampleCallback)
+        } else {
+            pendingInputs = []; inputCallback = nil
+            try await configure(source: source, audioCallback: { _ in }, sampleCallback: sampleCallback)
+        }
     }
 
     private func configure(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
@@ -140,6 +154,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         // Content filter: all display audio, or a single app's audio (BL-100).
         let filter: SCContentFilter
         switch source {
+        case .multiple: throw SessionError.invalid("Multiple inputs require the multi-source capture path")
         case .mixed(nil, _), .systemAll:
             filter = SCContentFilter(display: display, excludingWindows: [])
         case .mixed(let bundleID?, _), .app(let bundleID):
@@ -187,19 +202,56 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         }
 
         do {
+            inputGeneration = UUID()
+            let generation = inputGeneration
+            if let inputCallback {
+                for selection in pendingInputs {
+                    let track = CaptureTrack.input(selection.deviceUID)
+                    let input = DeviceInputCapture(uid: selection.deviceUID, callback: inputCallback) { [weak self] message in
+                        self?.inputFailed(track, message: message, generation: generation)
+                    }
+                    deviceInputs[track] = input
+                    try input.start()
+                }
+            }
             try await stream.startCapture()
             isCapturing = true
+            if !deviceInputs.isEmpty {
+                deviceWatch = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(1))
+                        guard !Task.isCancelled, let self, isCapturing, inputGeneration == generation else { return }
+                        let connected = Set(InputDeviceEnumerator().availableInputDevices().map(\.uid))
+                        for (track, input) in deviceInputs where !connected.contains(input.uid) {
+                            inputFailed(track, message: "Input disconnected; its track is incomplete. Other sources continue.", generation: generation)
+                        }
+                    }
+                }
+            }
             Log.capture.info("Capture started")
         } catch {
+            for input in deviceInputs.values { input.stop() }
+            deviceInputs = [:]
             Log.recordFailure(error, operation: "start_stream")
             throw ScreenCaptureAudioError.startCaptureFailed(error)
         }
+    }
+
+    private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID) {
+        guard inputGeneration == generation, let input = deviceInputs.removeValue(forKey: track) else { return }
+        input.stop()
+        onSourceFailure?(track, message)
     }
 
     /// Stop audio capture
     func stopCapture() async throws {
         if let stopTask { return try await stopTask.value }
         guard let stream else { return }
+        deviceWatch?.cancel(); deviceWatch = nil
+        for (track, input) in deviceInputs {
+            if let message = input.stop() { onSourceFailure?(track, message) }
+        }
+        deviceInputs = [:]
         let shouldStop = isCapturing, output = output
         isCapturing = false
         let task = Task {
@@ -223,6 +275,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         try? await stopCapture()
         stream = nil
         output = nil
+        pendingInputs = []; inputCallback = nil
     }
 
     var capturing: Bool {

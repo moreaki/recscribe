@@ -168,14 +168,14 @@ final class AudioSourceManager: AudioSourceProviding {
     /// re-upgrading restores the user's real selection.
     private static func decodeSource(from defaults: UserDefaults, key: String) -> AudioSource {
         guard let data = defaults.data(forKey: key),
-              let source = try? JSONDecoder().decode(AudioSource.self, from: data) else {
+              let source = try? JSONDecoder().decode(AudioSource.self, from: data), source.valid else {
             return .systemAll
         }
         return source
     }
 
     func setSelectedSource(_ source: AudioSource) {
-        guard let data = try? JSONEncoder().encode(source) else { return }
+        guard source.valid, let data = try? JSONEncoder().encode(source) else { return }
         // Write through: cache first so a read in the same turn can't observe the
         // stale value, then persist.
         cachedSource = source
@@ -183,7 +183,20 @@ final class AudioSourceManager: AudioSourceProviding {
     }
 
     func validate(_ source: AudioSource) async throws {
+        guard source.valid else { throw SessionError.invalid("Invalid input selection; choose at most eight distinct devices") }
         switch source {
+        case .multiple(let bundle, let inputs, let allowDuplicate):
+            if let bundle { try await validate(.app(bundleID: bundle)) }
+            let devices = availableInputDevices()
+            for input in inputs {
+                guard let device = devices.first(where: { $0.uid == input.deviceUID }) else { throw AudioSourceError.micNotAvailable(input.deviceUID) }
+                guard let count = device.inputChannels, (1...32).contains(count), input.routes.allSatisfy({ $0.channel < count }) else {
+                    throw SessionError.invalid("Input channel availability changed. Review the selected channels before recording.")
+                }
+            }
+            if !allowDuplicate, !InputRouteSafety.warnings(inputs: inputs, devices: devices).isEmpty {
+                throw SessionError.invalid("Possible duplicate or loopback routes. Review Capture inputs and remove overlapping devices or explicitly acknowledge their inclusion.")
+            }
         case .mixed(let bundle, let uid):
             if let bundle { try await validate(.app(bundleID: bundle)) }
             try await validate(.mic(deviceUID: uid))

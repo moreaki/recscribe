@@ -164,6 +164,15 @@ enum OverflowMenu {
             .submenu(perAppSubmenu(context)),
             .submenu(microphoneSubmenu(context)),
             .submenu(mixedSubmenu(context)),
+            .action(OverflowAction(id: "sourceMultiple", title: "Multiple inputs + playback…", isChecked: context.selectedSource.kind == .multiple, isSourceRow: true, perform: {
+                let current = context.selectedSource
+                if current.kind == .multiple { openWindow(.settings); return }
+                let inputs = current.inputSelections.map { selection in
+                    context.inputDevices.first { $0.uid == selection.deviceUID }.map(InputSelection.init(device:)) ?? selection
+                }
+                onSelectSource(.multiple(appBundleID: current.appBundleID, inputs: inputs))
+                openWindow(.settings)
+            })),
             .separator
         ]
     }
@@ -183,7 +192,7 @@ enum OverflowMenu {
                 isChecked: selected == .mixed(appBundleID: bundle, deviceUID: device.uid), isSourceRow: true,
                 perform: { onSelectSource(.mixed(appBundleID: bundle, deviceUID: device.uid)) }))
         }
-        return OverflowSubmenu(id: "sourceMixed", title: "Playback + microphone", isChecked: selected.isMixed, entries: entries)
+        return OverflowSubmenu(id: "sourceMixed", title: "Playback + microphone", isChecked: selected.kind == .mixed, entries: entries)
     }
 
     /// The microphone root row (BL-130).

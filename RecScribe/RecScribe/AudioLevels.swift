@@ -21,10 +21,14 @@ nonisolated struct RecordingLevels: Equatable, Sendable {
     var playback = SourceLevel()
     var microphone = SourceLevel()
     var master = SourceLevel()
+    var inputs: [CaptureTrack: SourceLevel] = [:]
     // Fixed order is the on-disk automation format: playback 0...31, mic 32...63, master 64.
-    var amplitudes: [Float] {
-        (0..<32).map { playback.amplitude(channel: $0) } +
-        (0..<32).map { microphone.amplitude(channel: $0) } + [master.amplitude(channel: 0)]
+    var amplitudes: [Float] { amplitudes(for: CaptureTrack.legacyPair) }
+    func amplitudes(for tracks: [CaptureTrack]) -> [Float] {
+        tracks.flatMap { track in
+            let level = track == .playback ? playback : (track == .microphone ? microphone : inputs[track] ?? .init())
+            return (0..<32).map { level.amplitude(channel: $0) }
+        } + [master.amplitude(channel: 0)]
     }
 }
 
@@ -61,7 +65,8 @@ final class AudioLevels: ObservableObject {
     nonisolated func snapshot(for source: AudioSource) -> RecordingLevels {
         storage.withLock { values in
             .init(playback: values[source.playbackLevelID] ?? .init(),
-                  microphone: values[source.microphoneLevelID] ?? .init(), master: values["master"] ?? .init())
+                  microphone: values[source.microphoneLevelID] ?? .init(), master: values["master"] ?? .init(),
+                  inputs: Dictionary(uniqueKeysWithValues: source.inputSelections.map { (.input($0.deviceUID), values["input:" + $0.deviceUID] ?? .init()) }))
         }
     }
 }
@@ -77,27 +82,31 @@ nonisolated struct GainEvent: Codable, Sendable {
         return from[index] + (to[index] - from[index]) * fraction
     }
     var valid: Bool {
-        frame >= 0 && from.count == 65 && to.count == 65 && (from + to).allSatisfy { $0.isFinite && (0...252).contains($0) }
+        frame >= 0 && (33...(CaptureTrack.maximumSources * 32 + 1)).contains(from.count) && (from.count - 1) % 32 == 0 && to.count == from.count && (from + to).allSatisfy { $0.isFinite && (0...252).contains($0) }
     }
 }
 nonisolated final class GainAutomation {
     private(set) var events: [GainEvent]
     private var cursor = 0
+    let tracks: [CaptureTrack]
+    var masterIndex: Int { tracks.count * 32 }
+    private var maximumEvents: Int { min(2048, 131_072 / (masterIndex + 1)) }
     private var lastLevels: RecordingLevels
-    init(_ levels: RecordingLevels = .init()) {
+    init(_ levels: RecordingLevels = .init(), tracks: [CaptureTrack] = CaptureTrack.legacyPair) {
+        self.tracks = tracks
         lastLevels = levels
-        let values = levels.amplitudes
+        let values = levels.amplitudes(for: tracks)
         events = [.init(frame: 0, from: values, to: values)]
     }
     @discardableResult func update(_ levels: RecordingLevels, at frame: Int64) throws -> Bool {
         guard levels != lastLevels else { return false }
-        let values = levels.amplitudes
+        let values = levels.amplitudes(for: tracks)
         guard values != events.last!.to else { lastLevels = levels; return false }
-        guard events.count < 2048 else { throw SessionError.invalid("Recording level automation reached its 2048-edit limit; the partial take is preserved") }
+        guard events.count < maximumEvents else { throw SessionError.invalid("Recording level automation reached its bounded edit limit; the partial take is preserved") }
         let last = events.last!
         let position = max(frame, last.frame)
         lastLevels = levels
-        events.append(.init(frame: position, from: (0..<65).map { last.value($0, at: position) }, to: values))
+        events.append(.init(frame: position, from: (0...masterIndex).map { last.value($0, at: position) }, to: values))
         return true
     }
     func event(at frame: Int64) -> GainEvent {

@@ -390,7 +390,7 @@ class RecorderViewModel: ObservableObject {
         // never changed. The user got a button that did nothing, for ever, with
         // one log line as the only trace. `.starting → .error` is legal, so the
         // error now reaches `presentError`. Do not move this back above.
-        if audioSource.selectedSource.microphoneUID != nil {
+        if audioSource.selectedSource.requiresMicrophone {
             guard await requestMicrophoneAccess() else {
                 transition(to: .error(.microphoneDenied))
                 return
@@ -542,6 +542,9 @@ class RecorderViewModel: ObservableObject {
     /// `nil` for all-system-audio, which needs no qualifier.
     var captureSourceName: String? {
         switch audioSource.selectedSource {
+        case .multiple(let bundle, let inputs, _):
+            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+            return "\(playback) + \(inputs.count) inputs"
         case .mixed(let bundle, let uid):
             let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
             let mic = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
@@ -826,6 +829,7 @@ class RecorderViewModel: ObservableObject {
     }
 
     var captureSourceHint: String {
+        if case .multiple = audioSource.selectedSource { return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically." }
         if audioSource.selectedSource.isMixed { return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture." }
         if case .systemAll = audioSource.selectedSource {
             return "System playback only · microphone excluded"

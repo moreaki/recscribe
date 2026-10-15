@@ -67,6 +67,9 @@ class RecordingController: RecordingControlling {
         self.captureManager.onStreamError = { [weak self] message in
             self?.onStreamError?(message)
         }
+        self.captureManager.onSourceFailure = { [weak self] track, message in
+            self?.multiRecorder?.sourceFailed(track, message: message)
+        }
         self.audioRecorder.onWriteError = { [weak self] message in
             self?.onStreamError?(message)
         }
@@ -108,16 +111,23 @@ class RecordingController: RecordingControlling {
 
         // Start audio recorder first (creates the file in the chosen format).
         activity.start()
-        if case .mixed(let bundle, let uid) = source {
-            let micName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
+        if source.isMixed {
+            let bundle = source.appBundleID
+            let devices = audioSource.availableInputDevices()
             let playbackName = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
+            var descriptors: [RecordingSession.SourceTrack] = [.init(role: .playback, name: playbackName, bundleID: bundle)]
+            let multiple = source.kind == .multiple
+            for selection in source.inputSelections {
+                let device = devices.first { $0.uid == selection.deviceUID }
+                descriptors.append(.init(role: multiple ? .input(selection.deviceUID) : .microphone,
+                    name: device?.name ?? "Input", deviceUID: selection.deviceUID,
+                    channelRoutes: multiple ? selection.routes : nil, channelLabels: device?.channelLabels))
+            }
             let recorder = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) }, onWaveform: onWaveformData)
             multiRecorder = recorder
             do {
-                try recorder.start(at: fileURL, descriptors: [
-                    .init(role: .playback, name: playbackName, bundleID: bundle),
-                    .init(role: .microphone, name: micName, deviceUID: uid)
-                ], options: storageOptions(), levels: { [levels] in levels.snapshot(for: source) })
+                try recorder.start(at: fileURL, descriptors: descriptors, options: storageOptions(),
+                    levels: { [levels] in levels.snapshot(for: source) }, continueOnSourceFailure: multiple)
                 try await captureManager.setupMultiCapture(source: source) { recorder.accept($0) }
                 try await captureManager.startCapture()
                 guard !activity.interrupted else { throw ScreenCaptureAudioError.interruptedBySleep }

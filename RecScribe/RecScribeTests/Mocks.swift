@@ -13,6 +13,7 @@ import AVFoundation
 @MainActor
 final class MockAudioCapturing: AudioCapturing {
     var capturing = false
+    var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     var onStreamError: (@MainActor (String) -> Void)?
     private(set) var setupCount = 0
     private(set) var startCount = 0
@@ -21,6 +22,7 @@ final class MockAudioCapturing: AudioCapturing {
     var setupError: Error?
     var stopError: Error?
     var onStart: (() -> Void)?
+    var beforeSetup: (() async -> Void)?
     /// The source passed to the most recent `setupCapture`, for assertions (BL-100).
     private(set) var lastSource: AudioSource?
     private var sampleCallback: (@Sendable (CapturedAudioSample) -> Void)?
@@ -35,6 +37,7 @@ final class MockAudioCapturing: AudioCapturing {
 
     func setupMultiCapture(source: AudioSource, sampleCallback: @escaping @Sendable (CapturedAudioSample) -> Void) async throws {
         setupCount += 1
+        await beforeSetup?()
         if let setupError { throw setupError }
         lastSource = source
         self.sampleCallback = sampleCallback

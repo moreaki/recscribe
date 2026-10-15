@@ -21,6 +21,10 @@ struct MultipleInputsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             AudioMuteSummary(source: source)
+            if let test = recorder.audioTest, test.locksSources {
+                Label("Audio test active · start recording to end the test and begin a take", systemImage: "waveform.circle")
+                    .font(.caption).foregroundStyle(WorkspaceStyle.mint)
+            }
         }.font(.callout)
     }
 }

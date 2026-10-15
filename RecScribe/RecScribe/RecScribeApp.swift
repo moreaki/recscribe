@@ -26,6 +26,7 @@ struct RecScribeApp: App {
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
                 .onAppear {
                     appDelegate.prepareForTermination = {
+                        await services.recorder.audioTest?.close()
                         if services.recorder.isRecording { await services.recorder.stopRecording() }
                         await services.recorder.waitForFailureFinalization()
                         await services.live.shutdown()

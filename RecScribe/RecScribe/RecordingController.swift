@@ -26,6 +26,8 @@ class RecordingController: RecordingControlling {
     private let liveTranscription: LiveTranscription?
     private let activity: RecordingActivity
     private let levels: AudioLevels
+    private let captureGate: CaptureSessionGate
+    private let captureID = UUID()
 
     private var currentRecordingURL: URL?
     private var activeSourceName = "Selected source"
@@ -50,9 +52,11 @@ class RecordingController: RecordingControlling {
         liveTranscription: LiveTranscription? = nil,
         activity: RecordingActivity? = nil,
         levels: AudioLevels? = nil,
+        captureGate: CaptureSessionGate = CaptureSessionGate(),
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
         self.levels = levels ?? .shared
+        self.captureGate = captureGate
         self.storageOptions = storageOptions
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
         self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
@@ -85,9 +89,10 @@ class RecordingController: RecordingControlling {
         guard !starting, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
         starting = true
         defer { starting = false }
+        try captureGate.acquire(captureID)
         sessionLibrary?.setRecording(true)
         var started = false
-        defer { if !started { CapturedAudioMonitor.shared.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
+        defer { if !started { captureGate.release(captureID); CapturedAudioMonitor.shared.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
@@ -178,6 +183,7 @@ class RecordingController: RecordingControlling {
     func stopRecording() async throws {
         var needsReview = false
         defer {
+            captureGate.release(captureID)
             CapturedAudioMonitor.shared.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: needsReview)
@@ -240,6 +246,7 @@ class RecordingController: RecordingControlling {
     /// preserves the audio captured before the failure as a playable file.
     func finalizeAfterFailure() async {
         defer {
+            captureGate.release(captureID)
             CapturedAudioMonitor.shared.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: true)

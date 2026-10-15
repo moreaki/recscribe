@@ -4,8 +4,9 @@ import Foundation
 import os
 
 /// Admission and stop share one lock; the worker owns PCM after submission.
-/// Budget: 4 MiB queued PCM plus a 384 KiB mix ring and at most two 250-ms
-/// pending source buffers (32 channels maximum). No ASR runs on this queue.
+/// Budget: 4 MiB queued PCM plus a 384 KiB mix ring and one pending buffer /
+/// normalizer per selected source (250-ms packets, 32 channels maximum).
+/// No ASR runs on this queue.
 @MainActor
 final class MultiSourceRecorder {
     private nonisolated struct State: Sendable {
@@ -24,6 +25,8 @@ final class MultiSourceRecorder {
         var tracks: [CaptureTrack] = []
         var continueOnSourceFailure = false
         var health: [CaptureTrack: RecordingHealth] = [:]
+        var meters: [CaptureTrack: CaptureSourceMeters] = [:]
+        var mixMeter = CapturePeakMeter()
         var waveform: [Float]?
         var waveformScheduled = false
     }
@@ -42,21 +45,38 @@ final class MultiSourceRecorder {
 
     init(onError: @escaping @MainActor @Sendable (String) -> Void,
          onWaveform: (@MainActor @Sendable ([Float]) -> Void)? = nil,
-         maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256) {
+         maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256, monitor: CapturedAudioMonitor? = nil) {
         precondition(maximumBytes > 0 && maximumBuffers > 0)
-        self.monitor = .shared
+        self.monitor = monitor ?? .shared
         self.maximumBytes = maximumBytes; self.maximumBuffers = maximumBuffers
         self.onError = onError; self.onWaveform = onWaveform
     }
 
     func start(at url: URL, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
                epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
-               levels: @escaping @Sendable () -> RecordingLevels = { .init() }, continueOnSourceFailure: Bool = false) throws {
+               levels: @escaping @Sendable () -> RecordingLevels = { .init() }, continueOnSourceFailure: Bool = false,
+               maximumFrames: Int64? = nil) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
         let mix = SessionWAVWriter(options: options)
         try mix.createFile(at: url, sampleRate: 48_000, channels: 2)
+        try begin(mix: mix, descriptors: descriptors, options: options, epoch: epoch, levels: levels,
+                  continueOnSourceFailure: continueOnSourceFailure, maximumFrames: maximumFrames)
+    }
+
+    /// The same normalization, timestamp alignment, routing and ramps without
+    /// any disk sinks, manifests or unbounded PCM history.
+    func startPreview(descriptors: [RecordingSession.SourceTrack], epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
+                      levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
+        guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
+        try begin(mix: nil, descriptors: descriptors, options: .init(), epoch: epoch, levels: levels,
+                  continueOnSourceFailure: true, maximumFrames: 600 * 48_000)
+    }
+
+    private func begin(mix: SessionWAVWriter?, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
+                       epoch: Double, levels: @escaping @Sendable () -> RecordingLevels,
+                       continueOnSourceFailure: Bool, maximumFrames: Int64?) throws {
         self.descriptors = descriptors
-        audioURL = mix.audioURL; manifestURL = mix.manifestURL
+        audioURL = mix?.audioURL; manifestURL = mix?.manifestURL
         let now = ProcessInfo.processInfo.systemUptime
         state.withLock { s in
             s = State(); s.active = true; s.accepting = true
@@ -64,11 +84,12 @@ final class MultiSourceRecorder {
             for track in s.tracks { s.health[track] = .init(startedAt: now) }
         }
         do {
-            let worker = try SynchronizedCaptureWriter(mix: mix, descriptors: descriptors, epoch: epoch, options: options, levels: levels)
+            let worker = try SynchronizedCaptureWriter(mix: mix, descriptors: descriptors, epoch: epoch, options: options,
+                                                       maximumFrames: maximumFrames, levels: levels)
             worker.onMix = { [weak self] in self?.monitor.submit($0); self?.publishWaveform($0) }
             queue.sync { writer = worker }
         } catch {
-            try? mix.markFailure(error); try? mix.finalize()
+            try? mix?.markFailure(error); try? mix?.finalize()
             state.withLock { $0.accepting = false; $0.active = false }
             throw error
         }
@@ -106,6 +127,7 @@ final class MultiSourceRecorder {
             let writeMS = Self.milliseconds(started.duration(to: .now))
             let queueMS = Self.milliseconds(submitted.duration(to: started))
             let snapshot = state.withLock { $0.tracks }.map { ($0, writer.health(for: $0)) }
+            let meters = writer.sourceMeters, mixMeter = writer.mixMeter
             state.withLock { s in
                 s.writeMS += writeMS
                 s.maxWriteMS = max(s.maxWriteMS, writeMS)
@@ -120,6 +142,7 @@ final class MultiSourceRecorder {
                     s.health[track]?.mixPeak = health.mixPeak
                     if health.clipped { s.health[track]?.clipped = true }
                 }
+                s.meters = meters; s.mixMeter = mixMeter
             }
         } catch {
             if case SessionError.invalid = error, state.withLock({ $0.continueOnSourceFailure }) {
@@ -156,7 +179,8 @@ final class MultiSourceRecorder {
         let id = s.id
         DispatchQueue.main.async { [self] in
             guard state.withLock({ $0.id == id && $0.active && $0.failure != nil }) else { return }
-            onError("Multi-source capture stopped; preserved source tracks need review. \(error.localizedDescription)")
+            let context = manifestURL == nil ? "Audio test stopped." : "Multi-source capture stopped; preserved source tracks need review."
+            onError("\(context) \(error.localizedDescription)")
         }
     }
 
@@ -183,12 +207,14 @@ final class MultiSourceRecorder {
         let health = state.withLock { $0.health }
         return descriptors.map { .init(id: $0.role.rawValue, name: $0.name, detail: $0.deviceUID ?? $0.bundleID ?? "All system playback (RecScribe excluded)", health: health[$0.role] ?? .init()) }
     }
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] { state.withLock { $0.meters } }
+    var mixMeter: CapturePeakMeter { state.withLock { $0.mixMeter } }
 
     nonisolated private static func milliseconds(_ duration: Duration) -> Double {
         Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
     }
 
-    func stop(failure: Error? = nil) async throws {
+    func stop(failure: Error? = nil, reportReviewIssues: Bool = true) async throws {
         guard !stopping, state.withLock({ $0.active }) else { throw AudioRecorderError.notRecording }
         let stopStarted = ContinuousClock.now
         stopping = true
@@ -205,7 +231,9 @@ final class MultiSourceRecorder {
                         let frames = writer?.health(for: track).written ?? 0
                         state.withLock { $0.health[track]?.writtenFrames = frames }
                     }
-                    if resultError == nil, writer?.mix.hasIssues == true {
+                    let meters = writer?.sourceMeters ?? [:], mixMeter = writer?.mixMeter ?? .init()
+                    state.withLock { $0.meters = meters; $0.mixMeter = mixMeter }
+                    if reportReviewIssues, resultError == nil, writer?.mix?.hasIssues == true {
                         resultError = SessionError.invalid("The recording has clipping, timing gaps or incomplete source coverage. Review the preserved source tracks and mix.")
                     }
                     let finalizeMS = Self.milliseconds(finalizeStarted.duration(to: .now))
@@ -218,7 +246,7 @@ final class MultiSourceRecorder {
                         let h = snapshot.0[track] ?? .init()
                         Log.recorder.notice("Source drained role=\(track.rawValue, privacy: .public) received_frames=\(h.receivedFrames) written_frames=\(h.writtenFrames) peak_queued_pcm_bytes=\(snapshot.1)")
                     }
-                    if resultError == nil, snapshot.0.values.contains(where: { $0.receivedFrames == 0 }) {
+                    if reportReviewIssues, resultError == nil, snapshot.0.values.contains(where: { $0.receivedFrames == 0 }) {
                         resultError = SessionError.invalid("A selected source delivered no audio data; coverage is incomplete. Review saved source tracks.")
                     }
                     continuation.resume(returning: resultError)

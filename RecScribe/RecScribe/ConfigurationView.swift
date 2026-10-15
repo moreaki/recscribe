@@ -157,7 +157,7 @@ struct ConfigurationView: View {
                         recorder.setCaptureSource(.mixed(appBundleID: recorder.audioSource.selectedSource.appBundleID, deviceUID: device.uid))
                     }
                 }
-            }.disabled(!recorder.state.allowsCaptureSourceChange)
+            }.disabled(!recorder.allowsCaptureSourceChange)
             card("Capture safely", detail: "Recording always writes 16-bit PCM WAV. Parts share one session and a continuous sample timeline. Changes apply to the next recording.") {
                 HStack {
                     Text("Maximum WAV part size (MiB)"); Spacer()

@@ -142,7 +142,7 @@ class MenuBarController: NSObject {
 
         return OverflowContext(
             selectedSource: selected,
-            allowsCaptureSourceChange: viewModel.state.allowsCaptureSourceChange,
+            allowsCaptureSourceChange: viewModel.allowsCaptureSourceChange,
             permissionGranted: viewModel.permissionStatus == .granted,
             apps: appListCache.apps,
             selectedAppName: selectedAppName,

@@ -15,6 +15,9 @@ import os
 /// View model managing recording state and user interactions
 @MainActor
 class RecorderViewModel: ObservableObject {
+    let audioTest: AudioTestController?
+    private var audioTestObservation: AnyCancellable?
+    var allowsCaptureSourceChange: Bool { state.allowsCaptureSourceChange && audioTest?.locksSources != true }
 
     // MARK: - Published Properties
 
@@ -75,7 +78,7 @@ class RecorderViewModel: ObservableObject {
     ///
     /// Extracted from the view so the rule is reachable by a test — living inside
     /// a SwiftUI `if` is why the divergence went unnoticed.
-    var showsSettingsShelf: Bool { state.allowsCaptureSourceChange }
+    var showsSettingsShelf: Bool { allowsCaptureSourceChange }
 
     /// Whether the app is actually in a position to record: permission granted and
     /// the bundle in a location where that grant will survive. The record button is
@@ -190,8 +193,10 @@ class RecorderViewModel: ObservableObject {
         installNoticePresenter: (() -> Void)? = nil,
         notificationCenter: NotificationCenter = .default,
         pollClock: PollClock? = nil,
-        registrationTimeout: TimeInterval = 2.0
+        registrationTimeout: TimeInterval = 2.0,
+        audioTest: AudioTestController? = nil
     ) {
+        self.audioTest = audioTest
         self.notificationCenter = notificationCenter
         self.pollClock = pollClock ?? SystemPollClock()
         self.registrationTimeout = registrationTimeout
@@ -252,6 +257,7 @@ class RecorderViewModel: ObservableObject {
         // own state is not a good enough reason to interrupt. Preflight is accurate
         // at launch, which is exactly and only what is needed here.
         permissionStatus = self.permissions.preflight()
+        audioTestObservation = audioTest?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         // A translocated bundle is broken from the first launch, so the block state
         // is set now — but nothing is *presented* from here. At this point the view
         // model is still being constructed as a `@StateObject`, so no window exists
@@ -368,6 +374,7 @@ class RecorderViewModel: ObservableObject {
         }
 
         transition(to: .starting)
+        await audioTest?.prepareForRecording()
         errorMessage = nil
         showError = false
         recoverySuggestion = nil
@@ -533,7 +540,7 @@ class RecorderViewModel: ObservableObject {
     /// without it the status line would keep naming the previous source until
     /// some unrelated state change happened to redraw the view.
     func setCaptureSource(_ source: AudioSource) {
-        guard state.allowsCaptureSourceChange, source != audioSource.selectedSource else { return }
+        guard allowsCaptureSourceChange, source != audioSource.selectedSource else { return }
         objectWillChange.send()
         audioSource.setSelectedSource(source)
     }
@@ -805,6 +812,7 @@ class RecorderViewModel: ObservableObject {
             return
         }
         state = next
+        if next.allowsCaptureSourceChange { audioTest?.recordingFinished() }
         if case .error(let recorderError) = next {
             presentError(recorderError.message, recovery: recorderError.recovery)
         }

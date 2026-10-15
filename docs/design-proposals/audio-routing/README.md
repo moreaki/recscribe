@@ -59,8 +59,10 @@ summaries and the routing entry point, and omit their duplicate **Audio levels**
 disclosure. Legacy single-source/combined modes retain those controls because
 the routing workspace still requires explicit conversion to multiple-input mode.
 
-This layout work does not implement #27's preview capture or test recordings.
-Opening the editor still acquires no audio and enables no monitor.
+The layout change itself did not acquire audio. The subsequent
+[#27 implementation](../../live-audio-test.md) adds explicit **Test audio** and
+short sample/playback actions. Opening the editor still acquires no audio and
+enables no monitor.
 
 Native previews, rendered offscreen using synthetic inputs and isolated level
 settings (the output name is discovered read-only from the local Mac):
@@ -78,6 +80,12 @@ return, VoiceOver and physical-device acceptance still need human verification;
 offscreen rendering does not establish those interactions.
 
 ## Test audio
+
+The native [live audio test workflow](../../live-audio-test.md) now implements
+this proposal inside the compact routing editor, including real source/channel
+and L/R meters, temporary sample capture, verified playback and Keep/Discard.
+The mock below remains a simulated design reference. Physical-device listening
+and accessibility acceptance require human interaction.
 
 ![Test audio](audio-test.png)
 

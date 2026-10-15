@@ -172,6 +172,7 @@ struct DeviceVolumeView: View {
 /// Shared audio transport and app-owned listening controls.
 struct SessionPlaybackView: View {
     @ObservedObject var playback: SessionPlayback
+    var showListeningControls = true
     var body: some View {
         if playback.player != nil {
             VStack(alignment: .leading, spacing: 8) {
@@ -184,7 +185,7 @@ struct SessionPlaybackView: View {
                     Text(String(format: "%.0f / %.0f s", playback.position, playback.duration)).font(.caption).monospacedDigit()
                     Button("Stop") { playback.stop() }
                 }
-                ListeningControls(levels: playback.levels, title: "Playback output")
+                if showListeningControls { ListeningControls(levels: playback.levels, title: "Playback output") }
             }
         }
     }

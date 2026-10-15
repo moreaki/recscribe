@@ -159,3 +159,10 @@ playback**. Select up to eight devices and configure their mix channels. Each de
 gets a separate synchronized source recording, gain controls and a derived stereo
 mix. See [multiple-input recording](docs/multiple-inputs.md) for routing, failure
 handling, resource limits and hardware verification status.
+
+In **Audio Routing**, **Test audio** shows live source/channel and stereo-mix
+meters while you adjust gain and mute. **Record 10-second sample** captures a
+temporary take that you can play through the selected output, keep or discard.
+Opening the window does not start capture. See the
+[live audio test guide](docs/live-audio-test.md) for listening controls and sample
+cleanup.

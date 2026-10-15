@@ -20,7 +20,9 @@ struct CaptureBenchmarkTests {
             for index in 0..<100 {
                 for role in CaptureTrack.legacyPair {
                     let buffer = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 4_800, interleaved: false) { channel, frame in
-                        Float(sin(Double(frame) * 2 * .pi * Double(channel == 0 ? 440 : 660) / 48_000)) * 0.2
+                        let frequency: Double = channel == 0 ? 440 : 660
+                        let phase: Double = Double(frame) * (2.0 * Double.pi) * frequency / 48_000.0
+                        return Float(sin(phase)) * 0.2
                     }
                     try worker.accept(.init(track: role, presentationTime: 100 + Double(index) / 10, buffer: buffer))
                 }

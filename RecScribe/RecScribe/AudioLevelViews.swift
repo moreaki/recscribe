@@ -59,8 +59,8 @@ struct SourceFader: View {
                 Text(String(format: "%+.1f dB", value.decibels)).monospacedDigit()
                 Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(context.map { "\($0) \(title)" } ?? title)")
             }
-            Slider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }), in: -60...24, step: 0.5)
-                .accessibilityLabel(context.map { "\($0) \(title)" } ?? title).accessibilityValue(String(format: "%+.1f decibels", value.decibels))
+            GainSlider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }),
+                       label: context.map { "\($0) \(title)" } ?? title).frame(height: 30)
             Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
                 .font(.caption).fixedSize(horizontal: false, vertical: true)
                 .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
@@ -70,8 +70,8 @@ struct SourceFader: View {
                     ForEach(0..<min(32, channels), id: \.self) { ch in
                         HStack {
                             Text("Ch \(ch + 1)")
-                            Slider(value: Binding(get: { value.channelTrims[ch] ?? 0 }, set: { newValue in change { $0.channelTrims[ch] = newValue } }), in: -60...24, step: 0.5)
-                                .accessibilityLabel("\(context ?? title) channel \(ch + 1) trim")
+                            GainSlider(value: Binding(get: { value.channelTrims[ch] ?? 0 }, set: { newValue in change { $0.channelTrims[ch] = newValue } }),
+                                       label: "\(context ?? title) channel \(ch + 1) trim").frame(height: 30)
                             Text(String(format: "%+.1f", value.channelTrims[ch] ?? 0)).monospacedDigit().frame(width: 45)
                         }
                     }

@@ -27,18 +27,88 @@ nonisolated struct WhisperModel: Identifiable, Sendable {
 }
 
 nonisolated final class DownloadProgress: NSObject, URLSessionDownloadDelegate, Sendable {
+    typealias Output = (URL, URLResponse)
     let update: @Sendable (Double) -> Void
-    private let lastPercent = OSAllocatedUnfairLock(initialState: -1)
-    init(update: @escaping @Sendable (Double) -> Void) { self.update = update }
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
+    private let expectedBytes: Int64
+    private struct State {
+        var continuation: CheckedContinuation<Output, any Error>?
+        var task: URLSessionDownloadTask?
+        var cancelled = false
+        var lastPercent = -1
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
+    init(expectedBytes: Int64, update: @escaping @Sendable (Double) -> Void) {
+        self.expectedBytes = expectedBytes
+        self.update = update
+    }
+
+    /// Completion-handler/async downloads do not deliver download progress to
+    /// their task delegate. Use a session delegate and bridge completion instead.
+    func download(_ request: URLRequest) async throws -> Output {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+                let task = session.downloadTask(with: request)
+                let start = state.withLock { state in
+                    guard !state.cancelled else { return false }
+                    state.continuation = continuation
+                    state.task = task
+                    return true
+                }
+                if start { task.resume() }
+                else {
+                    session.invalidateAndCancel()
+                    continuation.resume(throwing: CancellationError())
+                }
+            }
+        } onCancel: {
+            let task = self.state.withLock { state in
+                state.cancelled = true
+                return state.task
+            }
+            task?.cancel()
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        do {
+            guard let response = downloadTask.response else { throw SessionError.invalid("Model download returned no response") }
+            // URLSession removes its file when this callback returns. Retain it
+            // under our own name until the caller verifies and installs it.
+            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.moveItem(at: location, to: temporary)
+            complete(.success((temporary, response)), session: session)
+        } catch { complete(.failure(error), session: session) }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
+        complete(.failure(error ?? SessionError.invalid("Model download returned no file")), session: session)
+    }
+
+    private func complete(_ result: Result<Output, any Error>, session: URLSession) {
+        let (continuation, cancelled) = state.withLock { state in
+            let continuation = state.continuation
+            state.continuation = nil
+            state.task = nil
+            return (continuation, state.cancelled)
+        }
+        session.finishTasksAndInvalidate()
+        guard let continuation else { return }
+        if cancelled {
+            if case .success(let output) = result { try? FileManager.default.removeItem(at: output.0) }
+            continuation.resume(throwing: CancellationError())
+        } else { continuation.resume(with: result) }
+    }
+
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
                     totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        if totalBytesExpectedToWrite > 0 {
-            let fraction = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        let total = totalBytesExpectedToWrite > 0 ? totalBytesExpectedToWrite : expectedBytes
+        if total > 0 {
+            let fraction = min(1, max(0, Double(totalBytesWritten) / Double(total)))
             let percent = Int(fraction * 100)
-            let changed = lastPercent.withLock { previous in
-                guard previous != percent else { return false }
-                previous = percent; return true
+            let changed = state.withLock { state in
+                guard !state.cancelled, percent > state.lastPercent else { return false }
+                state.lastPercent = percent; return true
             }
             if changed { update(fraction) }
         }
@@ -146,16 +216,18 @@ final class RuntimeManager: ObservableObject {
                 try RuntimeInstallation.modelDestination(model, directory: directory, cancel: token)
             }.value
             try token.check()
-            let delegate = DownloadProgress { [weak self] fraction in
+            let delegate = DownloadProgress(expectedBytes: model.bytes) { [weak self] fraction in
                 Task { @MainActor in
                     guard self?.token === token else { return }
-                    self?.progress = fraction * RuntimeInstallation.Policy.downloadProgressShare
+                    guard let self else { return }
+                    self.progress = max(self.progress, fraction * RuntimeInstallation.Policy.downloadProgressShare)
                 }
             }
-            let (temporary, response) = try await URLSession.shared.download(for: URLRequest(url: model.url), delegate: delegate)
+            let (temporary, response) = try await delegate.download(URLRequest(url: model.url))
             defer { try? FileManager.default.removeItem(at: temporary) }
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw SessionError.invalid("Model download failed") }
             status = "Verifying model SHA-256…"
+            progress = RuntimeInstallation.Policy.downloadProgressShare
             try await Task.detached(priority: .utility) {
                 try model.verifyAndInstall(temporary, to: destination, cancel: token)
             }.value

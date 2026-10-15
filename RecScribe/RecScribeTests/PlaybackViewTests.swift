@@ -8,22 +8,24 @@ struct PlaybackViewTests {
     func playerViewRenders() throws {
         // Inspect the host executable: importing frameworks in a test bundle
         // must not accidentally hide a missing dependency in the shipped app.
-        let executable = try #require(Bundle.main.executableURL)
+        let launcher = try #require(Bundle.main.executableURL)
+        // Xcode 26 Debug builds can put app code and framework links in a dylib.
+        let debugLibrary = launcher.appendingPathExtension("debug.dylib")
+        let executable = FileManager.default.fileExists(atPath: debugLibrary.path) ? debugLibrary : launcher
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/otool")
-        // Xcode's Debug executable may be a loader shim; the actual app's
-        // dependencies then belong to its adjacent debug dylib, not this test bundle.
-        let debugLibrary = executable.deletingLastPathComponent().appendingPathComponent("RecScribe.debug.dylib")
-        let linkedApp = FileManager.default.fileExists(atPath: debugLibrary.path) ? debugLibrary : executable
-        process.arguments = ["-L", linkedApp.path]
+        process.arguments = ["-L", executable.path]
         process.standardOutput = output
         try process.run()
         let dependencies = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         process.waitUntilExit()
         try #require(process.terminationStatus == 0)
         try #require(dependencies.contains("/AVKit.framework/"))
-        try #require(NSClassFromString("AVPlayerView") != nil)
+        // Capturing an Objective-C metatype inside #require crashes the Swift
+        // Testing runtime on the CI toolchain. Pass only the evaluated Boolean.
+        let playerViewAvailable = NSClassFromString("AVPlayerView") != nil
+        try #require(playerViewAvailable, "AVKit must provide AVPlayerView at runtime")
 
         let player = AVPlayer()
         player.isMuted = true

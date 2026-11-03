@@ -53,7 +53,7 @@ struct IntelligenceSettingsView: View {
                 .disabled(!settings.values.aiEnabled || settings.values.aiProvider != .ollama)
             Text("AI text is an unverified derivative, not a correction to the audio evidence. Review ambiguous words against the recording.")
                 .font(.caption).foregroundStyle(.secondary)
-            Text("Connections, text improvement and summaries run natively in Swift. Python is only needed for the reference audio transcription pipeline.")
+            Text("Connections, transcription, text improvement and summaries run natively in Swift. Recordings stay on this Mac unless you explicitly approve cloud processing.")
                 .font(.caption).foregroundStyle(.secondary)
         }.onDisappear { apiKey = ""; credentials.cancel() }
     }

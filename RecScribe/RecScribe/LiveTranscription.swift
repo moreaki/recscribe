@@ -7,10 +7,10 @@ nonisolated enum LiveTranscriptionPolicy {
     static let chunkChoices = [10, 20, 30]
     static let defaultChunkSeconds = 20
     static let overlapSeconds = 1
-    static let threadRange = 1...4
-    static let defaultThreads = 2
-    static let sampleRate = 16_000
-    static let conversionFrames = 4_096
+    static let threadRange = NativeWhisperEngine.Policy.threadRange
+    static let defaultThreads = NativeWhisperEngine.Policy.defaultThreads
+    static let sampleRate = NativeAudioPreparer.sampleRate
+    static let conversionFrames = NativeAudioPreparer.bufferFrames
     static let previewSegments = 80
     static let previewCharacters = 48_000
     static let maximumResultBytes = 4 * 1_024 * 1_024

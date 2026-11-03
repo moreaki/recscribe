@@ -35,6 +35,7 @@ final class AppSettings: ObservableObject {
         var storage = RecordingStorageOptions()
         var whisperPath = ""
         var ffmpegPath = ""
+        // Legacy preference retained for migration only; never executed by the app.
         var pythonPath = ""
         var modelPath = ""
         var verificationModelPath = ""

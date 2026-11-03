@@ -116,7 +116,7 @@ nonisolated final class DownloadProgress: NSObject, URLSessionDownloadDelegate, 
 }
 
 nonisolated enum LocalSoftware: String, Hashable, Sendable {
-    case pipeline, ffmpeg, ollama
+    case ffmpeg, ollama
     case whisperCPP = "whisper-cpp"
 }
 
@@ -166,16 +166,8 @@ final class RuntimeManager: ObservableObject {
         switch software {
         case .ffmpeg: settings.values.ffmpegPath = found.path
         case .whisperCPP: settings.values.whisperPath = found.path
-        case .pipeline: settings.values.pythonPath = found.path
         case .ollama: break
         }
-    }
-
-    func forgetPipelineSelection() {
-        guard !busy, !isRecording() else { return }
-        settings.values.pythonPath = ""
-        availability = nil
-        status = "Pipeline selection cleared; existing environments and jobs are retained."
     }
 
     init(settings: AppSettings, aiModels: @escaping @Sendable () async throws -> [String] = {
@@ -243,8 +235,7 @@ final class RuntimeManager: ObservableObject {
         }
     }
 
-    func install(_ software: LocalSoftware, reinitialize: Bool = false) {
-        guard software != .pipeline else { installPipeline(reinitialize: reinitialize); return }
+    func install(_ software: LocalSoftware) {
         let formula = software.rawValue
         perform("Install \(formula) with Homebrew") { [self] token in
             guard software != .ollama || !localAIAvailable else {
@@ -257,22 +248,6 @@ final class RuntimeManager: ObservableObject {
                 }
                 return try RuntimeInstallation.install(software, cancel: token)
             }.value
-        }
-    }
-
-    func installPipeline(reinitialize: Bool = false) {
-        perform("Install local pipeline runtime") { [self] token in
-            guard reinitialize || !RuntimeAvailability.executable(settings.values.pythonPath) else {
-                throw SessionError.invalid("A Python runtime is already selected. Recheck it or explicitly reinitialize the pipeline.")
-            }
-            guard let archive = Bundle.main.url(forResource: "pipeline", withExtension: "tar.gz") else {
-                throw SessionError.invalid("Bundled pipeline sources are missing; rebuild or reinstall RecScribe")
-            }
-            let executable = try await Task.detached(priority: .utility) {
-                try RuntimeInstallation.pipeline(archive: archive, support: AppSettings.supportDirectory, cancel: token)
-            }.value
-            try token.check()
-            settings.values.pythonPath = executable.path
         }
     }
 

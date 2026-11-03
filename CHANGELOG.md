@@ -16,6 +16,12 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- Final WAV/session recognition now runs in shared native Swift code in the app
+  and `recscribe-text transcribe`, with configured whisper.cpp threads, verified
+  passes, channel/window provenance and continuous multipart timelines. Python
+  runtime setup and pipeline archive packaging are removed from the shipping app;
+  FFmpeg is optional for archive compression. Disposable working/region WAVs are
+  removed on terminal completion while raw ASR JSON/logs and hashes are retained.
 - Live Whisper speech with a zero-duration timestamp is retained at the reported
   point with an explicit timing-review flag and visible warning. It no longer
   stops the chunk; no words are deduplicated or durations fabricated. Invalid

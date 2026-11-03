@@ -13,11 +13,13 @@ per-application, microphone, and simultaneous playback + selected-input recordin
 Combined capture retains separate source tracks and a derived stereo mix with
 per-source recording health; see [capture sources](docs/capture-sources.md).
 WAV originals support FLAC, Opus and M4A archive export. The local
-WAV transcription CLI now provides a tested local vertical slice with a
+WAV/session transcription now runs in the shared native Swift core, with a
 whisper.cpp adapter, versioned canonical JSON and deterministic text/subtitle
-exports. Text normalization, translation and source-linked summaries now use a
-shared native Swift core, with opt-in Ollama or explicitly approved OpenAI text
-processing. Diarization remains pending. See the [Swift migration](docs/swift-first-migration.md),
+exports. The app and `recscribe-text transcribe` CLI require neither Python nor
+FFmpeg for recognition. FFmpeg is optional for FLAC, Opus and M4A archive export.
+Text normalization, translation and source-linked summaries use the same Swift
+core, with opt-in Ollama or explicitly approved OpenAI text processing.
+Diarization remains pending. See the [Swift migration](docs/swift-first-migration.md),
 [WAV guide](docs/wav-vertical-slice.md) and
 [architecture](docs/transcription-architecture.md).
 
@@ -86,24 +88,30 @@ xcodebuild test \
 
 ## Transcribe a finalized WAV locally
 
-The separate pipeline requires Python 3.12+, FFmpeg, a local `whisper-cli` and an
-existing ggml model. It never downloads a model or uses a cloud fallback.
+Build the native CLI and supply an installed `whisper-cli` and local ggml model.
+The source can be a finalized integer PCM WAV or a `.recscribe.json` session.
+No Python, virtual environment, pip installation or FFmpeg is needed.
 
 ```bash
-python3 -m venv pipeline/.venv
-pipeline/.venv/bin/python -m pip install -e ./pipeline
-pipeline/.venv/bin/recscribe recording.wav \
+swift build --package-path core -c release
+core/.build/release/recscribe-text transcribe recording.wav \
   --whisper-cli /absolute/path/to/whisper-cli \
   --model /absolute/path/to/ggml-model.bin \
-  --source-language de-CH --mode verbatim --local-only \
+  --source-language de-CH --mode verbatim --threads 2 --local-only \
   --output jobs/first-recording
-pipeline/.venv/bin/python -m unittest discover -s pipeline/tests -v
 ```
 
-Jobs preserve original audio and exact per-channel ASR JSON. Cancel with Ctrl-C
+Jobs preserve original audio and exact per-channel ASR JSON/logs. Disposable
+working/region WAVs are removed on success, failure or cancellation; their hashes
+and preparation metadata remain in the manifest/raw indexes. Cancel with Ctrl-C
 or a `cancel.request` file in the job directory. Use the terminal manifest state
 to distinguish complete, reviewable, failed and cancelled results. See the WAV
 guide for all modes, profiles, artifact contracts and current limitations.
+
+`normalize` and `translate` retain pending derivations until a separate native
+`derive` action or the app's configured local text step completes. `verified`
+requires a second distinct model. The `pipeline/` Python code remains a development
+reference and benchmark tool; it is not bundled, installed or invoked by the app.
 
 ## Upstream workflow
 
@@ -124,7 +132,8 @@ signing, release process, update channel, and product direction.
 
 ```text
 RecScribe/                         SwiftUI application and Xcode project
-pipeline/                          Standalone local WAV CLI and synthetic tests
+core/                              Shared native audio/text jobs and Swift CLI
+pipeline/                          Python reference/benchmark tooling (not shipped)
 schemas/transcript.schema.json      Canonical transcript contract
 benchmarks/                        Local corpus protocol and readiness manifest
 skills/recscribe/                  Thin Codex wrapper for the CLI

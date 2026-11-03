@@ -73,7 +73,7 @@ nonisolated struct LocalProcessRunner: Sendable {
         process.currentDirectoryURL = directory
         process.standardInput = secretPipe?.fileHandleForReading ?? FileHandle.nullDevice
         // Preload the bounded input before launch, avoiding a broken-pipe race
-        // if Python fails to launch. Neither key nor input is retained in Result.
+        // if the child fails to launch. Neither key nor input is retained in Result.
         if let privateInput, let secretPipe {
             try secretPipe.fileHandleForWriting.write(contentsOf: privateInput)
             try secretPipe.fileHandleForWriting.close()

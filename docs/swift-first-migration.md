@@ -1,7 +1,85 @@
 # Swift-first migration
 
 Tracking: [issue #10](https://github.com/moreaki/recscribe/issues/10).
-Implementation date: 2026-09-09. The umbrella remains open until all four phases pass their acceptance gates.
+Phases 1–2: 2026-09-09. Phase 3: 2026-11-02. Phase 4 is explicitly deferred
+outside #10 closure; no custom signed XPC helper is introduced.
+
+## Implemented: native final audio and Python-free shipping app
+
+- `AudioJob`, `WAVAudio`, `NativeAudioPreparer` and `NativeWhisperEngine` now live
+  in `RecScribeCore`. The app and `recscribe-text transcribe` share these exact
+  implementations. WAV/session recognition needs only the app/Swift CLI,
+  whisper-cli and selected local models. FFmpeg is optional for archive export.
+- Inspection streams integer 8/16/24/32-bit PCM, exact channel metrics/equality,
+  SHA-256 and bounded 30-second channel windows. More than 16,384 analysis windows
+  fall back to full-channel recognition instead of retaining unbounded window
+  metadata. Distinct channels are never deduplicated by text or correlation.
+- AVAudioConverter prepares bounded 16-kHz mono channels, flushes its tail, checks
+  working-WAV RIFF capacity/free space, and is also used by existing live drafts.
+  whisper.cpp remains an isolated child process; configured thread count is passed
+  to both primary and verification models. No engine weights are loaded in-app.
+- Native jobs preserve canonical v1.0, nine output artifacts, exact raw JSON/logs,
+  verified distinct-model comparison, decoder-padding provenance, channel-window
+  indexes, session v1–v3 identities, part ordering and continuous timestamps.
+  Missing/corrupt parts remain reviewable gaps. Untimed speech fails explicitly
+  with raw words retained; canonical intervals are never fabricated.
+- Job manifests are atomic and directories exclusive/private. Cancellation,
+  source-mutation checks, failure evidence, priority/preemption and separate native
+  AI text derivatives remain in place. CLI SIGINT/SIGTERM and `cancel.request`
+  stop the owned process; process output and conversion buffers are bounded.
+- Working-channel and region WAVs are disposable on **all terminal paths**.
+  Preparation hashes/timings and region mappings remain in manifests/indexes;
+  raw ASR JSON, version/process logs and canonical exports remain on disk.
+  A failed cleanup is reported, rather than silently labelled successful.
+- Python setup/detection/installer UI, `PipelineRuntime` and app-bundle
+  `pipeline.tar.gz` packaging are removed. Legacy Python-path preferences are
+  decoded for compatibility but never executed. Existing Python source remains
+  available for development comparison; no venv or pip setup ships in the app.
+- Four environments with broken Python 3.14 links were moved to Trash by explicit
+  request. A separate working interpreter under `Build/SwiftAudioReference` is
+  test-only, outside the app. It verifies source/report semantics and five
+  byte-identical text exports against Python; AVFoundation and FFmpeg resampling
+  are not claimed byte-identical. Filesystem aliases are compared by identity.
+
+```sh
+swift build --package-path core -c release
+core/.build/release/recscribe-text transcribe recording.wav \
+  --output NEW_JOB --whisper-cli /path/to/whisper-cli --model /path/to/model.bin \
+  --source-language de-CH --threads 2 --local-only
+```
+
+`--profile verified --verify-model /path/to/second.bin` enables the second pass.
+Normalize/translate remain pending until a separate native text derivation runs;
+they are not recognition-model translation flags. Diarization is still unavailable.
+
+### Phase 3 acceptance — 2026-11-03
+
+- Native core/CLI: 44 tests passed, with the optional Python reference enabled.
+  Differential coverage includes 8/16/24/32-bit inspection, exact channel windows,
+  distinct/silent channels, verified disagreement, session v1–v3 source identity,
+  part boundaries, schema semantics and byte-identical text/subtitle exports.
+  Missing parts, source changes, unsafe paths and cancellation are covered.
+- Full Release app suite: 488 tests / 75 suites; 487 passed and the opt-in signed
+  Keychain round-trip skipped. Python reference: 54 tests passed. Total: 585 passed,
+  one skipped. Existing app/Core tests were retained; a wall-clock-dependent text
+  test now gates first-batch completion on a real later result to avoid scheduling
+  flakes under parallel audio/reference load.
+- CLI integration executes native WAV and verified multipart jobs with a synthetic
+  whisper executable, checks `--threads 3`, and verifies cleanup on success and
+  cancellation. The app integration uses missing Python/FFmpeg paths deliberately.
+- A real standalone native CLI/Base smoke test on generated speech completed in
+  1.111 seconds of job time, retained four segments and all raw logs, removed every
+  disposable WAV, preserved the source SHA-256, and produced byte-identical exports
+  when re-rendered. The app's real native/Base smoke also passed. These are local
+  functional checks, not recognition-quality or comparative speed benchmarks.
+- Signed Release 0.3.0 (300): arm64/64-bit, Swift 6/complete checking, bundle
+  `com.moreaki.recscribe`, team `CDS4KLP8GT`, Hardened Runtime and unchanged Keychain
+  entitlements, without `get-task-allow`. Strict/deep codesign verification passed;
+  `pipeline.tar.gz` is absent. Authority remains Apple Development, not a notarized
+  Developer ID distribution. No model download or cloud inference was performed.
+- Logs: `Build/swift-audio-{core,app,python}-tests.log`,
+  `Build/swift-audio-release.log`. The real CLI fixture/artifacts are private local
+  generated test data under `Build/NativeAudioSmoke-20261102-ASX57p`.
 
 ## Assessment and boundaries
 
@@ -35,7 +113,7 @@ fallback. This change does not introduce cloud audio or download models.
   privacy boundaries. No personal model paths, API keys or endpoint overrides are
   embedded in the shared core.
 - Both manual text actions and automatic local post-ASR processing use `TextJob`.
-  The latter creates a separate derivative after the reference ASR job completes.
+  The latter creates a separate derivative after the native ASR job completes.
 - Canonical v1 validation covers the checked-in schema vocabulary **and** semantic
   invariants: chronology, channel bounds, review flags, explicit cloud consent,
   source-linked derived fields, summary references and repaired boundary timing.
@@ -59,8 +137,8 @@ match, but canonical semantics and evidence hashes must remain valid.
 ## Native text CLI
 
 Build with `swift build --package-path core -c release`. Run `--help` for all options.
-This companion processes existing canonical JSON; the WAV command still belongs
-to the reference pipeline until the audio migration passes parity.
+The same companion now supports `transcribe` for native WAV/session jobs as well
+as `render` and `derive` for existing canonical JSON.
 
 ```sh
 swift run --package-path core recscribe-text render transcript.json --output new-exports
@@ -77,8 +155,18 @@ Ctrl-C cancels processing and leaves a terminal job manifest plus partial eviden
 ## Verification
 
 ```sh
-RECSCRIBE_REFERENCE_PYTHON="$PWD/pipeline/.venv/bin/python" swift test --package-path core
-pipeline/.venv/bin/python -m unittest discover -s pipeline/tests -q
+swift test --package-path core -c release
+xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe -destination 'platform=macOS' -only-testing:RecScribeTests -parallel-testing-enabled NO
+```
+
+For optional differential tests, create a development-only environment outside the
+shipping app and install the reference package:
+
+```sh
+python3 -m venv Build/PythonReference
+Build/PythonReference/bin/python -m pip install -e pipeline
+RECSCRIBE_REFERENCE_PYTHON="$PWD/Build/PythonReference/bin/python" swift test --package-path core -c release
+Build/PythonReference/bin/python -m unittest discover -s pipeline/tests -q
 ```
 
 The optional reference interpreter is used **only by tests** to run Python schema
@@ -114,20 +202,13 @@ Local acceptance on the MacBook Air (M1):
   loaded and no provider request was triggered during the UI check. Previous app:
   `Build/PreviousRelease/RecScribe-0.2.3-before-swift-core-20260909.app`.
 
-## Remaining gates (not claimed complete)
+## Deferred work (outside #10 closure)
 
-1. **Complete the common audio-job core.** Reuse the native WAV/channel inspection
-   and conversion foundation for final processing; port adapter/job orchestration
-   without changing capture. Compare synthetic PCM widths/rates, independent
-   channels, split manifests, missing/corrupt parts, cancellation and timestamps
-   against Python before switching the final-audio path. Keep Python available
-   until the complete WAV pipeline has demonstrated parity, not just text jobs.
-2. **Benchmark a persistent isolated ASR worker.** Compare current per-chunk CLI
-   versus a resident helper on identical model/audio/settings. Measure cold load,
-   warm latency p50/p95, real-time factor, peak/resident RAM, backlog, cancellation
-   and recording queue metrics. Actors provide scheduling, not crash isolation;
-   a native model assertion must not terminate recording.
-3. **Decide from evidence.** The previous 346.2-second run for 643.74 seconds of
+1. **Evaluate residency only if measured live latency warrants it.** Start with
+   whisper.cpp's existing out-of-process `whisper-server` in a separate optional
+   spike. A custom XPC daemon, idle-unloading manager and resident benchmark matrix
+   are not prerequisites for Python removal. Keep the recorder isolated from ASR.
+2. **Decide from evidence.** The previous 346.2-second run for 643.74 seconds of
    stereo audio included two model passes per independently retained channel and
    concurrent builds/tests. It is not a clean benchmark or proof of a Swift speedup.
    Do not compare it directly with the separately reported M2 Ultra run.
@@ -144,7 +225,7 @@ idle machine; these numbers exclude inference and are not evidence for a residen
 ASR worker:
 
 ```sh
-pipeline/.venv/bin/python benchmarks/compare-text-core.py transcript.json \
+Build/PythonReference/bin/python benchmarks/compare-text-core.py transcript.json \
   --native core/.build/release/recscribe-text --runs 5
 ```
 

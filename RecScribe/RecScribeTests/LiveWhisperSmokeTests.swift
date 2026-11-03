@@ -1,4 +1,5 @@
 import AVFoundation
+import RecScribeCore
 import Testing
 @testable import RecScribe
 
@@ -52,5 +53,16 @@ struct LiveWhisperSmokeTests {
         #expect(FileManager.default.fileExists(atPath: live.directory.appendingPathComponent("channel-0.raw.json").path))
         #expect(!FileManager.default.fileExists(atPath: live.directory.appendingPathComponent("working.wav").path))
         print("LIVE_ASR_SMOKE audio_s=10 first_chunk_wall_s=\(live.durationSeconds) subsequent_chunk_wall_s=\(last?.durationSeconds ?? 0) model=base engine=whisper.cpp native_preparation=true")
+        let finalSource = directory.appendingPathComponent("synthetic.wav")
+        let digest = try RecordingSession.hash(finalSource)
+        let finalOutput = directory.appendingPathComponent("native-final")
+        let finalStart = ContinuousClock.now
+        try await Task.detached(priority: .utility) {
+            try NativeAudioTranscription.run(finalSource, output: finalOutput, settings: configured, cancel: WorkCancellation())
+        }.value
+        let final = try JSONDecoder().decode(RecScribeCore.JSONValue.self, from: Data(contentsOf: finalOutput.appendingPathComponent("transcript.json")))
+        #expect(final["segments"].array?.contains { $0["source_text"].string?.lowercased().contains("local") == true } == true)
+        #expect(try RecordingSession.hash(finalSource) == digest)
+        print("FINAL_ASR_SMOKE engine=whisper.cpp model=base python=false ffmpeg=false wall_s=\(NativeAudioTranscription.seconds(since: finalStart))")
     }
 }

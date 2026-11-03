@@ -39,6 +39,7 @@ final class SessionLibrary: ObservableObject {
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
     private let rememberJob: (URL, URL) -> Void
+    private let jobsDirectory: URL
 
     init(exportSession: @escaping @Sendable (URL, URL, WorkCancellation) throws -> URL = { manifest, directory, token in
         try SessionExporter().export(manifest, to: directory, checkCancellation: token.check)
@@ -47,13 +48,14 @@ final class SessionLibrary: ObservableObject {
          readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
          readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil,
          initialJob: URL? = nil, initialSource: URL? = nil,
-         rememberJob: @escaping (URL, URL) -> Void = { _, _ in }) {
+         rememberJob: @escaping (URL, URL) -> Void = { _, _ in }, jobsDirectory: URL? = nil) {
         let repository = ManifestRepository()
         let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
         self.cancelRuntime = cancelRuntime
         self.settings = settings
         self.rememberJob = rememberJob
+        self.jobsDirectory = jobsDirectory ?? AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
         self.latestJob = initialJob
         self.latestSource = initialSource
         if initialJob != nil { self.progress = 1 }
@@ -213,7 +215,7 @@ final class SessionLibrary: ObservableObject {
         defer { busy = false }
         try VADModel.validate(settings.vadModelPath)
         latestSource = source
-        let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
+        let jobs = jobsDirectory
         let job = jobs.appendingPathComponent(cancel.id.uuidString)
         previousJob = latestJob
         latestJob = job
@@ -224,23 +226,8 @@ final class SessionLibrary: ObservableObject {
             self?.progress = value.progress
         }, failure: { [weak self] message in self?.errorMessage = message })
         defer { progressMonitor.stop() }
-        var args = ["-m", "recscribe", source.path, "--output", job.path,
-                    "--whisper-cli", settings.whisperPath, "--model", settings.modelPath,
-                    "--ffmpeg", settings.ffmpegPath, "--source-language", settings.sourceLanguage,
-                    "--mode", settings.mode.rawValue, "--profile", settings.profile.rawValue, "--local-only"]
-        if settings.mode != .verbatim { args += ["--target-language", settings.targetLanguage] }
-        if settings.profile == .verified { args += ["--verify-model", settings.verificationModelPath] }
-        if !settings.vadModelPath.isEmpty { args += ["--vad-model", settings.vadModelPath] }
-        let arguments = args
-        _ = try await Task.detached(priority: .utility) {
-            guard FileManager.default.isExecutableFile(atPath: settings.pythonPath),
-                  FileManager.default.isExecutableFile(atPath: settings.whisperPath),
-                  FileManager.default.fileExists(atPath: settings.modelPath) else {
-                throw SessionError.invalid("Configure the pipeline runtime, whisper-cli and a local model in Settings")
-            }
-            try PipelineRuntime.validate(settings.pythonPath, cancel: cancel)
-            try FileManager.default.createDirectory(at: jobs, withIntermediateDirectories: true)
-            return try LocalProcessRunner.run(URL(fileURLWithPath: settings.pythonPath), arguments, in: jobs, cancel: cancel)
+        try await Task.detached(priority: .utility) {
+            try NativeAudioTranscription.run(source, output: job, settings: settings, cancel: cancel)
         }.value
         let info = try await readJob(job.appendingPathComponent("manifest.json")).validated()
         try cancel.check()
@@ -289,7 +276,7 @@ final class SessionLibrary: ObservableObject {
                 let key = request.isCloud ? try IntelligenceCredentials().key() : nil
                 let preview = try await TranscriptPreview.read(request.transcript.deletingLastPathComponent())
                 try token.check()
-                let jobs = AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
+                let jobs = jobsDirectory
                 let job = jobs.appendingPathComponent(token.id.uuidString)
                 try await deriveText(from: request.transcript, source: preview.sourceURL, output: job,
                                      options: request.options(cloudConsent: cloudConsent), key: key)

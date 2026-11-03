@@ -4,10 +4,6 @@ import Testing
 @testable import RecScribe
 
 @MainActor struct IntelligenceTests {
-    @Test func outdatedPipelineRequiresExplicitSetup() {
-        for version in ["0.1.0", "0.2.0", "garbage", "", "0.2.1\nwarning"] { #expect(!PipelineRuntime.supportsTextActions(version)) }
-        for version in ["0.2.1", "0.2.2", "0.10.0", "1.0.0"] { #expect(PipelineRuntime.supportsTextActions(version)) }
-    }
     @Test("Signed Data Protection Keychain round trip", .enabled(if: ProcessInfo.processInfo.environment["HR_KEYCHAIN_TEST"] == "1"))
     func signedKeychainRoundTrip() throws {
         let store = KeychainIntelligenceSecret(service: "com.moreaki.recscribe.integration-test.\(UUID())")

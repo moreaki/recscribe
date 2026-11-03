@@ -1,7 +1,8 @@
-# WAV vertical slice, v0.1
+# Native WAV/session transcription
 
-Historical implementation baseline. For the current local/cloud text-only
-post-processing and VAD validation, see [the 0.2.2 workflow](intelligence-workflow.md).
+The original v0.1 Python slice remains development/reference tooling. The shipping
+app and native CLI now use [RecScribeCore](swift-first-migration.md) for final
+audio; local/cloud text post-processing remains a separate action.
 
 Implemented locally on the MacBook Air, starting from `4d695ed`.
 The native capture implementation remains unchanged. The pipeline starts from a
@@ -9,13 +10,12 @@ finalized WAV or a file selected for import; it does not attach to live capture.
 
 ## Run
 
-Python 3.12+ and a local FFmpeg executable are required. Install the small Python
-package and its JSON Schema validator once:
+Build the Swift CLI and supply a local whisper.cpp binary and model. No Python
+or FFmpeg is needed for recognition; FFmpeg is optional for archive compression.
 
 ```sh
-python3 -m venv pipeline/.venv
-pipeline/.venv/bin/python -m pip install -e pipeline
-pipeline/.venv/bin/recscribe recording.wav \
+swift build --package-path core -c release
+core/.build/release/recscribe-text transcribe recording.wav \
   --whisper-cli /absolute/path/to/whisper-cli \
   --model /absolute/path/to/ggml-model.bin \
   --source-language de-CH --target-language de --mode normalize \
@@ -27,10 +27,10 @@ The output directory must be new. Its mode is 0700; CLI-created files are privat
 to the current account. Jobs and model files must remain outside version control.
 The CLI does not install engines, fetch models, use a cloud provider or retry on
 another service. `--local-only` is always true. The user supplies trusted local
-executables. FFmpeg's input protocol is restricted to local files.
+executables. `.recscribe.json` input processes session parts without joining WAVs.
 
 The command above performs ASR, but normalization remains **pending** until a
-local language processor is implemented. It emits `completed_with_review`, with
+separate native `derive` action or the configured app text processor runs. It emits `completed_with_review`, with
 null derived fields and a prominent notice in Markdown. The original ASR text is
 never described as normalized or translated. `verbatim` preserves what the engine
 recognized; Whisper may itself output Standard German for Swiss German, which
@@ -74,13 +74,15 @@ Each successful job emits the nine required files:
 
 Additional `asr-channel-N.json` and `verify-channel-N.json` files preserve exact
 backend bytes. The raw index references them with SHA-256 and engine/model
-provenance. Working WAVs and local process logs also stay in the job directory.
+provenance. Disposable working/channel-region WAVs are deleted on success, failure
+or cancellation; preparation hashes and source mappings remain in manifests/raw
+indexes. Local version/process logs stay in the job directory.
 Logs may contain transcript content and local paths; do not commit or share them
 without reviewing them. The manifest hashes all artifacts except itself and the
 cancellation request, avoiding a circular self-hash.
 
 `schemas/transcript.schema.json` is the source contract. The identical packaged
-copy is needed for installed wheels; a test enforces byte-for-byte equality.
+copies are included in the Swift core and Python reference; tests enforce equality.
 Runtime validation checks the JSON Schema plus unique IDs, chronological order,
 channel bounds and timestamps within the source. Unsupported or malformed engine
 output fails visibly rather than being silently repaired. One documented boundary
@@ -92,10 +94,11 @@ overruns and wholly out-of-range cues fail validation.
 
 The inspector streams integer PCM WAVs (8, 16, 24, 32 bit; 1–32 channels). Float
 WAV, RF64 and compressed containers are currently unsupported and fail explicitly.
-FFmpeg prepares a separate 16-kHz mono PCM16 working file for every source
+AVAudioConverter prepares a separate 16-kHz mono PCM16 working file for each recognized
 channel. This preserves channel provenance, even for two independently captured
-speakers. Duplicated stereo is currently processed twice; cross-channel merging,
-channel-correlation detection and diarization remain future work. Simultaneous
+speakers. Sample-identical channels share recognition; differing stereo windows
+are recognized with context. Text similarity/correlation never establishes
+channel equality. Diarization remains unavailable. Simultaneous
 channels can produce overlapping subtitle cues and are marked for review.
 The source is hashed before inspection and again after inference; a changing
 recording fails the job. Original audio is never written by the pipeline.
@@ -111,10 +114,11 @@ independent runs are not expected to produce byte-identical manifests.
 → rendering → completed | completed_with_review`.
 
 SIGINT, SIGTERM or a `cancel.request` file inside a running job requests
-cancellation. The CLI exits 130, stops the current child process group and writes
-the terminal manifest. Failures exit 1; invalid arguments exit 2. Reviewable
-results exit 0 and explicitly report `completed_with_review`. Machine-readable
-stage events go to stderr, a final result locator goes to stdout.
+cancellation. The CLI exits 130, stops its owned ASR child and writes
+the terminal manifest. Failures and invalid arguments exit 1. Reviewable
+results exit 0 and explicitly report `completed_with_review`. The atomic JSON
+manifest carries progress/history; unified logs contain operation IDs and timings,
+and a final result locator goes to stdout.
 
 Artifacts are atomically published. Failed/cancelled jobs retain already completed
 artifacts, a terminal manifest and `review.md`; they cannot promise a full set of

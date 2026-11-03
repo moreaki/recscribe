@@ -6,12 +6,11 @@ nonisolated struct RuntimeAvailability: Sendable {
     struct Paths: Hashable, Sendable {
         var ffmpeg: String
         var whisper: String
-        var python: String
         var model: String
         var verificationModel: String
         init(_ values: AppSettings.Values) {
             ffmpeg = values.ffmpegPath; whisper = values.whisperPath
-            python = values.pythonPath; model = values.modelPath
+            model = values.modelPath
             verificationModel = values.verificationModelPath
         }
     }
@@ -41,7 +40,6 @@ nonisolated struct RuntimeAvailability: Sendable {
         case .ffmpeg: configured = paths.ffmpeg; name = "ffmpeg"
         case .whisperCPP: configured = paths.whisper; name = "whisper-cli"
         case .ollama: configured = ""; name = "ollama"
-        case .pipeline: return executable(paths.python) ? paths.python : nil
         }
         if executable(configured) { return configured }
         return LocalToolDiscovery.executable(name, directories: directories, isExecutable: executable)
@@ -74,31 +72,20 @@ nonisolated struct RuntimeAvailability: Sendable {
                 in: FileManager.default.temporaryDirectory, cancel: cancel, timeout: 10)
         }
         var result = Self(paths: paths)
-        for software in [LocalSoftware.ffmpeg, .whisperCPP, .ollama, .pipeline] {
+        for software in [LocalSoftware.ffmpeg, .whisperCPP, .ollama] {
             try cancel.check()
             guard let path = toolPath(software, paths: paths, directories: directories) else { continue }
             var dependency = Dependency(path: path)
-            if probeVersions, software == .ffmpeg || software == .pipeline {
+            if probeVersions, software == .ffmpeg {
                 do {
-                    let output = try run(path, software == .ffmpeg ? ["-version"]
-                        : ["-I", "-c", "from recscribe import __version__; print(__version__)"])
+                    let output = try run(path, ["-version"])
                     try cancel.check()
-                    if software == .ffmpeg {
                         if let line = output.split(separator: "\n").first(where: { $0.hasPrefix("ffmpeg version ") }) {
                             dependency.version = String((line.dropFirst("ffmpeg version ".count).split(separator: " ").first ?? "").prefix(120))
                         } else { dependency.issue = "Executable found; FFmpeg version could not be confirmed." }
-                    } else {
-                        let version = output.trimmingCharacters(in: .whitespacesAndNewlines)
-                        dependency.version = String(version.prefix(100))
-                        if !PipelineRuntime.supportsTextActions(version) {
-                            dependency.issue = "Pipeline version needs review; reinitialize the runtime to update it."
-                        }
-                    }
                 } catch is CancellationError { throw CancellationError() }
                 catch {
-                    dependency.issue = software == .pipeline
-                        ? "Python found; the pipeline could not be verified. Reinitialize or choose another runtime."
-                        : "Executable found; version check failed. Recheck or choose another executable."
+                    dependency.issue = "Executable found; version check failed. Recheck or choose another executable."
                 }
             }
             result.tools[software] = dependency

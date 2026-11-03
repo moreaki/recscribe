@@ -17,7 +17,7 @@ struct ConfigurationView: View {
         static let progressWidth: CGFloat = 90
     }
     private var availabilityKey: [String] {
-        [settings.values.ffmpegPath, settings.values.whisperPath, settings.values.pythonPath,
+        [settings.values.ffmpegPath, settings.values.whisperPath,
          settings.values.modelPath, settings.values.verificationModelPath,
          section.rawValue, String(availabilityRefresh), String(runtime.busy), String(library.recordingActive), String(library.liveWorkActive)]
     }
@@ -68,13 +68,13 @@ struct ConfigurationView: View {
             do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
             await runtime.refreshAvailability()
         }
-        .confirmationDialog(installation == .pipeline && runtime.dependency(.pipeline) != nil ? "Reinitialize pipeline runtime?" : "Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
-            Button(installation == .pipeline && runtime.dependency(.pipeline) != nil ? "Reinitialize" : "Install") {
-                if let name = installation { runtime.install(name, reinitialize: name == .pipeline && runtime.dependency(.pipeline) != nil) }
+        .confirmationDialog("Install local software?", isPresented: Binding(get: { installation != nil }, set: { if !$0 { installation = nil } })) {
+            Button("Install") {
+                if let name = installation { runtime.install(name) }
                 installation = nil
             }
         } message: {
-            Text(installation == .pipeline ? "Creates a new private Python environment and downloads the pipeline’s package dependencies. Existing environments, models and jobs are retained. No models or audio are uploaded." : "Runs brew install \(installation?.rawValue ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
+            Text("Runs brew install \(installation?.rawValue ?? ""). Homebrew downloads software and dependencies; no models or recordings are sent. Ollama must then be started separately.")
         }
         .confirmationDialog("Download Whisper model?", isPresented: Binding(get: { download != nil }, set: { if !$0 { download = nil } })) {
             Button("Download and verify") { if let model = download { runtime.download(model) }; download = nil }
@@ -101,18 +101,14 @@ struct ConfigurationView: View {
             HStack {
                 Button("Recheck") { availabilityRefresh += 1 }
                 Button("Reveal executable") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: found.path)]) }
-                if software == .pipeline {
-                    Button("Reinitialize pipeline…") { installation = .pipeline }
-                    Button("Forget selection") { runtime.forgetPipelineSelection() }
-                        .help("Clears the selected Python path. Existing environments, models and jobs are retained.")
-                } else if software == .ffmpeg && settings.values.ffmpegPath != found.path
+                if software == .ffmpeg && settings.values.ffmpegPath != found.path
                             || software == .whisperCPP && settings.values.whisperPath != found.path {
                     Button("Use detected executable") { runtime.useDependency(software) }
                 }
             }.disabled(runtimeActionsDisabled || runtime.checkingAvailability)
         } else if runtime.availabilityCurrent && !runtime.checkingAvailability {
             HStack {
-                Button(software == .pipeline ? "Set up isolated pipeline runtime…" : "Install \(name)…") { installation = software }
+                Button("Install \(name)…") { installation = software }
                 Button("Recheck") { availabilityRefresh += 1 }
             }.disabled(runtimeActionsDisabled)
         } else {
@@ -217,7 +213,7 @@ struct ConfigurationView: View {
                  : "Shorter chunks update sooner but reload the model more often. Changes apply when live transcription is next enabled. Auto detects language per chunk and channel; mixed-language boundaries require review. For a known language, set Source language below (for example de-CH).")
                 .font(.caption).foregroundStyle(.secondary)
         }
-        card("Completed recordings", detail: "Capture works without Whisper, Python or AI. The full verification, normalization and summary pipeline runs after recording or file import, independently of live drafts.") {
+        card("Completed recordings", detail: "Final transcription runs natively on this Mac with whisper.cpp. Recording remains independent of transcription and AI.") {
             Toggle("Automatically transcribe completed recordings", isOn: $settings.values.autoTranscribe)
                 .disabled(settings.values.processingLocation == .cloud)
             if settings.values.processingLocation == .cloud {
@@ -237,9 +233,7 @@ struct ConfigurationView: View {
             if !settings.values.vadModelPath.isEmpty {
                 Button("Clear optional VAD model") { settings.values.vadModelPath = "" }
             }
-            file("Pipeline Python 3.12+", value: $settings.values.pythonPath)
-            dependencyStatus(.pipeline, name: "Pipeline")
-            Text("Completed local audio jobs use this runtime. AI text actions and cloud live transcription run natively in Swift. Setup retains previous versions.").font(.caption).foregroundStyle(.secondary)
+            Text("WAV inspection, channel preparation, jobs and exports run in Swift. FFmpeg is optional for FLAC, Opus and M4A archive export.").font(.caption).foregroundStyle(.secondary)
             Text("Normalize/translate require AI post-processing. Cloud text processing is always a separate, confirmed action in the Studio; automatic recognition never uploads text.").font(.caption).foregroundStyle(.secondary)
         }
         }

@@ -85,19 +85,14 @@ struct RuntimeAvailabilityTests {
         #expect(RuntimeAvailability.model(model, paths: paths, support: directory) == nil)
     }
 
-    @Test func pipelineProbeReportsVersionAndKeepsOutdatedRuntimeAvailableForExplicitReset() throws {
+    @Test func legacyPythonSelectionIsNeverProbed() throws {
         let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
         let python = directory.appendingPathComponent("python3"); try executable(python)
-        var paths = RuntimeAvailability.Paths(AppSettings.Values()); paths.python = python.path
-        for version in ["0.2.3", "0.1.0"] {
-            let snapshot = try RuntimeAvailability.scan(paths: paths, support: directory, cancel: WorkCancellation(), directories: [], probe: { path, arguments in
-                guard path == python.path, arguments.first == "-I" else { throw SessionError.invalid("Unexpected pipeline probe") }
-                return version + "\n"
-            })
-            #expect(snapshot.tools[.pipeline]?.path == python.path)
-            #expect(snapshot.tools[.pipeline]?.version == version)
-            #expect((snapshot.tools[.pipeline]?.issue == nil) == (version == "0.2.3"))
-        }
+        var values = AppSettings.Values(); values.pythonPath = python.path
+        let snapshot = try RuntimeAvailability.scan(paths: .init(values), support: directory, cancel: WorkCancellation(), directories: [], probe: { _, _ in
+            Issue.record("Legacy Python must not be invoked"); return ""
+        })
+        #expect(snapshot.tools.isEmpty)
     }
 
     @Test func existingToolsAndExternalModelsBlockStaleInstallAndDownloadActions() async throws {
@@ -123,12 +118,6 @@ struct RuntimeAvailabilityTests {
         #expect(!runtime.busy)
         #expect(runtime.status.contains("local tiny model file was found"))
         #expect(settings.values.modelPath == external.path)
-        settings.values.pythonPath = binary.path
-        runtime.installPipeline()
-        for _ in 0..<1000 where runtime.busy { try await Task.sleep(for: .milliseconds(5)) }
-        #expect(runtime.status.contains("explicitly reinitialize"))
-        runtime.forgetPipelineSelection()
-        #expect(settings.values.pythonPath.isEmpty)
         #expect(FileManager.default.fileExists(atPath: binary.path))
         #expect(FileManager.default.fileExists(atPath: external.path))
     }

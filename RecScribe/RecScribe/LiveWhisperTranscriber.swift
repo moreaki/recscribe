@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import RecScribeCore
 import os
 
 /// Only malformed recognizer output is eligible for a bounded local retry.
@@ -94,40 +95,13 @@ nonisolated enum LiveWhisperTranscriber {
                 "-ojf", "-of", output.path, "-t", String(settings.liveThreads), "-tp", "0", "-mc", "0"]
     }
 
-    /// One converter owns one bounded input stream; flushes its tail at EOF.
+    /// Live and final jobs share the same bounded native converter.
     @discardableResult
     static func convert(_ source: URL, channel: Int, to destination: URL, cancel: WorkCancellation,
-                        sampleRate: Int = LiveTranscriptionPolicy.sampleRate) throws -> Bool {
-        let input = try AVAudioFile(forReading: source)
-        guard (0..<Int(input.processingFormat.channelCount)).contains(channel),
-              let format = AVAudioFormat(standardFormatWithSampleRate: Double(sampleRate), channels: 1),
-              let converter = AVAudioConverter(from: input.processingFormat, to: format),
-              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(LiveTranscriptionPolicy.conversionFrames)) else {
-            throw WAVWriterError.invalidFormat
+                        sampleRate: Int = LiveTranscriptionPolicy.sampleRate, check: () throws -> Void = {}) throws -> Bool {
+        try NativeAudioPreparer.convert(source, channel: channel, to: destination, sampleRate: sampleRate) {
+            try cancel.check(); try check()
         }
-        converter.channelMap = [NSNumber(value: channel)]
-        let output = try AVAudioFile(forWriting: destination, settings: [
-            AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: PCM16WAV.bitDepth,
-            AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false
-        ])
-        let feeder = ConverterInput(input)
-        var hasSignal = false
-        while true {
-            try cancel.check()
-            var error: NSError?
-            let status = converter.convert(to: buffer, error: &error) { count, state in feeder.read(count, state) }
-            if let error = feeder.error ?? error { throw error }
-            guard status != .error else { throw WAVWriterError.invalidFormat }
-            if buffer.frameLength > 0 {
-                if !hasSignal, let samples = buffer.floatChannelData?[0] {
-                    hasSignal = (0..<Int(buffer.frameLength)).contains { samples[$0] != 0 }
-                }
-                try output.write(from: buffer)
-            }
-            if status == .endOfStream { break }
-        }
-        return hasSignal
     }
 
     private struct Raw: Decodable {
@@ -200,24 +174,5 @@ nonisolated enum LiveWhisperTranscriber {
             logger.notice("Retained speech requiring timing review cursor_frame=\(cursor) channel=\(channel) count=\(untimedSpeech)")
         }
         return segments
-    }
-}
-
-/// AVAudioConverter invokes its input closure synchronously on the caller's
-/// thread. This file and its mutable read state never cross that boundary.
-private nonisolated final class ConverterInput: @unchecked Sendable {
-    let file: AVAudioFile
-    var error: NSError?
-    init(_ file: AVAudioFile) { self.file = file }
-    func read(_ count: AVAudioPacketCount, _ status: UnsafeMutablePointer<AVAudioConverterInputStatus>) -> AVAudioBuffer? {
-        guard file.framePosition < file.length else { status.pointee = .endOfStream; return nil }
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
-            frameCapacity: min(count, AVAudioFrameCount(LiveTranscriptionPolicy.conversionFrames))) else {
-            error = NSError(domain: NSOSStatusErrorDomain, code: Int(memFullErr))
-            status.pointee = .endOfStream
-            return nil
-        }
-        do { try file.read(into: buffer); status.pointee = .haveData; return buffer }
-        catch { self.error = error as NSError; status.pointee = .endOfStream; return nil }
     }
 }

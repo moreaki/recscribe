@@ -1,14 +1,16 @@
 # RecScribe: Architecture Notes
 
-Status: Architecture and staged implementation; see [WAV slice](wav-vertical-slice.md) for implemented capabilities
+Status: Native Swift audio/text jobs in app and CLI; see [Swift migration](swift-first-migration.md)
 Date: 2026-09-05  
 Base project: [Home Rec](https://github.com/melissa-pereira-deel/home-rec)
 
-Implementation update (2026-09-09): [Swift-first migration](swift-first-migration.md)
-tracks the staged transition. Native AI connections, text-only jobs, canonical v1
-validation and deterministic exports now share `RecScribeCore` between the app and
-the `recscribe-text` CLI. Python remains the audio/ASR reference; it is no longer
-required for the app's AI settings, text improvement, translation or summaries.
+Implementation update (2026-11-02): `RecScribeCore` now owns final WAV/session
+inspection, channel analysis, AVAudioConverter preparation, replaceable whisper.cpp
+recognition, verified passes, jobs, canonical validation and deterministic exports,
+as well as native AI/text jobs. The app and `recscribe-text transcribe` use the same
+implementation. Python remains optional development/reference tooling outside the
+shipping app. FFmpeg is optional for archive compression, not WAV recognition.
+Resident workers/custom XPC packaging are deferred and do not gate Phase 3 closure.
 
 ## 1. Purpose
 
@@ -17,8 +19,9 @@ local-first recording and transcription system. It should turn an audio file int
 an auditable, high-quality transcript that can be read by people and processed by
 other software.
 
-The first supported input is WAV. The architecture must allow additional formats
-through FFmpeg without changing the transcription core.
+The first supported input is integer PCM WAV, including ordered multipart session
+manifests. Additional import formats can be added behind preparation adapters;
+they do not create an implicit FFmpeg dependency for supported WAVs.
 
 The intended workflow is:
 
@@ -103,20 +106,14 @@ intact.
 
 ## 5. Repository evolution
 
-The first iterations should preserve the existing application and add a
-standalone pipeline before integrating it into the UI:
+The production app and CLI now share native audio and text orchestration:
 
 ```text
-RecScribe/                       existing native recorder
-pipeline/
-  pyproject.toml                 Python orchestration package
-  src/recscribe/
-    audio/                       inspection, conversion and VAD
-    engines/                     ASR backend adapters
-    language/                    cleanup and translation adapters
-    quality/                     disagreement and review logic
-    renderers/                   JSON, Markdown, TXT, SRT and VTT
-    cli.py                       stable command-line interface
+RecScribe/                       native recorder and SwiftUI integration
+core/
+  Sources/RecScribeCore/         audio/text jobs, adapters, validation, rendering
+  Sources/RecScribeTextCLI/      transcribe, render and derive commands
+pipeline/                       optional Python reference/benchmark tooling
 schemas/
   transcript.schema.json         canonical output contract
 benchmarks/
@@ -128,10 +125,10 @@ docs/
   transcription-architecture.md  this document
 ```
 
-Python is proposed for the orchestration layer because it makes backend
-experimentation and structured output easy. The stable boundary is the JSON
-schema and CLI, not the Python implementation. A later native worker can replace
-it without changing callers.
+Swift owns production orchestration. The versioned JSON schema and adapter
+contracts remain stable; Python is retained only for optional comparison and
+research. Proven codecs and speech engines stay behind adapters rather than
+being rewritten. FFmpeg is needed only when archive compression is requested.
 
 ## 6. Engine strategy
 

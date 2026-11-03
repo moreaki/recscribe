@@ -25,7 +25,17 @@ private actor BatchTransport: IntelligenceTransport {
         active += 1; started += 1; peak = max(peak, active)
         defer { active -= 1 }
         do {
-            try await Task.sleep(for: slowFirst && id == "seg-000001" ? .milliseconds(150) : delay)
+            if slowFirst && !failFirst && id == "seg-000001" {
+                // Gate on an actual later completion, not wall-clock scheduling:
+                // concurrent audio/reference tests can delay either sleeping task.
+                let deadline = ContinuousClock.now + .seconds(5)
+                while completed.isEmpty {
+                    guard ContinuousClock.now < deadline else { throw CoreFailure("Later synthetic batch did not complete") }
+                    try await Task.sleep(for: .milliseconds(1))
+                }
+            } else {
+                try await Task.sleep(for: slowFirst && id == "seg-000001" ? .milliseconds(150) : delay)
+            }
             if failFirst && id == "seg-000001" { throw CoreFailure("Synthetic batch failure") }
             completed.append(id)
             let result: JSONValue = ["segments": .array(segments.map { ["id": $0["id"], "text": $0["id"]] }),

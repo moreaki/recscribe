@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import RecScribeCore
 
-/// Text-only companion during migration. WAV/ASR stays in the existing reference CLI until parity.
+/// Native WAV/session transcription and canonical text tools share RecScribeCore.
 @main struct RecScribeTextCLI {
     static func main() async {
         do {
@@ -27,6 +27,29 @@ import RecScribeCore
 
     static func run(_ arguments: Arguments) async throws {
         let source = URL(fileURLWithPath: arguments.source)
+        if arguments.command == "transcribe" {
+            guard let output = arguments.output, let binary = arguments.whisper, let model = arguments.model else {
+                throw CoreFailure("transcribe requires --output, --whisper-cli and --model")
+            }
+            let work = Task.detached(priority: .utility) {
+                let engine = try NativeWhisperEngine(binary: URL(fileURLWithPath: binary), model: URL(fileURLWithPath: model),
+                    vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads)
+                let verifier = try arguments.verificationModel.map {
+                    try NativeWhisperEngine(binary: URL(fileURLWithPath: binary), model: URL(fileURLWithPath: $0),
+                        vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads)
+                }
+                if let verifier, engine.metadata["model_sha256"] == verifier.metadata["model_sha256"] {
+                    throw CoreFailure("Verification requires two distinct model checksums")
+                }
+                return try AudioJob(engine: engine, verifier: verifier, preparer: NativeAudioPreparer()).run(
+                    source: source, output: URL(fileURLWithPath: output),
+                    options: .init(sourceLanguage: arguments.language, targetLanguage: arguments.target,
+                        mode: arguments.mode, profile: arguments.profile, diarize: arguments.diarize))
+            }
+            let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            print("\(result.value["status"].string ?? "completed"); local audio evidence and exports retained in \(output)")
+            return
+        }
         if arguments.command == "render" {
             guard let output = arguments.output else { throw CoreFailure("--output is required") }
             let handle = try FileHandle(forReadingFrom: source)
@@ -60,11 +83,15 @@ import RecScribeCore
         let command: String
         let source: String
         var output: String?, model: String?, target: String?
+        var whisper: String?, verificationModel: String?, vad: String?
+        var language = "auto", profile = "fast"
+        var threads = NativeWhisperEngine.Policy.defaultThreads
+        var diarize = false
         var provider: TextProvider?
         var mode: TextMode = .verbatim
         var summary = false, cloudConsent = false, keyStdin = false
         init(_ args: [String]) throws {
-            guard args.count >= 2, ["derive", "render"].contains(args[0]) else { throw CoreFailure(usage) }
+            guard args.count >= 2, ["derive", "render", "transcribe"].contains(args[0]) else { throw CoreFailure(usage) }
             command = args[0]; source = args[1]
             var index = 2
             while index < args.count {
@@ -73,12 +100,28 @@ import RecScribeCore
                 case "--summarize": summary = true
                 case "--allow-cloud-text": cloudConsent = true
                 case "--key-stdin": keyStdin = true
+                case "--local-only": break // Native audio recognition is always local.
                 default:
                     guard index < args.count else { throw CoreFailure("Missing option value") }
                     let value = args[index]; index += 1
                     switch flag {
                     case "--output": output = value
                     case "--model": model = value
+                    case "--whisper-cli": whisper = value
+                    case "--verify-model": verificationModel = value
+                    case "--vad-model": vad = value
+                    case "--source-language": language = value
+                    case "--profile":
+                        guard ["fast", "accurate", "verified"].contains(value) else { throw CoreFailure("Profile must be fast, accurate or verified") }
+                        profile = value
+                    case "--threads":
+                        guard let count = Int(value), NativeWhisperEngine.Policy.threadRange.contains(count) else { throw CoreFailure("Choose 1–4 transcription threads") }
+                        threads = count
+                    case "--diarize":
+                        guard ["off", "auto"].contains(value) else { throw CoreFailure("Diarize must be off or auto (review-only, no speaker model)") }
+                        diarize = value == "auto"
+                    case "--formats":
+                        guard Set(value.split(separator: ",")) == Set(["json","md","txt","srt","vtt"]) else { throw CoreFailure("Native jobs retain all five canonical export formats") }
                     case "--target-language": target = value
                     case "--provider":
                         guard let selected = TextProvider(rawValue: value) else { throw CoreFailure("Provider must be ollama or openai") }
@@ -91,15 +134,28 @@ import RecScribeCore
                 }
             }
             guard provider != .ollama || !cloudConsent && !keyStdin else { throw CoreFailure("Local jobs do not accept cloud consent or credentials") }
+            if command == "transcribe" {
+                guard provider == nil, !cloudConsent, !keyStdin, !summary else { throw CoreFailure("Audio transcription is local. Use derive separately for AI text or summaries") }
+                guard profile == "verified" ? verificationModel != nil : verificationModel == nil else { throw CoreFailure("Use --profile verified and --verify-model together") }
+            }
         }
     }
     static let usage = """
+    recscribe-text transcribe recording.wav|session.recscribe.json --output NEW_JOB
+      --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin
+      [--source-language auto|de-CH|en] [--threads 1..4] [--local-only]
+      [--profile fast|accurate|verified] [--verify-model /path/to/second-model.bin]
+      [--vad-model /path/to/silero.bin] [--diarize off|auto]
+      [--mode verbatim|normalize|translate] [--target-language LANGUAGE]
+      [--formats json,md,txt,srt,vtt]
     recscribe-text render transcript.json --output NEW_DIRECTORY
     recscribe-text derive transcript.json --output NEW_JOB --provider ollama|openai --model MODEL
       [--mode verbatim|normalize|translate] [--target-language LANGUAGE] [--summarize]
       [--allow-cloud-text --key-stdin]
 
-    No audio upload, automatic model download or fallback. Cloud text requires explicit consent.
+    Native transcription requires no Python or FFmpeg. Normalize/translate remain pending
+    until a separate derive action. No audio upload, model download or silent fallback.
+    Cloud text requires explicit consent.
     API keys are read only from stdin, never command arguments. Ctrl-C cancels a running job.
     """
 }

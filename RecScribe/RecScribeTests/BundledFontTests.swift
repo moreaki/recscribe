@@ -106,16 +106,32 @@ struct BundledFontTests {
         viewModel.duration = 125
         #expect(viewModel.statusText == "Recording \(longAppName) + \(longMicName)")
 
-        let popoverRecording = fittingSize(
+        let popoverLarge = fittingSize(
+            MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.large)
+        )
+        let popoverAccessibility = fittingSize(
             MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.accessibility3)
         )
-        #expect(popoverRecording.width == WorkspaceStyle.popoverWidth)
-        #expect(popoverRecording.height >= WorkspaceStyle.previewHeight)
+        #expect(popoverLarge.width == WorkspaceStyle.popoverWidth)
+        #expect(popoverAccessibility.width == WorkspaceStyle.popoverWidth)
+        #expect(popoverAccessibility.height > popoverLarge.height)
     }
 
     private func fittingSize<V: View>(_ view: V) -> CGSize {
         let hosting = NSHostingView(rootView: view)
+        hosting.frame = CGRect(x: 0, y: 0, width: 480, height: 800)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = hosting
+        window.layoutIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         hosting.layoutSubtreeIfNeeded()
-        return hosting.fittingSize
+        let size = hosting.fittingSize
+        window.contentView = nil
+        return size
     }
 }

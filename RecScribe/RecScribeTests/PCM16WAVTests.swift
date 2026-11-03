@@ -16,7 +16,7 @@ import Testing
         let payload: UInt64 = 2 << 30
         try file.truncate(atOffset: payload + UInt64(PCM16WAV.headerBytes))
         let started = ContinuousClock.now
-        try WAVWriter.repair(at: url)
+        _ = try PCM16WAV.repair(url)
         let elapsed = started.duration(to: .now)
         #expect(try PCM16WAV.read(url).frames == payload / format.frameBytes)
         var usage = rusage()
@@ -79,17 +79,13 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let format = try PCM16WAV(sampleRate: 48_000, channels: 2)
         let audio = Data((0..<19).map(UInt8.init)) // Four complete stereo frames + three bytes.
-        for name in ["legacy.wav", "session.wav"] {
-            let url = root.appendingPathComponent(name)
-            try (format.header + audio).write(to: url)
-            #expect(try WAVWriter.isUnfinalized(at: url))
-            if name == "legacy.wav" { try WAVWriter.repair(at: url) }
-            else { #expect(try PCM16WAV.repair(url, expected: format, blockBytes: 3) == 4) }
-            let repaired = try Data(contentsOf: url)
-            #expect(repaired.dropFirst(PCM16WAV.headerBytes) == audio.prefix(16))
-            #expect(try PCM16WAV.read(url).frames == 4)
-            #expect(try !WAVWriter.isUnfinalized(at: url))
-        }
+        let url = root.appendingPathComponent("session.wav")
+        try (format.header + audio).write(to: url)
+        #expect(try PCM16WAV.read(url).frames == 0)
+        #expect(try PCM16WAV.repair(url, expected: format, blockBytes: 3) == 4)
+        let repaired = try Data(contentsOf: url)
+        #expect(repaired.dropFirst(PCM16WAV.headerBytes) == audio.prefix(16))
+        #expect(try PCM16WAV.read(url).frames == 4)
     }
 
     @Test func interruptedOrFailedCopyPreservesOriginal() throws {

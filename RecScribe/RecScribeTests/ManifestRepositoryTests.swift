@@ -136,4 +136,35 @@ struct ManifestRepositoryTests {
         try FileManager.default.removeItem(at: file)
         await #expect(throws: (any Error).self) { try await repository.job(at: file) }
     }
+
+    @Test func recoveryScanHonorsGenerationCancellationAndInFlightCaptureStart() async throws {
+        let gate = Gate<SessionSnapshot>()
+        let library = SessionLibrary(readSessions: { try await gate.read($0) })
+        let first = URL(fileURLWithPath: "/first"), second = URL(fileURLWithPath: "/second")
+        var unfinalized = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mono"], options: .init())
+        unfinalized.status = .recording
+        let staleManifest = first.appendingPathComponent("stale.recscribe.json")
+        let activeManifest = second.appendingPathComponent("active.recscribe.json")
+
+        library.recoverUnfinalizedSessions(in: first)
+        await waitUntil("first recovery scan") { gate.pending[first] != nil }
+        library.load(second)
+        await waitUntil("second load") { gate.pending[second] != nil }
+        gate.finish(first, SessionSnapshot(entries: [.init(id: staleManifest, session: unfinalized)]))
+        gate.finish(second, SessionSnapshot(failures: [.init(id: second, message: "second failure")]))
+        await waitUntil("second load complete") { !library.refreshing }
+        #expect(library.entries.isEmpty)
+        #expect(library.readFailures.map(\.id) == [second])
+        #expect(library.activity == "Ready")
+
+        library.recoverUnfinalizedSessions(in: second)
+        await waitUntil("in-flight recovery scan") { gate.pending[second] != nil }
+        library.setRecording(true)
+        library.setRecording(false)
+        gate.finish(second, SessionSnapshot(entries: [.init(id: activeManifest, session: unfinalized)]))
+        await waitUntil("in-flight scan finishes") { !library.refreshing }
+        #expect(library.entries.map(\.id) == [activeManifest])
+        #expect(library.activity == "Background work paused for recording")
+        await library.shutdown()
+    }
 }

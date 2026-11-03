@@ -224,4 +224,73 @@ struct RecordingSessionTests {
         try model.verifyAndInstall(source, to: fresh, cancel: WorkCancellation())
         #expect(try RecordingSession.hash(fresh) == model.sha256)
     }
+    @Test("SessionLibrary.recoverUnfinalizedSessions recovers interrupted .recscribe.json sessions and surfaces corrupt manifests")
+    @MainActor
+    func libraryRecoversUnfinalizedSessionsInDirectory() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+        var session = try RecordingSession.read(manifest)
+        session.status = .recording
+        session.parts[9].status = .recording
+        session.parts[9].frames = 0
+        try session.save(manifest)
+        let corrupt = directory.appendingPathComponent("corrupt.recscribe.json")
+        try Data("not-valid-json".utf8).write(to: corrupt)
+
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.recoverUnfinalizedSessions(in: directory)
+        for _ in 0..<50 {
+            if let current = try? RecordingSession.read(manifest),
+               current.status != .recording,
+               !library.refreshing,
+               library.entries.first?.session.status == .needsReview {
+                break
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        let recovered = try RecordingSession.read(manifest)
+        #expect(recovered.status == .needsReview)
+        #expect(recovered.totalFrames == 100)
+        #expect(recovered.parts[9].recovered)
+        #expect(library.readFailures.map(\.id.lastPathComponent) == ["corrupt.recscribe.json"])
+        await library.shutdown()
+    }
+
+    @Test("SessionLibrary.recoverUnfinalizedSessions protects active capture and exposes scan errors")
+    @MainActor
+    func libraryRecoveryRespectsActiveCaptureAndScanErrors() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+        var session = try RecordingSession.read(manifest)
+        session.status = .recording
+        session.parts[9].status = .recording
+        session.parts[9].frames = 0
+        try session.save(manifest)
+
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.setRecording(true)
+        library.recoverUnfinalizedSessions(in: directory)
+        for _ in 0..<50 where library.refreshing {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        #expect(library.entries.count == 1)
+        #expect(try RecordingSession.read(manifest).status == .recording)
+        library.setRecording(false)
+        try await Task.sleep(nanoseconds: 40_000_000)
+        #expect(try RecordingSession.read(manifest).status == .recording)
+
+        let missing = directory.appendingPathComponent("missing-dir", isDirectory: true)
+        library.recoverUnfinalizedSessions(in: missing)
+        for _ in 0..<50 where library.refreshing {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        #expect(library.readFailures.map(\.id) == [missing])
+        await library.shutdown()
+    }
 }

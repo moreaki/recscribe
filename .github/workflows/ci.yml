@@ -64,11 +64,6 @@ jobs:
         # when it completes, but a system-framework abort won't fail the PR. The
         # authoritative TSan run for the BL-024 serial-queue guard is the local dev
         # loop (targeted `-enableThreadSanitizer YES` runs, which are reliable).
-        # M4AEncoderTests is skipped — it aborts deterministically (AAC codec).
-        # FLACEncoderTests is skipped for the same reason: it drives the same
-        # AVFoundation/CoreAudio codec machinery via AVAudioFile. An aborting
-        # host yields NO results for ANY test in this job, so one aborting suite
-        # would silently destroy the advisory race signal for the whole run.
         continue-on-error: true
         run: |
           set -o pipefail
@@ -77,8 +72,6 @@ jobs:
             -scheme RecScribe \
             -destination 'platform=macOS' \
             -only-testing:RecScribeTests \
-            -skip-testing:RecScribeTests/M4AEncoderTests \
-            -skip-testing:RecScribeTests/FLACEncoderTests \
             -parallel-testing-enabled NO \
             -parallel-testing-worker-count 1 \
             -enableThreadSanitizer YES \

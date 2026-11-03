@@ -220,7 +220,7 @@ enum AudioFixture {
         var value = try AudioFixture.read(root, session.lastPathComponent)
         var parts = value["parts"].array!; parts[0]["path"] = "../outside.wav"; value["parts"] = .array(parts)
         try value.encoded().write(to: session)
-        #expect(throws: CoreFailure.self) { try AudioSource.inspect(session, check: {}) }
+        #expect(throws: CoreFailure.self) { try TranscriptAudioInput.inspect(session, check: {}) }
         let file = try FileHandle(forWritingTo: source); try file.truncate(atOffset: 100); try file.close()
         #expect(throws: CoreFailure.self) { try WAVAudio.inspect(source) }
     }

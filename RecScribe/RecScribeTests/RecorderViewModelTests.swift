@@ -358,19 +358,19 @@ struct RecorderViewModelTests {
         let defaults = freshDefaults()
         let vm = makeViewModel(controller: MockRecordingControlling(), defaults: defaults)
 
-        vm.setFormat(.m4a)
+        vm.setFormat(.wav)
 
-        #expect(vm.selectedFormat == .m4a)
-        #expect(defaults.string(forKey: "selectedFormat") == "m4a")
+        #expect(vm.selectedFormat == .wav)
+        #expect(defaults.string(forKey: "selectedFormat") == "wav")
     }
 
     @Test("Selected format persists across view-model instances")
     func formatPersistsAcrossInstances() {
         let defaults = freshDefaults()
-        makeViewModel(controller: MockRecordingControlling(), defaults: defaults).setFormat(.m4a)
+        makeViewModel(controller: MockRecordingControlling(), defaults: defaults).setFormat(.wav)
 
         let reopened = makeViewModel(controller: MockRecordingControlling(), defaults: defaults)
-        #expect(reopened.selectedFormat == .m4a)
+        #expect(reopened.selectedFormat == .wav)
     }
 
     @Test("An unparseable stored format falls back to WAV")
@@ -407,10 +407,10 @@ struct RecorderViewModelTests {
         let controller = MockRecordingControlling()
         let vm = makeViewModel(controller: controller, defaults: freshDefaults())
 
-        vm.setFormat(.m4a)
+        vm.setFormat(.wav)
         await vm.startRecording()
 
-        #expect(controller.lastStartFormat == .m4a)
+        #expect(controller.lastStartFormat == .wav)
     }
 }
 

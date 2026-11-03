@@ -3,11 +3,8 @@
 //  RecScribeTests
 //
 //  BL-112: an encoder is told its input format once, in `createFile`, and then
-//  stamps a header / configures a writer input from it. A later buffer that
-//  disagrees is not a bad frame — it is silent corruption (WAV) or the loss of
-//  the entire take at stop (M4A). Both must refuse instead.
-//
-//  FLAC already had this guard from BL-013 and is covered in `FLACEncoderTests`.
+//  stamps a header from it. A later buffer that disagrees is not a bad frame —
+//  it is silent corruption (WAV) and must be refused immediately.
 //
 
 import Testing
@@ -15,11 +12,6 @@ import Foundation
 import AVFoundation
 @testable import RecScribe
 
-/// `.serialized` because every test here calls `M4AEncoder.finalize()`, which
-/// blocks on a semaphore. Run in parallel on a small cooperative pool they
-/// deadlock the entire suite (BL-147). Serialising bounds the blocked threads to
-/// one, which the pool absorbs on any core count.
-@Suite(.serialized)
 struct EncoderFormatGuardTests {
 
     private func tempURL(_ ext: String) -> URL {
@@ -87,66 +79,19 @@ struct EncoderFormatGuardTests {
         #expect(size == 44 + 256 * 2 * 2)
     }
 
-    // MARK: - M4A
+    @Test("SessionWAVWriter enforces WAV sample rate and channel count guards")
+    func sessionWAVWriterRejectsMismatchedFormat() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("session-guard-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
 
-    @Test("M4A refuses a buffer whose sample rate contradicts its timeline")
-    func m4aRejectsWrongSampleRate() throws {
-        let url = tempURL("m4a")
-        defer { try? FileManager.default.removeItem(at: url) }
+        let url = dir.appendingPathComponent("take.wav")
+        let writer = SessionWAVWriter()
+        try writer.createFile(at: url, sampleRate: 48_000, channels: 2)
 
-        let encoder = M4AEncoder()
-        try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
-        defer { try? encoder.finalize() }
-
-        #expect(throws: M4AEncoderError.formatMismatch) {
-            try encoder.writeBuffer(self.buffer(sampleRate: 44_100, channels: 2))
+        #expect(throws: WAVWriterError.formatMismatch) {
+            try writer.writeBuffer(self.buffer(sampleRate: 44_100, channels: 2))
         }
-    }
-
-    @Test("M4A refuses a mono buffer rather than losing the take at stop")
-    func m4aRejectsWrongChannelCount() throws {
-        let url = tempURL("m4a")
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let encoder = M4AEncoder()
-        try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
-        defer { try? encoder.finalize() }
-
-        // Without the guard the append is refused, the refusal was discarded,
-        // and `finalize()` threw `.writeFailed` — the whole recording gone, with
-        // nothing indicating when it broke.
-        #expect(throws: M4AEncoderError.formatMismatch) {
-            try encoder.writeBuffer(self.buffer(sampleRate: 48_000, channels: 1))
-        }
-    }
-
-    @Test("M4A still encodes a matching buffer to a finalized file")
-    func m4aAcceptsMatchingFormat() throws {
-        let url = tempURL("m4a")
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let encoder = M4AEncoder()
-        try encoder.createFile(at: url, sampleRate: 48_000, channels: 2)
-        for index in 0..<16 {
-            try encoder.writeBuffer(buffer(sampleRate: 48_000, channels: 2, frames: 1024 + index))
-        }
-        try encoder.finalize()
-
-        // ⚠️ Deliberately synchronous. This assertion used `await
-        // asset.loadTracks(...)`, which made the test `async` — and `finalize()`
-        // blocks on a `DispatchSemaphore` bridging `finishWriting`'s completion.
-        // Swift Testing runs tests on the cooperative thread pool, whose width is
-        // the core count, so a blocking wait there consumes a pool thread. Enough
-        // of them in parallel and the pool starves: measured on CI as a total
-        // deadlock with **zero** tests completing (BL-147). It survived locally
-        // only because a dev machine has more cores.
-        //
-        // Reading the container directly proves the same thing without awaiting:
-        // a finalized M4A is flat `ftyp mdat moov`, and it is the `moov` atom
-        // whose absence made crash-interrupted files unplayable before BL-016.
-        let data = try Data(contentsOf: url)
-        #expect(data.count > 1_000)
-        #expect(data.range(of: Data("ftyp".utf8)) != nil)
-        #expect(data.range(of: Data("moov".utf8)) != nil, "no moov atom — the file was never finalized")
     }
 }

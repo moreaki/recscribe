@@ -139,29 +139,6 @@ struct RecorderReliabilityTests {
         #expect(try Data(contentsOf: target).count == 44)
     }
 
-    @Test("AAC never succeeds with pending audio; not-ready storage stays bounded")
-    func aacBackpressure() throws {
-        let target = url("m4a")
-        defer { try? FileManager.default.removeItem(at: target) }
-        let encoder = M4AEncoder(pendingByteLimit: 64, pendingBufferLimit: 1, finalizeTimeout: 0, isReady: { _ in false })
-        try encoder.createFile(at: target, sampleRate: 48_000, channels: 2)
-        try encoder.writeBuffer(buffer())
-        #expect(throws: M4AEncoderError.bufferLimit) { try encoder.writeBuffer(buffer()) }
-        #expect(throws: M4AEncoderError.timedOut) { try encoder.finalize() }
-        #expect(throws: M4AEncoderError.notOpen) { try encoder.finalize() }
-        #expect(FileManager.default.fileExists(atPath: target.path))
-    }
-
-    @Test("AAC completion that never calls back has a finite deadline")
-    func aacFinishTimeout() throws {
-        let target = url("m4a")
-        defer { try? FileManager.default.removeItem(at: target) }
-        let encoder = M4AEncoder(finalizeTimeout: 0, finish: { _, _ in })
-        try encoder.createFile(at: target, sampleRate: 48_000, channels: 2)
-        #expect(throws: M4AEncoderError.timedOut) { try encoder.finalize() }
-        #expect(FileManager.default.fileExists(atPath: target.path))
-    }
-
     @Test("Capture hand-off drains in order and rejects a late callback")
     func captureBarrier() async {
         // Owned CMSampleBuffer backing survives until the queue consumes it.

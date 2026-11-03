@@ -1,24 +1,11 @@
 // Based on Home Rec by Melissa de Britto Pereira; see NOTICE.
 // Modified for RecScribe's single-window studio and optional live ASR (2026).
 import SwiftUI
-import CoreText
-import os
 
 @main
 struct RecScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var services = AppServices()
-
-    init() {
-        for name in ["Archivo-Variable", "Inter"] {
-            if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
-                var error: Unmanaged<CFError>?
-                if !CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
-                    Log.recorder.error("Font registration failed: \(name, privacy: .public)")
-                }
-            }
-        }
-    }
 
     var body: some Scene {
         Window("RecScribe", id: AppWindow.studio.rawValue) {

@@ -21,11 +21,10 @@ struct InstallLocationNoticeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Move RecScribe to Applications")
-                .font(.custom("Archivo", size: 15, relativeTo: .headline))
-                .fontWeight(.medium)
+                .font(.system(size: 15, weight: .medium))
 
             Text(message)
-                .font(.custom("Inter-Regular", size: 12, relativeTo: .body))
+                .font(.system(size: 12))
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -50,7 +49,7 @@ struct InstallLocationNoticeView: View {
         // Same ground as every other surface. Still not a glass *panel* — this
         // sits inside a titled NSPanel, and a rounded card here would put a
         // second set of corners inside the panel's own square ones.
-        .background(GlassWindowGround())
+        .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
     }
 }

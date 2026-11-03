@@ -14,7 +14,7 @@ struct StudioView: View {
                       systemImage: live.cloudAudioActive ? "cloud" : "lock.shield")
                     .font(.caption).foregroundStyle(live.cloudAudioActive ? .orange : WorkspaceStyle.mint)
                 Button("Recordings", systemImage: "rectangle.stack") { openWindow(id: AppWindow.recordings.rawValue) }
-                SettingsPopover()
+                SettingsWindowButton()
             }.padding(WorkspaceStyle.contentPadding)
             Divider()
             HStack(alignment: .top, spacing: 0) {

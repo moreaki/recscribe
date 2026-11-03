@@ -2,48 +2,44 @@
 //  BundledFontTests.swift
 //  RecScribeTests
 //
-//  That the bundled fonts resolve by the names the code asks for.
-//
-//  This guards a failure that is otherwise completely silent. Fonts are
-//  registered at runtime from the app bundle, and both the app's own views and
-//  the design system look them up by name — the design system through
-//  `NSFont(name:)`, whose result it caches for the process lifetime. A miss
-//  throws nothing and logs nothing: SwiftUI simply falls back to the system font
-//  at the same size, so the app stays correctly proportioned and quietly wears
-//  the wrong face.
-//
-//  It is also not a hypothetical mismatch. `Inter.ttf` carries the PostScript
-//  name "Inter-Regular" but the family name "Inter", and `Archivo-Variable.ttf`
-//  reports the family "Archivo SemiBold" with "Archivo" only as its typographic
-//  family. The two name tables are genuinely different shapes, and the lookups
-//  depend on which one resolution finds.
+//  Verifies that RecScribe standardises on native macOS system typography
+//  (San Francisco and SF Mono) with no bundled third-party .ttf/.otf font
+//  resources (#39), and preserves Dynamic Type scaling bounds.
 //
 
 import Testing
+import SwiftUI
 import AppKit
 @testable import RecScribe
 
 @MainActor
 struct BundledFontTests {
 
-    /// The names used across the app's views and by `GlassTypography`.
-    @Test("Bundled font families resolve by the names the code uses", arguments: ["Inter", "Archivo"])
-    func familiesResolve(_ family: String) {
-        #expect(
-            NSFont(name: family, size: 12) != nil,
-            """
-            \(family) did not resolve. Everything still renders — in the system \
-            font — so this will not look broken, only wrong.
-            """
-        )
+    @Test("No custom .ttf or .otf font files are shipped in the app bundle")
+    func noBundledFontFilesShipped() {
+        let ttf = Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+        let otf = Bundle.main.urls(forResourcesWithExtension: "otf", subdirectory: nil) ?? []
+        #expect(ttf.isEmpty)
+        #expect(otf.isEmpty)
     }
 
-    /// The design system applies a 1pt optical correction to its largest button
-    /// label, but only when the custom face actually loaded. If the fonts stop
-    /// resolving, that correction has to stop with them, or the label sits a
-    /// point off centre in a font that never needed the nudge.
-    @Test("The design system agrees that the custom family is available")
-    func designSystemSeesCustomFamily() {
-        #expect(GlassTypography.standard.usesCustomUIFamily)
+    @Test("GlassTypography.standard uses native San Francisco and SF Mono families")
+    func designSystemUsesNativeSystemTypography() {
+        let typography = GlassTypography.standard
+        #expect(!typography.usesCustomUIFamily)
+        #expect(typography.uiFamily.name == nil)
+        #expect(typography.displayFamily.name == nil)
+        #expect(typography.monoFamily.name == nil)
+        #expect(typography.monoFamily.design == .monospaced)
+    }
+
+    @Test("GlassTypography honors Dynamic Type scaling and role maxScale caps")
+    func dynamicTypeScalingHonorsRoleCaps() {
+        let typography = GlassTypography.standard
+        #expect(typography.size(.body, for: .large) == 13)
+        #expect(typography.size(.body, for: .accessibility5) == 26)
+        // Hero timer is capped at 1.4x (30 * 1.4 = 42), timecodeChip at 1.0x (10).
+        #expect(typography.size(.timer, for: .accessibility5) == 42)
+        #expect(typography.size(.timecodeChip, for: .accessibility5) == 10)
     }
 }

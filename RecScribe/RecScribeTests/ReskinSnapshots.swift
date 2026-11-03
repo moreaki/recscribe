@@ -99,11 +99,8 @@ struct ReskinSnapshots {
         // (RecScribeApp), not inside these views — without it every snapshot is
         // white-on-white and proves nothing about the thing being checked.
         //
-        // Flat ground, not the real `GlassWindowGround`: that one blurs the
-        // desktop through a non-opaque window, and an offscreen window has no
-        // desktop behind it. Flat is deterministic and slightly conservative —
-        // the shipped glass is a touch lighter. Whether text survives over a
-        // *real* desktop stays a human check, and is in manual-acceptance.md.
+        // Uses the shared `WorkspaceStyle.background` ground, which is
+        // deterministic for offscreen snapshot rendering.
         // The palette is injected directly rather than adapted from the
         // environment. Two things block the obvious routes:
         // `EnvironmentValues.colorSchemeContrast` is read-only, and setting
@@ -117,7 +114,7 @@ struct ReskinSnapshots {
         // not that `glassThemeAdaptingToContrast()` fires — the wiring itself
         // stays a human check with the real system setting.
         let root = view()
-            .background(GlassFlatGround())
+            .background(WorkspaceStyle.background)
             .glassTheme(contrast == .increased ? .highContrast : .standard)
 
         let hosting = NSHostingView(rootView: root)

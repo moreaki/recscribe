@@ -100,9 +100,9 @@ public struct GlassBrandLockup: View {
 
         var gap: CGFloat { (mark * 10 / 24).rounded() }
 
-        /// Archivo medium at −0.02em in both cases — the site's wordmark
-        /// spec. `.compact` matches the `appTitle` role exactly; `.regular`
-        /// sets it at the site's own 15pt, which is a brand measurement rather
+        /// Medium weight at −0.02em in both cases — the wordmark spec.
+        /// `.compact` matches the `appTitle` role exactly; `.regular`
+        /// sets it at 15pt, which is a brand measurement rather
         /// than a UI role and so is stated here instead of in the role table.
         func textStyle(_ typography: GlassTypography) -> GlassTextStyle {
             switch self {
@@ -153,16 +153,17 @@ public struct GlassBrandLockup: View {
 }
 
 #Preview("Brand") {
-    GlassPreviewStage {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
-            GlassBrandLockup(size: .regular)
-            GlassBrandLockup(size: .compact)
-            GlassBrandLockup(size: .compact, showsMark: false)
-            HStack(spacing: GlassSpacing.l) {
-                ForEach([16, 24, 32, 64], id: \.self) { size in
-                    GlassBrandMark(size: CGFloat(size))
-                }
+    VStack(alignment: .leading, spacing: GlassSpacing.l) {
+        GlassBrandLockup(size: .regular)
+        GlassBrandLockup(size: .compact)
+        GlassBrandLockup(size: .compact, showsMark: false)
+        HStack(spacing: GlassSpacing.l) {
+            ForEach([16, 24, 32, 64], id: \.self) { size in
+                GlassBrandMark(size: CGFloat(size))
             }
         }
     }
+    .padding(GlassSpacing.xxl)
+    .background(WorkspaceStyle.background)
+    .glassThemeAdaptingToContrast()
 }

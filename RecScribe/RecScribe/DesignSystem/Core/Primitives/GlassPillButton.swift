@@ -449,22 +449,23 @@ public struct GlassPillButton: View {
 }
 
 #Preview("Pill buttons — emphasis × size") {
-    GlassPreviewStage {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
-            ForEach(GlassPillSize.allCases, id: \.self) { size in
-                HStack(spacing: GlassSpacing.m) {
-                    Text(size.rawValue)
-                        .glassText(.metaSmall, color: .textTertiary)
-                        .frame(width: 60, alignment: .leading)
-                    GlassPillButton("record", systemImage: "circle.fill", emphasis: .primary, size: size) {}
-                    GlassPillButton("choose folder…", emphasis: .primaryNeutral, size: size) {}
-                    GlassPillButton("keep", emphasis: .secondary, size: size) {}
-                    GlassPillButton("dismiss", emphasis: .tertiary, size: size) {}
-                    GlassPillButton("blocked", emphasis: .blocked, size: size) {}
-                    GlassPillButton("saving…", emphasis: .primary, size: size, isLoading: true) {}
-                    GlassPillButton("disabled", emphasis: .primary, size: size) {}.disabled(true)
-                }
+    VStack(alignment: .leading, spacing: GlassSpacing.l) {
+        ForEach(GlassPillSize.allCases, id: \.self) { size in
+            HStack(spacing: GlassSpacing.m) {
+                Text(size.rawValue)
+                    .glassText(.metaSmall, color: .textTertiary)
+                    .frame(width: 60, alignment: .leading)
+                GlassPillButton("record", systemImage: "circle.fill", emphasis: .primary, size: size) {}
+                GlassPillButton("choose folder…", emphasis: .primaryNeutral, size: size) {}
+                GlassPillButton("keep", emphasis: .secondary, size: size) {}
+                GlassPillButton("dismiss", emphasis: .tertiary, size: size) {}
+                GlassPillButton("blocked", emphasis: .blocked, size: size) {}
+                GlassPillButton("saving…", emphasis: .primary, size: size, isLoading: true) {}
+                GlassPillButton("disabled", emphasis: .primary, size: size) {}.disabled(true)
             }
         }
     }
+    .padding(GlassSpacing.xxl)
+    .background(WorkspaceStyle.background)
+    .glassThemeAdaptingToContrast()
 }

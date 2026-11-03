@@ -135,7 +135,7 @@ enum TranscriptFixture {
             #expect(Int64(data.count) == entry["size_bytes"].integer)
         }
         #expect(try read(output, "transcript.raw.json")["raw_asr_unchanged"] == true)
-        try validateWithPythonReference(output)
+        try GoldenReference.exports(output, fixture: "text-normalize-summary")
         let manifestBefore = try Data(contentsOf: output.appendingPathComponent("manifest.json"))
         await #expect(throws: (any Error).self) {
             try await job.run(source: source, output: output, options: .init(provider: .ollama, model: "synthetic", mode: .normalize, targetLanguage: "de"))
@@ -149,7 +149,7 @@ enum TranscriptFixture {
         #expect(summarized["segments"] == document["segments"])
         #expect(summarized["processing"]["mode"] == "normalize")
         #expect(summarized["language_processing"]["derivations"].array?.first?["raw_path"].string == output.appendingPathComponent("ai-raw-0000.json").path)
-        try validateWithPythonReference(summary)
+        try GoldenReference.exports(summary, fixture: "text-summary-only")
     }
 
     @Test func invalidAIOutputRetainsRawResponseButNeverPublishesTranscript() async throws {
@@ -231,7 +231,7 @@ enum TranscriptFixture {
         let document = try read(output, "transcript.json")
         #expect(document["segments"].array?.allSatisfy { $0["normalized_text"] == .null && $0["translated_text"] == "Guten Tag!" } == true)
         #expect(document["segments"].array?.map { $0["source_text"] } == original["segments"].array?.map { $0["source_text"] })
-        try validateWithPythonReference(output)
+        try GoldenReference.exports(output, fixture: "text-translate")
     }
 
     @Test func approvedCloudJobRecordsConsentTokensAndProviderEvidence() async throws {
@@ -256,34 +256,11 @@ enum TranscriptFixture {
         for url in try FileManager.default.contentsOfDirectory(at: output, includingPropertiesForKeys: nil) {
             #expect(!String(decoding: try Data(contentsOf: url), as: UTF8.self).contains("synthetic-secret"))
         }
-        try validateWithPythonReference(output)
+        try GoldenReference.exports(output, fixture: "text-cloud-normalize")
     }
 
     private func read(_ directory: URL, _ name: String) throws -> JSONValue {
         try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: directory.appendingPathComponent(name)))
     }
 
-    /// Optional migration acceptance check; the shipping library/CLI never invokes Python.
-    private func validateWithPythonReference(_ directory: URL) throws {
-        guard let python = ProcessInfo.processInfo.environment["RECSCRIBE_REFERENCE_PYTHON"] else { return }
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.environment = ProcessInfo.processInfo.environment.merging(["PYTHONPATH": root.appendingPathComponent("pipeline/src").path]) { _, new in new }
-        process.arguments = ["-c", """
-        import json, sys
-        from pathlib import Path
-        from recscribe.job import validate
-        from recscribe.renderers import render
-        root = Path(sys.argv[1])
-        document = json.loads((root / 'transcript.json').read_bytes())
-        validate(document)
-        for name, expected in render(document).items():
-            assert (root / name).read_bytes() == expected.encode(), name
-        print('Python schema/semantic validation and all five byte-for-byte exports match')
-        """, directory.path]
-        try process.run()
-        process.waitUntilExit()
-        #expect(process.terminationStatus == 0)
-    }
 }

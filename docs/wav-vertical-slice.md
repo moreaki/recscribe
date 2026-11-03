@@ -1,7 +1,7 @@
 # Native WAV/session transcription
 
-The original v0.1 Python slice remains development/reference tooling. The shipping
-app and native CLI now use [RecScribeCore](swift-first-migration.md) for final
+The original v0.1 Python slice has been retired after freezing synthetic reference
+outputs as Swift test fixtures. The app and native CLI use [RecScribeCore](swift-first-migration.md) for final
 audio; local/cloud text post-processing remains a separate action.
 
 Implemented locally on the MacBook Air, starting from `4d695ed`.
@@ -82,7 +82,7 @@ without reviewing them. The manifest hashes all artifacts except itself and the
 cancellation request, avoiding a circular self-hash.
 
 `schemas/transcript.schema.json` is the source contract. The identical packaged
-copies are included in the Swift core and Python reference; tests enforce equality.
+copy is included in the Swift core; tests enforce equality.
 Runtime validation checks the JSON Schema plus unique IDs, chronological order,
 channel bounds and timestamps within the source. Unsupported or malformed engine
 output fails visibly rather than being silently repaired. One documented boundary
@@ -128,8 +128,8 @@ alone as successful completion. There is no automatic resume in v0.1: retry in a
 new job directory. After SIGKILL/power loss, a nonterminal manifest means interrupted
 work, not success. Future JobStore recovery must reconcile it.
 
-The CLI lowers CPU priority by 10; children inherit it. This does not limit Metal
-GPU usage or guarantee recording priority. UI integration must defer inference
+Native CLI jobs run on utility workers and launch utility-priority child processes.
+This does not limit Metal GPU usage or guarantee recording priority. UI integration must defer inference
 while recording and cancel/requeue processing when capture starts (see integration
 plan). Progress is stage-level, not a predicted percent of wall-clock time.
 
@@ -156,7 +156,7 @@ No custom ASR model, decoder or engine is part of this project.
 ## Verification and remaining work
 
 ```sh
-pipeline/.venv/bin/python -m unittest discover -s pipeline/tests -v
+swift test --package-path core -c release
 ./scripts/build-app.sh
 xcodebuild -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
   -configuration Debug -destination 'platform=macOS,arch=arm64' \
@@ -164,13 +164,15 @@ xcodebuild -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
 ```
 
 Tests synthesize tones/silence in temporary directories; no private audio is
-included. Test-only adapters are clearly labeled and not exposed in the CLI.
+included. Frozen synthetic Python reference outputs check canonical semantics and
+all five exports without Python or FFmpeg. Test-only adapters are clearly labeled and not exposed in the CLI.
 Their transcripts validate orchestration, not speech-recognition accuracy.
 The signed local build uses Apple Development, team `CDS4KLP8GT`, Swift 6 with
 complete strict concurrency and Hardened Runtime. It is not a notarized Developer
 ID distribution. No signing settings were changed for the pipeline.
 
 Open work: real local-model accuracy smoke test; curated licensed benchmark audio;
-learned VAD evaluation; segment retries/alignment; normalization/translation with
-verified segment derivations; diarization and overlap handling; robust restart
-recovery; processing resource limits; packaged interpreter/engine distribution.
+learned VAD evaluation; segment retries/alignment; diarization and overlap handling;
+robust restart recovery; processing resource limits; engine distribution.
+Native normalization/translation with source-linked derivations is available as
+a separate text action.

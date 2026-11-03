@@ -12,12 +12,27 @@ products_dir="$build_root/Products/$configuration"
 derived_data_dir="$build_root/DerivedData"
 app_path="$products_dir/RecScribe.app"
 bundle_identifier="com.moreaki.recscribe"
-mode="${1:---signed}"
+mode=""
+build_actions=(build)
+usage="Usage: scripts/build-app.sh [--signed|--ad-hoc] [--clean]"
 
 fail() {
     echo "Error: $*" >&2
     exit 1
 }
+
+for argument in "$@"; do
+    case "$argument" in
+        --signed|--ad-hoc)
+            [[ -z "$mode" ]] || fail "Choose one signing mode. $usage"
+            mode="$argument"
+            ;;
+        --clean) build_actions=(clean build) ;;
+        --help|-h) echo "$usage"; exit 0 ;;
+        *) fail "Unknown option: $argument. $usage" ;;
+    esac
+done
+mode="${mode:---signed}"
 
 command -v xcodebuild >/dev/null 2>&1 || fail "xcodebuild is unavailable. Install Xcode and select it with xcode-select."
 command -v codesign >/dev/null 2>&1 || fail "codesign is unavailable."
@@ -40,10 +55,10 @@ cd "$project_root"
 
 case "$mode" in
     --signed)
-        xcodebuild "${common_arguments[@]}" -allowProvisioningUpdates clean build
+        xcodebuild "${common_arguments[@]}" -allowProvisioningUpdates "${build_actions[@]}"
         ;;
     --ad-hoc)
-        xcodebuild "${common_arguments[@]}" CODE_SIGNING_ALLOWED=NO clean build
+        xcodebuild "${common_arguments[@]}" CODE_SIGNING_ALLOWED=NO "${build_actions[@]}"
         codesign \
             --force \
             --deep \
@@ -51,9 +66,6 @@ case "$mode" in
             --options runtime \
             --identifier "$bundle_identifier" \
             "$app_path"
-        ;;
-    *)
-        fail "Usage: scripts/build-app.sh [--signed|--ad-hoc]"
         ;;
 esac
 

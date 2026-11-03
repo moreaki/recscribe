@@ -59,7 +59,8 @@ cloud streaming behavior is unchanged by this work.
 Working-channel normalization still processes the selected complete channels.
 The savings are in redundant **ASR audio**, not a promise to remove all disk I/O
 or model-load cost. There is no automatic reprocessing of old jobs. The current
-Python pipeline remains the reference backend during the staged Swift migration.
+native Swift core handles final recognition; frozen synthetic Python outputs
+now enforce reference compatibility in Swift tests.
 
 ## Verification and limits
 

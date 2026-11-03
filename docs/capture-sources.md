@@ -63,12 +63,11 @@ because interfaces may place playback loopback there. Each route contributes at
 channel trims and the master then determine the derived mix, as described below.
 
 Recordings → More offers playback/transcription of each source independently.
-Playback/normal transcription of the parent uses the mix. Python pipeline 0.2.2
+Playback/normal transcription of the parent uses the mix. The native Swift core
 accepts version-2 manifests and marks recognition of a derived mix for review;
 independent recognition uses a source-session manifest. Existing separately
-installed pipeline environments need **Reinitialize pipeline…**
-in Settings → Transcription to pick up this bundled update. Recording itself does
-not depend on Python, ASR, a model, a network connection or live transcription.
+installed Python environments are no longer used. Recording itself does not
+depend on Python, ASR, a model, a network connection or live transcription.
 
 Verification/recovery visits the linked source sessions, export copies them with
 the mix, and deletion moves the entire group into one restorable Trash folder.

@@ -9,25 +9,29 @@ under ignored `benchmarks/audio/`, `benchmarks/results/` or outside the reposito
 Synthetic unit tests need no licensed audio download and are not an ASR benchmark.
 
 ```sh
-pipeline/.venv/bin/python -m recscribe.benchmark \
+swift build --package-path core -c release
+core/.build/release/recscribe-text benchmark \
   benchmarks/manifests/corpus.template.json --dry-run \
   --output benchmarks/results/readiness
 
-pipeline/.venv/bin/python -m recscribe.benchmark /path/to/private-corpus.json \
+core/.build/release/recscribe-text benchmark /path/to/private-corpus.json \
   --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin \
-  --output benchmarks/results/whisper-small-run-1
+  --threads 2 --output benchmarks/results/whisper-small-run-1
 ```
 
 Missing corpus entries are `pending_corpus`, never zero error. The runner produces
 canonical jobs and records WER, CER, wall time, real-time factor and peak RSS bytes
 using macOS `/usr/bin/time -l`. RSS is a maximum process high-water mark including
-child accounting, not the sum of simultaneous Python/FFmpeg/Metal allocations.
+child accounting, not the sum of simultaneous Swift/whisper.cpp/Metal allocations.
 Unified GPU memory and model-load phase require separate instrumentation later.
 Wall time includes inspection, model load, inference, validation and rendering.
 Engine-pass duration is also recorded. Run each case in a fresh subprocess.
 
-WER/CER normalization is explicitly versioned in results: Unicode NFC, casefold,
-punctuation converted to spaces, repeated whitespace collapsed. CER omits spaces.
+WER/CER normalization is explicitly versioned in results as
+`swift-nfc-casefold-alphanumeric-v1`: Unicode NFC, Foundation case folding with
+POSIX locale, non-alphanumeric characters (except underscore) converted to spaces,
+repeated whitespace collapsed. CER counts Unicode scalars and omits spaces.
+Do not mix scores from different normalization versions without recomputing them.
 Preserve original references, including dialect spelling. For empty references,
 WER/CER are null and false-speech word count measures hallucination on silence or
 noise. Rates may exceed 1 for many insertions. Do not compare a Standard German
@@ -54,7 +58,22 @@ same across adapters. Require human review before drawing quality conclusions.
 | WhisperKit | Planned Swift/Core ML adapter | Same TranscriptEngine times, cancellation, raw evidence and canonical schema |
 | MLX-Whisper | Planned local Python worker adapter | Same contract; explicit local model path and no hub fallback |
 
-The runner currently invokes whisper.cpp only. `recscribe.benchmark.accuracy` scores
+The runner currently invokes whisper.cpp only. `TranscriptAccuracy` in the Swift core scores
 canonical source text independently of the engine; future runners must retain the
 same metrics and fixture IDs. No implementation of either planned engine is
 claimed. Adapters are wrappers around upstream engines, never a new ASR engine.
+
+Each output directory must be new. IDs must be unique safe path components.
+Checksum mismatches and failed cases are recorded and exit nonzero. Missing or
+unlicensed corpus entries remain pending. Ctrl-C or `cancel.request` in the
+benchmark directory requests cancellation of the active native job; partial
+results and raw evidence remain. There are no automatic retries or cloud calls.
+
+The retired `compare-text-core.py` measured Python/Swift render startup, not ASR.
+Frozen outputs now enforce parity in every native test run, so that runner and
+the Python pipeline are removed. Historical measurements remain in
+`docs/swift-first-migration.md`. `scripts/benchmark-recorder.sh` and the recorded
+recorder baselines remain useful and unchanged. The separate optional
+`scripts/verify-mic-rate.sh` uses FFmpeg/ffprobe and standard-library Python for
+reference-tone diagnostics; it does not depend on the retired pipeline and is
+not part of app runtime, core tests or corpus benchmarks.

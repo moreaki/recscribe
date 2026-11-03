@@ -33,7 +33,7 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Run native text core and CLI tests
+      - name: Run native audio/text, frozen reference and CLI tests
         run: swift test --package-path core
 
       - name: Run unit tests (functional)

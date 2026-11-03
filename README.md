@@ -59,6 +59,11 @@ bundle identifier `com.moreaki.recscribe`, hardened runtime, and provisioning up
 managed by Xcode's command-line build tools. Xcode must be installed, but its GUI does
 not need to be open.
 
+Builds are incremental by default and reuse `Build/DerivedData`. Request a clean
+rebuild with `./scripts/build-app.sh --clean`; combine with `--ad-hoc` when needed.
+`--help` lists the options. To build separately from the running app, set
+`RECSCRIBE_BUILD_DIR` to another build-output directory before invoking the script.
+
 For an offline build that does not require an Apple identity, use:
 
 ```bash
@@ -110,8 +115,10 @@ guide for all modes, profiles, artifact contracts and current limitations.
 
 `normalize` and `translate` retain pending derivations until a separate native
 `derive` action or the app's configured local text step completes. `verified`
-requires a second distinct model. The `pipeline/` Python code remains a development
-reference and benchmark tool; it is not bundled, installed or invoked by the app.
+requires a second distinct model. The old Python pipeline has been removed.
+Frozen synthetic reference fixtures now check canonical semantics and byte-identical
+exports in every Swift test run. Corpus benchmarks also use the native CLI;
+see [benchmark instructions](benchmarks/README.md).
 
 ## Upstream workflow
 
@@ -133,7 +140,7 @@ signing, release process, update channel, and product direction.
 ```text
 RecScribe/                         SwiftUI application and Xcode project
 core/                              Shared native audio/text jobs and Swift CLI
-pipeline/                          Python reference/benchmark tooling (not shipped)
+core/Tests/RecScribeCoreTests/Fixtures/ Frozen synthetic migration references
 schemas/transcript.schema.json      Canonical transcript contract
 benchmarks/                        Local corpus protocol and readiness manifest
 skills/recscribe/                  Thin Codex wrapper for the CLI

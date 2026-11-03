@@ -59,6 +59,11 @@ bundle identifier `com.moreaki.recscribe`, hardened runtime, and provisioning up
 managed by Xcode's command-line build tools. Xcode must be installed, but its GUI does
 not need to be open.
 
+Builds are incremental by default and reuse `Build/DerivedData`. Request a clean
+rebuild with `./scripts/build-app.sh --clean`; combine with `--ad-hoc` when needed.
+`--help` lists the options. To build separately from the running app, set
+`RECSCRIBE_BUILD_DIR` to another build-output directory before invoking the script.
+
 For an offline build that does not require an Apple identity, use:
 
 ```bash

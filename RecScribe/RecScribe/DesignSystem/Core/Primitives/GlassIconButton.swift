@@ -59,8 +59,8 @@ public struct GlassIconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: isHovering)
+        .glassHover($isHovering, showsPointingHand: isEnabled)
+        .glassAnimation(.hover, value: isHovering)
         .accessibilityLabel(label)
         .accessibilityHint(hint ?? "")
     }

@@ -135,7 +135,7 @@ struct CaptureSourceMenuTests {
         #expect(counts.root == 1)
         // Zero inside when the selection isn't an app at all; never more than one.
         #expect(counts.submenu <= 1)
-        if case .app = selected {
+        if selected.kind == .app {
             #expect(counts.submenu == 1)
         } else {
             #expect(counts.submenu == 0)
@@ -581,5 +581,110 @@ struct AudioCapableFilterTests {
         #expect(AudioSourceManager.alwaysExcludedBundleIDs.contains("com.apple.Terminal") == false)
         #expect(AudioSourceManager.alwaysExcludedBundleIDs.contains("com.apple.dt.Xcode") == false)
         #expect(AudioSourceManager.alwaysExcludedBundleIDs.contains("com.apple.Notes") == false)
+    }
+
+    @Test("Nested browser helper bundles and WebKit XPC processes resolve to their enclosing app bundle ID (#16)")
+    func helperProcessesResolveToEnclosingBrowserBundleID() {
+        let chromeHelperURL = URL(fileURLWithPath: "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/130.0/Helpers/Google Chrome Helper (Renderer).app")
+        let resolvedChrome = AudioCapableProcesses.enclosingAppBundleIDs(
+            bundleURL: chromeHelperURL,
+            directBundleID: "com.google.Chrome.helper.renderer",
+            bundleIdentifierLookup: { url in
+                url.path == "/Applications/Google Chrome.app" ? "com.google.Chrome" : nil
+            }
+        )
+        #expect(resolvedChrome.contains("com.google.Chrome"))
+        #expect(resolvedChrome.contains("com.google.Chrome.helper.renderer"))
+
+        let firefoxPluginExecutable = URL(fileURLWithPath: "/Applications/Firefox.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container")
+        let resolvedFirefox = AudioCapableProcesses.enclosingAppBundleIDs(
+            bundleURL: nil,
+            executableURL: firefoxPluginExecutable,
+            directBundleID: "org.mozilla.plugincontainer",
+            bundleIdentifierLookup: { url in
+                url.path == "/Applications/Firefox.app" ? "org.mozilla.firefox" : nil
+            }
+        )
+        #expect(resolvedFirefox.contains("org.mozilla.firefox"))
+
+        let resolvedSafariWebKit = AudioCapableProcesses.enclosingAppBundleIDs(
+            bundleURL: URL(fileURLWithPath: "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc"),
+            directBundleID: "com.apple.WebKit.GPU"
+        )
+        #expect(resolvedSafariWebKit.contains("com.apple.Safari"))
+    }
+
+    @Test("Idle user-facing apps stay selectable before a call while audio-active apps sort first and badge (#16)")
+    func idleBrowsersStaySelectableAndActiveAppsSortFirst() {
+        let candidates: [(bundleID: String, applicationName: String)] = [
+            ("com.apple.finder", "Finder"),
+            ("com.moreaki.recscribe", "RecScribe"),
+            ("com.apple.Safari", "Safari"),
+            ("com.google.Chrome", "Google Chrome"),
+            ("com.cisco.webexmeetingsapp", "Webex")
+        ]
+        let userFacing: Set<String> = [
+            "com.apple.finder",
+            "com.moreaki.recscribe",
+            "com.apple.Safari",
+            "com.google.Chrome",
+            "com.cisco.webexmeetingsapp"
+        ]
+        let filtered = AudioSourceManager.filterAndSortAvailableApps(
+            candidates: candidates,
+            userFacingBundleIDs: userFacing,
+            audioActiveBundleIDs: ["com.cisco.webexmeetingsapp"],
+            ownBundleID: "com.moreaki.recscribe"
+        )
+        #expect(filtered.map(\.bundleID) == [
+            "com.cisco.webexmeetingsapp",
+            "com.google.Chrome",
+            "com.apple.Safari"
+        ])
+        #expect(filtered.first?.isAudioActive == true)
+        #expect(filtered.dropFirst().allSatisfy { !$0.isAudioActive })
+
+        let submenu = OverflowMenu.perAppSubmenu(
+            OverflowContext(
+                selectedSource: .systemAll,
+                permissionGranted: true,
+                apps: filtered
+            )
+        )
+        let titles = submenu.entries.compactMap { entry -> String? in
+            if case .action(let action) = entry { return action.title }
+            return nil
+        }
+        #expect(titles == [
+            "Webex · Playing audio",
+            "Google Chrome",
+            "Safari"
+        ])
+    }
+
+    @Test("matchingApplications includes all SCRunningApplication instances for a bundle ID (#16)")
+    func matchingApplicationsIncludesAllInstances() throws {
+        struct StubApp: Equatable {
+            let pid: Int
+            let bundleIdentifier: String
+        }
+        let running = [
+            StubApp(pid: 101, bundleIdentifier: "com.google.Chrome"),
+            StubApp(pid: 102, bundleIdentifier: "com.apple.Safari"),
+            StubApp(pid: 103, bundleIdentifier: "com.google.Chrome")
+        ]
+        let matched = try ScreenCaptureAudioManager.matchingApplications(
+            in: running,
+            bundleID: "com.google.Chrome",
+            bundleIdentifier: \.bundleIdentifier
+        )
+        #expect(matched.map(\.pid) == [101, 103])
+        #expect(throws: ScreenCaptureAudioError.self) {
+            try ScreenCaptureAudioManager.matchingApplications(
+                in: running,
+                bundleID: "com.missing.app",
+                bundleIdentifier: \.bundleIdentifier
+            )
+        }
     }
 }

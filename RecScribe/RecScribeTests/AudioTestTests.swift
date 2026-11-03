@@ -263,4 +263,28 @@ struct AudioTestTests {
         #expect(recording.startCount == 2 && preview.startCount == 2)
         #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("scratch").path))
     }
+
+    @Test func inputsOnlyPreviewAndSampleBypassScreenRecordingPermission() async throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let settings = defaults(), capture = MockAudioCapturing()
+        let device = InputDeviceInfo(uid: "mic", name: "Studio Mic", inputChannels: 2, sampleRate: 48_000)
+        let provider = MockAudioSourceProviding(selectedSource: .inputsOnly([.init(device: device)]))
+        provider.availableInputDevicesResult = [device]
+        let permissions = MockPermissionProviding(.denied)
+        permissions.micStatus = .granted
+        let test = AudioTestController(
+            capture: capture,
+            source: provider,
+            permissions: permissions,
+            levels: AudioLevels(defaults: settings),
+            monitor: CapturedAudioMonitor(defaults: settings),
+            temporaryRoot: directory.appendingPathComponent("scratch"),
+            saveDirectory: { directory },
+            sampleSeconds: 0.05
+        )
+        await test.startPreview()
+        #expect(test.state == .testing && capture.capturing)
+        #expect(permissions.requestedPermissionKinds == [.microphone])
+        await test.close()
+    }
 }

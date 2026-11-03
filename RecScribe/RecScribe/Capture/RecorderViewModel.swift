@@ -80,10 +80,13 @@ class RecorderViewModel: ObservableObject {
     /// a SwiftUI `if` is why the divergence went unnoticed.
     var showsSettingsShelf: Bool { allowsCaptureSourceChange }
 
-    /// Whether the app is actually in a position to record: permission granted and
+    /// Whether the currently selected capture source requires Screen Recording permission (#40).
+    var requiresScreenCapturePermission: Bool { audioSource.selectedSource.requiresScreenCapture }
+
+    /// Whether the app is actually in a position to record: required permission granted and
     /// the bundle in a location where that grant will survive. The record button is
     /// live only in this state; otherwise it carries a corrective action instead.
-    var canRecord: Bool { permissionStatus == .granted && !installLocation.blocksRecording }
+    var canRecord: Bool { (!requiresScreenCapturePermission || permissionStatus == .granted) && !installLocation.blocksRecording }
 
     /// Recording is refused outright only for a translocated bundle: the grant it
     /// needs cannot survive, so "it worked once and then stopped" is the *best*
@@ -365,8 +368,8 @@ class RecorderViewModel: ObservableObject {
             return
         }
 
-        // Check permission first; if not granted, remain in the current state.
-        if permissionStatus != .granted {
+        // Check Screen Recording permission only when the selected source captures playback (#40).
+        if audioSource.selectedSource.requiresScreenCapture && permissionStatus != .granted {
             await requestPermission()
             if permissionStatus != .granted {
                 return
@@ -548,27 +551,28 @@ class RecorderViewModel: ObservableObject {
     /// Human-readable name of the current capture source, for the status line.
     /// `nil` for all-system-audio, which needs no qualifier.
     var captureSourceName: String? {
-        switch audioSource.selectedSource {
-        case .multiple(let bundle, let inputs, _):
-            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
-            return "\(playback) + \(inputs.count) inputs"
-        case .mixed(let bundle, let uid):
-            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+        let source = audioSource.selectedSource
+        switch source.kind {
+        case .multiple:
+            if source.requiresScreenCapture {
+                let playback = source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+                return "\(playback) + \(source.inputs.count) inputs"
+            }
+            return "\(source.inputs.count) inputs"
+        case .mixed:
+            let playback = source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+            let uid = source.microphoneUID ?? ""
             let mic = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
             return "\(playback) + \(mic)"
         case .systemAll:
             return nil
-        case .app(let bundleID):
-            // Falls back to the bundle ID only if this app has never been seen
-            // in the picker — which cannot happen for a source the user chose
-            // there, but can for a value restored from a much older build.
+        case .app:
+            guard let bundleID = source.appBundleID else { return nil }
             return audioSource.knownAppName(forBundleID: bundleID) ?? bundleID
-        case .mic(let deviceUID):
-            // Devices are enumerable at any time without a prompt, so unlike an
-            // app name this never has to fall back to a raw identifier in
-            // practice — only if the device was unplugged.
+        case .microphone:
+            let uid = source.microphoneUID ?? ""
             return audioSource.availableInputDevices()
-                .first { $0.uid == deviceUID }?.name ?? "Microphone"
+                .first { $0.uid == uid }?.name ?? "Microphone"
         }
     }
 
@@ -837,13 +841,19 @@ class RecorderViewModel: ObservableObject {
     }
 
     var captureSourceHint: String {
-        if case .multiple = audioSource.selectedSource { return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically." }
-        if audioSource.selectedSource.isMixed { return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture." }
-        if case .systemAll = audioSource.selectedSource {
+        let source = audioSource.selectedSource
+        switch source.kind {
+        case .multiple:
+            return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically."
+        case .mixed:
+            return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture."
+        case .systemAll:
             return "System playback only · microphone excluded"
+        case .app:
+            return "Selected app playback only · microphone excluded"
+        case .microphone:
+            return "Selected input only · system playback excluded"
         }
-        if case .app = audioSource.selectedSource { return "Selected app playback only · microphone excluded" }
-        return "Selected input only · system playback excluded"
     }
 
     /// Stop duration timer
@@ -937,7 +947,9 @@ class RecorderViewModel: ObservableObject {
             // A translocated bundle can't hold a permission grant, so "Almost
             // ready / grant permission" would be a lie — point at the real fix.
             if installLocation.blocksRecording { return "Move to Applications" }
-            guard permissionStatus == .granted else { return "Almost ready" }
+            if audioSource.selectedSource.requiresScreenCapture {
+                guard permissionStatus == .granted else { return "Almost ready" }
+            }
             // Naming the source here also pre-announces the failure that
             // `AudioSourceManager.validate()` would otherwise only raise *after*
             // the user commits to a click.

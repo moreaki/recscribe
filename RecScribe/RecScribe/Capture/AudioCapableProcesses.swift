@@ -48,17 +48,62 @@ final class AudioCapableProcesses: AudioCapableProcessListing {
 
         var bundleIDs = Set<String>()
         for object in objects {
-            guard let pid = processID(of: object) else { continue }
-            // A helper process (Safari's GPU process, an Electron renderer) is
-            // where the audio actually lives, but the user picks the *app*.
-            // `SCContentFilter` matches on the app's bundle ID and SCK resolves
-            // the helpers itself, so mapping back through the PID is what makes
-            // the two lists line up.
-            guard let app = NSRunningApplication(processIdentifier: pid),
-                  let bundleID = app.bundleIdentifier else { continue }
-            bundleIDs.insert(bundleID)
+            guard let pid = processID(of: object),
+                  let app = NSRunningApplication(processIdentifier: pid) else { continue }
+            // A helper process (Safari's GPU process, Chrome/Arc/Edge renderer or
+            // audio helper, Firefox plugin-container, Electron helper) is where the
+            // audio actually lives, while the user picks the outermost `.app` (#16).
+            // Resolve both the direct process bundle ID and any enclosing `.app`
+            // bundle's `CFBundleIdentifier` so parent browsers are marked audio-active.
+            for id in Self.enclosingAppBundleIDs(
+                bundleURL: app.bundleURL,
+                executableURL: app.executableURL,
+                directBundleID: app.bundleIdentifier
+            ) {
+                bundleIDs.insert(id)
+            }
         }
         return bundleIDs
+    }
+
+    /// Resolves both a process's direct bundle identifier and the outermost enclosing
+    /// `.app` bundle's `CFBundleIdentifier` for nested helper apps/XPC services (#16).
+    nonisolated static func enclosingAppBundleIDs(
+        bundleURL: URL?,
+        executableURL: URL? = nil,
+        directBundleID: String? = nil,
+        bundleIdentifierLookup: (URL) -> String? = { Bundle(url: $0)?.bundleIdentifier }
+    ) -> Set<String> {
+        var resolved = Set<String>()
+        if let directBundleID, !directBundleID.isEmpty {
+            resolved.insert(directBundleID)
+            // System WebKit GPU/Audio XPC helpers reside in `/System/Library/Frameworks/WebKit.framework`
+            // when playing audio for Safari.
+            if directBundleID.hasPrefix("com.apple.WebKit.") {
+                resolved.insert("com.apple.Safari")
+            }
+        }
+        for candidateURL in [bundleURL, executableURL].compactMap({ $0 }) {
+            let components = candidateURL.standardizedFileURL.pathComponents
+            var currentPath = ""
+            for component in components {
+                if currentPath.isEmpty && component == "/" {
+                    currentPath = "/"
+                } else if currentPath == "/" {
+                    currentPath += component
+                } else {
+                    currentPath += "/" + component
+                }
+                if component.hasSuffix(".app") {
+                    let outerAppURL = URL(fileURLWithPath: currentPath, isDirectory: true)
+                    if let outerID = bundleIdentifierLookup(outerAppURL), !outerID.isEmpty {
+                        resolved.insert(outerID)
+                    }
+                    break
+                }
+            }
+        }
+        return resolved
     }
 
     private func processObjects() -> [AudioObjectID]? {

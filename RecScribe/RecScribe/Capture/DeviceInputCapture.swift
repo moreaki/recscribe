@@ -17,10 +17,11 @@ final class DeviceInputCapture {
     private var configurationFailed = false
     private let tap: DeviceInputTap
     private let onFailure: @MainActor @Sendable (String) -> Void
-    init(uid: String, callback: @escaping @Sendable (CapturedAudioSample) -> Void,
+    init(uid: String, track: CaptureTrack? = nil, callback: @escaping @Sendable (CapturedAudioSample) -> Void,
          onFailure: @escaping @MainActor @Sendable (String) -> Void) {
-        self.uid = uid; self.track = .input(uid); self.onFailure = onFailure
-        tap = DeviceInputTap(track: .input(uid), callback: callback, onFailure: onFailure)
+        let resolvedTrack = track ?? .input(uid)
+        self.uid = uid; self.track = resolvedTrack; self.onFailure = onFailure
+        tap = DeviceInputTap(track: resolvedTrack, callback: callback, onFailure: onFailure)
     }
     func start() throws {
         guard engine == nil else { throw AudioRecorderError.alreadyRecording }

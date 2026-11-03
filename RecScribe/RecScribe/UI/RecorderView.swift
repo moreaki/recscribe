@@ -9,7 +9,7 @@ struct RecorderView: View {
 
     private var mainButtonTitle: String {
         if viewModel.installLocationBlocksRecording { return "Reveal in Finder" }
-        if viewModel.permissionStatus != .granted { return "Open System Settings" }
+        if !viewModel.canRecord { return "Open System Settings" }
         return viewModel.isRecording ? "Stop recording" : "Start recording"
     }
 
@@ -47,14 +47,14 @@ struct RecorderView: View {
                     }
                 }
             }
-            if !viewModel.installLocationBlocksRecording && viewModel.permissionStatus != .granted {
+            if !viewModel.installLocationBlocksRecording && !viewModel.canRecord {
                 Text(PermissionKind.screenCapture.navigationHint).font(.caption).foregroundStyle(.secondary)
             }
             GlassPillButton(mainButtonTitle,
                 systemImage: viewModel.canRecord ? (viewModel.isRecording ? "stop.circle.fill" : "record.circle") : nil,
                 emphasis: viewModel.canRecord ? .primary : .primaryNeutral, size: .large, isFullWidth: true) {
                     if viewModel.installLocationBlocksRecording { viewModel.revealAppInFinder() }
-                    else if viewModel.permissionStatus != .granted { viewModel.openSystemSettings() }
+                    else if !viewModel.canRecord { viewModel.openSystemSettings() }
                     else { Task { await viewModel.toggleRecording() } }
                 }
                 .disabled(viewModel.isFinalizingAfterFailure || !viewModel.state.allowsCaptureSourceChange && !viewModel.isRecording)

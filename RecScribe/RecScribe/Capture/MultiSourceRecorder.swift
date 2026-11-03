@@ -53,22 +53,24 @@ final class MultiSourceRecorder {
     }
 
     func start(at url: URL, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
-               epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
+               epoch: Double? = nil,
                levels: @escaping @Sendable () -> RecordingLevels = { .init() }, continueOnSourceFailure: Bool = false,
                maximumFrames: Int64? = nil) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
         let mix = SessionWAVWriter(options: options)
         try mix.createFile(at: url, sampleRate: 48_000, channels: 2)
-        try begin(mix: mix, descriptors: descriptors, options: options, epoch: epoch, levels: levels,
+        let resolvedEpoch = epoch ?? CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        try begin(mix: mix, descriptors: descriptors, options: options, epoch: resolvedEpoch, levels: levels,
                   continueOnSourceFailure: continueOnSourceFailure, maximumFrames: maximumFrames)
     }
 
     /// The same normalization, timestamp alignment, routing and ramps without
     /// any disk sinks, manifests or unbounded PCM history.
-    func startPreview(descriptors: [RecordingSession.SourceTrack], epoch: Double = CMClockGetTime(CMClockGetHostTimeClock()).seconds,
+    func startPreview(descriptors: [RecordingSession.SourceTrack], epoch: Double? = nil,
                       levels: @escaping @Sendable () -> RecordingLevels = { .init() }) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
-        try begin(mix: nil, descriptors: descriptors, options: .init(), epoch: epoch, levels: levels,
+        let resolvedEpoch = epoch ?? CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        try begin(mix: nil, descriptors: descriptors, options: .init(), epoch: resolvedEpoch, levels: levels,
                   continueOnSourceFailure: true, maximumFrames: 600 * 48_000)
     }
 

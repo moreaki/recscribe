@@ -148,11 +148,6 @@ struct ConfigurationView: View {
                     OverflowMenuButton()
                 }
                 MultipleInputsView(recorder: recorder)
-                ForEach(recorder.audioSource.availableInputDevices()) { device in
-                    Button("\(recorder.audioSource.selectedSource.appBundleID == nil ? "System playback" : "Selected app") + \(device.name)") {
-                        recorder.setCaptureSource(.mixed(appBundleID: recorder.audioSource.selectedSource.appBundleID, deviceUID: device.uid))
-                    }
-                }
             }.disabled(!recorder.allowsCaptureSourceChange)
             card("Capture safely", detail: "Recording always writes 16-bit PCM WAV. Parts share one session and a continuous sample timeline. Changes apply to the next recording.") {
                 HStack {

@@ -16,6 +16,14 @@ struct RunningAppInfo: Identifiable, Sendable, Equatable {
     var id: String { bundleID }
     let bundleID: String
     let applicationName: String
+    /// Whether the app or one of its helper processes currently holds an active Core Audio object (#16).
+    var isAudioActive: Bool = false
+
+    init(bundleID: String, applicationName: String, isAudioActive: Bool = false) {
+        self.bundleID = bundleID
+        self.applicationName = applicationName
+        self.isAudioActive = isAudioActive
+    }
 }
 
 enum AudioSourceError: Error, LocalizedError, Equatable {
@@ -86,11 +94,6 @@ final class AudioSourceManager: AudioSourceProviding {
     /// Finder is user-facing (`activationPolicy == .regular`) and always running,
     /// so the policy filter cannot remove it — it would otherwise appear as a
     /// capture target on every Mac, forever, at the top of an alphabetical list.
-    ///
-    /// Kept even though `AudioCapableProcesses` now does the real filtering:
-    /// Finder does hold audio objects on some systems (Quick Look preview
-    /// playback runs under it), so the audio-capability rule alone would not
-    /// reliably remove it — and it is never a thing anyone means to record.
     ///
     /// Keep this list short. It is a patch over specific known-wrong entries,
     /// **not** a substitute for a rule; if it starts growing, the filter above it
@@ -183,36 +186,35 @@ final class AudioSourceManager: AudioSourceProviding {
     }
 
     func validate(_ source: AudioSource) async throws {
-        guard source.valid else { throw SessionError.invalid("Invalid input selection; choose at most eight distinct devices") }
-        switch source {
-        case .multiple(let bundle, let inputs, let allowDuplicate):
-            if let bundle { try await validate(.app(bundleID: bundle)) }
-            let devices = availableInputDevices()
-            for input in inputs {
-                guard let device = devices.first(where: { $0.uid == input.deviceUID }) else { throw AudioSourceError.micNotAvailable(input.deviceUID) }
-                guard let count = device.inputChannels, (1...32).contains(count), input.routes.allSatisfy({ $0.channel < count }) else {
-                    throw SessionError.invalid("Input channel availability changed. Review the selected channels before recording.")
-                }
-            }
-            if !allowDuplicate, !InputRouteSafety.warnings(inputs: inputs, devices: devices).isEmpty {
-                throw SessionError.invalid("Possible duplicate or loopback routes. Review Capture inputs and remove overlapping devices or explicitly acknowledge their inclusion.")
-            }
-        case .mixed(let bundle, let uid):
-            if let bundle { try await validate(.app(bundleID: bundle)) }
-            try await validate(.mic(deviceUID: uid))
-        case .systemAll:
-            return
-        case .app(let bundleID):
+        guard source.valid else {
+            throw SessionError.invalid("Invalid input selection; choose at most eight distinct devices")
+        }
+        if case .app(let bundleID) = source.playback {
             let apps = try await availableApps()
             guard apps.contains(where: { $0.bundleID == bundleID }) else {
                 throw AudioSourceError.appNotRunning(bundleID)
             }
-        case .mic(let deviceUID):
-            // Fail here rather than letting `startCapture` fail obscurely with a
-            // device that was unplugged since it was chosen (BL-130).
-            guard deviceEnumerator.availableInputDevices().contains(where: { $0.uid == deviceUID }) else {
-                throw AudioSourceError.micNotAvailable(deviceUID)
+        }
+        guard !source.inputs.isEmpty else { return }
+        let devices = availableInputDevices()
+        for input in source.inputs {
+            guard let device = devices.first(where: { $0.uid == input.deviceUID }) else {
+                throw AudioSourceError.micNotAvailable(input.deviceUID)
             }
+            if source.kind == .multiple {
+                guard let count = device.inputChannels, (1...32).contains(count), input.routes.allSatisfy({ $0.channel < count }) else {
+                    throw SessionError.invalid("Input channel availability changed. Review the selected channels before recording.")
+                }
+            } else if let count = device.inputChannels {
+                guard (1...32).contains(count), input.routes.allSatisfy({ $0.channel < count }) else {
+                    throw SessionError.invalid("Input channel availability changed. Review the selected channels before recording.")
+                }
+            }
+        }
+        if source.kind == .multiple,
+           !source.allowDuplicateRoutes,
+           !InputRouteSafety.warnings(inputs: source.inputs, devices: devices).isEmpty {
+            throw SessionError.invalid("Possible duplicate or loopback routes. Review Capture inputs and remove overlapping devices or explicitly acknowledge their inclusion.")
         }
     }
 
@@ -229,48 +231,54 @@ final class AudioSourceManager: AudioSourceProviding {
                 .compactMap(\.bundleIdentifier)
         )
 
-        // Narrow to apps that actually have audio. Without this the list is
-        // every open window on the Mac — Notes, Xcode, a text editor — none of
-        // which anyone scrolls past on purpose.
-        //
-        // `nil` means Core Audio could not answer, in which case skip the filter
-        // rather than showing an empty picker: too long is a papercut, wrongly
-        // empty is a broken feature.
-        let audioCapable = audioProcesses.audioCapableBundleIDs()
-
-        // The current selection always survives the filter. An app that has not
-        // touched audio *yet* holds no Core Audio object, so a DAW sitting idle
-        // could otherwise drop out of the list and take the user's own choice
-        // with it — leaving the menu implying something they never picked.
-        var keep: Set<String>?
-        if var audioCapable {
-            if let selectedBundleID = selectedSource.appBundleID {
-                audioCapable.insert(selectedBundleID)
-            }
-            keep = audioCapable
+        // Keep all open user-facing (`.regular`) apps selectable so users can
+        // select an idle browser before joining a WebEx/browser meeting (#16),
+        // while using `audioCapableBundleIDs()` to badge and sort currently
+        // audible apps first.
+        let audioActive = audioProcesses.audioCapableBundleIDs()
+        let candidates = content.applications.map {
+            (bundleID: $0.bundleIdentifier, applicationName: $0.applicationName)
         }
-
-        var seen = Set<String>()
-        let apps = content.applications
-            .filter { $0.bundleIdentifier != ownBundleID }
-            .filter { userFacing.contains($0.bundleIdentifier) }
-            .filter { !Self.alwaysExcludedBundleIDs.contains($0.bundleIdentifier) }
-            .filter { keep?.contains($0.bundleIdentifier) ?? true }
-            // An app running twice appears twice. There is nowhere to put a PID:
-            // `AudioSource.app` carries only a bundle ID, and a PID would not
-            // survive the relaunch that persistence requires. So all instances
-            // are one entry, and capture resolves to whichever SCK returns first
-            // (BL-100 correction C5).
-            .filter { seen.insert($0.bundleIdentifier).inserted }
-            .map { RunningAppInfo(bundleID: $0.bundleIdentifier, applicationName: $0.applicationName) }
-            // Flat and alphabetical. The "audio-producing apps first" ordering in
-            // the original spec is unimplementable here — ScreenCaptureKit
-            // exposes no is-this-app-making-sound signal (correction C2).
-            .sorted { $0.applicationName.localizedStandardCompare($1.applicationName) == .orderedAscending }
+        let apps = Self.filterAndSortAvailableApps(
+            candidates: candidates,
+            userFacingBundleIDs: userFacing,
+            audioActiveBundleIDs: audioActive,
+            ownBundleID: ownBundleID
+        )
         // Enumeration is the only place names are available, and it is gated
         // behind permission and a deliberate submenu open. Capture them here so
         // every other surface can name the selection without enumerating.
         rememberNames(apps)
         return apps
+    }
+
+    /// Pure filtering, deduplication, badging, and sorting for user-facing apps (#16).
+    /// Keeps all open `.regular` apps selectable while sorting `isAudioActive` apps first.
+    static func filterAndSortAvailableApps(
+        candidates: [(bundleID: String, applicationName: String)],
+        userFacingBundleIDs: Set<String>,
+        audioActiveBundleIDs: Set<String>?,
+        ownBundleID: String?
+    ) -> [RunningAppInfo] {
+        var seen = Set<String>()
+        let activeSet = audioActiveBundleIDs ?? []
+        return candidates
+            .filter { $0.bundleID != ownBundleID }
+            .filter { userFacingBundleIDs.contains($0.bundleID) }
+            .filter { !alwaysExcludedBundleIDs.contains($0.bundleID) }
+            .filter { seen.insert($0.bundleID).inserted }
+            .map {
+                RunningAppInfo(
+                    bundleID: $0.bundleID,
+                    applicationName: $0.applicationName,
+                    isAudioActive: activeSet.contains($0.bundleID)
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.isAudioActive != rhs.isAudioActive {
+                    return lhs.isAudioActive && !rhs.isAudioActive
+                }
+                return lhs.applicationName.localizedStandardCompare(rhs.applicationName) == .orderedAscending
+            }
     }
 }

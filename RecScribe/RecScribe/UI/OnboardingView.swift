@@ -66,7 +66,7 @@ struct OnboardingView: View {
                 // one permission makes the second prompt feel like an ambush.
                 // "A second permission" states the count outright, which is the
                 // whole of that warning.
-                Label("A microphone needs a second permission, requested only when you choose one.", systemImage: "mic")
+                Label("A microphone needs only Microphone permission, requested when you choose one.", systemImage: "mic")
                     .fixedSize(horizontal: false, vertical: true)
                 // Where to actually find it. Without this the line above sends
                 // people to the audio-only list, which doesn't contain RecScribe.
@@ -78,7 +78,7 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Live permission status (re-detected automatically when you return).
-            if viewModel.permissionStatus == .granted {
+            if viewModel.canRecord {
                 Label("You're ready to record", systemImage: "checkmark.circle.fill")
                     .workspaceFont(.sectionTitle)
                     .foregroundColor(.green)

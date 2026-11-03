@@ -33,6 +33,8 @@ final class SessionLibrary: ObservableObject {
         let issue: String?
     }
     private var pending: [PendingSession] = []
+    private var pendingRecoveryDirectory: URL?
+    private var activeManifest: URL?
     private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
     private var shuttingDown = false
@@ -65,29 +67,55 @@ final class SessionLibrary: ObservableObject {
     }
 
     func load(_ directory: URL) {
+        refresh(directory, recoverUnfinalized: pendingRecoveryDirectory == directory)
+    }
+
+    func recoverUnfinalizedSessions(in directory: URL) {
+        refresh(directory, recoverUnfinalized: !recordingActive && !liveWorkActive)
+    }
+
+    private func refresh(_ directory: URL, recoverUnfinalized: Bool) {
         guard !shuttingDown else { return }
         refreshTask?.cancel()
         let id = UUID(), read = readSessions
         refreshID = id
         refreshing = true
+        pendingRecoveryDirectory = (recoverUnfinalized && !recordingActive && !liveWorkActive) ? directory : nil
         refreshTask = Task(priority: .utility) { [weak self] in
             do {
                 let snapshot = try await read(directory)
-                guard !Task.isCancelled, self?.refreshID == id else { return }
-                self?.entries = snapshot.entries
-                self?.readFailures = snapshot.failures
-            } catch is CancellationError { }
-            catch {
-                guard self?.refreshID == id else { return }
-                self?.readFailures = [ManifestFailure(id: directory, message: error.localizedDescription)]
+                guard !Task.isCancelled, let self, self.refreshID == id else { return }
+                self.entries = snapshot.entries
+                self.readFailures = snapshot.failures
+                let shouldRecover = self.pendingRecoveryDirectory == directory
+                self.pendingRecoveryDirectory = nil
+                if shouldRecover, !self.shuttingDown, !self.recordingActive, !self.liveWorkActive {
+                    var enqueued = false
+                    for entry in snapshot.entries where entry.needsRecovery {
+                        if self.activeManifest != entry.id, !self.pending.contains(where: { $0.manifest == entry.id }) {
+                            self.pending.append(.init(manifest: entry.id, recover: true, issue: nil))
+                            enqueued = true
+                        }
+                    }
+                    if enqueued {
+                        self.startNext()
+                    }
+                }
+            } catch is CancellationError {
+            } catch {
+                guard let self, self.refreshID == id else { return }
+                self.pendingRecoveryDirectory = nil
+                self.readFailures = [ManifestFailure(id: directory, message: error.localizedDescription)]
             }
-            guard self?.refreshID == id else { return }
-            self?.refreshing = false
-            self?.refreshTask = nil
+            guard let self, self.refreshID == id else { return }
+            self.refreshing = false
+            self.refreshTask = nil
         }
     }
+
     func cancelRefresh() {
         refreshID = UUID()
+        pendingRecoveryDirectory = nil
         refreshTask?.cancel()
         refreshTask = nil
         refreshing = false
@@ -113,44 +141,35 @@ final class SessionLibrary: ObservableObject {
     }
     func setRecording(_ active: Bool) {
         recordingActive = active
-        if active { cancellation?.cancel(); task?.cancel(); progressMonitor.stop(); cancelRuntime(); activity = "Background work paused for recording" }
-        else { startNext() }
+        if active {
+            pendingRecoveryDirectory = nil
+            cancellation?.cancel()
+            task?.cancel()
+            progressMonitor.stop()
+            cancelRuntime()
+            activity = "Background work paused for recording"
+        } else {
+            startNext()
+        }
     }
     func setLiveWork(_ active: Bool) {
         liveWorkActive = active
-        if active { cancellation?.cancel(); task?.cancel(); progressMonitor.stop() }
-        else { startNext() }
+        if active {
+            pendingRecoveryDirectory = nil
+            cancellation?.cancel()
+            task?.cancel()
+            progressMonitor.stop()
+        } else {
+            startNext()
+        }
     }
     func enqueue(_ url: URL, recover: Bool = false, issue: String? = nil) {
         guard !shuttingDown else { return }
-        if !pending.contains(where: { $0.manifest == url }) { pending.append(.init(manifest: url, recover: recover, issue: issue)) }
+        if activeManifest != url, !pending.contains(where: { $0.manifest == url }) {
+            pending.append(.init(manifest: url, recover: recover, issue: issue))
+        }
         load(url.deletingLastPathComponent())
         startNext()
-    }
-    func recoverUnfinalizedSessions(in directory: URL) {
-        guard !shuttingDown else { return }
-        guard !recordingActive else {
-            load(directory)
-            return
-        }
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        var recoveredCount = 0
-        for url in urls.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where url.lastPathComponent.hasSuffix(".recscribe.json") {
-            if let session = try? RecordingSession.read(url), session.status == .recording {
-                if !pending.contains(where: { $0.manifest == url }) {
-                    pending.append(.init(manifest: url, recover: true, issue: nil))
-                }
-                recoveredCount += 1
-            }
-        }
-        load(directory)
-        if recoveredCount > 0 {
-            startNext()
-        }
     }
     func cancel() {
         guard let cancellation else { return }
@@ -182,6 +201,7 @@ final class SessionLibrary: ObservableObject {
         guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, !pending.isEmpty else { return }
         let item = pending.removeFirst()
         let token = WorkCancellation()
+        activeManifest = item.manifest
         cancellation = token
         let settings = settings()
         errorMessage = nil
@@ -197,6 +217,7 @@ final class SessionLibrary: ObservableObject {
                 if (recordingActive || liveWorkActive) && !shuttingDown { pending.insert(item, at: 0) }
                 activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
             } catch { errorMessage = error.localizedDescription; activity = "Needs attention" }
+            activeManifest = nil
             task = nil
             cancellation = nil
             load(item.manifest.deletingLastPathComponent())

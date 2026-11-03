@@ -39,7 +39,7 @@ struct RecordingLibraryView: View {
                             RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
                         }
                         Spacer()
-                        Text(entry.session.status == .recording && !library.recordingActive ? "Not finalized — verify / recover" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
+                        Text(entry.needsRecovery && !library.recordingActive ? "Not finalized — verify / recover" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
                     }
                     Text("\(entry.session.parts.count) parts · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
                         .font(.caption).foregroundStyle(.secondary)

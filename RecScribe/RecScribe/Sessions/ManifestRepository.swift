@@ -19,6 +19,8 @@ nonisolated enum JobState: String, Codable, Sendable {
 nonisolated struct SessionEntry: Identifiable, Sendable {
     var id: URL
     var session: RecordingSession
+    var hasUnfinalizedSource = false
+    var needsRecovery: Bool { session.needsRecovery || hasUnfinalizedSource }
 }
 nonisolated struct ManifestFailure: Identifiable, Sendable {
     let id: URL
@@ -65,8 +67,19 @@ actor ManifestRepository {
         }
         try Task.checkCancellation()
         let roots = Set(result.entries.filter { $0.session.parentSessionID == nil }.map { $0.session.id })
+        let unfinalizedParents = Set(
+            result.entries.compactMap { $0.session.needsRecovery ? $0.session.parentSessionID : nil }
+        )
         result.entries.removeAll { $0.session.parentSessionID.map { roots.contains($0) } ?? false }
-        result.entries.sort { $0.session.startedAt > $1.session.startedAt }
+        for index in result.entries.indices where unfinalizedParents.contains(result.entries[index].session.id) {
+            result.entries[index].hasUnfinalizedSource = true
+        }
+        result.entries.sort {
+            if $0.session.startedAt != $1.session.startedAt {
+                return $0.session.startedAt > $1.session.startedAt
+            }
+            return $0.id.lastPathComponent < $1.id.lastPathComponent
+        }
         result.failures.sort { $0.id.lastPathComponent < $1.id.lastPathComponent }
         return result
     }

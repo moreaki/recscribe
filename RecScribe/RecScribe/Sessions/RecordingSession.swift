@@ -129,6 +129,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     }
     var totalFrames: Int64 { parts.last.map { $0.startSample + $0.frames } ?? 0 }
     var duration: Double { Double(totalFrames) / Double(sampleRate) }
+    var needsRecovery: Bool {
+        status == .recording || parts.contains { [.opening, .recording].contains($0.status) }
+    }
     static func manifestURL(for audio: URL) -> URL {
         audio.deletingPathExtension().appendingPathExtension("recscribe.json")
     }

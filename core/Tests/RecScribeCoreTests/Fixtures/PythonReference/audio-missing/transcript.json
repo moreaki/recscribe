@@ -1,0 +1,221 @@
+{
+  "job_id": "fixture",
+  "language_processing": {
+    "derivations": [],
+    "mode": "verbatim",
+    "processor": null,
+    "status": "not_requested"
+  },
+  "processing": {
+    "diarize": "off",
+    "duration_ms": 0,
+    "engine_passes": [
+      {
+        "command": [],
+        "duration_seconds": 0,
+        "engine": "synthetic",
+        "local_only": true,
+        "model": "a",
+        "model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "version": "1"
+      },
+      {
+        "command": [],
+        "duration_seconds": 0,
+        "engine": "synthetic",
+        "local_only": true,
+        "model": "a",
+        "model_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "version": "1"
+      }
+    ],
+    "formats": [
+      "json",
+      "md",
+      "txt",
+      "srt",
+      "vtt"
+    ],
+    "local_only": true,
+    "mode": "verbatim",
+    "pipeline_version": "swift-audio-1.0",
+    "profile": "fast",
+    "source_language": "auto",
+    "started_at": "2026-01-01T00:00:00Z",
+    "target_language": null
+  },
+  "review_reasons": [
+    "part_2_unavailable:The file \u201cmissing.wav\u201d couldn\u2019t be opened because there is no such file.",
+    "automatic_language_detection_unverified; a quiet opening can select the wrong language",
+    "learned_vad_not_run; silence guard only detects exact digital silence"
+  ],
+  "schema_version": "1.0",
+  "segments": [
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 800,
+      "id": "seg-000001",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "confidence_unavailable",
+        "part_boundary; check_cut_or_duplicate_speech"
+      ],
+      "source_text": " Gr \u00fcezi <test>! ",
+      "speaker": null,
+      "start_ms": 0,
+      "translated_text": null,
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 2800,
+      "id": "seg-000002",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "confidence_unavailable",
+        "part_boundary; check_cut_or_duplicate_speech"
+      ],
+      "source_text": " Gr \u00fcezi <test>! ",
+      "speaker": null,
+      "start_ms": 2000,
+      "translated_text": null,
+      "words": []
+    }
+  ],
+  "source": {
+    "bit_depth": 16,
+    "channel_layout": [
+      "channel-1"
+    ],
+    "channel_metrics": [
+      {
+        "channel": 0,
+        "clipped_samples": 0,
+        "digital_silence": false,
+        "peak": 0.030517578125,
+        "rms": 0.030517578125
+      }
+    ],
+    "channels": 1,
+    "codec": "PCM",
+    "container": "WAV",
+    "duration_ms": 3000,
+    "frames": 48000,
+    "kind": "multipart_session",
+    "parts": [
+      {
+        "frames": 16000,
+        "index": 0,
+        "offset_ms": 0,
+        "path": "one.wav",
+        "report": {
+          "bit_depth": 16,
+          "channel_layout": "unspecified; channel indices preserved",
+          "channel_metrics": [
+            {
+              "channel": 0,
+              "clipped_samples": 0,
+              "digital_silence": false,
+              "peak": 0.030517578125,
+              "rms": 0.030517578125
+            }
+          ],
+          "channel_windows": {
+            "policy": "exact_pcm_equality_v1",
+            "window_seconds": 30,
+            "windows": [
+              {
+                "bit_identical": true,
+                "end_frame": 16000,
+                "start_frame": 0
+              }
+            ]
+          },
+          "channels": 1,
+          "channels_bit_identical": true,
+          "codec": "PCM",
+          "container": "WAV",
+          "duration_ms": 1000,
+          "frames": 16000,
+          "mono_policy": "separate_channels_preserved; no downmix",
+          "path": "/fixture/one.wav",
+          "sample_rate": 16000,
+          "sha256": "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+          "size_bytes": 32044,
+          "speech_detection": "digital-silence-only; not a learned VAD"
+        },
+        "sha256": "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+        "sizeBytes": 32044,
+        "startSample": 0,
+        "status": "verified"
+      },
+      {
+        "frames": 16000,
+        "index": 1,
+        "offset_ms": 1000,
+        "path": "missing.wav",
+        "report": null,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sizeBytes": 32044,
+        "startSample": 16000,
+        "status": "verified"
+      },
+      {
+        "frames": 16000,
+        "index": 2,
+        "offset_ms": 2000,
+        "path": "three.wav",
+        "report": {
+          "bit_depth": 16,
+          "channel_layout": "unspecified; channel indices preserved",
+          "channel_metrics": [
+            {
+              "channel": 0,
+              "clipped_samples": 0,
+              "digital_silence": false,
+              "peak": 0.030517578125,
+              "rms": 0.030517578125
+            }
+          ],
+          "channel_windows": {
+            "policy": "exact_pcm_equality_v1",
+            "window_seconds": 30,
+            "windows": [
+              {
+                "bit_identical": true,
+                "end_frame": 16000,
+                "start_frame": 0
+              }
+            ]
+          },
+          "channels": 1,
+          "channels_bit_identical": true,
+          "codec": "PCM",
+          "container": "WAV",
+          "duration_ms": 1000,
+          "frames": 16000,
+          "mono_policy": "separate_channels_preserved; no downmix",
+          "path": "/fixture/three.wav",
+          "sample_rate": 16000,
+          "sha256": "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+          "size_bytes": 32044,
+          "speech_detection": "digital-silence-only; not a learned VAD"
+        },
+        "sha256": "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+        "sizeBytes": 32044,
+        "startSample": 32000,
+        "status": "verified"
+      }
+    ],
+    "path": "/fixture/synthetic.recscribe.json",
+    "sample_rate": 16000,
+    "session_id": "synthetic-session",
+    "sha256": "2bc6aff6af680881fe21d83ffa3a4670a5bc7957a0d9c358924ce1136a457982",
+    "size_bytes": 96132
+  },
+  "status": "completed_with_review"
+}

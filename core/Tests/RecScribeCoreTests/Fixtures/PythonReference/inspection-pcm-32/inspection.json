@@ -1,0 +1,43 @@
+{
+  "bit_depth": 32,
+  "channel_layout": "unspecified; channel indices preserved",
+  "channel_metrics": [
+    {
+      "channel": 0,
+      "clipped_samples": 502,
+      "digital_silence": false,
+      "peak": 1.0,
+      "rms": 0.707459189108091
+    },
+    {
+      "channel": 1,
+      "clipped_samples": 502,
+      "digital_silence": false,
+      "peak": 1.0,
+      "rms": 0.707459189108091
+    }
+  ],
+  "channel_windows": {
+    "policy": "exact_pcm_equality_v1",
+    "window_seconds": 30,
+    "windows": [
+      {
+        "bit_identical": false,
+        "end_frame": 1003,
+        "start_frame": 0
+      }
+    ]
+  },
+  "channels": 2,
+  "channels_bit_identical": false,
+  "codec": "PCM",
+  "container": "WAV",
+  "duration_ms": 23,
+  "frames": 1003,
+  "mono_policy": "separate_channels_preserved; no downmix",
+  "path": "/fixture/source.wav",
+  "sample_rate": 44100,
+  "sha256": "9a8f60e1f7cc7b5b43fada2937a6f82d835ba24abd37ff0d550e2d4f00e38f5d",
+  "size_bytes": 8068,
+  "speech_detection": "digital-silence-only; not a learned VAD"
+}

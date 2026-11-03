@@ -83,7 +83,7 @@ enum AudioFixture {
         #expect(inspection.report["channels_bit_identical"] == false)
         #expect(inspection.report["duration_ms"] == 23)
         #expect(inspection.report["channel_metrics"].array?[0]["peak"] == .number(1))
-        try reference(root, source: source, job: nil)
+        try reference(root, source: source, job: nil, fixture: "inspection-pcm-\(width * 8)")
     }
 
     @Test func exactWindowReuseRetainsDifferentChannelsAndContext() throws {
@@ -120,7 +120,7 @@ enum AudioFixture {
         #expect(!FileManager.default.fileExists(atPath: output.appendingPathComponent("working-channel-0.wav").path))
         #expect(try Data(contentsOf: output.appendingPathComponent("asr-channel-0.json")) == Data("{\"raw\":true}\n".utf8))
         #expect(throws: (any Error).self) { try AudioJob(engine: engine, preparer: AudioFixture.Preparer()).run(source: source, output: output, options: .init()) }
-        try reference(root, source: source, job: output)
+        try reference(root, source: source, job: output, fixture: "audio-identical-normalize")
     }
 
     @Test func distinctAndSilentChannelsAreNeverDeducedFromRecognizedText() throws {
@@ -130,7 +130,7 @@ enum AudioFixture {
         let result = try AudioJob(engine: engine, preparer: AudioFixture.Preparer()).run(source: source, output: root.appendingPathComponent("job"), options: .init())
         #expect(result.value["segments"].array?.map { $0["channel"] } == [0, 1])
         #expect(engine.requests.withLock { $0 }.count == 2)
-        try reference(root, source: source, job: root.appendingPathComponent("job"))
+        try reference(root, source: source, job: root.appendingPathComponent("job"), fixture: "audio-distinct-silent")
     }
 
     @Test func recognitionRegionJobsRetainRawIndexesAndMapSourceTimeWithoutConcatenation() throws {
@@ -148,7 +148,7 @@ enum AudioFixture {
         #expect(index["regions"].array?[0]["offset_ms"] == 28000)
         #expect(!FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-1-region-0.wav").path))
         #expect(index["regions"].array?[0]["working_sha256"].string?.count == 64)
-        try reference(root, source: source, job: output)
+        try reference(root, source: source, job: output, fixture: "audio-regions")
     }
 
     @Test func verifiedPassesCompareDistinctModelHashesAndRetainDisagreement() throws {
@@ -158,7 +158,7 @@ enum AudioFixture {
         let result = try AudioJob(engine: primary, verifier: second, preparer: AudioFixture.Preparer()).run(source: source, output: root.appendingPathComponent("job"), options: .init(profile: "verified"))
         #expect(result.value["processing"]["engine_passes"].array?.count == 2)
         #expect(result.value["segments"].array?[0]["review_reasons"].array?.contains("engine_pass_disagreement") == true)
-        try reference(root, source: source, job: root.appendingPathComponent("job"))
+        try reference(root, source: source, job: root.appendingPathComponent("job"), fixture: "audio-verified")
         #expect(throws: CoreFailure.self) { try AudioJob(engine: primary, verifier: primary, preparer: AudioFixture.Preparer()).run(source: source, output: root.appendingPathComponent("same-model"), options: .init(profile: "verified")) }
     }
 
@@ -173,7 +173,7 @@ enum AudioFixture {
         #expect(result.value["review_reasons"].array?.contains { $0.string?.hasPrefix("part_2_unavailable:") == true } == true)
         #expect(result.value["segments"].array?.allSatisfy { $0["review_reasons"].array?.contains("part_boundary; check_cut_or_duplicate_speech") == true } == true)
         #expect(try WAVAudio.hash(source) == before)
-        try reference(root, source: source, job: root.appendingPathComponent("job"), compareJob: false)
+        try reference(root, source: source, job: root.appendingPathComponent("job"), compareJob: false, fixture: "audio-missing")
     }
 
     @Test(arguments: [1,2,3])
@@ -190,7 +190,7 @@ enum AudioFixture {
         let result = try AudioJob(engine: AudioFixture.Engine(), preparer: AudioFixture.Preparer()).run(source: source, output: output, options: .init())
         #expect(result.value["segments"].array?.map { $0["start_ms"] } == [0,1000])
         #expect(result.value["source"]["capture_source"] == session["sourceIdentity"])
-        try reference(root, source: source, job: output)
+        try reference(root, source: source, job: output, fixture: "audio-session-v\(version)")
     }
 
     @Test func cancellationAndSourceMutationRetainFailureEvidenceWithoutPublishingSuccess() throws {
@@ -225,58 +225,22 @@ enum AudioFixture {
         #expect(throws: CoreFailure.self) { try WAVAudio.inspect(source) }
     }
 
-    private func reference(_ root: URL, source: URL, job: URL?, compareJob: Bool = true) throws {
-        guard let python = ProcessInfo.processInfo.environment["RECSCRIBE_REFERENCE_PYTHON"] else { return }
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        if !source.path.hasSuffix(".json") { try WAVAudio.inspect(source).report.encoded().write(to: root.appendingPathComponent("native-report.json")) }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: python)
-        process.environment = ProcessInfo.processInfo.environment.merging(["PYTHONPATH": repo.appendingPathComponent("pipeline/src").path]) { _, new in new }
-        process.arguments = ["-c", """
-        import json, math, sys, shutil
-        from pathlib import Path
-        from recscribe.audio import inspect_wav
-        from recscribe.process import Cancellation
-        from recscribe.job import Job, validate
-        from recscribe.engines import EngineResult
-        from recscribe.renderers import render
-        root, source, job = map(Path, sys.argv[1:4])
-        if not source.name.endswith('.json'):
-            native=json.loads((root/'native-report.json').read_text())
-            reference=inspect_wav(source,Cancellation(root/'cancel.request'))
-            for key in reference:
-                if key != 'channel_metrics': assert native[key]==reference[key], key
-            for a,b in zip(native['channel_metrics'],reference['channel_metrics']):
-                for key in b:
-                    assert math.isclose(a[key],b[key],rel_tol=1e-12,abs_tol=1e-12), key
-        if str(job) != '.':
-            doc=json.loads((job/'transcript.json').read_text()); validate(doc)
-            for name, content in render(doc).items(): assert (job/name).read_bytes()==content.encode(), name
-            if sys.argv[4]=='true':
-                class Engine:
-                    def __init__(self,model='a',text=' Gr \\u00fcezi <test>! '): self.model,self.text=model,text
-                    def transcribe(self,audio,output,language,cancel):
-                        raw=output.with_suffix('.json'); raw.write_bytes(b'{"raw":true}\\n')
-                        return EngineResult([dict(start_ms=0,end_ms=800,source_text=self.text,confidence=None,speaker=None,words=[])],raw,
-                            dict(engine='synthetic',version='1',model=self.model,model_sha256=self.model*64,command=[],duration_seconds=0,local_only=True))
-                options={k:doc['processing'][k] for k in ('source_language','target_language','mode','profile','diarize','local_only','formats')}
-                verifier=Engine('b','different') if options['profile']=='verified' else None
-                ref=Job(root/'reference-job',source,options).run(Engine(),Path(shutil.which('ffmpeg')),verifier)
-                # Compare filesystem identity for macOS /var aliases, including part reports.
-                def align_paths(a,b):
-                    if isinstance(a,dict) and isinstance(b,dict):
-                        for k in a.keys() & b.keys():
-                            if k=='path' and isinstance(a[k],str) and a[k].startswith('/'):
-                                assert Path(a[k]).samefile(b[k]); b[k]=a[k]
-                            else: align_paths(a[k],b[k])
-                    elif isinstance(a,list) and isinstance(b,list):
-                        for x,y in zip(a,b): align_paths(x,y)
-                align_paths(doc['source'],ref['source'])
-                for key in ('source','segments','review_reasons','language_processing','status'):
-                    assert doc[key]==ref[key], (key,doc[key],ref[key])
-                for name in render(ref): assert (job/name).read_bytes()==(root/'reference-job'/name).read_bytes(),name
-        """, root.path, source.path, job?.path ?? ".", String(compareJob)]
-        try process.run(); process.waitUntilExit()
-        #expect(process.terminationStatus == 0)
+    private func reference(_ root: URL, source: URL, job: URL?, compareJob: Bool = true, fixture: String) throws {
+        if !source.path.hasSuffix(".json") {
+            try GoldenReference.inspection(WAVAudio.inspect(source).report, root: root, fixture: fixture)
+        }
+        if let job {
+            _ = try CanonicalTranscript(AudioFixture.read(job, "transcript.json"))
+            if compareJob {
+                let actual = GoldenReference.normalize(try AudioFixture.read(job, "transcript.json"), root: root)
+                let expected = try GoldenReference.read(fixture, "transcript.json")
+                for key in ["source", "segments", "review_reasons", "language_processing", "status"] {
+                    #expect(actual[key] == expected[key], "Reference mismatch: \(fixture)/\(key)")
+                }
+                try GoldenReference.exports(job, fixture: fixture)
+            }
+            // Missing-file diagnostics are OS/localization dependent. Explicit gap assertions
+            // above cover the runtime result; the frozen document covers renderer parity.
+        }
     }
 }

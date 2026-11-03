@@ -1,0 +1,116 @@
+{
+  "job_id": "fixture",
+  "language_processing": {
+    "derivations": [
+      {
+        "duration_seconds": 0,
+        "field": "normalized_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "104c9f5ba3742283fd57fa0211be22f251b64ad0306a356c0bbb6f3e80062b46",
+        "segment_id": "seg-000001",
+        "source_sha256": "365c6e272691add3b7edbc406a7e99692140adcc1d3a75529ad3ae6c1bdddc89"
+      }
+    ],
+    "mode": "normalize",
+    "processor": "ollama:synthetic",
+    "status": "completed"
+  },
+  "processing": {
+    "diarize": "off",
+    "duration_ms": 0,
+    "engine_passes": [],
+    "formats": [
+      "json",
+      "md",
+      "txt",
+      "srt",
+      "vtt"
+    ],
+    "local_only": true,
+    "mode": "normalize",
+    "ollama_model": "synthetic",
+    "pipeline_version": "swift-core-0.1.0",
+    "profile": "fast",
+    "source_language": "de-CH",
+    "started_at": "2026-01-01T00:00:00Z",
+    "summarize": true,
+    "target_language": "de"
+  },
+  "review_reasons": [
+    "ai_summary_unverified"
+  ],
+  "schema_version": "1.0",
+  "segments": [
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 2000,
+      "id": "seg-000001",
+      "needs_review": true,
+      "normalized_text": "Guten Tag!",
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 0,
+      "translated_text": null,
+      "words": []
+    }
+  ],
+  "source": {
+    "bit_depth": 16,
+    "channel_metrics": [
+      {
+        "channel": 0,
+        "clipped_samples": 0,
+        "digital_silence": false,
+        "peak": 0,
+        "rms": 0
+      }
+    ],
+    "channels": 1,
+    "codec": "PCM",
+    "container": "WAV",
+    "duration_ms": 2000,
+    "frames": 32000,
+    "future_audio_metadata": {
+      "sample_counter": 9007199254740993
+    },
+    "path": "/synthetic/recording.wav",
+    "sample_rate": 16000,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 64044
+  },
+  "status": "completed_with_review",
+  "summary": {
+    "notes": [
+      {
+        "provenance": {
+          "duration_seconds": 0,
+          "human_verified": false,
+          "model_metadata_path": "ai-model.json",
+          "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+          "output_tokens": 5,
+          "processor": "ollama:synthetic",
+          "prompt_tokens": 10,
+          "raw_path": "ai-raw-0000.json",
+          "raw_sha256": "104c9f5ba3742283fd57fa0211be22f251b64ad0306a356c0bbb6f3e80062b46",
+          "source_sha256": "365c6e272691add3b7edbc406a7e99692140adcc1d3a75529ad3ae6c1bdddc89"
+        },
+        "segment_ids": [
+          "seg-000001"
+        ],
+        "text": "A greeting."
+      }
+    ],
+    "processor": "ollama:synthetic",
+    "status": "needs_review"
+  }
+}

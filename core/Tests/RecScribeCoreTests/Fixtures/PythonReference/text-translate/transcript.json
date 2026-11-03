@@ -1,0 +1,1560 @@
+{
+  "job_id": "fixture",
+  "language_processing": {
+    "derivations": [
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000001",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000002",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000003",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000004",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000005",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000006",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000007",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000008",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000009",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000010",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000011",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000012",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000013",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000014",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000015",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000016",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000017",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000018",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000019",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000020",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000021",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000022",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000023",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "ecaad9612e627b9fbe4295e048a4a872798412559ff167f8a8f72ecad3dfb67e",
+        "segment_id": "seg-000024",
+        "source_sha256": "297f6daa761e78cf9ba8726f921c1e94baed0090f2a31eeb6a9c49d3996f6ead"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000025",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000026",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000027",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000028",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000029",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000030",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000031",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000032",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000033",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000034",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000035",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000036",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000037",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000038",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000039",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000040",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000041",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000042",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000043",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000044",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000045",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000046",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000047",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0001.json",
+        "raw_sha256": "c759984a4821c4aaa0b85c50287c173d8c99250d5e08ad02ace4043d16bc92b8",
+        "segment_id": "seg-000048",
+        "source_sha256": "f5ad59637ddf98883c434ce09511e2fee0c4c535fa3f544bea448fa61c6c1079"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0002.json",
+        "raw_sha256": "49efbe13381da6a7239978e8fff277d887eb638e28d84cf8961bf9adf21c190e",
+        "segment_id": "seg-000049",
+        "source_sha256": "55e0eed82c088edb044fda85df6c7a4a626bd392239a8427794a543d2d8221f6"
+      },
+      {
+        "duration_seconds": 0,
+        "field": "translated_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "f56f649f8698d2bcd9957d0d28b2ef4660c8ca2b4f4208c23c83f11408670907",
+        "output_tokens": 5,
+        "processor": "ollama:synthetic",
+        "prompt_tokens": 10,
+        "raw_path": "ai-raw-0002.json",
+        "raw_sha256": "49efbe13381da6a7239978e8fff277d887eb638e28d84cf8961bf9adf21c190e",
+        "segment_id": "seg-000050",
+        "source_sha256": "55e0eed82c088edb044fda85df6c7a4a626bd392239a8427794a543d2d8221f6"
+      }
+    ],
+    "mode": "translate",
+    "processor": "ollama:synthetic",
+    "status": "completed"
+  },
+  "processing": {
+    "diarize": "off",
+    "duration_ms": 0,
+    "engine_passes": [],
+    "formats": [
+      "json",
+      "md",
+      "txt",
+      "srt",
+      "vtt"
+    ],
+    "local_only": true,
+    "mode": "translate",
+    "ollama_model": "synthetic",
+    "pipeline_version": "swift-core-0.1.0",
+    "profile": "fast",
+    "source_language": "de-CH",
+    "started_at": "2026-01-01T00:00:00Z",
+    "summarize": false,
+    "target_language": "en"
+  },
+  "review_reasons": [],
+  "schema_version": "1.0",
+  "segments": [
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 40,
+      "id": "seg-000001",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 0,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 80,
+      "id": "seg-000002",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 40,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 120,
+      "id": "seg-000003",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 80,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 160,
+      "id": "seg-000004",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 120,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 200,
+      "id": "seg-000005",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 160,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 240,
+      "id": "seg-000006",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 200,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 280,
+      "id": "seg-000007",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 240,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 320,
+      "id": "seg-000008",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 280,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 360,
+      "id": "seg-000009",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 320,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 400,
+      "id": "seg-000010",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 360,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 440,
+      "id": "seg-000011",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 400,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 480,
+      "id": "seg-000012",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 440,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 520,
+      "id": "seg-000013",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 480,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 560,
+      "id": "seg-000014",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 520,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 600,
+      "id": "seg-000015",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 560,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 640,
+      "id": "seg-000016",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 600,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 680,
+      "id": "seg-000017",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 640,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 720,
+      "id": "seg-000018",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 680,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 760,
+      "id": "seg-000019",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 720,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 800,
+      "id": "seg-000020",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 760,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 840,
+      "id": "seg-000021",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 800,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 880,
+      "id": "seg-000022",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 840,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 920,
+      "id": "seg-000023",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 880,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 960,
+      "id": "seg-000024",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 920,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1000,
+      "id": "seg-000025",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 960,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1040,
+      "id": "seg-000026",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1000,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1080,
+      "id": "seg-000027",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1040,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1120,
+      "id": "seg-000028",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1080,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1160,
+      "id": "seg-000029",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1120,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1200,
+      "id": "seg-000030",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1160,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1240,
+      "id": "seg-000031",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1200,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1280,
+      "id": "seg-000032",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1240,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1320,
+      "id": "seg-000033",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1280,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1360,
+      "id": "seg-000034",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1320,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1400,
+      "id": "seg-000035",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1360,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1440,
+      "id": "seg-000036",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1400,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1480,
+      "id": "seg-000037",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1440,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1520,
+      "id": "seg-000038",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1480,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1560,
+      "id": "seg-000039",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1520,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1600,
+      "id": "seg-000040",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1560,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1640,
+      "id": "seg-000041",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1600,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1680,
+      "id": "seg-000042",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1640,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1720,
+      "id": "seg-000043",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1680,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1760,
+      "id": "seg-000044",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1720,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1800,
+      "id": "seg-000045",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1760,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1840,
+      "id": "seg-000046",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1800,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1880,
+      "id": "seg-000047",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1840,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1920,
+      "id": "seg-000048",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1880,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 1960,
+      "id": "seg-000049",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1920,
+      "translated_text": "Guten Tag!",
+      "words": []
+    },
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 2000,
+      "id": "seg-000050",
+      "needs_review": true,
+      "normalized_text": null,
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 1960,
+      "translated_text": "Guten Tag!",
+      "words": []
+    }
+  ],
+  "source": {
+    "bit_depth": 16,
+    "channel_metrics": [
+      {
+        "channel": 0,
+        "clipped_samples": 0,
+        "digital_silence": false,
+        "peak": 0,
+        "rms": 0
+      }
+    ],
+    "channels": 1,
+    "codec": "PCM",
+    "container": "WAV",
+    "duration_ms": 2000,
+    "frames": 32000,
+    "future_audio_metadata": {
+      "sample_counter": 9007199254740993
+    },
+    "path": "/synthetic/recording.wav",
+    "sample_rate": 16000,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 64044
+  },
+  "status": "completed_with_review"
+}

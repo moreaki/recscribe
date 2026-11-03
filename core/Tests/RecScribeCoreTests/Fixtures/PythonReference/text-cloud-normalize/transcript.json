@@ -1,0 +1,91 @@
+{
+  "job_id": "fixture",
+  "language_processing": {
+    "derivations": [
+      {
+        "duration_seconds": 0,
+        "field": "normalized_text",
+        "human_verified": false,
+        "model_metadata_path": "ai-model.json",
+        "model_metadata_sha256": "41814e7c906b817fbb634a8352ee215349ccf3a1d15e3ffdcb9d4f4c33e8f186",
+        "output_tokens": 6,
+        "processor": "openai:synthetic",
+        "prompt_tokens": 12,
+        "raw_path": "ai-raw-0000.json",
+        "raw_sha256": "f7386dfabc67bdeed93246a00229934181c16d88d5646ce2fe2feb93686d47ac",
+        "segment_id": "seg-000001",
+        "source_sha256": "4df586cbcd8ada25723bcbe20463a9b4d9c52a133083898aa8cda0126ba48c26"
+      }
+    ],
+    "mode": "normalize",
+    "processor": "openai:synthetic",
+    "status": "completed"
+  },
+  "processing": {
+    "allow_cloud_text": true,
+    "diarize": "off",
+    "duration_ms": 0,
+    "engine_passes": [],
+    "formats": [
+      "json",
+      "md",
+      "txt",
+      "srt",
+      "vtt"
+    ],
+    "local_only": false,
+    "mode": "normalize",
+    "openai_model": "synthetic",
+    "pipeline_version": "swift-core-0.1.0",
+    "profile": "fast",
+    "source_language": "de-CH",
+    "started_at": "2026-01-01T00:00:00Z",
+    "summarize": false,
+    "target_language": "de"
+  },
+  "review_reasons": [],
+  "schema_version": "1.0",
+  "segments": [
+    {
+      "channel": 0,
+      "confidence": null,
+      "end_ms": 2000,
+      "id": "seg-000001",
+      "needs_review": true,
+      "normalized_text": "Guten Tag",
+      "review_reasons": [
+        "ai_derived_text_unverified"
+      ],
+      "source_text": "Gr\u00fcezi <world>!\n\"Test\" & [link] --> \u00fc \ud83c\udde8\ud83c\udded",
+      "speaker": null,
+      "start_ms": 0,
+      "translated_text": null,
+      "words": []
+    }
+  ],
+  "source": {
+    "bit_depth": 16,
+    "channel_metrics": [
+      {
+        "channel": 0,
+        "clipped_samples": 0,
+        "digital_silence": false,
+        "peak": 0,
+        "rms": 0
+      }
+    ],
+    "channels": 1,
+    "codec": "PCM",
+    "container": "WAV",
+    "duration_ms": 2000,
+    "frames": 32000,
+    "future_audio_metadata": {
+      "sample_counter": 9007199254740993
+    },
+    "path": "/synthetic/recording.wav",
+    "sample_rate": 16000,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 64044
+  },
+  "status": "completed_with_review"
+}

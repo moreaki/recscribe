@@ -16,34 +16,34 @@ import AppKit
 /// Three registers run through the scale, and mixing them is the single most
 /// load-bearing typographic decision in the system:
 ///
-/// - **UI (Inter)** — anything a person reads as language: names, copy,
+/// - **UI (San Francisco)** — anything a person reads as language: names, copy,
 ///   control labels. Lowercase in the control register.
 /// - **Mono (SF Mono)** — anything a machine produced: timecodes, sample
 ///   rates, file sizes, dates, version numbers. Monospace is the signal for
 ///   "this is data", and it also keeps columns from dancing as values change.
-/// - **Display (Archivo)** — the wordmark, and only the wordmark.
+/// - **Display (San Francisco)** — the wordmark, and only the wordmark.
 public enum GlassTextRole: String, CaseIterable, Hashable, Sendable {
-    /// Archivo 26 medium, −0.02em. The brand wordmark on the onboarding card.
+    /// SF 26 medium, −0.02em. The brand wordmark on the onboarding card.
     case wordmark
-    /// Archivo 13 medium, −0.02em. The panel's own header lockup ("RecScribe").
+    /// SF 13 medium, −0.02em. The panel's own header lockup ("RecScribe").
     case appTitle
     /// SF Mono 30 light. The hero timecode.
     case timer
     /// SF Mono 14 medium. The recording bar's wall-clock timer.
     case timerCompact
-    /// Inter 14 medium. Expanded take title.
+    /// SF 14 medium. Expanded take title.
     case title
-    /// Inter 13 regular. Take names, onboarding supporting copy.
+    /// SF 13 regular. Take names, onboarding supporting copy.
     case body
-    /// Inter 13 medium. Emphasised body — the permission ask.
+    /// SF 13 medium. Emphasised body — the permission ask.
     case bodyEmphasized
-    /// Inter 14 semibold. Primary pill label.
+    /// SF 14 semibold. Primary pill label.
     case control
-    /// Inter 12 semibold. Compact pill labels.
+    /// SF 12 semibold. Compact pill labels.
     case controlCompact
-    /// Inter 12 regular. Chips, secondary labels.
+    /// SF 12 regular. Chips, secondary labels.
     case caption
-    /// Inter 11 regular. Notice messages, hints, captions under actions.
+    /// SF 11 regular. Notice messages, hints, captions under actions.
     case captionSmall
     /// SF Mono 10 regular. Metadata lines, eyebrows, nav links, timestamps.
     case meta
@@ -55,21 +55,19 @@ public enum GlassTextRole: String, CaseIterable, Hashable, Sendable {
 
 // MARK: - Family
 
-/// A font family slot. `name` is a real installed family; when it is missing
-/// the system font in `design` takes over at the same size, so a host app
-/// that hasn't registered Inter still gets a correctly *proportioned* kit —
-/// just in SF.
+/// A font family slot. `name` is an optional installed family; when `nil`,
+/// the system font in `design` (San Francisco / SF Mono) is used.
 public struct GlassFontFamily: Hashable, Sendable {
     public var name: String?
     public var design: Font.Design
 
-    public init(name: String?, design: Font.Design = .default) {
+    public init(name: String? = nil, design: Font.Design = .default) {
         self.name = name
         self.design = design
     }
 
-    public static let ui = GlassFontFamily(name: "Inter", design: .default)
-    public static let display = GlassFontFamily(name: "Archivo", design: .default)
+    public static let ui = GlassFontFamily(name: nil, design: .default)
+    public static let display = GlassFontFamily(name: nil, design: .default)
     /// No name: SF Mono is reached through `Font.Design.monospaced` rather
     /// than by PostScript name, which is the only supported way to get it.
     public static let mono = GlassFontFamily(name: nil, design: .monospaced)
@@ -136,7 +134,7 @@ public struct GlassTypography {
     /// The role table.
     public func style(_ role: GlassTextRole) -> GlassTextStyle {
         switch role {
-        // Both wordmark roles use Archivo at weight 500 with −0.02em tracking.
+        // Both wordmark roles use medium weight (500) with −0.02em tracking.
         // −0.02em is a *ratio*, so it resolves per size: −0.52 at 26, −0.26
         // at 13.
         case .wordmark:
@@ -307,17 +305,18 @@ public extension View {
 }
 
 #Preview("Type scale") {
-    GlassPreviewStage {
-        VStack(alignment: .leading, spacing: GlassSpacing.md) {
-            ForEach(GlassTextRole.allCases, id: \.self) { role in
-                HStack(alignment: .firstTextBaseline, spacing: GlassSpacing.md) {
-                    Text(role.rawValue)
-                        .glassText(.metaSmall, color: .textTertiary)
-                        .frame(width: 110, alignment: .leading)
-                    Text("home rec · 0:08.7")
-                        .glassText(role, color: .textPrimary)
-                }
+    VStack(alignment: .leading, spacing: GlassSpacing.md) {
+        ForEach(GlassTextRole.allCases, id: \.self) { role in
+            HStack(alignment: .firstTextBaseline, spacing: GlassSpacing.md) {
+                Text(role.rawValue)
+                    .glassText(.metaSmall, color: .textTertiary)
+                    .frame(width: 110, alignment: .leading)
+                Text("RecScribe · 0:08.7")
+                    .glassText(role, color: .textPrimary)
             }
         }
     }
+    .padding(GlassSpacing.xxl)
+    .background(WorkspaceStyle.background)
+    .glassThemeAdaptingToContrast()
 }

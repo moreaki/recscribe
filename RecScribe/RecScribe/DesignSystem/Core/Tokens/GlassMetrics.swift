@@ -32,12 +32,6 @@ public enum GlassSpacing {
     public static let xl: CGFloat = 18
     public static let xxl: CGFloat = 22
     public static let xxxl: CGFloat = 28
-
-    /// Ordered scale, for token inspectors and the gallery.
-    public static let all: [(name: String, value: CGFloat)] = [
-        ("xxs", xxs), ("xs", xs), ("sm", sm), ("s", s), ("m", m),
-        ("md", md), ("l", l), ("xl", xl), ("xxl", xxl), ("xxxl", xxxl),
-    ]
 }
 
 // MARK: - Radii
@@ -65,11 +59,6 @@ public enum GlassRadius {
     /// Pills and chips use a true capsule, never a large fixed radius: a
     /// capsule stays a capsule when Dynamic Type grows the control.
     public static let pill: CGFloat = .infinity
-
-    public static let all: [(name: String, value: CGFloat)] = [
-        ("control", control), ("inner", inner), ("card", card),
-        ("cardLarge", cardLarge), ("window", window), ("panel", panel),
-    ]
 }
 
 // MARK: - Metrics
@@ -116,31 +105,6 @@ public struct GlassMetrics {
     public var waveformBarSpacing: CGFloat = 1
     /// Opacity of the unplayed portion of a waveform.
     public var waveformDimOpacity: Double = 0.28
-    /// Thumbnail size in a take row.
-    public var waveformThumbnailSize = CGSize(width: 96, height: 28)
-    /// The live trace on the recorder face.
-    public var waveformLiveHeight: CGFloat = 44
-    /// The player waveform in an expanded row.
-    public var waveformPlayerHeight: CGFloat = 72
-
-    // MARK: Fixed slots
-
-    /// Height of the onboarding card's conditional slot.
-    ///
-    /// Fixed on purpose. The slot swaps between "open System Settings" (a
-    /// pill plus a two-line caption) and "Ready to record" (one line) the
-    /// instant permission lands — often while the user is looking at it. A
-    /// flexible slot would move the primary CTA out from under the cursor.
-    public var onboardingSlotHeight: CGFloat = 76
-    /// Onboarding card size — a modal card, not a resizable window.
-    public var onboardingCardSize = CGSize(width: 420, height: 430)
-
-    /// Diameter of the recording-bar pulse dot.
-    public var pulseDotSize: CGFloat = 9
-    /// Height of the scrub ruler's tick field.
-    public var rulerHeight: CGFloat = 18
-    /// Horizontal pitch between ruler ticks.
-    public var rulerTickPitch: CGFloat = 3
 
     public init() {}
 

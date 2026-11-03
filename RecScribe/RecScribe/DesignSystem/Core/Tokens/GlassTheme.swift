@@ -11,18 +11,15 @@ public struct GlassTheme {
     public var colors: GlassColors
     public var typography: GlassTypography
     public var metrics: GlassMetrics
-    public var materials: GlassMaterials
 
     public init(
         colors: GlassColors = .standard,
         typography: GlassTypography = .standard,
-        metrics: GlassMetrics = .standard,
-        materials: GlassMaterials = .standard
+        metrics: GlassMetrics = .standard
     ) {
         self.colors = colors
         self.typography = typography
         self.metrics = metrics
-        self.materials = materials
     }
 
     /// The shipped Glass theme.

@@ -220,11 +220,19 @@ private struct GlassPillBody: View {
     @Environment(\.glassTheme) private var theme
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isHovering = false
     @FocusState private var isFocused: Bool
 
     /// Loading is not disabled, but it is not pressable either.
     private var acceptsInput: Bool { isEnabled && !isLoading }
+
+    private var resolvedHeight: CGFloat {
+        let baseHeight = size.height(theme.metrics)
+        let baseFontSize = theme.typography.style(size.textRole).size
+        let scaledFontSize = theme.typography.size(size.textRole, for: dynamicTypeSize)
+        return max(baseHeight, baseHeight + (scaledFontSize - baseFontSize))
+    }
 
     // HOMEREC-LOCAL: the focus ring became a permanent border on the record
     // control. SwiftUI grants focus on a *mouse* click and keeps it after the
@@ -245,7 +253,7 @@ private struct GlassPillBody: View {
         label
             .padding(.horizontal, size.horizontalPadding)
         .frame(maxWidth: isFullWidth ? .infinity : nil)
-        .frame(height: size.height(theme.metrics))
+        .frame(height: resolvedHeight)
         .background(fill, in: Capsule())
         // The one stroke in the component, and only when focused. Drawn
         // outside the capsule so it never eats into the fill or shifts the
@@ -449,22 +457,23 @@ public struct GlassPillButton: View {
 }
 
 #Preview("Pill buttons — emphasis × size") {
-    GlassPreviewStage {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
-            ForEach(GlassPillSize.allCases, id: \.self) { size in
-                HStack(spacing: GlassSpacing.m) {
-                    Text(size.rawValue)
-                        .glassText(.metaSmall, color: .textTertiary)
-                        .frame(width: 60, alignment: .leading)
-                    GlassPillButton("record", systemImage: "circle.fill", emphasis: .primary, size: size) {}
-                    GlassPillButton("choose folder…", emphasis: .primaryNeutral, size: size) {}
-                    GlassPillButton("keep", emphasis: .secondary, size: size) {}
-                    GlassPillButton("dismiss", emphasis: .tertiary, size: size) {}
-                    GlassPillButton("blocked", emphasis: .blocked, size: size) {}
-                    GlassPillButton("saving…", emphasis: .primary, size: size, isLoading: true) {}
-                    GlassPillButton("disabled", emphasis: .primary, size: size) {}.disabled(true)
-                }
+    VStack(alignment: .leading, spacing: GlassSpacing.l) {
+        ForEach(GlassPillSize.allCases, id: \.self) { size in
+            HStack(spacing: GlassSpacing.m) {
+                Text(size.rawValue)
+                    .glassText(.metaSmall, color: .textTertiary)
+                    .frame(width: 60, alignment: .leading)
+                GlassPillButton("record", systemImage: "circle.fill", emphasis: .primary, size: size) {}
+                GlassPillButton("choose folder…", emphasis: .primaryNeutral, size: size) {}
+                GlassPillButton("keep", emphasis: .secondary, size: size) {}
+                GlassPillButton("dismiss", emphasis: .tertiary, size: size) {}
+                GlassPillButton("blocked", emphasis: .blocked, size: size) {}
+                GlassPillButton("saving…", emphasis: .primary, size: size, isLoading: true) {}
+                GlassPillButton("disabled", emphasis: .primary, size: size) {}.disabled(true)
             }
         }
     }
+    .padding(GlassSpacing.xxl)
+    .background(WorkspaceStyle.background)
+    .glassThemeAdaptingToContrast()
 }

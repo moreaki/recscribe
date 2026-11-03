@@ -2,48 +2,136 @@
 //  BundledFontTests.swift
 //  RecScribeTests
 //
-//  That the bundled fonts resolve by the names the code asks for.
-//
-//  This guards a failure that is otherwise completely silent. Fonts are
-//  registered at runtime from the app bundle, and both the app's own views and
-//  the design system look them up by name — the design system through
-//  `NSFont(name:)`, whose result it caches for the process lifetime. A miss
-//  throws nothing and logs nothing: SwiftUI simply falls back to the system font
-//  at the same size, so the app stays correctly proportioned and quietly wears
-//  the wrong face.
-//
-//  It is also not a hypothetical mismatch. `Inter.ttf` carries the PostScript
-//  name "Inter-Regular" but the family name "Inter", and `Archivo-Variable.ttf`
-//  reports the family "Archivo SemiBold" with "Archivo" only as its typographic
-//  family. The two name tables are genuinely different shapes, and the lookups
-//  depend on which one resolution finds.
+//  Verifies that RecScribe standardises on native macOS system typography
+//  (San Francisco and SF Mono) with no bundled third-party .ttf/.otf font
+//  resources (#39), and preserves Dynamic Type scaling bounds.
 //
 
 import Testing
+import SwiftUI
 import AppKit
 @testable import RecScribe
 
 @MainActor
 struct BundledFontTests {
 
-    /// The names used across the app's views and by `GlassTypography`.
-    @Test("Bundled font families resolve by the names the code uses", arguments: ["Inter", "Archivo"])
-    func familiesResolve(_ family: String) {
-        #expect(
-            NSFont(name: family, size: 12) != nil,
-            """
-            \(family) did not resolve. Everything still renders — in the system \
-            font — so this will not look broken, only wrong.
-            """
-        )
+    @Test("No custom .ttf or .otf font files are shipped in the app bundle")
+    func noBundledFontFilesShipped() {
+        let ttf = Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+        let otf = Bundle.main.urls(forResourcesWithExtension: "otf", subdirectory: nil) ?? []
+        #expect(ttf.isEmpty)
+        #expect(otf.isEmpty)
     }
 
-    /// The design system applies a 1pt optical correction to its largest button
-    /// label, but only when the custom face actually loaded. If the fonts stop
-    /// resolving, that correction has to stop with them, or the label sits a
-    /// point off centre in a font that never needed the nudge.
-    @Test("The design system agrees that the custom family is available")
-    func designSystemSeesCustomFamily() {
-        #expect(GlassTypography.standard.usesCustomUIFamily)
+    @Test("GlassTypography.standard uses native San Francisco and SF Mono families")
+    func designSystemUsesNativeSystemTypography() {
+        let typography = GlassTypography.standard
+        #expect(!typography.usesCustomUIFamily)
+        #expect(typography.uiFamily.name == nil)
+        #expect(typography.displayFamily.name == nil)
+        #expect(typography.monoFamily.name == nil)
+        #expect(typography.monoFamily.design == .monospaced)
+    }
+
+    @Test("GlassTypography honors Dynamic Type scaling and role maxScale caps")
+    func dynamicTypeScalingHonorsRoleCaps() {
+        let typography = GlassTypography.standard
+        #expect(typography.size(.body, for: .large) == 13)
+        #expect(typography.size(.body, for: .accessibility5) == 26)
+        // Hero timer is capped at 1.4x (30 * 1.4 = 42), timecodeChip at 1.0x (10).
+        #expect(typography.size(.timer, for: .accessibility5) == 42)
+        #expect(typography.size(.timecodeChip, for: .accessibility5) == 10)
+
+        for role in WorkspaceStyle.TextRole.allCases {
+            #expect(WorkspaceStyle.size(role, for: .large) == role.baseSize)
+            #expect(WorkspaceStyle.size(role, for: .accessibility3) > WorkspaceStyle.size(role, for: .large))
+        }
+    }
+
+    @Test("OnboardingView, InstallLocationNoticeView, and MenuBarPopoverView scale and wrap at accessibility Dynamic Type sizes and with long app/device names")
+    func accessibilityDynamicTypeAndLongSourceWrapping() async {
+        let suite = "com.moreaki.RecScribe.typography-tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let longAppID = "com.apple.FinalCutStudio"
+        let longAppName = "Final Cut Pro Studio Master Suite"
+        let longMicUID = "focusrite-18i20-usb"
+        let longMicName = "Focusrite Scarlett 18i20 USB Multi-Channel Interface"
+
+        let source = MockAudioSourceProviding(
+            selectedSource: .mixed(appBundleID: longAppID, deviceUID: longMicUID)
+        )
+        source.knownAppNamesResult = [longAppID: longAppName]
+        source.availableInputDevicesResult = [
+            InputDeviceInfo(uid: longMicUID, name: longMicName, inputChannels: 8)
+        ]
+
+        let viewModel = RecorderViewModel(
+            controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(),
+            saveLocation: MockSaveLocationProviding(directory: URL(fileURLWithPath: "/Users/me/Desktop")),
+            audioSource: source,
+            installLocation: MockInstallLocationProviding(.applications),
+            defaults: defaults
+        )
+
+        #expect(viewModel.statusText == "Ready to record \(longAppName) + \(longMicName)")
+
+        let onboardingLarge = fittingSize(
+            OnboardingView().environmentObject(viewModel).dynamicTypeSize(.large)
+        )
+        let onboardingAccessibility = fittingSize(
+            OnboardingView().environmentObject(viewModel).dynamicTypeSize(.accessibility3)
+        )
+        #expect(onboardingLarge.width == 420)
+        #expect(onboardingAccessibility.width == 420)
+        #expect(onboardingAccessibility.height > onboardingLarge.height)
+
+        let noticeMessage = InstallLocation.translocated.explanation ?? "Move RecScribe to Applications."
+        let noticeLarge = fittingSize(
+            InstallLocationNoticeView(message: noticeMessage, onReveal: {}, onDismiss: {})
+                .dynamicTypeSize(.large)
+        )
+        let noticeAccessibility = fittingSize(
+            InstallLocationNoticeView(message: noticeMessage, onReveal: {}, onDismiss: {})
+                .dynamicTypeSize(.accessibility3)
+        )
+        #expect(noticeLarge.width == 340)
+        #expect(noticeAccessibility.width == 340)
+        #expect(noticeAccessibility.height > noticeLarge.height)
+
+        await viewModel.startRecording()
+        viewModel.duration = 125
+        #expect(viewModel.statusText == "Recording \(longAppName) + \(longMicName)")
+
+        let popoverLarge = fittingSize(
+            MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.large)
+        )
+        let popoverAccessibility = fittingSize(
+            MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.accessibility3)
+        )
+        #expect(popoverLarge.width == WorkspaceStyle.popoverWidth)
+        #expect(popoverAccessibility.width == WorkspaceStyle.popoverWidth)
+        #expect(popoverAccessibility.height > popoverLarge.height)
+    }
+
+    private func fittingSize<V: View>(_ view: V) -> CGSize {
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = CGRect(x: 0, y: 0, width: 480, height: 800)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = hosting
+        window.layoutIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        hosting.layoutSubtreeIfNeeded()
+        let size = hosting.fittingSize
+        window.contentView = nil
+        return size
     }
 }

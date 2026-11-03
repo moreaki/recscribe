@@ -20,22 +20,6 @@ Home Rec Copyright 2026 Melissa de Britto.
 Home Rec is licensed under the Apache License, Version 2.0.
 Source: https://github.com/melissa-pereira-deel/home-rec
 
-This product also includes the following third-party components:
-
--------------------------------------------------------------------------------
-Inter Font
-Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
-Licensed under the SIL Open Font License, Version 1.1
-https://openfontlicense.org
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
-Archivo Font
-Copyright 2012 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)
-Licensed under the SIL Open Font License, Version 1.1
-https://openfontlicense.org
--------------------------------------------------------------------------------
-
 This application uses Apple's ScreenCaptureKit framework for system audio
 capture. ScreenCaptureKit is proprietary software provided by Apple Inc.
 and is subject to Apple's software license agreements.

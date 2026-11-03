@@ -99,11 +99,8 @@ struct ReskinSnapshots {
         // (RecScribeApp), not inside these views — without it every snapshot is
         // white-on-white and proves nothing about the thing being checked.
         //
-        // Flat ground, not the real `GlassWindowGround`: that one blurs the
-        // desktop through a non-opaque window, and an offscreen window has no
-        // desktop behind it. Flat is deterministic and slightly conservative —
-        // the shipped glass is a touch lighter. Whether text survives over a
-        // *real* desktop stays a human check, and is in manual-acceptance.md.
+        // Uses the shared `WorkspaceStyle.background` ground, which is
+        // deterministic for offscreen snapshot rendering.
         // The palette is injected directly rather than adapted from the
         // environment. Two things block the obvious routes:
         // `EnvironmentValues.colorSchemeContrast` is read-only, and setting
@@ -117,7 +114,7 @@ struct ReskinSnapshots {
         // not that `glassThemeAdaptingToContrast()` fires — the wiring itself
         // stays a human check with the real system setting.
         let root = view()
-            .background(GlassFlatGround())
+            .background(WorkspaceStyle.background)
             .glassTheme(contrast == .increased ? .highContrast : .standard)
 
         let hosting = NSHostingView(rootView: root)
@@ -413,6 +410,29 @@ struct ReskinSnapshots {
         write("popover-04-install-blocked", size: Self.popoverSize, contrast: contrast) {
             MenuBarPopoverView().environmentObject(blocked)
         }
+
+        let longSource = MockAudioSourceProviding(
+            selectedSource: .mixed(appBundleID: "com.apple.FinalCutStudio", deviceUID: "focusrite-18i20")
+        )
+        longSource.knownAppNamesResult = ["com.apple.FinalCutStudio": "Final Cut Pro Studio Master Suite"]
+        longSource.availableInputDevicesResult = [
+            InputDeviceInfo(uid: "focusrite-18i20", name: "Focusrite Scarlett 18i20 USB Multi-Channel Interface", inputChannels: 8)
+        ]
+        let longRecording = RecorderViewModel(
+            controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(),
+            saveLocation: MockSaveLocationProviding(directory: URL(fileURLWithPath: "/Users/me/Desktop")),
+            audioSource: longSource,
+            installLocation: MockInstallLocationProviding(.applications),
+            defaults: Self.scratchDefaults
+        )
+        await longRecording.startRecording()
+        longRecording.duration = 754
+        longRecording.waveformSamples = quietSamples()
+        write("popover-05-long-source-accessibility", size: Self.popoverSize, contrast: contrast) {
+            MenuBarPopoverView().environmentObject(longRecording).dynamicTypeSize(.accessibility2)
+        }
     }
 
     @Test("Sheets and panels", arguments: [ColorSchemeContrast.standard])
@@ -436,6 +456,19 @@ struct ReskinSnapshots {
                 onReveal: {},
                 onDismiss: {}
             )
+        }
+
+        write("sheet-04-onboarding-accessibility", size: CGSize(width: 420, height: 620), contrast: contrast) {
+            OnboardingView().environmentObject(notGranted).dynamicTypeSize(.accessibility2)
+        }
+
+        write("sheet-05-install-panel-accessibility", size: CGSize(width: 340, height: 280), contrast: contrast) {
+            InstallLocationNoticeView(
+                message: InstallLocation.translocated.explanation ?? "",
+                onReveal: {},
+                onDismiss: {}
+            )
+            .dynamicTypeSize(.accessibility2)
         }
     }
 }

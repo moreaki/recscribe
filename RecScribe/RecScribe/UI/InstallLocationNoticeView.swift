@@ -21,28 +21,46 @@ struct InstallLocationNoticeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Move RecScribe to Applications")
-                .font(.custom("Archivo", size: 15, relativeTo: .headline))
-                .fontWeight(.medium)
+                .workspaceFont(.sectionTitle)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(message)
-                .font(.custom("Inter-Regular", size: 12, relativeTo: .body))
+                .workspaceFont(.detail)
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                GlassPillButton(
-                    "Reveal in Finder",
-                    emphasis: .primaryNeutral,
-                    size: .small,
-                    action: onReveal
-                )
-                Spacer()
-                GlassPillButton(
-                    "Close",
-                    emphasis: .tertiary,
-                    size: .small,
-                    action: onDismiss
-                )
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    GlassPillButton(
+                        "Reveal in Finder",
+                        emphasis: .primaryNeutral,
+                        size: .small,
+                        action: onReveal
+                    )
+                    Spacer()
+                    GlassPillButton(
+                        "Close",
+                        emphasis: .tertiary,
+                        size: .small,
+                        action: onDismiss
+                    )
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    GlassPillButton(
+                        "Reveal in Finder",
+                        emphasis: .primaryNeutral,
+                        size: .small,
+                        isFullWidth: true,
+                        action: onReveal
+                    )
+                    GlassPillButton(
+                        "Close",
+                        emphasis: .tertiary,
+                        size: .small,
+                        isFullWidth: true,
+                        action: onDismiss
+                    )
+                }
             }
         }
         .padding(18)
@@ -50,7 +68,7 @@ struct InstallLocationNoticeView: View {
         // Same ground as every other surface. Still not a glass *panel* — this
         // sits inside a titled NSPanel, and a rounded card here would put a
         // second set of corners inside the panel's own square ones.
-        .background(GlassWindowGround())
+        .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
     }
 }

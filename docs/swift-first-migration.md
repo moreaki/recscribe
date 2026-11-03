@@ -33,13 +33,19 @@ outside #10 closure; no custom signed XPC helper is introduced.
   A failed cleanup is reported, rather than silently labelled successful.
 - Python setup/detection/installer UI, `PipelineRuntime` and app-bundle
   `pipeline.tar.gz` packaging are removed. Legacy Python-path preferences are
-  decoded for compatibility but never executed. Existing Python source remains
-  available for development comparison; no venv or pip setup ships in the app.
-- Four environments with broken Python 3.14 links were moved to Trash by explicit
-  request. A separate working interpreter under `Build/SwiftAudioReference` is
-  test-only, outside the app. It verifies source/report semantics and five
-  byte-identical text exports against Python; AVFoundation and FFmpeg resampling
-  are not claimed byte-identical. Filesystem aliases are compared by identity.
+  decoded for compatibility but never executed. No venv or pip setup ships.
+- On 2026-11-03 the Python implementation/package/tests were retired after a
+  successful independent reference capture. Sixteen synthetic cases are frozen
+  in `core/Tests/RecScribeCoreTests/Fixtures/PythonReference`, with provenance and
+  checksums. Every Swift test run compares inspection/canonical semantics and
+  all five export bytes, without an optional interpreter environment variable.
+  AVFoundation and FFmpeg resampling are not claimed byte-identical.
+- The corpus runner/scorer is native (`recscribe-text benchmark`), retaining local
+  readiness checks, hashes, WER/CER and per-case wall/RTF/RSS measurements. The
+  Python-versus-Swift render benchmark was removed after the comparison ended.
+  `scripts/benchmark-recorder.sh` remains native. The separate optional
+  `scripts/verify-mic-rate.sh` keeps its standard-library Python tone diagnostic;
+  it has no pipeline/package dependency and is not used by the app or tests.
 
 ```sh
 swift build --package-path core -c release
@@ -80,6 +86,35 @@ they are not recognition-model translation flags. Diarization is still unavailab
 - Logs: `Build/swift-audio-{core,app,python}-tests.log`,
   `Build/swift-audio-release.log`. The real CLI fixture/artifacts are private local
   generated test data under `Build/NativeAudioSmoke-20261102-ASX57p`.
+
+### Reference retirement acceptance — 2026-11-03
+
+- Independent capture: 44 native tests passed against the then-present Python
+  implementation before removal (`Build/python-reference-capture.log`). The 80
+  frozen files retain their captured SHA-256 values, verified by a mandatory test.
+- With the pipeline directory and obsolete reference venv removed: all 51
+  core/CLI tests passed in both Debug and Release. Coverage includes all frozen semantic/export cases,
+  benchmark edit counts/Unicode/noise, readiness without invented scores, native
+  subprocess timing/RSS, checksum failure, exclusive output and cancellation
+  without leaving the child alive (`Build/native-only-core-tests.log` and
+  `Build/native-only-core-debug-tests.log`).
+- Full Release app suite: 488 passed, zero failures, two signed-host checks skipped
+  in the unsigned test configuration (microphone entitlement and the opt-in
+  Keychain round trip). The initial hardened Release test-host invocation did not
+  load XCTest and was stopped; the corrected unsigned test run passed. Result:
+  `Build/python-removal-app-tests-retry.log` and its xcresult in `Build/DerivedData`.
+- Signed incremental Release build passed in the isolated existing build-script
+  check directory (`Build/python-removal-release.log`). Strict/deep codesign,
+  arm64/64-bit, `com.moreaki.recscribe`, team `CDS4KLP8GT`, Hardened Runtime,
+  microphone/Keychain entitlements and absence of `get-task-allow` verified.
+  No Python archive or test fixtures are bundled. Apple Development signing is
+  unchanged; this is not a notarized distribution. The running app was retained.
+- Native corpus-template dry-run reports five `pending_corpus` entries, no scores;
+  script syntax checks passed. Recorder baselines remain unchanged. No private
+  source audio/results were modified, no model was downloaded and no inference
+  request was sent to a provider. Obsolete ignored pipeline build/cache files and
+  the no-longer-needed reference venv were moved to Trash rather than left as an
+  accidentally usable second implementation in the checkout.
 
 ## Assessment and boundaries
 
@@ -130,7 +165,7 @@ fallback. This change does not introduce cloud audio or download models.
   Unified logs record request/job IDs and elapsed time, not credentials or content.
   These elapsed times are diagnostic measurements, not ASR speedup claims.
 
-The Swift export bytes are compatible with the current Python renderer, including
+The Swift export bytes are compatible with the frozen Python renderer outputs, including
 its escaping and review markers. JSON serialization whitespace is not required to
 match, but canonical semantics and evidence hashes must remain valid.
 
@@ -159,20 +194,12 @@ swift test --package-path core -c release
 xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe -destination 'platform=macOS' -only-testing:RecScribeTests -parallel-testing-enabled NO
 ```
 
-For optional differential tests, create a development-only environment outside the
-shipping app and install the reference package:
-
-```sh
-python3 -m venv Build/PythonReference
-Build/PythonReference/bin/python -m pip install -e pipeline
-RECSCRIBE_REFERENCE_PYTHON="$PWD/Build/PythonReference/bin/python" swift test --package-path core -c release
-Build/PythonReference/bin/python -m unittest discover -s pipeline/tests -q
-```
-
-The optional reference interpreter is used **only by tests** to run Python schema
-and semantic validation on native synthetic jobs and compare all five exports
-byte-for-byte. Normal `swift test` has no Python dependency. CI runs the native
-core tests separately from app tests.
+Reference tests are mandatory bundled fixtures, not a second implementation.
+Their README records the original commit, synthetic inputs, normalization and
+limitations. Missing files fail tests. Do not regenerate expected outputs with
+the Swift implementation under test. Native schema/semantic corruption tests
+remain independent of the golden comparisons. CI runs these alongside the
+native audio/text/CLI tests, separately from app tests.
 
 Local acceptance on the MacBook Air (M1):
 
@@ -217,17 +244,11 @@ No resident model/worker is enabled by this change. Avoid permanently spending
 RAM before cold/warm measurements justify it; concurrency limits and unloading
 policy must be explicit and yield to recording.
 
-For a narrowly scoped text-core comparison, `benchmarks/compare-text-core.py`
-alternates native/reference validated renders of the same canonical JSON,
-checks byte equality, and reports per-run wall time and child peak RSS without
-including transcript content or its file path. Build in Release and run on an
-idle machine; these numbers exclude inference and are not evidence for a resident
-ASR worker:
-
-```sh
-Build/PythonReference/bin/python benchmarks/compare-text-core.py transcript.json \
-  --native core/.build/release/recscribe-text --runs 5
-```
+The now-retired Python/Swift comparison alternated validated renders of the same
+canonical JSON, checked byte equality, and measured process wall time/child peak
+RSS. Its historical measurements below exclude inference and provide no evidence
+for a resident ASR worker. Future corpus measurements use the native runner
+documented in `benchmarks/README.md`.
 
 Measured after builds/tests finished, on the M1 Air with the existing 200-segment
 transcript: median process wall time **52.5 ms Swift / 182.2 ms Python**; maximum

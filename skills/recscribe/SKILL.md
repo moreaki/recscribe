@@ -27,3 +27,6 @@ failed, cancelled or nonterminal. Never alter source audio or raw ASR evidence.
 Report the job directory, final state, actual engine/model, review reasons and
 which requested stages remain pending. Synthetic contract tests do not establish
 ASR accuracy. For comparison work, use `benchmarks/README.md` and retain provenance.
+The old Python pipeline is retired. Run `swift test --package-path core` for
+mandatory frozen-reference checks; use the native `benchmark` subcommand for local
+corpus readiness and measured runs. Never rebaseline fixtures from Swift output.

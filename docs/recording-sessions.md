@@ -93,10 +93,8 @@ of all optional dependencies. Settings are captured at job/capture start.
   sizes, progress and cancellation. Exact size and published SHA-256 must match
   before selection. Custom local model selection is also supported. The model
   catalogue was checked against Hugging Face LFS metadata on 2026-09-06.
-- The signed app bundles **source only**, not a Python runtime, environment or model.
-  Explicit runtime setup creates an isolated environment using installed Python
-  3.12+, then installs dependencies. The local checkout's existing environment can
-  be used during development. No dependencies are downloaded on app launch.
+- The signed app bundles the native Swift core, without a Python runtime,
+  environment or model. No dependencies are downloaded on app launch.
 - AI detection queries Ollama on numeric loopback only; no proxies/redirects or
   configurable remote URL. Models advertising a remote host/model, cloud-named
   models and unverifiable model metadata are rejected before transcript submission.
@@ -106,11 +104,13 @@ The CLI accepts either WAV or a finalized/verified session manifest. It inspects
 and hashes each part, processes valid parts separately, shifts segments/word times
 to the whole-session timeline, and flags cut/duplicate risk near boundaries.
 Missing/corrupt parts produce review reasons and gaps, never fabricated segments.
-Stereo channels are compared for bit identity during streaming inspection but are
-still processed independently: there is **no automatic mono downmix or speaker
-identity inference**.
+Stereo channels are compared for exact bit identity during streaming inspection;
+identical windows can share recognition, while distinct regions retain their own
+channel and source times. There is **no automatic mono downmix or speaker identity
+inference**.
 
-`--ollama-model NAME` explicitly enables local text processing. `verbatim` keeps
+The native CLI's separate `derive --provider ollama --model NAME` action enables
+local text processing. `verbatim` keeps
 raw ASR, `normalize` derives standardized text (including de-CH → de), and
 `translate` derives target-language text. `--summarize` generates bounded,
 source-referenced summary notes in canonical JSON and Markdown. All generated

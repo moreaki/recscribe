@@ -7,16 +7,15 @@ it never silently replaces a user-selected path.
 
 | Component | When found | When missing |
 | --- | --- | --- |
-| FFmpeg | Version, path, Recheck, Reveal; explicit Use detected executable if needed | Install FFmpeg |
+| FFmpeg (optional archive export) | Version, path, Recheck, Reveal; explicit Use detected executable if needed | Install FFmpeg |
 | whisper.cpp | Path, Recheck, Reveal; explicit Use detected executable if needed | Install whisper.cpp |
 | Ollama | Executable path or positively detected local service; Recheck | Install Ollama |
-| Pipeline | Selected Python path, pipeline version or verification issue; Reinitialize / Forget selection | Set up isolated pipeline runtime |
 | Whisper models | Local path, Select and Reveal; size mismatch warning where appropriate | Download and verify |
 
 Unknown/checking state does not display install/download actions. FFmpeg's version
-is obtained through a bounded `-version` probe. Pipeline version checking is also
-bounded; a Python executable whose pipeline cannot be confirmed stays visible
-with a warning and an explicit reinitialization option. Executable presence is
+is obtained through a bounded `-version` probe. Final WAV/session jobs use the
+native Swift core; no Python runtime setup or pipeline installation is needed.
+Executable presence is
 retained even if version probing fails, rather than suggesting a duplicate install.
 An Ollama service response counts as detection even when it has no local models.
 Probe subprocesses do not run during recording/live work; passive file discovery
@@ -30,10 +29,8 @@ are shown for review, with no duplicate Download button. Missing models retain
 the existing checksum-verified download workflow.
 
 Install/download handlers check availability again before invoking Homebrew or
-creating a download, including stale confirmation dialogs. Pipeline replacement
-requires an explicit **Reinitialize** action and confirmation. It creates a new
-environment while retaining the old one, models and jobs. **Forget selection**
-only clears RecScribe's selected Python path; it does not delete any files.
+creating a download, including stale confirmation dialogs. Legacy Python-path
+settings are ignored; the retired runtime controls are no longer displayed.
 Shared Homebrew executables are never uninstalled by these controls.
 
 Actual operation preflight remains authoritative: discovery alone does not prove

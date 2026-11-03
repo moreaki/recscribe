@@ -109,10 +109,9 @@ output-only monitor queue. It does not open another microphone, and monitor fail
 cannot stop capture. Monitoring is disabled for selected virtual/aggregate inputs
 even when their inclusion in recording was acknowledged.
 
-The bundled Python pipeline is **0.2.3**, reading manifest versions 1–3 and retaining
-source identity in inspection reports. Existing installed Python environments need
-explicit **Reinitialize pipeline…** to receive this update before
-transcribing version-3 groups. Capture does not depend on the Python runtime.
+The shared native Swift core reads manifest versions 1–3 and retains source
+identity in inspection reports. No Python installation or reinitialization is
+required. Capture remains independent of optional transcription.
 
 ## Verification and remaining hardware checks
 

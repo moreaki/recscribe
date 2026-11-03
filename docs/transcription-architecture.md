@@ -8,8 +8,9 @@ Implementation update (2026-11-02): `RecScribeCore` now owns final WAV/session
 inspection, channel analysis, AVAudioConverter preparation, replaceable whisper.cpp
 recognition, verified passes, jobs, canonical validation and deterministic exports,
 as well as native AI/text jobs. The app and `recscribe-text transcribe` use the same
-implementation. Python remains optional development/reference tooling outside the
-shipping app. FFmpeg is optional for archive compression, not WAV recognition.
+implementation. The old Python pipeline has been removed; frozen synthetic
+reference fixtures enforce compatibility in Swift tests. Corpus benchmarks also
+use the native CLI. FFmpeg is optional for archive compression, not WAV recognition.
 Resident workers/custom XPC packaging are deferred and do not gate Phase 3 closure.
 
 ## 1. Purpose
@@ -89,7 +90,7 @@ must be retained. Modified upstream files must carry appropriate change notices.
                    |                |                  |
                    v                v                  v
             AudioInspector    TranscriptEngine   LanguageProcessor
-            FFmpeg/VAD        adapter            adapter
+            Swift/VAD         adapter            adapter
                    |                |                  |
                    +----------------+------------------+
                                     v
@@ -112,8 +113,8 @@ The production app and CLI now share native audio and text orchestration:
 RecScribe/                       native recorder and SwiftUI integration
 core/
   Sources/RecScribeCore/         audio/text jobs, adapters, validation, rendering
-  Sources/RecScribeTextCLI/      transcribe, render and derive commands
-pipeline/                       optional Python reference/benchmark tooling
+  Sources/RecScribeTextCLI/      transcribe, render, derive and benchmark commands
+  Tests/RecScribeCoreTests/Fixtures/ frozen synthetic reference outputs
 schemas/
   transcript.schema.json         canonical output contract
 benchmarks/
@@ -126,8 +127,8 @@ docs/
 ```
 
 Swift owns production orchestration. The versioned JSON schema and adapter
-contracts remain stable; Python is retained only for optional comparison and
-research. Proven codecs and speech engines stay behind adapters rather than
+contracts remain stable; frozen reference outputs replace the retired Python
+implementation. Proven codecs and speech engines stay behind adapters rather than
 being rewritten. FFmpeg is needed only when archive compression is requested.
 
 ## 6. Engine strategy

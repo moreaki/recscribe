@@ -39,11 +39,9 @@ audio, not guessed into a fluent but unsupported reading rendition.
 
 ## Local and cloud providers
 
-Audio recognition still requires pipeline 0.2.0 or newer. An existing isolated
-Python environment does not change when the app updates. Set up the bundled
-pipeline again in Settings → Transcription if the recognition preflight requests
-it; old environments remain intact. AI discovery, connection testing, text
-improvement/translation and summaries now run natively without Python. See the
+Audio recognition and AI discovery, connection testing, text improvement/translation
+and summaries run natively without Python. No pipeline installation or
+reinitialization is needed. See the
 [Swift-first migration](swift-first-migration.md) for the shared core and CLI.
 
 - **Ollama** is the default provider. Explicit local model selection is required;
@@ -71,7 +69,7 @@ improvement/translation and summaries now run natively without Python. See the
 
 ## Evidence and boundaries
 
-Native `TextJob` (or the reference Python `--derive`) creates an exclusive new job. `input-transcript.json` preserves the
+Native `TextJob` creates an exclusive new job. `input-transcript.json` preserves the
 parent canonical document; the manifest and raw index link its path/hash.
 Existing raw ASR evidence stays in its parent job, avoiding copies of large audio
 work files. Retain parent job directories when archiving/exporting derivatives.

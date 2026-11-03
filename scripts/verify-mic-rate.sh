@@ -3,8 +3,8 @@
 # Verify a microphone take was captured at the correct sample rate.
 #
 # The check this exists for: a 44.1 kHz interface whose audio is *mislabeled*
-# as 48 kHz passes every guard in the app (WAVWriter:118, M4AEncoder:116,
-# FLACEncoder's format equality all compare the label, not the content) and
+# as 48 kHz passes every format-label guard in the app (WAVWriter compares
+# the buffer's declared format, not the acoustic content) and
 # lands as a file that plays ~8.8% fast. Correct duration, real audio, no
 # error — the failure this project keeps being bitten by.
 #

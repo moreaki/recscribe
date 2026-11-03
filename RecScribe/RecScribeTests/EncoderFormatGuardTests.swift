@@ -3,11 +3,8 @@
 //  RecScribeTests
 //
 //  BL-112: an encoder is told its input format once, in `createFile`, and then
-//  stamps a header / configures a writer input from it. A later buffer that
-//  disagrees is not a bad frame — it is silent corruption (WAV) or the loss of
-//  the entire take at stop (M4A). Both must refuse instead.
-//
-//  FLAC already had this guard from BL-013 and is covered in `FLACEncoderTests`.
+//  stamps a header from it. A later buffer that disagrees is not a bad frame —
+//  it is silent corruption (WAV) and must be refused immediately.
 //
 
 import Testing
@@ -15,11 +12,6 @@ import Foundation
 import AVFoundation
 @testable import RecScribe
 
-/// `.serialized` because every test here calls `M4AEncoder.finalize()`, which
-/// blocks on a semaphore. Run in parallel on a small cooperative pool they
-/// deadlock the entire suite (BL-147). Serialising bounds the blocked threads to
-/// one, which the pool absorbs on any core count.
-@Suite(.serialized)
 struct EncoderFormatGuardTests {
 
     private func tempURL(_ ext: String) -> URL {
@@ -85,5 +77,21 @@ struct EncoderFormatGuardTests {
         let size = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int
         // 44-byte header + 256 frames x 2ch x 2 bytes.
         #expect(size == 44 + 256 * 2 * 2)
+    }
+
+    @Test("SessionWAVWriter enforces WAV sample rate and channel count guards")
+    func sessionWAVWriterRejectsMismatchedFormat() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("session-guard-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let url = dir.appendingPathComponent("take.wav")
+        let writer = SessionWAVWriter()
+        try writer.createFile(at: url, sampleRate: 48_000, channels: 2)
+
+        #expect(throws: WAVWriterError.formatMismatch) {
+            try writer.writeBuffer(self.buffer(sampleRate: 44_100, channels: 2))
+        }
     }
 }

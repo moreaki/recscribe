@@ -224,4 +224,32 @@ struct RecordingSessionTests {
         try model.verifyAndInstall(source, to: fresh, cancel: WorkCancellation())
         #expect(try RecordingSession.hash(fresh) == model.sha256)
     }
+    @Test("SessionLibrary.recoverUnfinalizedSessions recovers interrupted .recscribe.json sessions")
+    @MainActor
+    func libraryRecoversUnfinalizedSessionsInDirectory() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+        var session = try RecordingSession.read(manifest)
+        session.status = .recording
+        session.parts[9].status = .recording
+        session.parts[9].frames = 0
+        try session.save(manifest)
+
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.recoverUnfinalizedSessions(in: directory)
+        for _ in 0..<50 {
+            if let current = try? RecordingSession.read(manifest), current.status != .recording {
+                break
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        let recovered = try RecordingSession.read(manifest)
+        #expect(recovered.status == .needsReview)
+        #expect(recovered.totalFrames == 100)
+        #expect(recovered.parts[9].recovered)
+        await library.shutdown()
+    }
 }

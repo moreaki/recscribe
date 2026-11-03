@@ -104,7 +104,7 @@ import Testing
         let prefix = Data([0x6c, 0x6d, 0x67, 0x67, 10, 0, 0, 0]) + Data("silero-16k".utf8)
         for bytes in [Data(), Data("ggml-asr".utf8), prefix] {
             try bytes.write(to: file)
-            #expect(throws: (any Error).self) { try VADModel.validate(file.path) }
+            #expect(throws: (any Error).self) { try WhisperVAD.validate(file.path) }
         }
         var header = prefix
         for value: UInt32 in [6, 2, 0, 512, 64, 4] {
@@ -112,8 +112,8 @@ import Testing
             withUnsafeBytes(of: &word) { header.append(contentsOf: $0) }
         }
         try header.write(to: file)
-        try VADModel.validate(file.path)
-        try VADModel.validate("")
+        try WhisperVAD.validate(file.path)
+        try WhisperVAD.validate("")
     }
 
     @Test func privateInputIsPipedAndNotRetainedInDiagnostics() throws {

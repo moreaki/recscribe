@@ -1,7 +1,7 @@
 import AVFoundation
-import CryptoKit
 import Darwin
 import Foundation
+import RecScribeCore
 
 nonisolated enum ArchiveFormat: String, Codable, CaseIterable, Sendable {
     case wav, flac, opus, m4a
@@ -255,15 +255,7 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     }
 
     static func hash(_ url: URL, skipping: Int = 0, check: () throws -> Void = {}) throws -> String {
-        let file = try FileHandle(forReadingFrom: url)
-        defer { try? file.close() }
-        try file.seek(toOffset: UInt64(skipping))
-        var hash = SHA256()
-        while let bytes = try file.read(upToCount: 1_024 * 1_024), !bytes.isEmpty {
-            try check()
-            hash.update(data: bytes)
-        }
-        return hash.finalize().map { String(format: "%02x", $0) }.joined()
+        try WAVAudio.hash(url, skipping: skipping, check: check)
     }
 }
 

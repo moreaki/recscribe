@@ -23,14 +23,27 @@ public enum WAVAudio {
         public let layout: Layout
         public let report: JSONValue
     }
-    public static func hash(_ url: URL, check: () throws -> Void = {}) throws -> String {
+    public static func hash(
+        _ url: URL,
+        skipping: Int = 0,
+        blockBytes: Int = 1_024 * 1_024,
+        check: () throws -> Void = {}
+    ) throws -> String {
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }
+        if skipping > 0 {
+            try file.seek(toOffset: UInt64(skipping))
+        }
         var digest = SHA256()
         while true {
             try check()
-            guard let bytes = try file.read(upToCount: 1_024 * 1_024), !bytes.isEmpty else { break }
-            digest.update(data: bytes)
+            let hasBytes = try autoreleasepool {
+                guard let bytes = try file.read(upToCount: blockBytes), !bytes.isEmpty else { return false }
+                try check()
+                digest.update(data: bytes)
+                return true
+            }
+            if !hasBytes { break }
         }
         return digest.finalize().map { String(format: "%02x", $0) }.joined()
     }

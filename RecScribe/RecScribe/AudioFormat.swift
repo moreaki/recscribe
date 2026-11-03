@@ -52,37 +52,16 @@ nonisolated enum AudioFormat: String, CaseIterable, Sendable {
         }
     }
 
-    /// Formats with a working encoder today. The picker (BL-015) filters to this
-    /// so an unimplemented format can never be selected.
-    static let available: [AudioFormat] = [.wav, .m4a, .flac]
-
-    /// How a crash-interrupted file of this format is detected and repaired
-    /// (BL-140). This exhaustive switch is the ONLY place a format maps to its
-    /// recovery behaviour — `RecoveryScanner` must never switch on file extension
-    /// itself, or a future format ships undetectable exactly the way BL-012
-    /// shipped without durability (see BL-018).
-    var recovery: (any AudioFileRecovering.Type)? {
-        switch self {
-        case .wav:  return WAVWriter.self
-        case .m4a:  return M4AEncoder.self
-        case .flac: return FLACEncoder.self
-        case .mp3:  return nil   // no encoder, so nothing of ours to recover
-        }
-    }
+    /// Live capture always records lossless WAV; post-recording archive
+    /// conversion is configured separately via `RecordingStorageOptions`.
+    static let available: [AudioFormat] = [.wav]
 
     /// Construct a streaming encoder for this format.
-    /// - Throws: `AudioFormatError.notImplemented` for formats not yet supported
-    ///   (BL-014). Throwing here means no file is ever created for a stubbed
-    ///   format — the failure surfaces before recording begins.
     func makeEncoder() throws -> any AudioFileEncoder {
         switch self {
         case .wav:
             return WAVWriter()
-        case .m4a:
-            return M4AEncoder()
-        case .flac:
-            return FLACEncoder()
-        case .mp3:
+        case .m4a, .flac, .mp3:
             throw AudioFormatError.notImplemented(self)
         }
     }

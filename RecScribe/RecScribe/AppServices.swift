@@ -27,6 +27,9 @@ final class AppServices: ObservableObject {
         live.onCloudTranscript = { [weak library] job, source in library?.acceptCloudTranscript(job, source: source) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
         let source = AudioSourceManager(), location = SaveLocationManager()
+        OverflowMenu.onRecoverRecordings = { [weak library] in
+            library?.recoverUnfinalizedSessions(in: location.resolvedDirectory)
+        }
         let gate = CaptureSessionGate()
         let test = AudioTestController(source: source, gate: gate, saveDirectory: { location.resolvedDirectory })
         test.onActivity = { [weak library] in library?.setRecording($0) }

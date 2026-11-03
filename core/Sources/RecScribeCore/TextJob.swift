@@ -132,13 +132,18 @@ public struct TextJob: Sendable {
     }
     static func inventory(_ directory: URL) throws -> JSONValue {
         var entries: [String: JSONValue] = [:]
-        for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isRegularFileKey]) where url.lastPathComponent != "manifest.json" {
-            guard try url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
-            let handle = try FileHandle(forReadingFrom: url)
-            defer { try? handle.close() }
-            var digest = SHA256(), size: Int64 = 0
-            while let chunk = try handle.read(upToCount: 1_024 * 1_024), !chunk.isEmpty { digest.update(data: chunk); size += Int64(chunk.count) }
-            entries[url.lastPathComponent] = ["sha256": .string(digest.finalize().map { String(format: "%02x", $0) }.joined()), "size_bytes": .integer(size)]
+        for url in try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey]
+        ) where url.lastPathComponent != "manifest.json" {
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+            guard values.isRegularFile == true else { continue }
+            let size = Int64(values.fileSize ?? 0)
+            let digest = try WAVAudio.hash(url)
+            entries[url.lastPathComponent] = [
+                "sha256": .string(digest),
+                "size_bytes": .integer(size)
+            ]
         }
         return .object(entries)
     }

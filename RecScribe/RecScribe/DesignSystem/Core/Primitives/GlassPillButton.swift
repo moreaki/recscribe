@@ -266,10 +266,10 @@ private struct GlassPillBody: View {
         .contentShape(Capsule())
         .scaleEffect(scale)
         .brightness(configuration.isPressed && acceptsInput ? -0.06 : 0)
-        .glassAnimation(.hover, value: isHovering)
-        .glassAnimation(.press, value: configuration.isPressed)
-        .glassAnimation(.hover, value: isFocused)
-        .glassHover($isHovering, showsPointingHand: acceptsInput)
+        .animation(.easeOut(duration: 0.12), value: isHovering)
+        .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+        .animation(.easeOut(duration: 0.12), value: isFocused)
+        .onHover { isHovering = $0 }
         // Only reachable by keyboard when it can actually be actioned.
         .focusable(acceptsInput)
         .focused($isFocused)

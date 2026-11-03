@@ -1,6 +1,6 @@
-import CryptoKit
 import Foundation
 import os
+import RecScribeCore
 
 /// Synchronous, bounded file work; called only on the library's utility worker.
 nonisolated struct SessionExporter {
@@ -87,9 +87,7 @@ nonisolated struct SessionExporter {
     }
 
     private func hash(_ source: URL, checkCancellation: () throws -> Void) throws -> String {
-        var digest = SHA256()
-        try readBlocks(source, checkCancellation: checkCancellation) { digest.update(data: $0) }
-        return digest.finalize().map { String(format: "%02x", $0) }.joined()
+        try WAVAudio.hash(source, blockBytes: blockBytes, check: checkCancellation)
     }
 
     private func readBlocks(_ source: URL, checkCancellation: () throws -> Void,

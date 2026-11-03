@@ -127,6 +127,31 @@ final class SessionLibrary: ObservableObject {
         load(url.deletingLastPathComponent())
         startNext()
     }
+    func recoverUnfinalizedSessions(in directory: URL) {
+        guard !shuttingDown else { return }
+        guard !recordingActive else {
+            load(directory)
+            return
+        }
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        var recoveredCount = 0
+        for url in urls.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where url.lastPathComponent.hasSuffix(".recscribe.json") {
+            if let session = try? RecordingSession.read(url), session.status == .recording {
+                if !pending.contains(where: { $0.manifest == url }) {
+                    pending.append(.init(manifest: url, recover: true, issue: nil))
+                }
+                recoveredCount += 1
+            }
+        }
+        load(directory)
+        if recoveredCount > 0 {
+            startNext()
+        }
+    }
     func cancel() {
         guard let cancellation else { return }
         cancellation.cancel()
@@ -213,7 +238,7 @@ final class SessionLibrary: ObservableObject {
         }
         busy = true
         defer { busy = false }
-        try VADModel.validate(settings.vadModelPath)
+        try WhisperVAD.validate(settings.vadModelPath)
         latestSource = source
         let jobs = jobsDirectory
         let job = jobs.appendingPathComponent(cancel.id.uuidString)

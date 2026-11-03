@@ -9,6 +9,12 @@ import Foundation
 import AVFoundation
 import Darwin
 
+nonisolated protocol AudioFileEncoder: AnyObject {
+    func createFile(at url: URL, sampleRate: Double, channels: Int) throws
+    func writeBuffer(_ buffer: AVAudioPCMBuffer) throws
+    func finalize() throws
+}
+
 /// Errors that can occur during WAV file writing
 enum WAVWriterError: Error, LocalizedError, Equatable {
     case fileCreationFailed

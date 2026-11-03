@@ -70,7 +70,7 @@ public struct GlassWaveform: View {
         Canvas(opaque: false) { context, size in
             guard !samples.isEmpty, pitch > 0 else { return }
             let count = max(1, Int(size.width / pitch))
-            let playedBars = progress.map { Int(Double(count) * $0.clampedToUnitInterval) }
+            let playedBars = progress.map { Int(Double(count) * min(max($0, 0), 1)) }
 
             for index in 0..<count {
                 let sample = samples[min(samples.count - 1, index * samples.count / count)]
@@ -91,7 +91,7 @@ public struct GlassWaveform: View {
             }
 
             if let progress, style.showsPlayhead {
-                let x = size.width * progress.clampedToUnitInterval
+                let x = size.width * min(max(progress, 0), 1)
                 context.fill(
                     Path(CGRect(x: x - 0.5, y: 0, width: 1, height: size.height)),
                     with: .color(tint)
@@ -172,28 +172,5 @@ public extension GlassWaveform {
     /// see on the idle face.
     static func idleSamples(count: Int = 96) -> [Float] {
         Array(repeating: 0.05, count: count)
-    }
-}
-
-#Preview("Waveforms") {
-    GlassPreviewStage {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
-            GlassMetaLabel("player · progress 0.42")
-            GlassWaveform(samples: GlassSampleWaveforms.identity(seed: 23), progress: 0.42)
-                .frame(height: 72)
-            GlassMetaLabel("thumbnail")
-            GlassWaveform(
-                samples: GlassSampleWaveforms.identity(seed: 41),
-                style: .thumbnail,
-                tint: .textPrimary
-            )
-            .frame(width: 96, height: 28)
-            GlassMetaLabel("live")
-            GlassLiveWaveform(samples: GlassSampleWaveforms.live(count: 60))
-                .frame(height: 44)
-            GlassMetaLabel("idle")
-            GlassWaveform(samples: GlassWaveform.idleSamples(), style: .thumbnail, tint: .textPrimary)
-                .frame(height: 44)
-        }
     }
 }

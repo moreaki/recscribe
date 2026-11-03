@@ -423,14 +423,14 @@ enum OverflowMenu {
         openWindow(.studio)
     }
 
-    /// Supplies the file being written right now, so the recovery window never
-    /// offers the live recording — which is unfinalized by definition. Set once
-    /// at startup by `MenuBarController`; nil when nothing is recording.
-    /// (BL-111 will replace this with a proper menu context.)
-    static var currentRecordingURL: @MainActor () -> URL? = { nil }
+    /// Enqueues any unfinalized `.recscribe.json` sessions in the active save
+    /// folder for session recovery before opening the Recordings window.
+    static var onRecoverRecordings: @MainActor () -> Void = {}
 
     private static func showRecovery() {
-        RecoveryWindowController.shared.show(inProgressURL: currentRecordingURL)
+        NSApp.activate(ignoringOtherApps: true)
+        onRecoverRecordings()
+        openWindow(.recordings)
     }
 
     private static func showAbout() {

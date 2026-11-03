@@ -5,6 +5,8 @@ import Metal
 import os
 import RecScribeCore
 
+typealias VADModel = WhisperVAD
+
 nonisolated struct WhisperModel: Identifiable, Sendable {
     let id: String
     let bytes: Int64

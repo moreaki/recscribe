@@ -40,15 +40,6 @@ class MenuBarController: NSObject {
             self?.makeOverflowMenu() ?? OverflowMenu.makeNSMenu()
         }
 
-        // BL-140: the recovery window must never offer the file being written
-        // right now — a live recording is unfinalized by definition.
-        // `lastRecordingURL` is set at start and deliberately survives stop, so
-        // gating on `isRecording` is what makes it mean "in progress".
-        OverflowMenu.currentRecordingURL = { [weak viewModel] in
-            guard let viewModel, viewModel.isRecording else { return nil }
-            return viewModel.lastRecordingURL
-        }
-
         // Configure popover
         let popoverView = MenuBarPopoverView(live: live)
             .environmentObject(viewModel)

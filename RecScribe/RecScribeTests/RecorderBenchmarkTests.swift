@@ -44,7 +44,7 @@ struct RecorderBenchmarkTests {
         }
     }
     @Test func encodingBaseline() async throws {
-        for format in [AudioFormat.wav, .m4a, .flac] {
+        for format in [AudioFormat.wav] {
             for iteration in 0..<3 {
                 let url = FileManager.default.temporaryDirectory
                     .appendingPathComponent("recorder-benchmark-\(UUID()).\(format.fileExtension)")

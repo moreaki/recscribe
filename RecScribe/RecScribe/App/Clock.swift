@@ -45,3 +45,16 @@ final class SystemDurationClock: DurationClock {
         timer?.invalidate()
     }
 }
+
+
+@MainActor
+protocol PollClock: AnyObject, Sendable {
+    func sleep(for interval: TimeInterval) async throws
+}
+
+@MainActor
+final class SystemPollClock: PollClock {
+    func sleep(for interval: TimeInterval) async throws {
+        try await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+    }
+}

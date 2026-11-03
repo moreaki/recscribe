@@ -290,3 +290,47 @@ final class AudioRecorder: AudioFileWriting {
 private nonisolated struct TransferredPCMBuffer: @unchecked Sendable {
     let value: AVAudioPCMBuffer
 }
+
+
+/// Writes captured audio buffers to a file. Implemented by `AudioRecorder`.
+@MainActor
+protocol AudioFileWriting: AnyObject, Sendable {
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
+    var onWriteError: (@MainActor @Sendable (String) -> Void)? { get set }
+    var recording: Bool { get }
+    var healthSnapshot: RecordingHealth { get }
+    var sessionManifestURL: URL? { get }
+    var actualAudioURL: URL? { get }
+    func startRecording(to fileURL: URL, format: AudioFormat) throws
+    nonisolated func processAudioSample(_ pcmBuffer: AVAudioPCMBuffer)
+    func stopRecording() async throws
+}
+
+extension AudioFileWriting {
+    var healthSnapshot: RecordingHealth { .init() }
+    var sessionManifestURL: URL? { nil }
+    var actualAudioURL: URL? { nil }
+}
+
+enum WaveformDownsampler {
+    nonisolated static func downsample(_ buffer: AVAudioPCMBuffer, targetSamples: Int = 200) -> [Float] {
+        guard let floatChannelData = buffer.floatChannelData else { return [] }
+        let frameCount = Int(buffer.frameLength)
+        let channelCount = Int(buffer.format.channelCount)
+        guard frameCount > 0, channelCount > 0 else { return [] }
+
+        let step = max(1, frameCount / targetSamples)
+        var samples: [Float] = []
+        samples.reserveCapacity(targetSamples)
+
+        for i in stride(from: 0, to: frameCount, by: step) {
+            var sample: Float = 0
+            for channel in 0..<channelCount {
+                sample += floatChannelData[channel][i]
+            }
+            sample /= Float(channelCount)
+            samples.append(sample)
+        }
+        return samples
+    }
+}

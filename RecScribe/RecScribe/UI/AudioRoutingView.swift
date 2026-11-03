@@ -458,3 +458,89 @@ private struct RoutingChannelRow: View {
         change(left && right ? .center : left ? .left : right ? .right : nil)
     }
 }
+
+
+/// Disclosure identity is independent of the capture selection and audio settings.
+enum AudioRoutingPanel: Hashable {
+    case playback, input(String), mix, monitor, recordingPlayback
+}
+
+nonisolated enum AudioRoutingSummary {
+    static func routes(_ input: InputSelection, channelCount: Int?) -> String {
+        let active = channelCount.map { count in input.routes.filter { (0..<count).contains($0.channel) } } ?? input.routes
+        let left = active.filter { $0.placement != .right }.count
+        let right = active.filter { $0.placement != .left }.count
+        if left == 0 && right == 0 { return "Not connected to mix · original track retained" }
+        let destination = left > 0 && right > 0 ? "L + R" : left > 0 ? "Left only" : "Right only"
+        let count = active.count
+        return "\(count) \(count == 1 ? "channel" : "channels") → \(destination)"
+    }
+
+    static func output(_ level: ListeningLevel, devices: [AudioOutputDevice], systemUID: String?) -> String {
+        let system = devices.first { $0.uid == systemUID }?.name ?? "system output"
+        if let uid = level.outputUID {
+            return devices.first { $0.uid == uid }?.name ?? "Output unavailable · using \(system)"
+        }
+        return "System · \(system)"
+    }
+}
+
+/// Compact entry point shared by the Studio, menu-bar popover and Settings.
+struct MultipleInputsView: View {
+    @ObservedObject var recorder: RecorderViewModel
+    @Environment(\.openWindow) private var openWindow
+    private var source: AudioSource { recorder.audioSource.selectedSource }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button("Audio routing…", systemImage: "point.3.connected.trianglepath.dotted") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: AppWindow.routing.rawValue)
+            }
+            if source.kind == .multiple {
+                let count = source.inputSelections.count
+                Text("Playback + \(count) \(count == 1 ? "input" : "inputs") → stereo recording mix")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("Connect apps and inputs, adjust channels, and choose a monitor output.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            AudioMuteSummary(source: source)
+            if let test = recorder.audioTest, test.locksSources {
+                Label("Audio test active · start recording to end the test and begin a take", systemImage: "waveform.circle")
+                    .font(.caption).foregroundStyle(WorkspaceStyle.mint)
+            }
+        }.font(.callout)
+    }
+}
+
+struct CaptureHealthView: View {
+    @ObservedObject var recorder: RecorderViewModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+            Text(recorder.captureSourceHint).font(.caption).foregroundStyle(.secondary)
+            if recorder.isRecording {
+                ForEach(recorder.sourceHealth) { source in
+                    let status = source.health.status(at: recorder.healthTime)
+                    VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                        Text("\(source.name): \(status.label)")
+                            .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
+                        if let message = source.health.failureMessage { Text(message).foregroundStyle(.orange) }
+                        if let rate = source.health.sampleRate, let channels = source.health.channels {
+                            Text("\(channels) input channels · \(rate.formatted(.number.precision(.fractionLength(0)))) Hz · \(source.health.peak >= 1 ? "clipping" : "peak " + String(format: "%.1f dBFS", 20 * log10(max(0.000_001, source.health.peak))))")
+                                .foregroundStyle(.secondary)
+                            if let post = source.health.postPeak {
+                                Text(String(format: "After fader: %.1f dBFS · saved mix: %.1f dBFS", 20 * log10(max(0.000_001, post)), 20 * log10(max(0.000_001, source.health.mixPeak ?? post))))
+                                    .foregroundStyle(source.health.clipped ? Color.orange : Color.secondary)
+                                if source.health.clipped { Text("Clipping detected · reduce recording gain").foregroundStyle(.orange) }
+                            }
+                            ProgressView(value: Double(min(1, source.health.peak))).accessibilityLabel("\(source.name) level")
+                        }
+                        Text("\(source.health.receivedFrames) frames received · \(source.health.writtenFrames) written")
+                            .foregroundStyle(.secondary).monospacedDigit()
+                    }.font(.caption).help(source.detail ?? source.name).accessibilityElement(children: .combine)
+                }
+            }
+        }.fixedSize(horizontal: false, vertical: true)
+    }
+}

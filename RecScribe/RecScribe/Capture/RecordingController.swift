@@ -338,3 +338,21 @@ class RecordingController: RecordingControlling {
         }
     }
 }
+
+
+/// Orchestrates the start/stop recording workflow. Implemented by `RecordingController`.
+@MainActor
+protocol RecordingControlling: AnyObject {
+    var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
+    var onStreamError: (@MainActor (String) -> Void)? { get set }
+    var isRecording: Bool { get }
+    var sourceHealth: [SourceRecordingHealth] { get }
+    var recordingURL: URL? { get }
+    func startRecording(format: AudioFormat) async throws -> URL
+    func stopRecording() async throws
+    func finalizeAfterFailure() async
+}
+
+extension RecordingControlling {
+    var sourceHealth: [SourceRecordingHealth] { [] }
+}

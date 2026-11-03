@@ -82,3 +82,63 @@ nonisolated extension AudioSource {
         return inputs.count <= InputSelection.maximumDevices && inputs.allSatisfy(\.valid) && Set(inputs.map(\.deviceUID)).count == inputs.count
     }
 }
+
+
+nonisolated enum InputMixPlacement: String, Codable, CaseIterable, Sendable {
+    case left, center, right
+}
+
+nonisolated struct InputChannelRoute: Codable, Equatable, Sendable {
+    var channel: Int
+    var placement: InputMixPlacement
+}
+
+nonisolated struct InputSelection: Codable, Equatable, Sendable, Identifiable {
+    var id: String { deviceUID }
+    var deviceUID: String
+    /// Mix routing only. All native channels are retained in the source session.
+    var routes: [InputChannelRoute]
+    static let maximumDevices = 8
+    init(deviceUID: String, routes: [InputChannelRoute] = [.init(channel: 0, placement: .center)]) {
+        self.deviceUID = deviceUID
+        self.routes = routes
+    }
+    init(device: InputDeviceInfo) {
+        deviceUID = device.uid
+        routes = (0..<min(2, device.inputChannels ?? 1)).map {
+            .init(channel: $0, placement: device.inputChannels == 1 ? .center : ($0 == 0 ? .left : .right))
+        }
+    }
+    var valid: Bool {
+        !deviceUID.isEmpty && deviceUID.count <= 1024 && routes.count <= 32 &&
+        Set(routes.map(\.channel)).count == routes.count && routes.allSatisfy { (0..<32).contains($0.channel) }
+    }
+}
+
+nonisolated enum InputRouteSafety {
+    static func warnings(inputs: [InputSelection], devices: [InputDeviceInfo]) -> [String] {
+        let uids = Set(inputs.map(\.deviceUID))
+        var warnings: [String] = []
+        for input in inputs {
+            guard let device = devices.first(where: { $0.uid == input.deviceUID }) else { continue }
+            if device.mayLoopBack { warnings.append("\(device.name) may duplicate system playback through a virtual or loopback route.") }
+            if device.isAggregate {
+                if device.aggregateMembers.contains(where: { uid in devices.contains { $0.uid == uid && $0.mayLoopBack } }) {
+                    warnings.append("\(device.name) contains a virtual or loopback input that may duplicate system playback.")
+                }
+                if !uids.isDisjoint(with: device.aggregateMembers) { warnings.append("\(device.name) overlaps a selected member device.") }
+                if device.aggregateMembers.isEmpty { warnings.append("The members of \(device.name) could not be identified; check for overlapping routes.") }
+            }
+            if input.routes.contains(where: { route in
+                device.channelLabels.indices.contains(route.channel) && device.channelLabels[route.channel].localizedCaseInsensitiveContains("loopback")
+            }) { warnings.append("A selected channel on \(device.name) is labelled loopback and may duplicate playback.") }
+        }
+        let aggregates = devices.filter { uids.contains($0.uid) && $0.isAggregate }
+        for (index, device) in aggregates.enumerated() {
+            for other in aggregates.dropFirst(index + 1) where !Set(device.aggregateMembers).isDisjoint(with: other.aggregateMembers) {
+                warnings.append("\(device.name) and \(other.name) share member devices.")
+            }
+        }
+        return warnings
+    }
+}

@@ -37,7 +37,8 @@ outside #10 closure; no custom signed XPC helper is introduced.
 - On 2026-11-03 the Python implementation/package/tests were retired after a
   successful independent reference capture. Sixteen synthetic cases are frozen
   in `core/Tests/RecScribeCoreTests/Fixtures/PythonReference`, with provenance and
-  checksums. Every Swift test run compares inspection/canonical semantics and
+  checksums, now consolidated into one reference catalog rather than 80 files.
+  Every Swift test run compares inspection/canonical semantics and
   all five export bytes, without an optional interpreter environment variable.
   AVFoundation and FFmpeg resampling are not claimed byte-identical.
 - The corpus runner/scorer is native (`recscribe-text benchmark`), retaining local
@@ -90,8 +91,13 @@ they are not recognition-model translation flags. Diarization is still unavailab
 ### Reference retirement acceptance — 2026-11-03
 
 - Independent capture: 44 native tests passed against the then-present Python
-  implementation before removal (`Build/python-reference-capture.log`). The 80
-  frozen files retain their captured SHA-256 values, verified by a mandatory test.
+  implementation before removal (`Build/python-reference-capture.log`). All 80
+  original file hashes were verified before consolidation. A single catalog now
+  holds readable inspections, canonical field fingerprints and the original
+  export fingerprints. Fresh native jobs validate canonical data and verify
+  those fingerprints; one full missing-part reference covers localized errors.
+  No new renderer generated expected values. The obsolete separate export files,
+  repeated canonical snapshots, checksum inventory and whitespace exception were removed.
 - With the pipeline directory and obsolete reference venv removed: all 51
   core/CLI tests passed in both Debug and Release. Coverage includes all frozen semantic/export cases,
   benchmark edit counts/Unicode/noise, readiness without invented scores, native

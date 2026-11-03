@@ -1,2 +1,0 @@
-# Raw reference text intentionally retains the source's trailing whitespace.
-core/Tests/RecScribeCoreTests/Fixtures/PythonReference/**/transcript.verbatim.txt whitespace=-blank-at-eol

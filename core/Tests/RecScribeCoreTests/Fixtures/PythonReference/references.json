@@ -1,0 +1,752 @@
+{
+  "audio-distinct-silent" : {
+    "exports_sha256" : {
+      "review.md" : "31e5a5316e75b3199c6264b89c928b9234f1d6ce3228fffa1b177dbbd183beeb",
+      "transcript.cleaned.md" : "8084472bc8d7450a1fddcf944629b0ed455c361db40473c2bd8a56fdfbb2b85e",
+      "transcript.srt" : "9095aba17c61bc6bf930916317ad49f2b59fddc9b87e65264bba57d261cc760d",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "9575fc305a10e4d1afd0aa8c0f8d9b8458202fcb40839565aee571085938326f"
+    },
+    "inspection" : {
+      "bit_depth" : 16,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030517578125,
+          "rms" : 0.030517578125
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030548095703125,
+          "rms" : 0.030548095703125
+        },
+        {
+          "channel" : 2,
+          "clipped_samples" : 0,
+          "digital_silence" : true,
+          "peak" : 0,
+          "rms" : 0
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : false,
+            "end_frame" : 16000,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 3,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 1000,
+      "frames" : 16000,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 16000,
+      "sha256" : "d8e4b0ae9567010f5e2ffec4ab42a37a98c72d9b1beeb5f88e88d90b53dce969",
+      "size_bytes" : 96044,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "2006515777bf0b90f13878393a06047bd5c6dec2c834120c8a74f8282d3e2a65",
+      "segments" : "66a7f62ca62e14d25ba4afbcd9329e540e7bdd116f4310fdbc443b6bae789bf4",
+      "source" : "31ba6b72b6c226046bcd69f67037cfe5333ac1d5c23652eb908d6c95ddc2e5d5",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-identical-normalize" : {
+    "exports_sha256" : {
+      "review.md" : "d2accc928b92aa236b4d08713eb85c297782addb5b18dc19be3ec5ef76e2c900",
+      "transcript.cleaned.md" : "e583c91a42e5aa05f8f15141e5b204dec592d6015db1d94c7b53e978a5d802a9",
+      "transcript.srt" : "d2bffbb54e41eba9bfd8d41ea0957e5ecb23232ddccb84ae56c850f308d95ac8",
+      "transcript.verbatim.txt" : "7b08e4b61dc09d77be129eec7264d42d2fa778eac9dee1a140b36bed82eb7d9b",
+      "transcript.vtt" : "db10f4149dae3def8b4b593841c95700d60b007ccea104a3a5d77349a4003b8a"
+    },
+    "inspection" : {
+      "bit_depth" : 16,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030517578125,
+          "rms" : 0.030517578125
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030517578125,
+          "rms" : 0.030517578125
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : true,
+            "end_frame" : 16000,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : true,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 1000,
+      "frames" : 16000,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 16000,
+      "sha256" : "7e87d5e6294567e1eeb8ab481039e8b6d3d8bb0abec7483a2d6c314f344519aa",
+      "size_bytes" : 64044,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "2df5c4d0539be7d4a686bf767acbf965ccbf927461b65c477f5f3d9219b8c0d3",
+      "review_reasons" : "8e9757fbcd7b219bb89861adef9827f5c8edadf3a77a419c9cbd8512b11325f6",
+      "segments" : "5224859fd5fa104618851b35d0e3b14a1b1196d06dec274507425d475e95319c",
+      "source" : "1522ffd8998a7729b3d02d12cc5171541e2bf1589e105fce1c98e5d3e894eaf5",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-missing" : {
+    "exports_sha256" : {
+      "review.md" : "6497007194d8d3fa87fbf20e3f9da3febbd78121d0ff60e0605bd8f6711be8e0",
+      "transcript.cleaned.md" : "3bb543676c5a2d6a403fc565b5626a9db860e78b385fef513b2218e9158b6f6b",
+      "transcript.srt" : "30031550acb45b33599e1f78683673089ead535971a162ca73c9ed9c88125e70",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "4d5061fc516991a5e9b993c3a80f4725d7a0bc37af22294305cc867fc4709333"
+    },
+    "transcript" : {
+      "job_id" : "fixture",
+      "language_processing" : {
+        "derivations" : [
+
+        ],
+        "mode" : "verbatim",
+        "processor" : null,
+        "status" : "not_requested"
+      },
+      "processing" : {
+        "diarize" : "off",
+        "duration_ms" : 0,
+        "engine_passes" : [
+          {
+            "command" : [
+
+            ],
+            "duration_seconds" : 0,
+            "engine" : "synthetic",
+            "local_only" : true,
+            "model" : "a",
+            "model_sha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "version" : "1"
+          },
+          {
+            "command" : [
+
+            ],
+            "duration_seconds" : 0,
+            "engine" : "synthetic",
+            "local_only" : true,
+            "model" : "a",
+            "model_sha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "version" : "1"
+          }
+        ],
+        "formats" : [
+          "json",
+          "md",
+          "txt",
+          "srt",
+          "vtt"
+        ],
+        "local_only" : true,
+        "mode" : "verbatim",
+        "pipeline_version" : "swift-audio-1.0",
+        "profile" : "fast",
+        "source_language" : "auto",
+        "started_at" : "2026-01-01T00:00:00Z",
+        "target_language" : null
+      },
+      "review_reasons" : [
+        "part_2_unavailable:The file “missing.wav” couldn’t be opened because there is no such file.",
+        "automatic_language_detection_unverified; a quiet opening can select the wrong language",
+        "learned_vad_not_run; silence guard only detects exact digital silence"
+      ],
+      "schema_version" : "1.0",
+      "segments" : [
+        {
+          "channel" : 0,
+          "confidence" : null,
+          "end_ms" : 800,
+          "id" : "seg-000001",
+          "needs_review" : true,
+          "normalized_text" : null,
+          "review_reasons" : [
+            "confidence_unavailable",
+            "part_boundary; check_cut_or_duplicate_speech"
+          ],
+          "source_text" : " Gr üezi <test>! ",
+          "speaker" : null,
+          "start_ms" : 0,
+          "translated_text" : null,
+          "words" : [
+
+          ]
+        },
+        {
+          "channel" : 0,
+          "confidence" : null,
+          "end_ms" : 2800,
+          "id" : "seg-000002",
+          "needs_review" : true,
+          "normalized_text" : null,
+          "review_reasons" : [
+            "confidence_unavailable",
+            "part_boundary; check_cut_or_duplicate_speech"
+          ],
+          "source_text" : " Gr üezi <test>! ",
+          "speaker" : null,
+          "start_ms" : 2000,
+          "translated_text" : null,
+          "words" : [
+
+          ]
+        }
+      ],
+      "source" : {
+        "bit_depth" : 16,
+        "channel_layout" : [
+          "channel-1"
+        ],
+        "channel_metrics" : [
+          {
+            "channel" : 0,
+            "clipped_samples" : 0,
+            "digital_silence" : false,
+            "peak" : 0.030517578125,
+            "rms" : 0.030517578125
+          }
+        ],
+        "channels" : 1,
+        "codec" : "PCM",
+        "container" : "WAV",
+        "duration_ms" : 3000,
+        "frames" : 48000,
+        "kind" : "multipart_session",
+        "parts" : [
+          {
+            "frames" : 16000,
+            "index" : 0,
+            "offset_ms" : 0,
+            "path" : "one.wav",
+            "report" : {
+              "bit_depth" : 16,
+              "channel_layout" : "unspecified; channel indices preserved",
+              "channel_metrics" : [
+                {
+                  "channel" : 0,
+                  "clipped_samples" : 0,
+                  "digital_silence" : false,
+                  "peak" : 0.030517578125,
+                  "rms" : 0.030517578125
+                }
+              ],
+              "channel_windows" : {
+                "policy" : "exact_pcm_equality_v1",
+                "window_seconds" : 30,
+                "windows" : [
+                  {
+                    "bit_identical" : true,
+                    "end_frame" : 16000,
+                    "start_frame" : 0
+                  }
+                ]
+              },
+              "channels" : 1,
+              "channels_bit_identical" : true,
+              "codec" : "PCM",
+              "container" : "WAV",
+              "duration_ms" : 1000,
+              "frames" : 16000,
+              "mono_policy" : "separate_channels_preserved; no downmix",
+              "path" : "/fixture/one.wav",
+              "sample_rate" : 16000,
+              "sha256" : "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+              "size_bytes" : 32044,
+              "speech_detection" : "digital-silence-only; not a learned VAD"
+            },
+            "sha256" : "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+            "sizeBytes" : 32044,
+            "startSample" : 0,
+            "status" : "verified"
+          },
+          {
+            "frames" : 16000,
+            "index" : 1,
+            "offset_ms" : 1000,
+            "path" : "missing.wav",
+            "report" : null,
+            "sha256" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "sizeBytes" : 32044,
+            "startSample" : 16000,
+            "status" : "verified"
+          },
+          {
+            "frames" : 16000,
+            "index" : 2,
+            "offset_ms" : 2000,
+            "path" : "three.wav",
+            "report" : {
+              "bit_depth" : 16,
+              "channel_layout" : "unspecified; channel indices preserved",
+              "channel_metrics" : [
+                {
+                  "channel" : 0,
+                  "clipped_samples" : 0,
+                  "digital_silence" : false,
+                  "peak" : 0.030517578125,
+                  "rms" : 0.030517578125
+                }
+              ],
+              "channel_windows" : {
+                "policy" : "exact_pcm_equality_v1",
+                "window_seconds" : 30,
+                "windows" : [
+                  {
+                    "bit_identical" : true,
+                    "end_frame" : 16000,
+                    "start_frame" : 0
+                  }
+                ]
+              },
+              "channels" : 1,
+              "channels_bit_identical" : true,
+              "codec" : "PCM",
+              "container" : "WAV",
+              "duration_ms" : 1000,
+              "frames" : 16000,
+              "mono_policy" : "separate_channels_preserved; no downmix",
+              "path" : "/fixture/three.wav",
+              "sample_rate" : 16000,
+              "sha256" : "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+              "size_bytes" : 32044,
+              "speech_detection" : "digital-silence-only; not a learned VAD"
+            },
+            "sha256" : "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+            "sizeBytes" : 32044,
+            "startSample" : 32000,
+            "status" : "verified"
+          }
+        ],
+        "path" : "/fixture/synthetic.recscribe.json",
+        "sample_rate" : 16000,
+        "session_id" : "synthetic-session",
+        "sha256" : "2bc6aff6af680881fe21d83ffa3a4670a5bc7957a0d9c358924ce1136a457982",
+        "size_bytes" : 96132
+      },
+      "status" : "completed_with_review"
+    }
+  },
+  "audio-regions" : {
+    "exports_sha256" : {
+      "review.md" : "c494189078c73f6e0537bd123929d8ccb38a51aea03c7122f7e99236e7f14701",
+      "transcript.cleaned.md" : "4abf0fb0eeb05c7cf4c2e60cbfb76a22897b3d31428e725fe28a09a7aa45cb6b",
+      "transcript.srt" : "f14e91907d6ee7dbfdee2f40ea0ad9442e1e63485c84438caebaaa4b659a2b99",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "62ddf84a0a527cb9864c47ec97484b04f2d9cad8d8a12efae1b23f448cda90b0"
+    },
+    "inspection" : {
+      "bit_depth" : 16,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030517578125,
+          "rms" : 0.030517578125
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030548095703125,
+          "rms" : 0.03051757814620336
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : true,
+            "end_frame" : 480000,
+            "start_frame" : 0
+          },
+          {
+            "bit_identical" : false,
+            "end_frame" : 960000,
+            "start_frame" : 480000
+          },
+          {
+            "bit_identical" : true,
+            "end_frame" : 1440000,
+            "start_frame" : 960000
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 90000,
+      "frames" : 1440000,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/stereo.wav",
+      "sample_rate" : 16000,
+      "sha256" : "4866c0d9c8c50b1f959a67e0647d15b5555478188ef7b108177beb2a6ec71cbd",
+      "size_bytes" : 5760044,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "5200f3a79e37be31ecba54e8bf00b773ac3288b7d4e1743ffef08823e844b403",
+      "segments" : "e24ef9fefc803b45e7e0831f05b98ee63d1ef7f704cae49510707595799dcb70",
+      "source" : "69a6d302aeea01dde1d5e2e57c7c0a00737fa5055345a9f35d43ca8d7a97669d",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-session-v1" : {
+    "exports_sha256" : {
+      "review.md" : "4badc4e71946848dd420f353a28967c2821dc7563e2079c3789e13f09fcee3ff",
+      "transcript.cleaned.md" : "17d47bb6b6fa98510c006fb7c3e523096ed748f9ec85020386dad3cf2aa3bd25",
+      "transcript.srt" : "dc6cde254aa2411fbb03b1546c89710785d14f1828c601f6e299780825e53e7f",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "8e9c92d6a265cb3e3342ffbe8860002fbf4012bee83f30b9ac4b051e1656af76"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "07f20881f599624be15d230e90695c070790664d4b8e4beff2ab9dddce6c2632",
+      "segments" : "f5b34ab56c5974b2c98f222646da68010f62f306c5a49e324d728a06d0f1bd28",
+      "source" : "d3df50b25f083b1e279c4af8233cc36a61822b73f91b5bd08b4dc0a449346c7a",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-session-v2" : {
+    "exports_sha256" : {
+      "review.md" : "4badc4e71946848dd420f353a28967c2821dc7563e2079c3789e13f09fcee3ff",
+      "transcript.cleaned.md" : "17d47bb6b6fa98510c006fb7c3e523096ed748f9ec85020386dad3cf2aa3bd25",
+      "transcript.srt" : "dc6cde254aa2411fbb03b1546c89710785d14f1828c601f6e299780825e53e7f",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "8e9c92d6a265cb3e3342ffbe8860002fbf4012bee83f30b9ac4b051e1656af76"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "07f20881f599624be15d230e90695c070790664d4b8e4beff2ab9dddce6c2632",
+      "segments" : "f5b34ab56c5974b2c98f222646da68010f62f306c5a49e324d728a06d0f1bd28",
+      "source" : "70c6b89c03f5584093af3efbfb8a69b1638932cac42c521a1edba23f2b9bc947",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-session-v3" : {
+    "exports_sha256" : {
+      "review.md" : "37dd479b9b4f226b3a7da68ea86b4b60ec4b3be5e2450f717f0bc42b0dbd24a9",
+      "transcript.cleaned.md" : "17d47bb6b6fa98510c006fb7c3e523096ed748f9ec85020386dad3cf2aa3bd25",
+      "transcript.srt" : "dc6cde254aa2411fbb03b1546c89710785d14f1828c601f6e299780825e53e7f",
+      "transcript.verbatim.txt" : "276080c1e739e76b6464022d0a6278079b2ed6f3c5fdde2631e5cc791f0b354e",
+      "transcript.vtt" : "8e9c92d6a265cb3e3342ffbe8860002fbf4012bee83f30b9ac4b051e1656af76"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "e18fa5db2e8691011374b2f4adbe64e87eaf021115717b1af4ed4d90fa5cd747",
+      "segments" : "f5b34ab56c5974b2c98f222646da68010f62f306c5a49e324d728a06d0f1bd28",
+      "source" : "c39f49202797ac253de75e62b0aa1b03b242c6132009ab9ec3acad0850da7d99",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "audio-verified" : {
+    "exports_sha256" : {
+      "review.md" : "eaa83603408e801fa692050e5a8d65179cc72e8f233a448a4adc910c52e84fbd",
+      "transcript.cleaned.md" : "a103cc0a3e14f02b73c6eef7a9f155037f980eb22db3dc5797b2d1c5db6b6fc8",
+      "transcript.srt" : "d2bffbb54e41eba9bfd8d41ea0957e5ecb23232ddccb84ae56c850f308d95ac8",
+      "transcript.verbatim.txt" : "7b08e4b61dc09d77be129eec7264d42d2fa778eac9dee1a140b36bed82eb7d9b",
+      "transcript.vtt" : "db10f4149dae3def8b4b593841c95700d60b007ccea104a3a5d77349a4003b8a"
+    },
+    "inspection" : {
+      "bit_depth" : 16,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 0,
+          "digital_silence" : false,
+          "peak" : 0.030517578125,
+          "rms" : 0.030517578125
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : true,
+            "end_frame" : 16000,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 1,
+      "channels_bit_identical" : true,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 1000,
+      "frames" : 16000,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 16000,
+      "sha256" : "d46938baf1fc1019581e15818aac59d87cb4b5c18d1e0c88f40d3e815dedc149",
+      "size_bytes" : 32044,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    },
+    "semantics_sha256" : {
+      "language_processing" : "7a7edc061bc7e7e562b798ad06c75bfc1a8c7638561090a30f497cfd2fe096f3",
+      "review_reasons" : "c206e9bfb3c04fc37af379de4aef911a1958f31d6c3978617f857e63656e0d84",
+      "segments" : "09d83a4c10dce1ceeda876914996f3ff70ad885fd851930355325de8d3e89bc2",
+      "source" : "b2b449b3885e60485889179158b609008485a092a376568b811dcd759e379894",
+      "status" : "1ee66a337635c8ef44bfe5e333c67cd691f87de9041466df83b21d617176fea6"
+    }
+  },
+  "inspection-pcm-16" : {
+    "inspection" : {
+      "bit_depth" : 16,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7074483945486945
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7074483950408877
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : false,
+            "end_frame" : 1003,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 23,
+      "frames" : 1003,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 44100,
+      "sha256" : "85af2e9de728c70e9a6914ed36ffa7fe9a90ad7607dcc50f4ebab681cfccae5d",
+      "size_bytes" : 4056,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    }
+  },
+  "inspection-pcm-24" : {
+    "inspection" : {
+      "bit_depth" : 24,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7074591471049555
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7074591471049648
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : false,
+            "end_frame" : 1003,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 23,
+      "frames" : 1003,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 44100,
+      "sha256" : "8806338beba93577555767d9a3aa8df8782190857f2e93bb84397471afe7c7d3",
+      "size_bytes" : 6062,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    }
+  },
+  "inspection-pcm-32" : {
+    "inspection" : {
+      "bit_depth" : 32,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.707459189108091
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.707459189108091
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : false,
+            "end_frame" : 1003,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 23,
+      "frames" : 1003,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 44100,
+      "sha256" : "9a8f60e1f7cc7b5b43fada2937a6f82d835ba24abd37ff0d550e2d4f00e38f5d",
+      "size_bytes" : 8068,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    }
+  },
+  "inspection-pcm-8" : {
+    "inspection" : {
+      "bit_depth" : 8,
+      "channel_layout" : "unspecified; channel indices preserved",
+      "channel_metrics" : [
+        {
+          "channel" : 0,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7047118894073414
+        },
+        {
+          "channel" : 1,
+          "clipped_samples" : 502,
+          "digital_silence" : false,
+          "peak" : 1,
+          "rms" : 0.7047442703001607
+        }
+      ],
+      "channel_windows" : {
+        "policy" : "exact_pcm_equality_v1",
+        "window_seconds" : 30,
+        "windows" : [
+          {
+            "bit_identical" : false,
+            "end_frame" : 1003,
+            "start_frame" : 0
+          }
+        ]
+      },
+      "channels" : 2,
+      "channels_bit_identical" : false,
+      "codec" : "PCM",
+      "container" : "WAV",
+      "duration_ms" : 23,
+      "frames" : 1003,
+      "mono_policy" : "separate_channels_preserved; no downmix",
+      "path" : "/fixture/source.wav",
+      "sample_rate" : 44100,
+      "sha256" : "7e62483636348b9042c1fbc764e97114e6c124ddd45e67a19a49332dd09aebd3",
+      "size_bytes" : 2050,
+      "speech_detection" : "digital-silence-only; not a learned VAD"
+    }
+  },
+  "text-cloud-normalize" : {
+    "exports_sha256" : {
+      "review.md" : "3bcca981cb7c470e32a95d4b031d92a4e464accb107017488e3091dd13f2c3d8",
+      "transcript.cleaned.md" : "558b9dd8dec1159e8e86df846d5e7e5c61bd6eaf6e1b8d27a30c428556514caa",
+      "transcript.srt" : "0988e1514d3f8100a949284aae5777c9f943aa9408ccc9c9807f89917ec6198b",
+      "transcript.verbatim.txt" : "f7d9e79c504cac1f7b2eada888e2a1f9ca56281716917135225bdbe46890e407",
+      "transcript.vtt" : "41765fe82b670265c55800964003687722b02f677d12f6321326e808483101ea"
+    }
+  },
+  "text-normalize-summary" : {
+    "exports_sha256" : {
+      "review.md" : "eeb29b3c47fd792310bfb66965a2bf76655381462c48f3b915ae2f194a954030",
+      "transcript.cleaned.md" : "07015f4a290e4bd5576697479bf3c70766f0029bba608d2bb5caf214d46b41f9",
+      "transcript.srt" : "28b5517a8454509c3f99982539e59249c79365a5606bbaa0f8b5405e90871946",
+      "transcript.verbatim.txt" : "f7d9e79c504cac1f7b2eada888e2a1f9ca56281716917135225bdbe46890e407",
+      "transcript.vtt" : "77b6ff803f781dce967281f5da5357d862c3c1550eac879b4e66158595fdf8a4"
+    }
+  },
+  "text-summary-only" : {
+    "exports_sha256" : {
+      "review.md" : "eeb29b3c47fd792310bfb66965a2bf76655381462c48f3b915ae2f194a954030",
+      "transcript.cleaned.md" : "07015f4a290e4bd5576697479bf3c70766f0029bba608d2bb5caf214d46b41f9",
+      "transcript.srt" : "28b5517a8454509c3f99982539e59249c79365a5606bbaa0f8b5405e90871946",
+      "transcript.verbatim.txt" : "f7d9e79c504cac1f7b2eada888e2a1f9ca56281716917135225bdbe46890e407",
+      "transcript.vtt" : "77b6ff803f781dce967281f5da5357d862c3c1550eac879b4e66158595fdf8a4"
+    }
+  },
+  "text-translate" : {
+    "exports_sha256" : {
+      "review.md" : "30c0516f1dc01504ba614c2495ed318ab05b96f57feb56bcedb7c8eb4e845f40",
+      "transcript.cleaned.md" : "723ccb02ce890a7b95f8c743addcb37bc7ea02d9cbc7ab9ede3e8f6322a58feb",
+      "transcript.srt" : "9c60d918c470418889846cc859a33e0785fd2c1b72022c04e40c64138027fc1c",
+      "transcript.verbatim.txt" : "523d45e2ba086640a7a62f3f9f832a230c8dc07cd82891f2832b36b4361a3d9a",
+      "transcript.vtt" : "fe075b66a0c04ba4cee0c22f25c134bfe1509f401a098c0f740dfdc8ef824284"
+    }
+  }
+}

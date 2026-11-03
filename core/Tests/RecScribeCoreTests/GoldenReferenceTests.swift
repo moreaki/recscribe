@@ -9,8 +9,9 @@ enum GoldenReference {
         "audio-verified", "audio-missing", "audio-session-v1", "audio-session-v2", "audio-session-v3",
         "text-normalize-summary", "text-summary-only", "text-translate", "text-cloud-normalize"]
 
-    static func read(_ fixture: String, _ name: String) throws -> JSONValue {
-        try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: directory.appendingPathComponent(fixture).appendingPathComponent(name)))
+    static func record(_ fixture: String) throws -> JSONValue {
+        let values = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: directory.appendingPathComponent("references.json")))
+        return try #require(values.object?[fixture])
     }
 
     static func normalize(_ value: JSONValue, root: URL) -> JSONValue {
@@ -25,7 +26,7 @@ enum GoldenReference {
     }
 
     static func inspection(_ report: JSONValue, root: URL, fixture: String) throws {
-        var actual = normalize(report, root: root), expected = try read(fixture, "inspection.json")
+        var actual = normalize(report, root: root), expected = try record(fixture)["inspection"]
         let metrics = try #require(actual["channel_metrics"].array)
         let reference = try #require(expected["channel_metrics"].array)
         #expect(metrics.count == reference.count)
@@ -44,33 +45,31 @@ enum GoldenReference {
     }
 
     static func exports(_ job: URL, fixture: String) throws {
-        for name in TranscriptRenderer.render(try CanonicalTranscript(read(fixture, "transcript.json"))).keys {
-            let expected = try Data(contentsOf: directory.appendingPathComponent(fixture).appendingPathComponent(name))
-            #expect(try Data(contentsOf: job.appendingPathComponent(name)) == expected, "Export reference mismatch: \(fixture)/\(name)")
+        _ = try CanonicalTranscript(AudioFixture.read(job, "transcript.json"))
+        let expected = try #require(record(fixture)["exports_sha256"].object)
+        #expect(expected.count == 5)
+        for (name, digest) in expected {
+            let data = try Data(contentsOf: job.appendingPathComponent(name))
+            #expect(TextJob.hash(data) == digest.string, "Export reference mismatch: \(fixture)/\(name)")
         }
     }
 }
 
 @Suite struct GoldenReferenceTests {
-    @Test func capturedInventoryRetainsOriginalBytes() throws {
-        let sums = try String(contentsOf: GoldenReference.directory.appendingPathComponent("SHA256SUMS"), encoding: .utf8)
-        let lines = sums.split(separator: "\n")
-        #expect(lines.count == 80)
-        for line in lines {
-            let fields = line.split(maxSplits: 1, whereSeparator: \.isWhitespace)
-            let path = String(fields[1]).trimmingCharacters(in: .whitespaces)
-            let data = try Data(contentsOf: GoldenReference.directory.appendingPathComponent(path))
-            #expect(TextJob.hash(data) == fields[0], "Captured fixture changed: \(path)")
-        }
+    @Test func referenceCatalogKeepsEveryCapturedCase() throws {
+        let values = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: GoldenReference.directory.appendingPathComponent("references.json")))
+        let inspections = [8,16,24,32].map { "inspection-pcm-\($0)" }
+        #expect(Set(try #require(values.object).keys) == Set(GoldenReference.jobs + inspections))
     }
-    @Test(arguments: GoldenReference.jobs)
-    func frozenDocumentsValidateAndRenderByteIdentically(fixture: String) throws {
-        let document = try CanonicalTranscript(GoldenReference.read(fixture, "transcript.json"))
+    @Test func frozenMissingPartDocumentStillRendersCapturedBytes() throws {
+        // Runtime filesystem error wording varies. Keep this independent input;
+        // all other cases compare freshly produced jobs to the captured hashes.
+        let reference = try GoldenReference.record("audio-missing")
+        let document = try CanonicalTranscript(reference["transcript"])
         let rendered = TranscriptRenderer.render(document)
         #expect(rendered.count == 5)
         for (name, content) in rendered {
-            let expected = try Data(contentsOf: GoldenReference.directory.appendingPathComponent(fixture).appendingPathComponent(name))
-            #expect(Data(content.utf8) == expected, "Frozen renderer mismatch: \(fixture)/\(name)")
+            #expect(TextJob.hash(Data(content.utf8)) == reference["exports_sha256"][name].string, "Frozen renderer mismatch: \(name)")
         }
     }
 }

@@ -233,9 +233,9 @@ enum AudioFixture {
             _ = try CanonicalTranscript(AudioFixture.read(job, "transcript.json"))
             if compareJob {
                 let actual = GoldenReference.normalize(try AudioFixture.read(job, "transcript.json"), root: root)
-                let expected = try GoldenReference.read(fixture, "transcript.json")
+                let expected = try GoldenReference.record(fixture)["semantics_sha256"]
                 for key in ["source", "segments", "review_reasons", "language_processing", "status"] {
-                    #expect(actual[key] == expected[key], "Reference mismatch: \(fixture)/\(key)")
+                    #expect(try TextJob.hash(actual[key].encoded()) == expected[key].string, "Reference mismatch: \(fixture)/\(key)")
                 }
                 try GoldenReference.exports(job, fixture: fixture)
             }

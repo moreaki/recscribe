@@ -328,16 +328,24 @@ nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Ident
     var deviceUID: String
     /// Mix routing only. All native channels are retained in the source session.
     var routes: [InputChannelRoute]
+    /// Ordered sub-device UIDs recorded when selecting a Core Audio aggregate device (#36).
+    var aggregateMembers: [String]?
     static let maximumDevices = 8
-    init(deviceUID: String, routes: [InputChannelRoute] = [.init(channel: 0, placement: .center)]) {
+    init(
+        deviceUID: String,
+        routes: [InputChannelRoute] = [.init(channel: 0, placement: .center)],
+        aggregateMembers: [String]? = nil
+    ) {
         self.deviceUID = deviceUID
         self.routes = routes
+        self.aggregateMembers = aggregateMembers
     }
     init(device: InputDeviceInfo) {
         deviceUID = device.uid
         routes = (0..<min(2, device.inputChannels ?? 1)).map {
             .init(channel: $0, placement: device.inputChannels == 1 ? .center : ($0 == 0 ? .left : .right))
         }
+        aggregateMembers = device.isAggregate && !device.aggregateMembers.isEmpty ? device.aggregateMembers : nil
     }
     var valid: Bool {
         !deviceUID.isEmpty && deviceUID.count <= 1024 && routes.count <= 32 &&

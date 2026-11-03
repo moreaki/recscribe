@@ -201,6 +201,12 @@ final class AudioSourceManager: AudioSourceProviding {
             guard let device = devices.first(where: { $0.uid == input.deviceUID }) else {
                 throw AudioSourceError.micNotAvailable(input.deviceUID)
             }
+            if let expectedMembers = input.aggregateMembers,
+               !expectedMembers.isEmpty,
+               !device.aggregateMembers.isEmpty,
+               expectedMembers != device.aggregateMembers {
+                throw SessionError.invalid("Aggregate device sub-device membership or order changed. Review the selected channels before recording.")
+            }
             if source.kind == .multiple {
                 guard let count = device.inputChannels, (1...32).contains(count), input.routes.allSatisfy({ $0.channel < count }) else {
                     throw SessionError.invalid("Input channel availability changed. Review the selected channels before recording.")

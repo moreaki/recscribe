@@ -15,18 +15,35 @@ final class CapturedAudioMonitor: ObservableObject {
     nonisolated private let state = OSAllocatedUnfairLock(initialState: (enabled: false, frames: 0, generation: 0))
     nonisolated(unsafe) private var engine: AVAudioEngine?
     nonisolated(unsafe) private var node: AVAudioPlayerNode?
+    private let hardwareObserver: AudioHardwareObserver
+    private let isLoopbackCheck: (String) -> Bool
+    private let startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)?
     private var observation: AnyCancellable?
-    private var routeTask: Task<Void, Never>?
+    private var hardwareObservation: AnyCancellable?
+    private var outputWatchToken: UUID?
     private var appliedRoute: String?
     private var appliedRate: Double?
-    init(defaults: UserDefaults = .standard) {
+
+    init(
+        defaults: UserDefaults = .standard,
+        hardwareObserver: AudioHardwareObserver = .shared,
+        isLoopbackCheck: ((String) -> Bool)? = nil,
+        startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)? = nil
+    ) {
+        self.hardwareObserver = hardwareObserver
+        self.isLoopbackCheck = isLoopbackCheck ?? Self.isLoopback
+        self.startEngineAction = startEngineAction
         levels = PlaybackLevels(defaults: defaults, key: "audio.monitorLevels.v1", initialVolume: 0.5)
         observation = levels.$value.dropFirst().sink { [weak self] _ in
             Task { @MainActor [weak self] in self?.configureOutput() }
         }
+        hardwareObservation = hardwareObserver.$revision.dropFirst().sink { [weak self] _ in
+            Task { @MainActor [weak self] in self?.configureOutput() }
+        }
     }
+
     func setEnabled(_ enabled: Bool, source: AudioSource) {
-        if enabled, source.inputSelections.contains(where: { Self.isLoopback($0.deviceUID) }) {
+        if enabled, source.inputSelections.contains(where: { isLoopbackCheck($0.deviceUID) }) {
             setEnabled(false, source: .systemAll)
             warning = "Monitoring is unavailable for virtual or aggregate inputs to avoid audio feedback. Recording is unaffected."
             return
@@ -35,16 +52,10 @@ final class CapturedAudioMonitor: ObservableObject {
         state.withLock { s in s.enabled = enabled; s.generation += 1 }
         queue.async { [self] in engine?.stop(); engine = nil; node = nil }
         appliedRoute = nil
-        routeTask?.cancel(); routeTask = nil
+        hardwareObserver.unwatchDevice(outputWatchToken)
+        outputWatchToken = nil
         if enabled {
             configureOutput(force: true)
-            routeTask = Task { [weak self] in
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(2))
-                    guard !Task.isCancelled, let self else { return }
-                    configureOutput()
-                }
-            }
         }
     }
     func recordingStopped() {
@@ -60,17 +71,45 @@ final class CapturedAudioMonitor: ObservableObject {
     private func configureOutput(force: Bool = false) {
         guard enabled else { return }
         let settings = levels.value
-        let outputs = AudioDeviceControls.outputs()
-        let uid = outputs.contains(where: { $0.uid == settings.outputUID }) ? settings.outputUID : AudioDeviceControls.defaultOutputUID()
-        if let uid, Self.isLoopback(uid) {
+        let outputs = hardwareObserver.outputDevices
+        let uid: String?
+        if let explicitUID = settings.outputUID, !explicitUID.isEmpty {
+            guard outputs.contains(where: { $0.uid == explicitUID }) else {
+                // Headphone-unplug safety (#36): never silently fall back to built-in speakers
+                // while live monitoring is active.
+                setEnabled(false, source: .systemAll)
+                warning = "Selected monitor output disconnected; live monitoring was muted to prevent speaker feedback. Recording is unaffected."
+                return
+            }
+            uid = explicitUID
+        } else {
+            uid = hardwareObserver.defaultOutputUID
+        }
+        if let uid, isLoopbackCheck(uid) {
             setEnabled(false, source: .systemAll)
             warning = "Live monitoring requires a physical output device. Select headphones to avoid loopback feedback."
             return
         }
         let rate = outputs.first { $0.uid == uid }?.sampleRate
         let changed = force || uid != appliedRoute || rate != appliedRate
+        if uid != appliedRoute {
+            hardwareObserver.unwatchDevice(outputWatchToken)
+            outputWatchToken = uid.map { targetUID in
+                hardwareObserver.watchDevice(uid: targetUID, inputScope: false, includeVolumes: false) { [weak self] in
+                    self?.configureOutput()
+                }
+            }
+        }
         appliedRoute = uid; appliedRate = rate
         let generation = state.withLock { $0.generation }
+        if let startEngineAction {
+            do {
+                try startEngineAction(uid, settings, changed)
+            } catch {
+                fail("Live monitoring stopped: \(error.localizedDescription) Recording is unaffected.", generation: generation)
+            }
+            return
+        }
         queue.async { [self] in
             guard state.withLock({ $0.enabled && $0.generation == generation }) else { return }
             do {
@@ -100,7 +139,9 @@ final class CapturedAudioMonitor: ObservableObject {
         engine?.stop(); engine = nil; node = nil
         Task { @MainActor [weak self] in
             guard let self, state.withLock({ $0.generation == generation }) else { return }
-            enabled = false; warning = message; routeTask?.cancel(); routeTask = nil
+            enabled = false; warning = message
+            hardwareObserver.unwatchDevice(outputWatchToken)
+            outputWatchToken = nil
         }
     }
     nonisolated func submit(_ input: AVAudioPCMBuffer) {
@@ -140,6 +181,5 @@ final class CapturedAudioMonitor: ObservableObject {
         guard AudioObjectGetPropertyData(device, &address, 0, nil, &bytes, &transport) == noErr else { return true }
         return [kAudioDeviceTransportTypeVirtual, kAudioDeviceTransportTypeAggregate].contains(transport)
     }
-    deinit { routeTask?.cancel() }
 }
 private nonisolated struct MonitorPCM: @unchecked Sendable { let buffer: AVAudioPCMBuffer }

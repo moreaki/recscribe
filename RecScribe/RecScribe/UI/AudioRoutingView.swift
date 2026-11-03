@@ -8,6 +8,7 @@ struct AudioRoutingView: View {
     @ObservedObject private var monitor = CapturedAudioMonitor.shared
     @ObservedObject private var monitorLevels = CapturedAudioMonitor.shared.levels
     @ObservedObject private var playbackLevels = PlaybackLevels.shared
+    @ObservedObject private var hardwareObserver = AudioHardwareObserver.shared
     @State private var devices: [InputDeviceInfo] = []
     @State private var outputs: [AudioOutputDevice] = []
     @State private var systemOutputUID: String?
@@ -19,11 +20,13 @@ struct AudioRoutingView: View {
     @FocusState private var focusedPanel: AudioRoutingPanel?
 
     init(levels: AudioLevels = .shared, monitor: CapturedAudioMonitor = .shared,
-         playbackLevels: PlaybackLevels = .shared, expandedPanel: AudioRoutingPanel? = nil) {
+         playbackLevels: PlaybackLevels = .shared, hardwareObserver: AudioHardwareObserver = .shared,
+         expandedPanel: AudioRoutingPanel? = nil) {
         _levels = ObservedObject(wrappedValue: levels)
         _monitor = ObservedObject(wrappedValue: monitor)
         _monitorLevels = ObservedObject(wrappedValue: monitor.levels)
         _playbackLevels = ObservedObject(wrappedValue: playbackLevels)
+        _hardwareObserver = ObservedObject(wrappedValue: hardwareObserver)
         _expandedPanel = State(initialValue: expandedPanel)
     }
 
@@ -71,7 +74,7 @@ struct AudioRoutingView: View {
                     }.padding(20)
                 }
             }
-            if (source.requiresScreenCapture && recorder.permissionStatus != .granted) || !warnings.isEmpty || monitor.warning != nil {
+            if (source.requiresScreenCapture && recorder.permissionStatus != .granted) || !warnings.isEmpty || monitor.warning != nil || recorder.hasInterruptedSource {
                 notices.padding(.horizontal, 20).padding(.vertical, 12)
             }
             Divider()
@@ -80,7 +83,10 @@ struct AudioRoutingView: View {
         .frame(minWidth: AppWindow.routing.minimumSize.width, minHeight: AppWindow.routing.minimumSize.height)
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onExitCommand { collapsePanel() }
-        .onAppear { recorder.audioTest?.opened() }
+        .onAppear {
+            recorder.audioTest?.opened()
+            refreshHardware()
+        }
         .onDisappear {
             expandedPanel = nil; focusedPanel = nil
             Task { await recorder.audioTest?.close() }
@@ -90,14 +96,15 @@ struct AudioRoutingView: View {
                 expandedPanel = nil; focusedPanel = .playback
             }
         }
-        .task {
-            while !Task.isCancelled {
-                devices = recorder.audioSource.availableInputDevices()
-                outputs = AudioDeviceControls.outputs()
-                systemOutputUID = AudioDeviceControls.defaultOutputUID()
-                try? await Task.sleep(for: .seconds(2))
-            }
+        .onChange(of: hardwareObserver.revision) { _, _ in
+            refreshHardware()
         }
+    }
+
+    private func refreshHardware() {
+        devices = recorder.audioSource.availableInputDevices()
+        outputs = hardwareObserver.outputDevices
+        systemOutputUID = hardwareObserver.defaultOutputUID
     }
 
     private var header: some View {
@@ -235,7 +242,7 @@ struct AudioRoutingView: View {
             }
             if let device {
                 channelConnections(input, device: device).disabled(!editable)
-                DeviceVolumeView(uid: input.deviceUID, input: true)
+                DeviceVolumeView(uid: input.deviceUID, input: true, hardwareObserver: hardwareObserver)
             }
         }
     }
@@ -289,14 +296,14 @@ struct AudioRoutingView: View {
                            muted: monitorLevels.value.muted, warning: outputWarning(monitorLevels.value)) {
                 Toggle("Listen to recording mix", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
                     .toggleStyle(.switch)
-                ListeningControls(levels: monitor.levels, title: "Live monitor output")
+                ListeningControls(levels: monitor.levels, title: "Live monitor output", hardwareObserver: hardwareObserver)
                 Text("Use headphones. Listening volume is independent of the saved recording mix. Monitoring turns off after each take.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             disclosureCard(.recordingPlayback, title: "Recording playback", symbol: "play.circle",
                            subtitle: output(playbackLevels.value), value: volume(playbackLevels.value),
                            muted: playbackLevels.value.muted, warning: outputWarning(playbackLevels.value)) {
-                ListeningControls(levels: playbackLevels, title: "Playback output")
+                ListeningControls(levels: playbackLevels, title: "Playback output", hardwareObserver: hardwareObserver)
                 Text("Changes what you hear when playing saved recordings. The recorded audio stays unchanged.")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -305,6 +312,17 @@ struct AudioRoutingView: View {
 
     private var notices: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let summary = recorder.interruptedSourceSummary {
+                HStack(spacing: 10) {
+                    Label(summary, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Spacer(minLength: 8)
+                    Button("Stop & start new take") {
+                        Task { await recorder.stopAndStartNewTake() }
+                    }
+                    .controlSize(.small)
+                }
+            }
             if source.requiresScreenCapture && recorder.permissionStatus != .granted {
                 Label("Screen & System Audio Recording permission is required for playback capture. Review permissions in the recording panel.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
@@ -530,6 +548,17 @@ struct CaptureHealthView: View {
         VStack(alignment: .leading, spacing: GlassSpacing.sm) {
             Text(recorder.captureSourceHint).font(.caption).foregroundStyle(.secondary)
             if recorder.isRecording {
+                if let summary = recorder.interruptedSourceSummary {
+                    VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                        Label(summary, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.orange)
+                        Button("Stop & start new take") {
+                            Task { await recorder.stopAndStartNewTake() }
+                        }
+                        .controlSize(.small)
+                    }
+                }
                 ForEach(recorder.sourceHealth) { source in
                     let status = source.health.status(at: recorder.healthTime)
                     VStack(alignment: .leading, spacing: GlassSpacing.xs) {

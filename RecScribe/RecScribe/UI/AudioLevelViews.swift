@@ -90,8 +90,9 @@ struct SourceFader: View {
 struct ListeningControls: View {
     @ObservedObject var levels: PlaybackLevels
     let title: String
-    @State private var devices: [AudioOutputDevice] = []
-    @State private var systemUID: String?
+    @ObservedObject var hardwareObserver: AudioHardwareObserver = .shared
+    private var devices: [AudioOutputDevice] { hardwareObserver.outputDevices }
+    private var systemUID: String? { hardwareObserver.defaultOutputUID }
     private func change(_ body: (inout ListeningLevel) -> Void) { var next = levels.value; body(&next); levels.set(next) }
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -122,17 +123,18 @@ struct ListeningControls: View {
                 if let uid = levels.value.outputUID, !devices.contains(where: { $0.uid == uid }) { Text("Unavailable output").tag(uid) }
             }.accessibilityLabel("\(title) device")
             if let uid = levels.value.outputUID, !devices.contains(where: { $0.uid == uid }) {
-                Text("Selected output unavailable · following system output").font(.caption).foregroundStyle(.orange)
+                Text(title == "Live monitor output"
+                    ? "Selected output unavailable · live monitoring is muted to prevent speaker feedback"
+                    : "Selected output unavailable · following system output")
+                    .font(.caption).foregroundStyle(.orange)
             } else {
                 Text("Listening on \(devices.first { $0.uid == (levels.value.outputUID ?? systemUID) }?.name ?? "system output")").font(.caption).foregroundStyle(.secondary)
             }
-            DeviceVolumeView(uid: devices.contains(where: { $0.uid == levels.value.outputUID }) ? levels.value.outputUID : systemUID, input: false)
-        }
-        .task {
-            while !Task.isCancelled {
-                devices = AudioDeviceControls.outputs(); systemUID = AudioDeviceControls.defaultOutputUID()
-                try? await Task.sleep(for: .seconds(2))
-            }
+            DeviceVolumeView(
+                uid: devices.contains(where: { $0.uid == levels.value.outputUID }) ? levels.value.outputUID : systemUID,
+                input: false,
+                hardwareObserver: hardwareObserver
+            )
         }
     }
 }
@@ -140,10 +142,17 @@ struct ListeningControls: View {
 struct DeviceVolumeView: View {
     let uid: String?
     let input: Bool
+    var hardwareObserver: AudioHardwareObserver = .shared
+    @State private var expanded = false
     @State private var controls: [AudioDeviceControls.Volume] = []
     @State private var error: String?
+    @State private var watchToken: UUID?
+
     var body: some View {
-        DisclosureGroup(input ? "Hardware input level (system-wide)" : "Hardware output volume (system-wide)") {
+        DisclosureGroup(
+            input ? "Hardware input level (system-wide)" : "Hardware output volume (system-wide)",
+            isExpanded: $expanded
+        ) {
             if controls.isEmpty { Text("This device has no writable software volume control. Use its hardware controls or Sound settings.").font(.caption).foregroundStyle(.secondary) }
             ForEach(controls) { control in
                 HStack {
@@ -160,11 +169,27 @@ struct DeviceVolumeView: View {
                 .controlSize(.small)
             if input { Text("Software gain cannot repair clipping that already occurred in the input hardware.").font(.caption).foregroundStyle(.secondary) }
         }.font(.caption)
-        .task(id: uid) {
-            while !Task.isCancelled {
-                controls = AudioDeviceControls.volumes(uid: uid, input: input)
-                try? await Task.sleep(for: .seconds(2))
+        .onChange(of: expanded) { _, isExpanded in
+            updateWatch(isExpanded: isExpanded, currentUID: uid)
+        }
+        .onChange(of: uid) { _, nextUID in
+            if expanded {
+                updateWatch(isExpanded: true, currentUID: nextUID)
             }
+        }
+        .onDisappear {
+            hardwareObserver.unwatchDevice(watchToken)
+            watchToken = nil
+        }
+    }
+
+    private func updateWatch(isExpanded: Bool, currentUID: String?) {
+        hardwareObserver.unwatchDevice(watchToken)
+        watchToken = nil
+        guard isExpanded, let currentUID, !currentUID.isEmpty else { return }
+        controls = AudioDeviceControls.volumes(uid: currentUID, input: input)
+        watchToken = hardwareObserver.watchDevice(uid: currentUID, inputScope: input, includeVolumes: true) {
+            controls = AudioDeviceControls.volumes(uid: currentUID, input: input)
         }
     }
 }

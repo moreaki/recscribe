@@ -69,12 +69,18 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var singleInputNormalizer: SingleInputAudioNormalizer?
     private var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
     private var inputGeneration = UUID()
-    private var deviceWatch: Task<Void, Never>?
+    private var deviceWatchTokens: [UUID] = []
+    private let hardwareObserver: AudioHardwareObserver
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     private var stopTask: Task<Void, Error>?
 
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
     var onStreamError: (@MainActor (String) -> Void)?
+
+    init(hardwareObserver: AudioHardwareObserver = .shared) {
+        self.hardwareObserver = hardwareObserver
+        super.init()
+    }
 
     // MARK: - Public Methods
 
@@ -243,29 +249,40 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             }
             isCapturing = true
             if !deviceInputs.isEmpty {
-                deviceWatch = Task { [weak self] in
-                    while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(1))
-                        guard !Task.isCancelled, let self, isCapturing, inputGeneration == generation else { return }
-                        let connected = Set(InputDeviceEnumerator().availableInputDevices().map(\.uid))
-                        for (track, input) in deviceInputs where !connected.contains(input.uid) {
+                for (track, input) in deviceInputs {
+                    let uid = input.uid
+                    let token = hardwareObserver.watchDevice(uid: uid, inputScope: true, includeVolumes: false) { [weak self] in
+                        guard let self, self.isCapturing, self.inputGeneration == generation,
+                              let currentInput = self.deviceInputs[track] else { return }
+                        currentInput.checkHardwareStatus()
+                        let connected = Set(self.hardwareObserver.inputDevices.map(\.uid))
+                        if !connected.contains(uid), self.deviceInputs[track] != nil {
                             if isSingleInputOnly {
-                                isCapturing = false
-                                onStreamError?("The selected microphone was disconnected.")
+                                self.isCapturing = false
+                                self.onStreamError?("The selected microphone was disconnected.")
                             } else {
-                                inputFailed(track, message: "Input disconnected; its track is incomplete. Other sources continue.", generation: generation)
+                                self.inputFailed(track, message: "Input disconnected; its track is incomplete. Other sources continue.", generation: generation)
                             }
                         }
                     }
+                    deviceWatchTokens.append(token)
                 }
             }
             Log.capture.info("Capture started")
         } catch {
+            clearDeviceWatches()
             for input in deviceInputs.values { input.stop() }
             deviceInputs = [:]
             Log.recordFailure(error, operation: "start_stream")
             throw ScreenCaptureAudioError.startCaptureFailed(error)
         }
+    }
+
+    private func clearDeviceWatches() {
+        for token in deviceWatchTokens {
+            hardwareObserver.unwatchDevice(token)
+        }
+        deviceWatchTokens.removeAll()
     }
 
     private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID) {
@@ -278,7 +295,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     func stopCapture() async throws {
         if let stopTask { return try await stopTask.value }
         guard stream != nil || !deviceInputs.isEmpty || isCapturing else { return }
-        deviceWatch?.cancel(); deviceWatch = nil
+        clearDeviceWatches()
         for (track, input) in deviceInputs {
             if let message = input.stop() { onSourceFailure?(track, message) }
         }

@@ -50,6 +50,7 @@ nonisolated final class SynchronizedCaptureWriter {
     private(set) var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
     private(set) var mixMeter = CapturePeakMeter()
     private let maximumFrames: Int64?
+    private var firstSampleTime: Double?
     var onMix: ((AVAudioPCMBuffer) -> Void)?
 
     init(mix: SessionWAVWriter? = nil, descriptors: [RecordingSession.SourceTrack], epoch: Double,
@@ -76,12 +77,19 @@ nonisolated final class SynchronizedCaptureWriter {
         guard seconds.isFinite, seconds >= -0.001, seconds <= policy.maximumDurationSeconds else {
             throw SessionError.invalid("Capture timestamp is outside the recording timeline")
         }
-        return max(0, Int64((seconds * 48_000).rounded()))
+        let base = (maximumFrames != nil) ? (firstSampleTime ?? max(epoch, time)) : epoch
+        return max(0, Int64((max(0, time - base) * 48_000).rounded()))
     }
 
     func accept(_ sample: CapturedAudioSample) throws {
         guard !sealed, !failedSources.contains(sample.track), sample.buffer.frameLength > 0 else { return }
-        if let maximumFrames, try frame(sample.presentationTime) >= maximumFrames { return }
+        if let maximumFrames {
+            let candidateFrame = try frame(sample.presentationTime)
+            if candidateFrame >= maximumFrames { return }
+            if firstSampleTime == nil {
+                firstSampleTime = max(epoch, sample.presentationTime)
+            }
+        }
         if try automation.update(levels(), at: max(end, head)) {
             try mix?.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
         }

@@ -491,6 +491,30 @@ class RecorderViewModel: ObservableObject {
         }
     }
 
+    /// True when at least one active source track has failed mid-recording while
+    /// other sources continue (#36).
+    var hasInterruptedSource: Bool {
+        isRecording && sourceHealth.contains(where: { $0.health.failed })
+    }
+
+    /// Concise summary of interrupted sources during an active multi-source take (#36).
+    var interruptedSourceSummary: String? {
+        guard isRecording else { return nil }
+        let failed = sourceHealth.filter { $0.health.failed }
+        guard !failed.isEmpty else { return nil }
+        let names = failed.map(\.name).joined(separator: ", ")
+        return "\(names) interrupted; unaffected sources continue recording."
+    }
+
+    /// Safely finalize the current take (preserving partial and unaffected tracks)
+    /// and immediately start a fresh take (#36).
+    func stopAndStartNewTake() async {
+        guard state == .recording else { return }
+        await stopRecording()
+        guard state == .idle else { return }
+        await startRecording()
+    }
+
     /// Reveal recording in Finder
     func revealInFinder() {
         guard let url = lastRecordingURL else { return }

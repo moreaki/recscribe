@@ -80,14 +80,16 @@ final class SessionPlayback: ObservableObject {
     private let activate: (AVPlayer) -> Void
     private var recordingActive = false
     let levels: PlaybackLevels
+    private let hardwareObserver: AudioHardwareObserver
     private var levelObservation: AnyCancellable?
+    private var hardwareObservation: AnyCancellable?
     private var routeTask: Task<Void, Never>?
     @Published private(set) var outputDevices: [AudioOutputDevice] = []
     @Published private(set) var effectiveOutput = "System output"
     func refreshOutput() {
-        outputDevices = AudioDeviceControls.outputs()
+        outputDevices = hardwareObserver.outputDevices
         let selected = levels.value.outputUID
-        let actual = outputDevices.first { $0.uid == (selected ?? AudioDeviceControls.defaultOutputUID()) }
+        let actual = outputDevices.first { $0.uid == (selected ?? hardwareObserver.defaultOutputUID) }
         effectiveOutput = actual?.name ?? "System output"
         if let selected, !outputDevices.contains(where: { $0.uid == selected }) {
             effectiveOutput = "Selected output unavailable · using system output"
@@ -96,11 +98,16 @@ final class SessionPlayback: ObservableObject {
     }
 
     init(build: @escaping (SessionEntry) async throws -> AVPlayerItem = SessionPlaybackBuilder.item,
-         activate: @escaping (AVPlayer) -> Void = { $0.play() }, levels: PlaybackLevels? = nil) {
+         activate: @escaping (AVPlayer) -> Void = { $0.play() }, levels: PlaybackLevels? = nil,
+         hardwareObserver: AudioHardwareObserver = .shared) {
         self.build = build
         self.activate = activate
         self.levels = levels ?? .shared
+        self.hardwareObserver = hardwareObserver
         levelObservation = self.levels.$value.dropFirst().sink { [weak self] _ in
+            Task { @MainActor [weak self] in self?.refreshOutput() }
+        }
+        hardwareObservation = hardwareObserver.$revision.dropFirst().sink { [weak self] _ in
             Task { @MainActor [weak self] in self?.refreshOutput() }
         }
     }
@@ -132,7 +139,6 @@ final class SessionPlayback: ObservableObject {
                 self.player = player
                 self.refreshOutput()
                 self.routeTask = Task { [weak self] in
-                    var ticks = 0
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .milliseconds(200))
                         guard !Task.isCancelled, let self else { return }
@@ -141,8 +147,6 @@ final class SessionPlayback: ObservableObject {
                         position = seconds.isFinite ? max(0, seconds) : 0
                         duration = length.isFinite ? max(0, length) : 0
                         isPlaying = (self.player?.rate ?? 0) > 0
-                        ticks += 1
-                        if ticks % 10 == 0 { refreshOutput() }
                     }
                 }
                 playing = selection

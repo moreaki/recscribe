@@ -14,6 +14,7 @@ final class DeviceInputCapture {
     private var configuration = DeviceInputConfigurationPolicy()
     private var selectedDevice: AudioDeviceID?
     private var expectedFormat: AVAudioFormat?
+    private var expectedAggregateMembers: [String] = []
     private var configurationFailed = false
     private let tap: DeviceInputTap
     private let onFailure: @MainActor @Sendable (String) -> Void
@@ -41,6 +42,7 @@ final class DeviceInputCapture {
         next.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format, block: tap.block)
         engine = next
         selectedDevice = device; expectedFormat = format
+        expectedAggregateMembers = AudioDeviceControls.aggregateSubDeviceUIDs(device: device)
         generation = UUID(); let id = generation
         configuration = .init(startedAt: ProcessInfo.processInfo.systemUptime)
         configurationFailed = false
@@ -54,6 +56,10 @@ final class DeviceInputCapture {
         catch { stop(); throw error }
         Log.capture.notice("Input engine started selected_device=\(device) actual_device=\(self.currentDevice(next) ?? 0) channels=\(format.channelCount) rate=\(format.sampleRate) running=\(next.isRunning)")
         if !next.isRunning { configurationChanged() }
+    }
+
+    func checkHardwareStatus() {
+        configurationChanged()
     }
 
     private func currentDevice(_ engine: AVAudioEngine) -> AudioDeviceID? {
@@ -71,9 +77,12 @@ final class DeviceInputCapture {
         var alive: UInt32 = 0, bytes = UInt32(MemoryLayout<UInt32>.size)
         let connected = AudioDeviceControls.device(uid: uid) == selectedDevice &&
             AudioObjectGetPropertyData(selectedDevice, &address, 0, nil, &bytes, &alive) == noErr && alive != 0
+        let sameAggregate = expectedAggregateMembers.isEmpty ||
+            AudioDeviceControls.aggregateSubDeviceUIDs(device: selectedDevice) == expectedAggregateMembers
         let received = tap.receivedFrames
         let decision = configuration.evaluate(connected: connected, sameDevice: actual == selectedDevice,
-            sameFormat: current == expectedFormat, running: engine.isRunning, receivedFrames: received,
+            sameFormat: current == expectedFormat, sameAggregateMembers: sameAggregate,
+            running: engine.isRunning, receivedFrames: received,
             now: ProcessInfo.processInfo.systemUptime)
         Log.capture.notice("Input configuration selected_device=\(selectedDevice) actual_device=\(actual ?? 0) connected=\(connected) channels=\(current.channelCount) rate=\(current.sampleRate) running=\(engine.isRunning) received_frames=\(received) action=\(decision.rawValue, privacy: .public)")
         switch decision {
@@ -85,7 +94,7 @@ final class DeviceInputCapture {
                 Log.recordFailure(error, operation: "input_startup_recovery")
                 onFailure("The selected input could not start after a configuration change; other sources continue.")
             }
-        case .disconnected, .deviceChanged, .formatChanged, .interrupted:
+        case .disconnected, .deviceChanged, .formatChanged, .aggregateChanged, .interrupted:
             configurationFailed = true
             onFailure(decision.message)
         }
@@ -97,7 +106,7 @@ final class DeviceInputCapture {
         // submitted its copy, so no late buffer can overtake recorder sealing.
         let failed = tap.finish()
         engine?.stop(); engine?.inputNode.removeTap(onBus: 0); engine = nil
-        selectedDevice = nil; expectedFormat = nil
+        selectedDevice = nil; expectedFormat = nil; expectedAggregateMembers = []
         return failed ? "Input timestamps, format or packet budget changed; its track is incomplete. Other sources continued." : nil
     }
 }
@@ -106,23 +115,26 @@ final class DeviceInputCapture {
 /// devices or accept a changed format, and never silently resume a partial take.
 nonisolated struct DeviceInputConfigurationPolicy {
     enum Decision: String {
-        case ignore, restart, disconnected, deviceChanged, formatChanged, interrupted
+        case ignore, restart, disconnected, deviceChanged, formatChanged, aggregateChanged, interrupted
         var message: String {
             switch self {
             case .disconnected: "The selected input disconnected; its track is incomplete. Other sources continue."
             case .deviceChanged: "The input engine changed away from the selected device; its track is incomplete. Other sources continue."
             case .formatChanged: "The selected input changed audio format; its track is incomplete. Other sources continue."
+            case .aggregateChanged: "The selected aggregate device's sub-device membership changed; its track is incomplete. Other sources continue."
             default: "The selected input engine stopped after a configuration change; its track is incomplete. Other sources continue."
             }
         }
     }
     var startedAt: TimeInterval = 0
     private(set) var restarts = 0
-    mutating func evaluate(connected: Bool, sameDevice: Bool, sameFormat: Bool, running: Bool,
+    mutating func evaluate(connected: Bool, sameDevice: Bool, sameFormat: Bool,
+                           sameAggregateMembers: Bool = true, running: Bool,
                            receivedFrames: Int64, now: TimeInterval) -> Decision {
         guard connected else { return .disconnected }
         guard sameDevice else { return .deviceChanged }
         guard sameFormat else { return .formatChanged }
+        guard sameAggregateMembers else { return .aggregateChanged }
         if running { return .ignore }
         guard receivedFrames == 0, (0...3).contains(now - startedAt), restarts < 2 else { return .interrupted }
         restarts += 1

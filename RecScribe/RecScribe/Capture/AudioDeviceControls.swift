@@ -58,6 +58,25 @@ nonisolated enum AudioDeviceControls {
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &property, 0, nil, &size, &device) == noErr else { return nil }
         return string(device, kAudioDevicePropertyDeviceUID)
     }
+    static func defaultInputUID() -> String? {
+        var property = address(kAudioHardwarePropertyDefaultInputDevice), device = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &property, 0, nil, &size, &device) == noErr else { return nil }
+        return string(device, kAudioDevicePropertyDeviceUID)
+    }
+    static func aggregateSubDeviceUIDs(device: AudioDeviceID) -> [String] {
+        var transport: UInt32 = 0
+        var transportProp = address(kAudioDevicePropertyTransportType)
+        var bytes = UInt32(MemoryLayout<UInt32>.size)
+        _ = AudioObjectGetPropertyData(device, &transportProp, 0, nil, &bytes, &transport)
+        guard transport == kAudioDeviceTransportTypeAggregate else { return [] }
+        var property = address(kAudioAggregateDevicePropertyActiveSubDeviceList)
+        bytes = 0
+        guard AudioObjectGetPropertyDataSize(device, &property, 0, nil, &bytes) == noErr, bytes > 0 else { return [] }
+        var ids = [AudioDeviceID](repeating: 0, count: Int(bytes) / MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, &ids) == noErr else { return [] }
+        return ids.compactMap { string($0, kAudioDevicePropertyDeviceUID) }
+    }
     static func volumes(uid: String?, input: Bool) -> [Volume] {
         guard let device = device(uid: uid) else { return [] }
         let controls = (0...32).compactMap { element -> Volume? in

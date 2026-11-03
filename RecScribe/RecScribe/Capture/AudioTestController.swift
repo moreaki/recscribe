@@ -50,6 +50,8 @@ final class AudioTestController: ObservableObject {
     private var closed = false
     private var recordingRequested = false
     private var sampleRun = false
+    private(set) var previewRebuildCount = 0
+    private static let maxPreviewRebuilds = 3
     private let previewLimit: TimeInterval
     private let sampleSeconds: TimeInterval
 
@@ -66,8 +68,11 @@ final class AudioTestController: ObservableObject {
         self.saveDirectory = saveDirectory; self.sampleSeconds = sampleSeconds; self.previewLimit = previewLimit
     }
 
-    func opened() { closed = false }
-    func startPreview() async { await start(sample: false) }
+    func opened() { closed = false; previewRebuildCount = 0 }
+    func startPreview() async {
+        previewRebuildCount = 0
+        await start(sample: false)
+    }
 
     /// A deliberately fresh take, using the real writers and a shared host-clock epoch.
     /// No competing capture engine is left running during the ten-second sample.
@@ -77,10 +82,10 @@ final class AudioTestController: ObservableObject {
         await start(sample: true)
     }
 
-    private func start(sample: Bool) async {
+    private func start(sample: Bool, preservingNotice: String? = nil) async {
         guard !closed, !recordingRequested, canStart(), !locksSources, self.sample == nil,
               startTask == nil, stopTask == nil else { return }
-        state = .starting; errorMessage = nil; notice = nil
+        state = .starting; errorMessage = nil; notice = preservingNotice
         health = []; meters = [:]; mixMeter = .init(); elapsed = 0
         let id = UUID(); runID = id
         let task = Task { await self.runStart(sample: sample, id: id) }
@@ -127,7 +132,11 @@ final class AudioTestController: ObservableObject {
                 Task { await self.stop() }
             }, monitor: monitor)
             worker = recorder; sampleRun = sample; sampleStartedAt = nil
-            capture.onSourceFailure = { [weak recorder] track, message in recorder?.sourceFailed(track, message: message) }
+            capture.onSourceFailure = { [weak self, weak recorder] track, message in
+                recorder?.sourceFailed(track, message: message)
+                guard let self, self.runID == id, !sample, self.state == .testing else { return }
+                self.attemptPreviewRebuildIfEligible(reason: message)
+            }
             capture.onStreamError = { [weak self] message in
                 guard let self, self.runID == id else { return }
                 self.errorMessage = message
@@ -193,6 +202,26 @@ final class AudioTestController: ObservableObject {
         mixMeter = worker?.mixMeter ?? mixMeter
         if sampleRun, sampleStartedAt == nil, let first = health.compactMap({ $0.health.firstReceivedAt }).min() { sampleStartedAt = first }
         elapsed = max(0, now - (sampleRun ? sampleStartedAt ?? now : startedAt))
+    }
+
+    /// Bounded automatic preview rebuild during idle/Audio Test preview (#36) when an input
+    /// undergoes a Bluetooth A2DP ↔ HFP duplex switch / format change or reconnects with
+    /// the same verified UID while no recording files are open.
+    func attemptPreviewRebuildIfEligible(reason: String) {
+        guard state == .testing, !sampleRun, !closed, !recordingRequested,
+              previewRebuildCount < Self.maxPreviewRebuilds else { return }
+        let selected = source.selectedSource
+        let availableUIDs = Set(source.availableInputDevices().map(\.uid))
+        guard selected.inputSelections.allSatisfy({ availableUIDs.contains($0.deviceUID) }) else { return }
+        previewRebuildCount += 1
+        let rebuildNotice = reason.localizedCaseInsensitiveContains("format")
+            ? "Input audio format changed (such as a Bluetooth headset mic switch); audio test preview was automatically restarted."
+            : "Selected input reconnected; audio test preview was automatically restarted."
+        Task { @MainActor [weak self] in
+            guard let self, self.state == .testing, !self.sampleRun else { return }
+            await self.stop()
+            await self.start(sample: false, preservingNotice: rebuildNotice)
+        }
     }
 
     func stop() async {

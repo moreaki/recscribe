@@ -27,6 +27,18 @@ import RecScribeCore
 
     static func run(_ arguments: Arguments) async throws {
         let source = URL(fileURLWithPath: arguments.source)
+        if arguments.command == "benchmark" {
+            guard let output = arguments.output else { throw CoreFailure("benchmark requires --output") }
+            guard let cli = Bundle.main.executableURL else { throw CoreFailure("Cannot locate the native CLI executable") }
+            let work = Task.detached(priority: .utility) {
+                try CorpusBenchmark.run(manifest: source, output: URL(fileURLWithPath: output), cli: cli,
+                    whisper: arguments.whisper.map { URL(fileURLWithPath: $0) },
+                    model: arguments.model.map { URL(fileURLWithPath: $0) }, threads: arguments.threads, dryRun: arguments.dryRun)
+            }
+            _ = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            print("Local benchmark saved in \(output)")
+            return
+        }
         if arguments.command == "transcribe" {
             guard let output = arguments.output, let binary = arguments.whisper, let model = arguments.model else {
                 throw CoreFailure("transcribe requires --output, --whisper-cli and --model")
@@ -89,9 +101,9 @@ import RecScribeCore
         var diarize = false
         var provider: TextProvider?
         var mode: TextMode = .verbatim
-        var summary = false, cloudConsent = false, keyStdin = false
+        var summary = false, cloudConsent = false, keyStdin = false, dryRun = false
         init(_ args: [String]) throws {
-            guard args.count >= 2, ["derive", "render", "transcribe"].contains(args[0]) else { throw CoreFailure(usage) }
+            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark"].contains(args[0]) else { throw CoreFailure(usage) }
             command = args[0]; source = args[1]
             var index = 2
             while index < args.count {
@@ -100,6 +112,7 @@ import RecScribeCore
                 case "--summarize": summary = true
                 case "--allow-cloud-text": cloudConsent = true
                 case "--key-stdin": keyStdin = true
+                case "--dry-run": dryRun = true
                 case "--local-only": break // Native audio recognition is always local.
                 default:
                     guard index < args.count else { throw CoreFailure("Missing option value") }
@@ -134,6 +147,13 @@ import RecScribeCore
                 }
             }
             guard provider != .ollama || !cloudConsent && !keyStdin else { throw CoreFailure("Local jobs do not accept cloud consent or credentials") }
+            guard command == "benchmark" || !dryRun else { throw CoreFailure("--dry-run is only for benchmark") }
+            if command == "benchmark" {
+                guard provider == nil, !cloudConsent, !keyStdin, !summary, verificationModel == nil, vad == nil,
+                      mode == .verbatim, profile == "fast", !diarize, target == nil, language == "auto" else {
+                    throw CoreFailure("benchmark uses corpus languages and verbatim fast local recognition; text/verification options are not supported")
+                }
+            }
             if command == "transcribe" {
                 guard provider == nil, !cloudConsent, !keyStdin, !summary else { throw CoreFailure("Audio transcription is local. Use derive separately for AI text or summaries") }
                 guard profile == "verified" ? verificationModel != nil : verificationModel == nil else { throw CoreFailure("Use --profile verified and --verify-model together") }
@@ -141,6 +161,8 @@ import RecScribeCore
         }
     }
     static let usage = """
+    recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]
+      [--whisper-cli /path/to/whisper-cli --model /path/to/model.bin --threads 1..4]
     recscribe-text transcribe recording.wav|session.recscribe.json --output NEW_JOB
       --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin
       [--source-language auto|de-CH|en] [--threads 1..4] [--local-only]

@@ -20,6 +20,73 @@ enum WorkspaceStyle {
     static let readingWidth: CGFloat = 720
     static let lineSpacing: CGFloat = 6
     static let waveformHeight: CGFloat = 64
+
+    /// Semantic typography roles shared across workspace chrome, popover,
+    /// onboarding, and notice panels. Scales with `DynamicTypeSize` on macOS.
+    enum TextRole: String, CaseIterable, Hashable, Sendable {
+        case heroTitle
+        case status
+        case timer
+        case sectionTitle
+        case body
+        case detail
+        case badge
+
+        var baseSize: CGFloat {
+            switch self {
+            case .heroTitle: 22
+            case .status: 17
+            case .timer: 15
+            case .sectionTitle: 14
+            case .body: 13
+            case .detail: 12
+            case .badge: 10
+            }
+        }
+
+        var weight: Font.Weight {
+            switch self {
+            case .heroTitle, .sectionTitle, .badge: .semibold
+            case .status: .medium
+            case .timer, .body, .detail: .regular
+            }
+        }
+
+        var design: Font.Design {
+            switch self {
+            case .timer: .monospaced
+            default: .default
+            }
+        }
+    }
+
+    static func size(_ role: TextRole, for dynamicTypeSize: DynamicTypeSize = .large) -> CGFloat {
+        (role.baseSize * dynamicTypeSize.glassScale).rounded()
+    }
+
+    static func font(_ role: TextRole, for dynamicTypeSize: DynamicTypeSize = .large) -> Font {
+        let base = Font.system(
+            size: size(role, for: dynamicTypeSize),
+            weight: role.weight,
+            design: role.design
+        )
+        return role == .timer ? base.monospacedDigit() : base
+    }
+}
+
+private struct WorkspaceFontModifier: ViewModifier {
+    let role: WorkspaceStyle.TextRole
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    func body(content: Content) -> some View {
+        content.font(WorkspaceStyle.font(role, for: dynamicTypeSize))
+    }
+}
+
+extension View {
+    func workspaceFont(_ role: WorkspaceStyle.TextRole) -> some View {
+        modifier(WorkspaceFontModifier(role: role))
+    }
 }
 
 struct WorkspaceIcon: View {

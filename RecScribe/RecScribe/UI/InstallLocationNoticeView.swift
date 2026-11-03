@@ -21,27 +21,46 @@ struct InstallLocationNoticeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Move RecScribe to Applications")
-                .font(.system(size: 15, weight: .medium))
+                .workspaceFont(.sectionTitle)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(message)
-                .font(.system(size: 12))
+                .workspaceFont(.detail)
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                GlassPillButton(
-                    "Reveal in Finder",
-                    emphasis: .primaryNeutral,
-                    size: .small,
-                    action: onReveal
-                )
-                Spacer()
-                GlassPillButton(
-                    "Close",
-                    emphasis: .tertiary,
-                    size: .small,
-                    action: onDismiss
-                )
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    GlassPillButton(
+                        "Reveal in Finder",
+                        emphasis: .primaryNeutral,
+                        size: .small,
+                        action: onReveal
+                    )
+                    Spacer()
+                    GlassPillButton(
+                        "Close",
+                        emphasis: .tertiary,
+                        size: .small,
+                        action: onDismiss
+                    )
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    GlassPillButton(
+                        "Reveal in Finder",
+                        emphasis: .primaryNeutral,
+                        size: .small,
+                        isFullWidth: true,
+                        action: onReveal
+                    )
+                    GlassPillButton(
+                        "Close",
+                        emphasis: .tertiary,
+                        size: .small,
+                        isFullWidth: true,
+                        action: onDismiss
+                    )
+                }
             }
         }
         .padding(18)

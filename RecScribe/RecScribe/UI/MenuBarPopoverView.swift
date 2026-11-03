@@ -35,7 +35,7 @@ struct MenuBarPopoverView: View {
                 }
 
                 Text(viewModel.statusText)
-                    .font(.system(size: 17, weight: .medium))
+                    .workspaceFont(.status)
                     .foregroundColor(viewModel.isRecording ? .red : .primary)
                     // Wrap rather than truncate. At 17pt there are 248pt to work
                     // with here (280 less the 16pt padding), and the idle line
@@ -55,9 +55,9 @@ struct MenuBarPopoverView: View {
 
                 if viewModel.isRecording {
                     Text(viewModel.formattedDuration)
-                        .font(.system(size: 15, weight: .regular))
-                        .monospacedDigit()
+                        .workspaceFont(.timer)
                         .foregroundColor(.secondary)
+                        .fixedSize()
                 }
             }
 
@@ -71,7 +71,7 @@ struct MenuBarPopoverView: View {
             if case .error = viewModel.state, let message = viewModel.errorMessage {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(message)
-                        .font(.system(size: 12))
+                        .workspaceFont(.detail)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -111,7 +111,7 @@ struct MenuBarPopoverView: View {
             // user can do. Red is unavailable; it means "record" in this app.
             if viewModel.installLocationBlocksRecording, let message = viewModel.installNotice {
                 Text(message)
-                    .font(.system(size: 12))
+                    .workspaceFont(.detail)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -157,7 +157,7 @@ struct MenuBarPopoverView: View {
                     Image(systemName: "doc.fill")
                         .foregroundColor(.secondary)
                     Text(url.lastPathComponent)
-                        .font(.system(size: 12))
+                        .workspaceFont(.detail)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .foregroundColor(.secondary)
@@ -202,9 +202,10 @@ struct MenuBarPopoverView: View {
                 NSApp.terminate(nil)
             } label: {
                 Label("Quit", systemImage: "power")
-                    .font(.system(size: 10, weight: .semibold))
+                    .workspaceFont(.badge)
                     .padding(.horizontal, 9)
-                    .frame(height: 30)
+                    .padding(.vertical, 4)
+                    .frame(minHeight: 30)
                     .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: 7))
             }
             .buttonStyle(.plain)
@@ -212,7 +213,8 @@ struct MenuBarPopoverView: View {
             .accessibilityIdentifier("popover-quit")
         }
         .padding(.horizontal, 14)
-        .frame(width: WorkspaceStyle.popoverWidth, height: 50)
+        .frame(width: WorkspaceStyle.popoverWidth)
+        .frame(minHeight: 50)
     }
 }
 

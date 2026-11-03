@@ -410,6 +410,29 @@ struct ReskinSnapshots {
         write("popover-04-install-blocked", size: Self.popoverSize, contrast: contrast) {
             MenuBarPopoverView().environmentObject(blocked)
         }
+
+        let longSource = MockAudioSourceProviding(
+            selectedSource: .mixed(appBundleID: "com.apple.FinalCutStudio", deviceUID: "focusrite-18i20")
+        )
+        longSource.knownAppNamesResult = ["com.apple.FinalCutStudio": "Final Cut Pro Studio Master Suite"]
+        longSource.availableInputDevicesResult = [
+            InputDeviceInfo(uid: "focusrite-18i20", name: "Focusrite Scarlett 18i20 USB Multi-Channel Interface", inputChannels: 8)
+        ]
+        let longRecording = RecorderViewModel(
+            controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(),
+            saveLocation: MockSaveLocationProviding(directory: URL(fileURLWithPath: "/Users/me/Desktop")),
+            audioSource: longSource,
+            installLocation: MockInstallLocationProviding(.applications),
+            defaults: Self.scratchDefaults
+        )
+        await longRecording.startRecording()
+        longRecording.duration = 754
+        longRecording.waveformSamples = quietSamples()
+        write("popover-05-long-source-accessibility", size: Self.popoverSize, contrast: contrast) {
+            MenuBarPopoverView().environmentObject(longRecording).dynamicTypeSize(.accessibility2)
+        }
     }
 
     @Test("Sheets and panels", arguments: [ColorSchemeContrast.standard])
@@ -433,6 +456,19 @@ struct ReskinSnapshots {
                 onReveal: {},
                 onDismiss: {}
             )
+        }
+
+        write("sheet-04-onboarding-accessibility", size: CGSize(width: 420, height: 620), contrast: contrast) {
+            OnboardingView().environmentObject(notGranted).dynamicTypeSize(.accessibility2)
+        }
+
+        write("sheet-05-install-panel-accessibility", size: CGSize(width: 340, height: 280), contrast: contrast) {
+            InstallLocationNoticeView(
+                message: InstallLocation.translocated.explanation ?? "",
+                onReveal: {},
+                onDismiss: {}
+            )
+            .dynamicTypeSize(.accessibility2)
         }
     }
 }

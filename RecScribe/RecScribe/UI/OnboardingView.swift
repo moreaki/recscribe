@@ -21,7 +21,9 @@ struct OnboardingView: View {
                 .frame(width: 72, height: 72)
 
             Text("Welcome to RecScribe")
-                .font(.system(size: 22, weight: .semibold))
+                .workspaceFont(.heroTitle)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             // Names what you can record *from*, not what formats exist: the
             // format picker is discoverable, the fact that the source is
@@ -34,7 +36,7 @@ struct OnboardingView: View {
             // the old phrasing hung "or a microphone" off "what your Mac is
             // playing", and a microphone is not something your Mac plays.
             Text("Record everything your Mac plays, a single app, or a microphone. Recordings go straight to your Desktop.")
-                .font(.body)
+                .workspaceFont(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -71,15 +73,16 @@ struct OnboardingView: View {
                 Label(PermissionKind.screenCapture.navigationHint, systemImage: "list.bullet")
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .font(.system(size: 12))
+            .workspaceFont(.detail)
             .foregroundColor(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             // Live permission status (re-detected automatically when you return).
             if viewModel.permissionStatus == .granted {
                 Label("You're ready to record", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 14, weight: .medium))
+                    .workspaceFont(.sectionTitle)
                     .foregroundColor(.green)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 // Neutral, not accent: granting permission is the step before
                 // recording, not recording itself.

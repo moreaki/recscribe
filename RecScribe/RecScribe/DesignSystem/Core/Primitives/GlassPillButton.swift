@@ -220,11 +220,19 @@ private struct GlassPillBody: View {
     @Environment(\.glassTheme) private var theme
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isHovering = false
     @FocusState private var isFocused: Bool
 
     /// Loading is not disabled, but it is not pressable either.
     private var acceptsInput: Bool { isEnabled && !isLoading }
+
+    private var resolvedHeight: CGFloat {
+        let baseHeight = size.height(theme.metrics)
+        let baseFontSize = theme.typography.style(size.textRole).size
+        let scaledFontSize = theme.typography.size(size.textRole, for: dynamicTypeSize)
+        return max(baseHeight, baseHeight + (scaledFontSize - baseFontSize))
+    }
 
     // HOMEREC-LOCAL: the focus ring became a permanent border on the record
     // control. SwiftUI grants focus on a *mouse* click and keeps it after the
@@ -245,7 +253,7 @@ private struct GlassPillBody: View {
         label
             .padding(.horizontal, size.horizontalPadding)
         .frame(maxWidth: isFullWidth ? .infinity : nil)
-        .frame(height: size.height(theme.metrics))
+        .frame(height: resolvedHeight)
         .background(fill, in: Capsule())
         // The one stroke in the component, and only when focused. Drawn
         // outside the capsule so it never eats into the fill or shifts the

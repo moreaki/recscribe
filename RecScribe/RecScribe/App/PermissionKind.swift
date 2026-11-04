@@ -69,6 +69,7 @@ enum PermissionKind: Sendable {
             return "macOS lists RecScribe under \(settingsSectionName)."
         }
         return "macOS lists RecScribe under \(settingsSectionName), "
-             + "not the \u{201C}\(confusable)\u{201D} list below it."
+             + "not the \u{201C}\(confusable)\u{201D} list below it. "
+             + "After enabling access, quit and reopen RecScribe if it is not detected."
     }
 }

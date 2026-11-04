@@ -18,6 +18,8 @@ import Foundation
 /// same strings.
 @MainActor
 protocol PermissionProviding {
+    /// Starts one deliberate user request. Polling and activation never call this.
+    func beginUserRequest(_ kind: PermissionKind)
     /// Cheap, silent read of permission state — **only trustworthy at launch** (BL-085).
     ///
     /// ⚠️ **The result is latched when the process starts and never refreshes.**
@@ -35,13 +37,10 @@ protocol PermissionProviding {
     /// its own state at startup without asking the user for anything.
     func preflight(_ kind: PermissionKind) -> PermissionStatus
 
-    /// Authoritative, live permission state.
-    ///
-    /// Tracks changes made while the process is running, which is why the guide's
-    /// poll loop and the activation re-probe both depend on it. The cost is that
-    /// this call **can raise the system prompt** and registers the app into the
-    /// System Settings list — so it must only run behind a deliberate user action
-    /// or while the guide is on screen. See BL-085.
+    /// Result of the current explicit request. A provider may perform its first
+    /// system probe here, but automatic retries must reuse a denied result rather
+    /// than repeatedly opening macOS permission prompts. A later user action can
+    /// beginUserRequest again; relaunch may be needed after a Settings change.
     func checkPermission(_ kind: PermissionKind) async -> PermissionStatus
 
     func requestPermission(_ kind: PermissionKind) async -> Bool
@@ -49,6 +48,8 @@ protocol PermissionProviding {
 }
 
 extension PermissionProviding {
+    func beginUserRequest(_ kind: PermissionKind) {}
+
     func preflight() -> PermissionStatus {
         preflight(.screenCapture)
     }

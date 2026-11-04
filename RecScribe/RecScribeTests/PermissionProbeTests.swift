@@ -18,6 +18,48 @@ import AppKit
 
 @MainActor
 struct PermissionProbeTests {
+    @Test func automaticChecksDoNotRepeatPromptingProbeAfterDenial() async {
+        var calls = 0
+        var nextStatus = PermissionStatus.denied
+        let manager = PermissionManager(screenCaptureProbe: {
+            calls += 1
+            return nextStatus
+        })
+        manager.beginUserRequest(.screenCapture)
+        for _ in 0..<100 { #expect(await manager.checkPermission() == .denied) }
+        #expect(calls == 1)
+        nextStatus = .granted
+        // A Settings toggle alone must not cause another potentially prompting call.
+        #expect(await manager.checkPermission() == .denied)
+        #expect(calls == 1)
+        #expect(await manager.requestPermission()) // A deliberate retry can refresh it.
+        for _ in 0..<100 { #expect(await manager.checkPermission() == .granted) }
+        #expect(calls == 2)
+    }
+
+    @Test func pollingActivationAndExplicitRequestShareOnePendingSystemProbe() async {
+        var calls = 0
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
+        defer { continuation.finish() }
+        let manager = PermissionManager(screenCaptureProbe: {
+            calls += 1
+            for await _ in stream { break }
+            return .denied
+        })
+        let polling = Task { await manager.checkPermission() }
+        await waitUntil("one system permission probe") { calls == 1 }
+        let activation = Task { await manager.checkPermission() }
+        let explicit = Task { await manager.requestPermission() }
+        await settle()
+        #expect(calls == 1)
+        continuation.yield(())
+        continuation.finish()
+        #expect(await polling.value == .denied)
+        #expect(await activation.value == .denied)
+        #expect(await explicit.value == false)
+        #expect(await manager.checkPermission() == .denied)
+        #expect(calls == 1)
+    }
 
     /// Each test gets its own notification center. `.default` is process-global
     /// and the suites run unserialized, so a synthetic `didBecomeActive` posted by

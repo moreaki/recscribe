@@ -140,6 +140,7 @@ class RecorderViewModel: ObservableObject {
     /// are `UserDefaults`-backed today and so tolerate duplicates by accident — once
     /// the selection is cached in memory (BL-111), duplicates diverge for real.
     let audioSource: AudioSourceProviding
+    let audio: AudioServices
     private var recordingStartTime: Date?
     private var longRecordingWarned = false
     /// Notification tokens are created and used on MainActor. Swift 6
@@ -174,6 +175,7 @@ class RecorderViewModel: ObservableObject {
         audioSource: AudioSourceProviding? = nil,
         installLocation: InstallLocationProviding? = nil,
         defaults: UserDefaults = .standard,
+        audio: AudioServices? = nil,
         installNoticePresenter: (() -> Void)? = nil,
         notificationCenter: NotificationCenter = .default,
         pollClock: PollClock? = nil,
@@ -181,6 +183,7 @@ class RecorderViewModel: ObservableObject {
         audioTest: AudioTestController? = nil
     ) {
         self.audioTest = audioTest
+        self.audio = audio ?? AudioServices(defaults: defaults)
         self.notificationCenter = notificationCenter
         let resolvedInstallLocation = installLocation ?? BundleInstallLocation()
         self.installLocation = resolvedInstallLocation.location
@@ -196,7 +199,7 @@ class RecorderViewModel: ObservableObject {
         self.audioSource = resolvedAudioSource
         self.controller = controller ?? RecordingController(
             saveLocation: resolvedSaveLocation,
-            audioSource: resolvedAudioSource
+            audioSource: resolvedAudioSource, levels: self.audio.levels, monitor: self.audio.monitor
         )
         self.permissionCoordinator = PermissionCoordinator(
             permissions: permissions ?? PermissionManager(),

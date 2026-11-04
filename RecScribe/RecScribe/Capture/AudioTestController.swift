@@ -56,8 +56,8 @@ final class AudioTestController: ObservableObject {
     private let sampleSeconds: TimeInterval
 
     init(capture: AudioCapturing = ScreenCaptureAudioManager(), source: AudioSourceProviding,
-         permissions: PermissionProviding = PermissionManager(), levels: AudioLevels = .shared,
-         monitor: CapturedAudioMonitor = .shared, gate: CaptureSessionGate = CaptureSessionGate(),
+         permissions: PermissionProviding = PermissionManager(), levels: AudioLevels = AudioLevels(),
+         monitor: CapturedAudioMonitor = CapturedAudioMonitor(), gate: CaptureSessionGate = CaptureSessionGate(),
          playback: SessionPlayback? = nil, temporaryRoot: URL? = nil,
          saveDirectory: @escaping () -> URL, sampleSeconds: TimeInterval = 10, previewLimit: TimeInterval = 600) {
         precondition(sampleSeconds > 0 && sampleSeconds <= 10 && previewLimit > 0 && previewLimit <= 600)

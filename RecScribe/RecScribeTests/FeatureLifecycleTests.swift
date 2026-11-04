@@ -54,7 +54,7 @@ struct FeatureLifecycleTests {
         #expect(cancellations == 1)
         #expect(library.recordingActive)
         library.setRecording(false)
-        let ids = Set(OverflowMenu.actions().map(\.id))
+        let ids = Set(OverflowMenu().actions().map(\.id))
         #expect(ids.contains("settings"))
         #expect(ids.contains("recordings"))
     }

@@ -8,11 +8,18 @@ struct RecordingLibraryView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @Environment(\.dismissWindow) private var dismissWindow
-    @StateObject private var playback = SessionPlayback()
+    @StateObject private var playback: SessionPlayback
     @State private var recordingToDelete: SessionEntry?
     @State private var showingDeleteConfirmation = false
     var embeddedInStudio = false
     var onOpenStudio: (() -> Void)? = nil
+
+    init(makePlayback: @escaping () -> SessionPlayback = { SessionPlayback() },
+         embeddedInStudio: Bool = false, onOpenStudio: (() -> Void)? = nil) {
+        _playback = StateObject(wrappedValue: makePlayback())
+        self.embeddedInStudio = embeddedInStudio
+        self.onOpenStudio = onOpenStudio
+    }
 
     private func navigateToStudio() {
         if let onOpenStudio {

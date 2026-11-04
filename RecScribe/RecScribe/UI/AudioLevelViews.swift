@@ -3,10 +3,17 @@ import SwiftUI
 
 struct RecordingLevelsView: View {
     @ObservedObject var recorder: RecorderViewModel
-    @ObservedObject private var levels = AudioLevels.shared
-    @ObservedObject private var monitor = CapturedAudioMonitor.shared
+    @ObservedObject private var levels: AudioLevels
+    @ObservedObject private var monitor: CapturedAudioMonitor
+    private let playbackLevels: PlaybackLevels
     @State private var expanded = false
     private var source: AudioSource { recorder.audioSource.selectedSource }
+    init(recorder: RecorderViewModel) {
+        self.recorder = recorder
+        levels = recorder.audio.levels
+        monitor = recorder.audio.monitor
+        playbackLevels = recorder.audio.playbackLevels
+    }
     var body: some View {
         DisclosureGroup("Audio levels", isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
@@ -28,7 +35,7 @@ struct RecordingLevelsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true) }
                 Divider()
-                ListeningControls(levels: .shared, title: "Playback output")
+                ListeningControls(levels: playbackLevels, title: "Playback output")
                 Toggle("Monitor recording through headphones", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
                 Text("Monitor plays the recording mix only while audio is captured. Use headphones to avoid acoustic feedback. Monitoring starts off and turns off after each take.")
                     .font(.caption).foregroundStyle(.secondary)

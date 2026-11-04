@@ -36,6 +36,7 @@ extension EnvironmentValues {
 }
 
 struct StudioView: View {
+    @EnvironmentObject private var recorder: RecorderViewModel
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.openWindow) private var openWindow
@@ -86,11 +87,14 @@ struct StudioView: View {
                 Group {
                     switch workspaceMode {
                     case .studio:
-                        TranscriptWorkspace()
+                        TranscriptWorkspace(playback: recorder.audio.makePlayback())
                     case .routing:
-                        AudioRoutingView(embeddedInStudio: true, onClose: { workspaceMode = .studio })
+                        AudioRoutingView(levels: recorder.audio.levels, monitor: recorder.audio.monitor,
+                            playbackLevels: recorder.audio.playbackLevels,
+                            embeddedInStudio: true, onClose: { workspaceMode = .studio })
                     case .recordings:
-                        RecordingLibraryView(embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
+                        RecordingLibraryView(makePlayback: { recorder.audio.makePlayback() },
+                            embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

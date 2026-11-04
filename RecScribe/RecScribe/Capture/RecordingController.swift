@@ -26,6 +26,7 @@ class RecordingController: RecordingControlling {
     private let liveTranscription: LiveTranscription?
     private let activity: RecordingActivity
     private let levels: AudioLevels
+    private let monitor: CapturedAudioMonitor
     private let captureGate: CaptureSessionGate
     private let captureID = UUID()
 
@@ -52,10 +53,12 @@ class RecordingController: RecordingControlling {
         liveTranscription: LiveTranscription? = nil,
         activity: RecordingActivity? = nil,
         levels: AudioLevels? = nil,
+        monitor: CapturedAudioMonitor? = nil,
         captureGate: CaptureSessionGate = CaptureSessionGate(),
         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
     ) {
-        self.levels = levels ?? .shared
+        self.levels = levels ?? AudioLevels()
+        self.monitor = monitor ?? CapturedAudioMonitor()
         self.captureGate = captureGate
         self.storageOptions = storageOptions
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
@@ -92,12 +95,12 @@ class RecordingController: RecordingControlling {
         try captureGate.acquire(captureID)
         sessionLibrary?.setRecording(true)
         var started = false
-        defer { if !started { captureGate.release(captureID); CapturedAudioMonitor.shared.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
+        defer { if !started { captureGate.release(captureID); monitor.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
         // Pre-flight: fail before touching disk if the selected source isn't
         // capturable right now (BL-100 — e.g. the chosen app isn't running).
         let source = audioSource.selectedSource
         try await audioSource.validate(source)
-        if CapturedAudioMonitor.shared.enabled { CapturedAudioMonitor.shared.setEnabled(true, source: source) }
+        if monitor.enabled { monitor.setEnabled(true, source: source) }
         if let uid = source.microphoneUID { activeSourceName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Input" }
         else if let bundle = source.appBundleID { activeSourceName = audioSource.knownAppName(forBundleID: bundle) ?? bundle }
         else { activeSourceName = "System playback" }
@@ -131,7 +134,7 @@ class RecordingController: RecordingControlling {
                     name: device?.name ?? "Input", deviceUID: selection.deviceUID,
                     channelRoutes: multiple ? selection.routes : nil, channelLabels: device?.channelLabels))
             }
-            let recorder = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) }, onWaveform: onWaveformData)
+            let recorder = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) }, onWaveform: onWaveformData, monitor: monitor)
             multiRecorder = recorder
             do {
                 try recorder.start(at: fileURL, descriptors: descriptors, options: storageOptions(),
@@ -152,7 +155,7 @@ class RecordingController: RecordingControlling {
             started = true
             return actual
         }
-        (audioRecorder as? AudioRecorder)?.configureLevels(source: source, levels: levels)
+        (audioRecorder as? AudioRecorder)?.configureLevels(source: source, levels: levels, monitor: monitor)
         try audioRecorder.startRecording(to: fileURL, format: .wav)
 
         // Set up capture with audio callback
@@ -187,7 +190,7 @@ class RecordingController: RecordingControlling {
         var needsReview = false
         defer {
             captureGate.release(captureID)
-            CapturedAudioMonitor.shared.recordingStopped()
+            monitor.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: needsReview)
             sessionLibrary?.setRecording(false)
@@ -250,7 +253,7 @@ class RecordingController: RecordingControlling {
     func finalizeAfterFailure() async {
         defer {
             captureGate.release(captureID)
-            CapturedAudioMonitor.shared.recordingStopped()
+            monitor.recordingStopped()
             activity.stop()
             liveTranscription?.recordingStopped(needsReview: true)
             sessionLibrary?.setRecording(false)

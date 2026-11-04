@@ -47,7 +47,7 @@ final class MultiSourceRecorder {
          onWaveform: (@MainActor @Sendable ([Float]) -> Void)? = nil,
          maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256, monitor: CapturedAudioMonitor? = nil) {
         precondition(maximumBytes > 0 && maximumBuffers > 0)
-        self.monitor = monitor ?? .shared
+        self.monitor = monitor ?? CapturedAudioMonitor()
         self.maximumBytes = maximumBytes; self.maximumBuffers = maximumBuffers
         self.onError = onError; self.onWaveform = onWaveform
     }

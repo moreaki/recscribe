@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct TranscriptReadingView: View {
-    private static let inertPlayback = SessionPlayback(coordinator: SessionPlaybackCoordinator())
 
     let document: TranscriptPreview
     private let hasPlayback: Bool
@@ -26,7 +25,7 @@ struct TranscriptReadingView: View {
         self.document = document
         self.hasPlayback = playback != nil
         self.playbackPosition = playbackPosition
-        self._playback = ObservedObject(wrappedValue: playback ?? Self.inertPlayback)
+        self._playback = ObservedObject(wrappedValue: playback ?? SessionPlayback())
         self.onSeek = onSeek
         _mode = State(initialValue: mode)
         _expandedGroups = State(initialValue: expandedGroups)

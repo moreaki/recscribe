@@ -13,6 +13,7 @@ struct RecScribeApp: App {
             StudioView().environmentObject(services.recorder)
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
                 .environment(\.studioNavigation, services.navigation)
+                .environment(\.makeOverflowMenu, services.makeOverflowMenu)
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {

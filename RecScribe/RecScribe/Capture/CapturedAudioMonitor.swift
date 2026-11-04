@@ -7,7 +7,6 @@ import os
 /// Its bounded 250-ms queue can fail independently without blocking the writer.
 @MainActor
 final class CapturedAudioMonitor: ObservableObject {
-    static let shared = CapturedAudioMonitor()
     @Published private(set) var enabled = false
     @Published private(set) var warning: String?
     let levels: PlaybackLevels

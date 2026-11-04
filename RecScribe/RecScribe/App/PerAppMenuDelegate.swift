@@ -48,15 +48,18 @@ final class PerAppMenuDelegate: NSObject, NSMenuDelegate {
 
     private let cache: PerAppListCache
     private let source: AudioSourceProviding
+    private let actions: OverflowMenu
     private let makeContext: @MainActor () -> OverflowContext
 
     init(
         cache: PerAppListCache,
         source: AudioSourceProviding,
+        actions: OverflowMenu = .init(),
         makeContext: @escaping @MainActor () -> OverflowContext
     ) {
         self.cache = cache
         self.source = source
+        self.actions = actions
         self.makeContext = makeContext
     }
 
@@ -67,14 +70,14 @@ final class PerAppMenuDelegate: NSObject, NSMenuDelegate {
         // must not enumerate at all, or *hovering* this submenu raises a dialog —
         // worse than the click-triggered prompt BL-085 removed.
         guard context.permissionGranted else {
-            OverflowMenu.populate(menu, with: OverflowMenu.perAppSubmenu(context).entries)
+            OverflowMenu.populate(menu, with: actions.perAppSubmenu(context).entries)
             return
         }
 
         // Populate from whatever the cache holds and return immediately. On the
         // very first open that is the "Looking for open apps…" placeholder, which
         // the refresh below replaces in place a moment later.
-        OverflowMenu.populate(menu, with: OverflowMenu.perAppSubmenu(context).entries)
+        OverflowMenu.populate(menu, with: actions.perAppSubmenu(context).entries)
 
         // Out-of-band refresh. No `await` on this path, no semaphore, nothing
         // that blocks the tracking loop.
@@ -87,7 +90,7 @@ final class PerAppMenuDelegate: NSObject, NSMenuDelegate {
             guard let menu else { return }
             OverflowMenu.populate(
                 menu,
-                with: OverflowMenu.perAppSubmenu(self.makeContext()).entries
+                with: self.actions.perAppSubmenu(self.makeContext()).entries
             )
         }
     }

@@ -119,7 +119,7 @@ struct TranscriptWorkspace: View {
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
-    @State private var playback = SessionPlayback()
+    @State private var playback: SessionPlayback
     @State private var pendingSeekSeconds: Double?
     @State private var section: Section
     @State private var document: TranscriptPreview?
@@ -144,7 +144,10 @@ struct TranscriptWorkspace: View {
             }
         }
     }
-    init(section: Section = .live) { _section = State(initialValue: section) }
+    init(section: Section = .live, playback: SessionPlayback = SessionPlayback()) {
+        _section = State(initialValue: section)
+        _playback = State(initialValue: playback)
+    }
 
     private func copyToPasteboard(_ text: String) {
         let board = NSPasteboard.general

@@ -1,20 +1,25 @@
+import AppKit
 import Combine
 import Foundation
 
 /// The only composition root. Features receive dependencies, not global peers.
 @MainActor
-final class AppServices: ObservableObject {
+final class AppServices {
     let settings: AppSettings
     let runtime: RuntimeManager
     let library: SessionLibrary
     let recorder: RecorderViewModel
+    let audio: AudioServices
     let live: LiveTranscription
     let navigation = StudioNavigation()
+    let overflowMenu: OverflowMenu
     private(set) var menuBarController: MenuBarController?
     private var locationObservation: AnyCancellable?
 
     init(defaults: UserDefaults = .standard, supportDirectory: URL = AppSettings.supportDirectory) {
         let settings = AppSettings(defaults: defaults)
+        let audio = AudioServices(defaults: defaults)
+        self.audio = audio
         let runtime = RuntimeManager(settings: settings)
         let repository = ManifestRepository()
         let library = SessionLibrary(cancelRuntime: { runtime.cancel() }, settings: { settings.values },
@@ -29,14 +34,14 @@ final class AppServices: ObservableObject {
         live.onCloudTranscript = { [weak library] job, source in library?.acceptCloudTranscript(job, source: source) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
         let source = AudioSourceManager(defaults: defaults), location = SaveLocationManager(defaults: defaults)
-        OverflowMenu.onRecoverRecordings = { [weak library] in
-            library?.recoverUnfinalizedSessions(in: location.resolvedDirectory)
-        }
         let gate = CaptureSessionGate()
-        let test = AudioTestController(source: source, gate: gate, saveDirectory: { location.resolvedDirectory })
+        let test = AudioTestController(source: source, levels: audio.levels, monitor: audio.monitor,
+            gate: gate, playback: audio.makePlayback(), saveDirectory: { location.resolvedDirectory })
         test.onActivity = { [weak library] in library?.setRecording($0) }
         test.onRetained = { [weak library] in library?.load($0.deletingLastPathComponent()) }
         let controller = RecordingController(saveLocation: location, audioSource: source, sessionLibrary: library, liveTranscription: live,
+                                             levels: audio.levels,
+                                             monitor: audio.monitor,
                                              captureGate: gate,
                                              storageOptions: { settings.values.storage })
         self.settings = settings
@@ -44,8 +49,13 @@ final class AppServices: ObservableObject {
         self.library = library
         self.live = live
         let recorder = RecorderViewModel(controller: controller, saveLocation: location, audioSource: source,
-                                         defaults: defaults, audioTest: test)
+                                         defaults: defaults, audio: audio, audioTest: test)
         self.recorder = recorder
+        overflowMenu = OverflowMenu(onSelectSource: { [weak recorder] in recorder?.setCaptureSource($0) },
+            onRequestPermission: { [weak recorder] in recorder?.openSystemSettings() },
+            onRecoverRecordings: { [weak library] in
+                library?.recoverUnfinalizedSessions(in: location.resolvedDirectory)
+            })
         test.canStart = { [weak recorder] in
             guard let recorder else { return false }
             return recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording && !recorder.isFinalizingAfterFailure
@@ -57,7 +67,11 @@ final class AppServices: ObservableObject {
 
     func start() {
         guard menuBarController == nil else { return }
-        menuBarController = MenuBarController(viewModel: recorder, live: live)
+        menuBarController = MenuBarController(viewModel: recorder, live: live, actions: overflowMenu)
+    }
+
+    func makeOverflowMenu() -> NSMenu {
+        menuBarController?.makeOverflowMenu() ?? overflowMenu.makeNSMenu()
     }
 
     func shutdown() async {
@@ -66,6 +80,7 @@ final class AppServices: ObservableObject {
         await recorder.audioTest?.close()
         if recorder.isRecording { await recorder.stopRecording() }
         await recorder.waitForFailureFinalization()
+        await audio.shutdown()
         await live.shutdown()
         await library.shutdown()
         await runtime.shutdown()

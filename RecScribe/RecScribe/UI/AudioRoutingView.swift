@@ -4,10 +4,10 @@ import SwiftUI
 struct AudioRoutingView: View {
     @EnvironmentObject private var recorder: RecorderViewModel
     @Environment(\.dismissWindow) private var dismissWindow
-    @ObservedObject private var levels = AudioLevels.shared
-    @ObservedObject private var monitor = CapturedAudioMonitor.shared
-    @ObservedObject private var monitorLevels = CapturedAudioMonitor.shared.levels
-    @ObservedObject private var playbackLevels = PlaybackLevels.shared
+    @ObservedObject private var levels: AudioLevels
+    @ObservedObject private var monitor: CapturedAudioMonitor
+    @ObservedObject private var monitorLevels: PlaybackLevels
+    @ObservedObject private var playbackLevels: PlaybackLevels
     @ObservedObject private var hardwareObserver = AudioHardwareObserver.shared
     @State private var devices: [InputDeviceInfo] = []
     @State private var outputs: [AudioOutputDevice] = []
@@ -21,8 +21,8 @@ struct AudioRoutingView: View {
     private let embeddedInStudio: Bool
     private let onClose: (() -> Void)?
 
-    init(levels: AudioLevels = .shared, monitor: CapturedAudioMonitor = .shared,
-         playbackLevels: PlaybackLevels = .shared, hardwareObserver: AudioHardwareObserver = .shared,
+    init(levels: AudioLevels, monitor: CapturedAudioMonitor,
+         playbackLevels: PlaybackLevels, hardwareObserver: AudioHardwareObserver = .shared,
          expandedPanel: AudioRoutingPanel? = nil,
          embeddedInStudio: Bool = false,
          onClose: (() -> Void)? = nil) {
@@ -576,7 +576,7 @@ struct MultipleInputsView: View {
                 Text("Connect apps and inputs, adjust channels, and choose a monitor output.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            AudioMuteSummary(source: source)
+            AudioMuteSummary(source: source, audio: recorder.audio)
             if let test = recorder.audioTest, test.locksSources {
                 Label("Audio test active · start recording to end the test and begin a take", systemImage: "waveform.circle")
                     .font(.caption).foregroundStyle(WorkspaceStyle.mint)

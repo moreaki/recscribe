@@ -65,9 +65,13 @@ enum SessionPlaybackBuilder {
 
 @MainActor
 final class SessionPlaybackCoordinator {
-    static let shared = SessionPlaybackCoordinator()
     private weak var activeInstance: SessionPlayback?
     private var requestToken: UInt64 = 0
+
+    func stop() {
+        activeInstance?.stop()
+        requestToken &+= 1
+    }
 
     func claim(for instance: SessionPlayback) -> UInt64 {
         if let active = activeInstance, active !== instance {
@@ -94,7 +98,6 @@ final class SessionPlaybackCoordinator {
 /// single-active-player preemption (#13, #41).
 @MainActor
 final class SessionPlayback: ObservableObject {
-    static let shared = SessionPlayback()
 
     private nonisolated final class PlayerObserverCleanup: @unchecked Sendable {
         weak var player: AVPlayer?
@@ -186,9 +189,9 @@ final class SessionPlayback: ObservableObject {
     ) {
         self.build = build ?? SessionPlaybackBuilder.item
         self.activate = activate ?? { $0.play() }
-        self.levels = levels ?? .shared
+        self.levels = levels ?? PlaybackLevels()
         self.hardwareObserver = hardwareObserver
-        self.coordinator = coordinator ?? ((build == nil && activate == nil) ? .shared : SessionPlaybackCoordinator())
+        self.coordinator = coordinator ?? SessionPlaybackCoordinator()
         self.sourceReader = sourceReader
         self.asyncSourceReader = asyncSourceReader
         levelObservation = self.levels.$value.dropFirst().sink { [weak self] _ in
@@ -493,7 +496,6 @@ nonisolated struct ListeningLevel: Codable, Equatable, Sendable {
 /// Shared by every app player; output controls never enter the capture pipeline.
 @MainActor
 final class PlaybackLevels: ObservableObject {
-    static let shared = PlaybackLevels()
     @Published private(set) var value: ListeningLevel
     private let defaults: UserDefaults
     private let key: String

@@ -67,8 +67,8 @@ struct CaptureSourceMenuTests {
     func rootHasOneRowPerKind() {
         // The root must not reshape because the world changed. Whether three apps
         // are running or none, the section is the same height.
-        let many = OverflowMenu.captureSourceEntries(context(apps: apps))
-        let none = OverflowMenu.captureSourceEntries(context(apps: []))
+        let many = OverflowMenu().captureSourceEntries(context(apps: apps))
+        let none = OverflowMenu().captureSourceEntries(context(apps: []))
 
         let shape: ([OverflowEntry]) -> [String] = { entries in
             entries.compactMap { entry in
@@ -87,7 +87,7 @@ struct CaptureSourceMenuTests {
 
     @Test("Section header is passed in sentence case for the system to style")
     func headerIsNotPreUppercased() {
-        #expect(headers(OverflowMenu.captureSourceEntries(context())) == ["Capture Source"])
+        #expect(headers(OverflowMenu().captureSourceEntries(context())) == ["Capture Source"])
     }
 
     // MARK: - Checkmarks are derived, and there is exactly one
@@ -101,7 +101,7 @@ struct CaptureSourceMenuTests {
     /// pickers exactly this way. What would be a real defect is two checkmarks
     /// *side by side* in one menu.
     private func checkedPerLevel(_ context: OverflowContext) -> (root: Int, submenu: Int) {
-        let entries = OverflowMenu.captureSourceEntries(context)
+        let entries = OverflowMenu().captureSourceEntries(context)
         var root = 0
         var submenu = 0
         for entry in entries {
@@ -145,7 +145,7 @@ struct CaptureSourceMenuTests {
 
     @Test("Selecting system audio checks the system row and nothing else")
     func systemAllIsCheckedByDefault() throws {
-        let actions = OverflowMenu.actions(context(apps: apps))
+        let actions = OverflowMenu().actions(context(apps: apps))
         let system = try #require(actions.first { $0.id == "sourceSystemAll" })
         #expect(system.isChecked)
         #expect(actions.first { $0.id == "sourcePerApp" }?.isChecked == false)
@@ -153,7 +153,7 @@ struct CaptureSourceMenuTests {
 
     @Test("A running selection checks its row and names the root")
     func runningSelectionNamesTheRootRow() throws {
-        let entries = OverflowMenu.captureSourceEntries(
+        let entries = OverflowMenu().captureSourceEntries(
             context(selected: .app(bundleID: "com.ableton.live"), apps: apps)
         )
         let submenu = try #require(
@@ -171,7 +171,7 @@ struct CaptureSourceMenuTests {
         // Without this row the builder emits zero checkmarks, and the menu
         // silently implies "All System Audio" while startRecording fails with
         // `.appNotRunning`.
-        let actions = OverflowMenu.actions(
+        let actions = OverflowMenu().actions(
             context(
                 selected: .app(bundleID: "com.ableton.live"),
                 apps: [],
@@ -186,7 +186,7 @@ struct CaptureSourceMenuTests {
 
     @Test("The parent row stays enabled so the user can change away from it")
     func notRunningParentRemainsSelectable() throws {
-        let actions = OverflowMenu.actions(
+        let actions = OverflowMenu().actions(
             context(selected: .app(bundleID: "com.ableton.live"), apps: [], selectedAppName: "Ableton Live")
         )
         let parent = try #require(actions.first { $0.id == "sourcePerApp" })
@@ -197,13 +197,13 @@ struct CaptureSourceMenuTests {
 
     @Test("An unprobed list does not claim there are no apps")
     func coldCacheShowsLookingRatherThanEmpty() throws {
-        let submenu = OverflowMenu.perAppSubmenu(context(apps: nil))
+        let submenu = OverflowMenu().perAppSubmenu(context(apps: nil))
         #expect(notices(submenu.entries) == ["Looking for open apps…"])
     }
 
     @Test("A probed-but-empty list says so")
     func emptyListSaysNoAppsAreOpen() {
-        let submenu = OverflowMenu.perAppSubmenu(context(apps: []))
+        let submenu = OverflowMenu().perAppSubmenu(context(apps: []))
         #expect(notices(submenu.entries) == ["No other apps are open"])
     }
 
@@ -211,7 +211,7 @@ struct CaptureSourceMenuTests {
 
     @Test("Without permission the submenu offers a way out, not a dead end")
     func missingPermissionOffersAnEnabledAction() throws {
-        let submenu = OverflowMenu.perAppSubmenu(context(granted: false, apps: apps))
+        let submenu = OverflowMenu().perAppSubmenu(context(granted: false, apps: apps))
         let actions: [OverflowAction] = submenu.entries.compactMap {
             if case .action(let a) = $0 { return a } else { return nil }
         }
@@ -225,7 +225,7 @@ struct CaptureSourceMenuTests {
 
     @Test("Without permission no app row is offered, even if a list is cached")
     func missingPermissionNeverListsApps() {
-        let actions = OverflowMenu.actions(context(granted: false, apps: apps))
+        let actions = OverflowMenu().actions(context(granted: false, apps: apps))
         #expect(actions.contains { $0.id.hasPrefix("sourceApp:") } == false)
     }
 
@@ -236,7 +236,7 @@ struct CaptureSourceMenuTests {
         // Written over the builder's output: *any* source row, not a known list.
         // A microphone row added later is covered the moment it exists.
         for selected in [AudioSource.systemAll, .app(bundleID: "com.ableton.live")] {
-            let actions = OverflowMenu.actions(
+            let actions = OverflowMenu().actions(
                 context(selected: selected, unlocked: false, apps: apps)
             )
             #expect(actions.contains { $0.isSourceRow } == false)
@@ -245,7 +245,7 @@ struct CaptureSourceMenuTests {
 
     @Test("While recording, the section header and submenu are gone too")
     func recordingRemovesTheWholeSection() {
-        let entries = OverflowMenu.entries(context(unlocked: false, apps: apps))
+        let entries = OverflowMenu().entries(context(unlocked: false, apps: apps))
         #expect(headers(entries).isEmpty)
         #expect(entries.contains { if case .submenu = $0 { return true } else { return false } } == false)
     }
@@ -265,7 +265,7 @@ struct CaptureSourceMenuTests {
     func appActionsAreNeverLocked() {
         // Hiding the source section must not take Quit or Show Window with it —
         // mid-recording those are the main reason to open the menu at all.
-        let ids = Set(OverflowMenu.actions(context(unlocked: false)).map(\.id))
+        let ids = Set(OverflowMenu().actions(context(unlocked: false)).map(\.id))
         #expect(ids.isSuperset(of: ["showWindow", "quit", "about", "recoverRecordings"]))
     }
 
@@ -274,7 +274,7 @@ struct CaptureSourceMenuTests {
     @Test("The NSMenu tree mirrors the builder, recursing into submenus")
     func nsMenuTreeMatchesBuilder() throws {
         let context = context(selected: .app(bundleID: "com.spotify.client"), apps: apps)
-        let menu = OverflowMenu.makeNSMenu(context)
+        let menu = OverflowMenu().makeNSMenu(context)
 
         let perApp = try #require(
             menu.items.first { $0.identifier?.rawValue == OverflowMenu.perAppItemIdentifier }
@@ -294,7 +294,7 @@ struct CaptureSourceMenuTests {
 
     @Test("Disabled rows carry no action, so AppKit cannot re-enable them")
     func disabledRowsHaveNoAction() throws {
-        let menu = OverflowMenu.makeNSMenu(
+        let menu = OverflowMenu().makeNSMenu(
             context(selected: .app(bundleID: "com.ableton.live"), apps: [], selectedAppName: "Ableton Live")
         )
         let perApp = try #require(
@@ -417,7 +417,7 @@ struct MicrophoneMenuTests {
 
     @Test("Devices are listed with the names macOS reports")
     func devicesUseSystemNames() {
-        let submenu = OverflowMenu.microphoneSubmenu(context(devices: devices))
+        let submenu = OverflowMenu().microphoneSubmenu(context(devices: devices))
         let titles = submenu.entries.compactMap { entry -> String? in
             if case .action(let a) = entry { return a.title }
             return nil
@@ -427,7 +427,7 @@ struct MicrophoneMenuTests {
 
     @Test("Selecting a mic checks its row and names the root")
     func selectedMicNamesTheRoot() {
-        let submenu = OverflowMenu.microphoneSubmenu(
+        let submenu = OverflowMenu().microphoneSubmenu(
             context(selected: .mic(deviceUID: "USB:Scarlett"), devices: devices)
         )
         #expect(submenu.title == "Scarlett 2i2 4th Gen")
@@ -446,7 +446,7 @@ struct MicrophoneMenuTests {
         // Same reasoning as the not-running app row: without it the section
         // shows zero checkmarks and silently implies system audio, while
         // startRecording fails pre-flight with `.micNotAvailable`.
-        let submenu = OverflowMenu.microphoneSubmenu(
+        let submenu = OverflowMenu().microphoneSubmenu(
             context(
                 selected: .mic(deviceUID: "USB:Gone"),
                 devices: devices,
@@ -465,7 +465,7 @@ struct MicrophoneMenuTests {
 
     @Test("No devices says so rather than showing an empty submenu")
     func emptyDeviceListShowsNotice() {
-        let notices = OverflowMenu.microphoneSubmenu(context()).entries
+        let notices = OverflowMenu().microphoneSubmenu(context()).entries
             .compactMap { entry -> String? in
                 if case .disabledNotice(let t) = entry { return t }
                 return nil
@@ -478,7 +478,7 @@ struct MicrophoneMenuTests {
         // Enumerating input devices raises no dialog and returns real names even
         // with mic access undetermined, so the Per-App permission gate must NOT
         // be copied here — only capturing prompts.
-        let submenu = OverflowMenu.microphoneSubmenu(context(granted: false, devices: devices))
+        let submenu = OverflowMenu().microphoneSubmenu(context(granted: false, devices: devices))
         let titles = submenu.entries.compactMap { entry -> String? in
             if case .action(let a) = entry { return a.title }
             return nil
@@ -493,7 +493,7 @@ struct MicrophoneMenuTests {
             allowsCaptureSourceChange: false,
             inputDevices: devices
         )
-        #expect(OverflowMenu.actions(locked).contains { $0.isSourceRow } == false)
+        #expect(OverflowMenu().actions(locked).contains { $0.isSourceRow } == false)
     }
 
     @Test("Microphone is a distinct source kind")
@@ -645,7 +645,7 @@ struct AudioCapableFilterTests {
         #expect(filtered.first?.isAudioActive == true)
         #expect(filtered.dropFirst().allSatisfy { !$0.isAudioActive })
 
-        let submenu = OverflowMenu.perAppSubmenu(
+        let submenu = OverflowMenu().perAppSubmenu(
             OverflowContext(
                 selectedSource: .systemAll,
                 permissionGranted: true,

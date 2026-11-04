@@ -70,11 +70,10 @@ struct TranscriptSourceView: View {
                 }.disabled(!sourceAvailable || recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }.disabled(!sourceAvailable)
             }
-            if playback.loading { ProgressView("Loading audio…").controlSize(.small) }
-            if playback.player != nil {
-                SessionPlaybackView(playback: playback)
+            if playback.hasPresentation {
+                SessionPlaybackView(playback: playback, showsSourceIdentity: false)
             }
-            if let message = error ?? playback.errorMessage { Text(message).font(.caption).foregroundStyle(.orange) }
+            if let message = error { Text(message).font(.caption).foregroundStyle(.orange) }
         }
         .task(id: "\(source.path):\(recording)") {
             playback.stop(); entry = nil; error = nil; wavDuration = nil
@@ -103,7 +102,7 @@ struct TranscriptSourceView: View {
         }
         .onChange(of: pendingSeekSeconds) { _, target in
             guard let target, !recording else { return }
-            if playback.player != nil {
+            if playback.player != nil, playback.phase != .failed {
                 playback.seek(to: target)
                 pendingSeekSeconds = nil
             } else if entry != nil || source.pathExtension.lowercased() == "wav" {

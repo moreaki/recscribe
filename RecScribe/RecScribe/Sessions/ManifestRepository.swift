@@ -26,6 +26,13 @@ nonisolated struct SessionEntry: Identifiable, Sendable {
         if let title = session.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
             return title
         }
+        // Only replace our generated timestamp names. Imported/custom file names
+        // remain meaningful, and the original path stays available separately.
+        if filenameStem.range(of: #"^recording_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}( \(\d+\))*$"#,
+                              options: .regularExpression) != nil {
+            let suffix = filenameStem.dropFirst("recording_yyyy-MM-dd_HH-mm-ss".count)
+            return "Recording · \(session.startedAt.formatted(date: .abbreviated, time: .standard))\(suffix)"
+        }
         return filenameStem
     }
 }

@@ -10,6 +10,27 @@ import Testing
 
 @MainActor
 struct RecordingSessionTests {
+    @Test func generatedSessionTitlesAreReadableWithoutRenamingFilesOrReplacingCustomNames() throws {
+        var session = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mono"], options: .init())
+        session.startedAt = Date(timeIntervalSince1970: 1_793_813_200)
+        session.parts = [.init(path: "recording_2026-11-04_19-00-00.wav", startSample: 0, frames: 480, startedAt: session.startedAt)]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let original = try encoder.encode(session)
+        for suffix in ["", " (2)", " (2) (1)"] {
+            let entry = SessionEntry(id: URL(fileURLWithPath: "/synthetic/recording_2026-11-04_19-00-00\(suffix).recscribe.json"), session: session)
+            #expect(entry.displayTitle.hasPrefix("Recording · "))
+            #expect(!entry.displayTitle.contains("recording_"))
+            #expect(entry.displayTitle.hasSuffix(suffix))
+            #expect(entry.filenameStem == "recording_2026-11-04_19-00-00\(suffix)")
+            #expect(try encoder.encode(entry.session) == original)
+        }
+        let custom = SessionEntry(id: URL(fileURLWithPath: "/synthetic/Interview with Ada.recscribe.json"), session: session)
+        #expect(custom.displayTitle == "Interview with Ada")
+        session.title = "Weekly planning"
+        #expect(SessionEntry(id: custom.id, session: session).displayTitle == "Weekly planning")
+    }
+
     @Test func archiveCancellationAndRestartNeverPublishPrematureCompletion() throws {
         let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
         let manifest = try record(directory, format: .flac)

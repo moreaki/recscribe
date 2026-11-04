@@ -103,13 +103,13 @@ final class SessionPlaybackCoordinator {
     private nonisolated final class PlayerObserverCleanup: @unchecked Sendable {
         weak var player: AVPlayer?
         var timeToken: Any?
-        var endObserver: NSObjectProtocol?
+        var notificationObservers: [NSObjectProtocol]
         private(set) var isTornDown = false
 
-        init(player: AVPlayer, timeToken: Any?, endObserver: NSObjectProtocol?) {
+        init(player: AVPlayer, timeToken: Any?, notificationObservers: [NSObjectProtocol]) {
             self.player = player
             self.timeToken = timeToken
-            self.endObserver = endObserver
+            self.notificationObservers = notificationObservers
         }
 
         func tearDown() {
@@ -120,10 +120,8 @@ final class SessionPlaybackCoordinator {
             }
             timeToken = nil
             player = nil
-            if let endObserver {
-                NotificationCenter.default.removeObserver(endObserver)
-                self.endObserver = nil
-            }
+            for observer in notificationObservers { NotificationCenter.default.removeObserver(observer) }
+            notificationObservers = []
         }
 
         deinit {
@@ -131,6 +129,11 @@ final class SessionPlaybackCoordinator {
         }
     }
 
+    private(set) var phase = PlaybackPhase.idle
+    private(set) var sourceName: String?
+    private(set) var isScrubbing = false
+    private var scrubWantsPlayback = false
+    private var resumeAfterSeek: Bool?
     private(set) var position = 0.0
     private(set) var duration = 0.0
     private(set) var isPlaying = false
@@ -155,7 +158,7 @@ final class SessionPlaybackCoordinator {
     private var recordingActive = false
     @ObservationIgnored private var levelObservation: ObservationSubscription?
     @ObservationIgnored private var hardwareObservation: ObservationSubscription?
-    private var statusObservation: AnyCancellable?
+    private var playerObservations: [AnyCancellable] = []
     @ObservationIgnored private var observerCleanup: PlayerObserverCleanup?
     private var seekInFlight = false
     private var pendingSeekTarget: Double?
@@ -165,17 +168,22 @@ final class SessionPlaybackCoordinator {
         return !observerCleanup.isTornDown
     }
 
+    var canSeek: Bool { player != nil && duration > 0 && phase != .failed }
+    var hasPresentation: Bool { loading || player != nil || errorMessage != nil }
+    var positionAccessibilityValue: String {
+        "\(PlaybackPolicy.spokenTime(position)) of \(PlaybackPolicy.spokenTime(duration))"
+    }
     var formattedPosition: String { Self.formatTime(position) }
     var formattedDuration: String { Self.formatTime(duration) }
 
     nonisolated static func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds > 0 else { return "00:00" }
+        guard seconds.isFinite, seconds > 0, seconds < Double(Int.max) else { return "00:00" }
         let total = Int(seconds.rounded(.down))
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         let secs = total % 60
         if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+            return "\(hours):" + String(format: "%02d:%02d", minutes, secs)
         }
         return String(format: "%02d:%02d", minutes, secs)
     }
@@ -193,7 +201,7 @@ final class SessionPlaybackCoordinator {
         self.build = build ?? SessionPlaybackBuilder.item
         self.activate = activate ?? { $0.play() }
         self.seekPlayer = seekPlayer ?? { player, target, completion in
-            player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: completion)
+            player.seek(to: target, toleranceBefore: PlaybackPolicy.seekTolerance, toleranceAfter: PlaybackPolicy.seekTolerance, completionHandler: completion)
         }
         self.levels = levels ?? PlaybackLevels()
         self.hardwareObserver = hardwareObserver
@@ -205,28 +213,81 @@ final class SessionPlaybackCoordinator {
     }
 
     func togglePlayback() {
-        guard let player else { return }
-        if player.rate > 0 || player.timeControlStatus == .playing {
+        guard let player, phase != .failed else { return }
+        if isScrubbing {
+            scrubWantsPlayback.toggle(); isPlaying = scrubWantsPlayback
+        } else if let desired = resumeAfterSeek {
+            resumeAfterSeek = !desired; isPlaying = !desired
+        } else if player.rate > 0 || player.timeControlStatus == .playing {
             player.pause()
-            isPlaying = false
+            isPlaying = false; phase = .paused
         } else {
             _ = claimGlobalPlayback()
-            if duration > 0, position >= duration {
-                seek(to: 0)
-            }
+            if duration > 0, position >= duration { seek(to: 0) }
             player.play()
-            isPlaying = player.rate > 0 || player.timeControlStatus == .playing
+            refreshTransportState()
         }
+    }
+
+    /// Pause actual output during dragging, retaining the user's play/pause intent.
+    /// Resume only after the final coalesced seek, never from a stale generation.
+    func setScrubbing(_ editing: Bool) {
+        guard let player, phase != .failed, editing != isScrubbing else { return }
+        if editing {
+            scrubWantsPlayback = resumeAfterSeek ?? isPlaying
+            resumeAfterSeek = nil
+            isScrubbing = true
+            player.pause()
+            isPlaying = scrubWantsPlayback; phase = .scrubbing
+        } else {
+            isScrubbing = false
+            resumeAfterSeek = scrubWantsPlayback
+            restoreScrubIntentIfReady()
+        }
+    }
+
+    private func restoreScrubIntentIfReady() {
+        guard !isScrubbing, !seekInFlight, pendingSeekTarget == nil,
+              let desired = resumeAfterSeek, let player, phase != .failed else { return }
+        resumeAfterSeek = nil
+        if desired, position < duration { player.play() } else { player.pause() }
+        refreshTransportState()
+    }
+
+    private func refreshTransportState() {
+        guard let player, phase != .failed else { return }
+        if isScrubbing { phase = .scrubbing; isPlaying = scrubWantsPlayback; return }
+        if let desired = resumeAfterSeek { phase = .scrubbing; isPlaying = desired; return }
+        isPlaying = player.rate > 0 || player.timeControlStatus == .playing || player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        switch player.timeControlStatus {
+        case .playing: phase = .playing
+        case .waitingToPlayAtSpecifiedRate: phase = isPlaying ? .buffering : .paused
+        case .paused:
+            phase = duration > 0 && position >= duration && !seekInFlight ? .ended : .paused
+        @unknown default: phase = .paused
+        }
+    }
+
+    /// Called only by this generation's registered player observers.
+    private func failPlayback(_ error: Error?) {
+        guard phase != .failed else { return }
+        phase = .failed
+        errorMessage = error?.localizedDescription ?? "Audio playback could not continue. Reopen or verify the recording."
+        isPlaying = false; isScrubbing = false; resumeAfterSeek = nil
+        pendingSeekTarget = nil; seekInFlight = false
+        player?.pause()
+        player?.currentItem?.cancelPendingSeeks()
     }
 
     /// Latest-wins coalesced seek (#13). Rapid scrub updates immediately move `position`
     /// while at most one `AVPlayer.seek` runs in flight; any newer target queued during
     /// an active seek runs as soon as the current seek completes.
     func seek(to seconds: Double) {
-        guard seconds.isFinite else { return }
+        guard seconds.isFinite, phase != .failed else { return }
         let upperBound = duration > 0 ? duration : max(0, seconds)
         let target = min(upperBound, max(0, seconds))
         position = target
+        if phase == .ended { phase = .paused }
         guard player != nil else { return }
         pendingSeekTarget = target
         drainPendingSeekIfNeeded()
@@ -243,14 +304,16 @@ final class SessionPlaybackCoordinator {
         pendingSeekTarget = nil
         seekInFlight = true
         let id = generation
-        let cmTarget = CMTime(seconds: target, preferredTimescale: 48_000)
-        seekPlayer(player, cmTarget) { [weak self] _ in
+        let cmTarget = CMTime(seconds: target, preferredTimescale: PlaybackPolicy.seekTimescale)
+        seekPlayer(player, cmTarget) { [weak self] finished in
             Task { @MainActor [weak self] in
-                guard let self, self.generation == id else { return }
+                guard let self, self.generation == id, self.phase != .failed else { return }
                 self.seekInFlight = false
                 if self.pendingSeekTarget != nil {
                     self.drainPendingSeekIfNeeded()
-                }
+                } else if !finished {
+                    self.failPlayback(SessionError.invalid("Audio could not seek to the requested position."))
+                } else { self.restoreScrubIntentIfReady() }
             }
         }
     }
@@ -268,13 +331,13 @@ final class SessionPlaybackCoordinator {
 
     func play(_ entry: SessionEntry) {
         let initialDuration = entry.session.duration
-        load(id: entry.session.id, initialDuration: initialDuration) { [build] in
+        load(id: entry.session.id, name: entry.displayTitle, initialDuration: initialDuration) { [build] in
             try await build(entry)
         }
     }
 
     func playFile(_ url: URL) {
-        load(id: UUID(), initialDuration: nil) {
+        load(id: UUID(), name: url.lastPathComponent, initialDuration: nil) {
             guard url.isFileURL else { throw SessionError.invalid("Playback requires a local audio file") }
             let asset = AVURLAsset(url: url)
             guard try await asset.load(.isPlayable), !(try await asset.loadTracks(withMediaType: .audio)).isEmpty else {
@@ -300,6 +363,7 @@ final class SessionPlaybackCoordinator {
 
     private func load(
         id selection: UUID,
+        name: String,
         initialDuration: Double?,
         operation: @escaping @MainActor () async throws -> AVPlayerItem
     ) {
@@ -307,7 +371,7 @@ final class SessionPlaybackCoordinator {
         guard !recordingActive else { return }
         let requestToken = claimGlobalPlayback()
         let id = generation
-        loading = true
+        loading = true; phase = .preparing; sourceName = name
         errorMessage = nil
         task = Task { [weak self] in
             do {
@@ -324,7 +388,7 @@ final class SessionPlaybackCoordinator {
             } catch is CancellationError { }
             catch {
                 if let self, self.generation == id {
-                    self.errorMessage = error.localizedDescription
+                    self.errorMessage = error.localizedDescription; self.phase = .failed
                 }
             }
             if let self, self.generation == id {
@@ -341,6 +405,7 @@ final class SessionPlaybackCoordinator {
         assetDuration: Double?,
         id: UUID
     ) {
+        item.preferredForwardBufferDuration = PlaybackPolicy.preferredForwardBufferDuration
         let player = AVPlayer(playerItem: item)
         levels.apply(to: player)
         self.player = player
@@ -351,37 +416,35 @@ final class SessionPlaybackCoordinator {
         attachPlayerObservers(player: player, item: item, id: id)
         playing = selection
         activate(player)
-        isPlaying = player.rate > 0 || player.timeControlStatus == .playing
+        refreshTransportState()
     }
 
     private func attachPlayerObservers(player: AVPlayer, item: AVPlayerItem, id: UUID) {
         detachPlayerObservers()
         let timeToken = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 0.1, preferredTimescale: 600),
+            forInterval: PlaybackPolicy.observerInterval,
             queue: .main
-        ) { [weak self] time in
+        ) { [weak self, weak player] time in
             MainActor.assumeIsolated {
-                guard let self, self.generation == id else { return }
-                if !self.seekInFlight && self.pendingSeekTarget == nil {
-                    let seconds = time.seconds
-                    if seconds.isFinite {
-                        self.position = max(0, seconds)
-                    }
-                }
-                if let itemDuration = self.player?.currentItem?.duration.seconds,
-                   itemDuration.isFinite, itemDuration > 0 {
-                    self.duration = itemDuration
-                }
-                self.isPlaying = (self.player?.rate ?? 0) > 0 || self.player?.timeControlStatus == .playing
+                guard let self, self.generation == id, let player else { return }
+                self.receiveTimeObservation(time, from: player)
             }
         }
 
-        statusObservation = player.publisher(for: \.timeControlStatus)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in
+        playerObservations = [
+            player.publisher(for: \.timeControlStatus).receive(on: RunLoop.main).sink { [weak self] _ in
                 guard let self, self.generation == id else { return }
-                self.isPlaying = status == .playing || (self.player?.rate ?? 0) > 0
+                self.refreshTransportState()
+            },
+            item.publisher(for: \.status).receive(on: RunLoop.main).sink { [weak self, weak item] _ in
+                guard let self, self.generation == id, let item else { return }
+                if item.status == .failed { self.failPlayback(item.error) }
+            },
+            player.publisher(for: \.status).receive(on: RunLoop.main).sink { [weak self, weak player] _ in
+                guard let self, self.generation == id, let player else { return }
+                if player.status == .failed { self.failPlayback(player.error) }
             }
+        ]
 
         let endToken = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
@@ -392,28 +455,62 @@ final class SessionPlaybackCoordinator {
                 // An EOF queued by the previous play-through can arrive after
                 // the user has already sought/restarted. Keep the latest intent.
                 guard let self, self.generation == id,
-                      !self.seekInFlight, self.pendingSeekTarget == nil else { return }
-                self.isPlaying = false
+                      !self.isScrubbing, !self.seekInFlight, self.pendingSeekTarget == nil, self.phase != .failed else { return }
+                self.player?.pause()
+                self.isPlaying = false; self.phase = .ended
                 if self.duration > 0 {
                     self.position = self.duration
                 }
             }
         }
 
+        let failureToken = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main
+        ) { [weak self] notification in
+            let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error
+            MainActor.assumeIsolated {
+                guard let self, self.generation == id else { return }
+                self.failPlayback(error)
+            }
+        }
+        let stalledToken = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemPlaybackStalled, object: item, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == id, self.isPlaying,
+                      !self.isScrubbing, self.phase != .failed else { return }
+                self.phase = .buffering
+            }
+        }
+
         observerCleanup = PlayerObserverCleanup(
             player: player,
             timeToken: timeToken,
-            endObserver: endToken
+            notificationObservers: [endToken, failureToken, stalledToken]
         )
+    }
+
+    /// The observer's event boundary also makes clock/order regressions deterministic.
+    func receiveTimeObservation(_ time: CMTime, from observedPlayer: AVPlayer) {
+        guard player === observedPlayer, phase != .failed else { return }
+        if !isScrubbing, !seekInFlight, pendingSeekTarget == nil, phase != .ended {
+            let seconds = time.seconds
+            if seconds.isFinite { position = min(max(0, seconds), duration > 0 ? duration : max(0, seconds)) }
+        }
+        if let seconds = observedPlayer.currentItem?.duration.seconds, seconds.isFinite, seconds > 0 {
+            duration = seconds
+        }
+        refreshTransportState()
     }
 
     private func detachPlayerObservers() {
         observerCleanup?.tearDown()
         observerCleanup = nil
-        statusObservation?.cancel()
-        statusObservation = nil
+        playerObservations.forEach { $0.cancel() }
+        playerObservations = []
         seekInFlight = false
         pendingSeekTarget = nil
+        isScrubbing = false; resumeAfterSeek = nil
     }
 
     func playSource(_ source: RecordingSession.SourceTrack, parent: SessionEntry) {
@@ -423,7 +520,7 @@ final class SessionPlaybackCoordinator {
         let id = generation
         let reader = sourceReader
         let asyncReader = asyncSourceReader
-        loading = true
+        loading = true; phase = .preparing; sourceName = source.name
         errorMessage = nil
         task = Task { [weak self] in
             do {
@@ -454,7 +551,7 @@ final class SessionPlaybackCoordinator {
             } catch is CancellationError { }
             catch {
                 if let self, self.generation == id {
-                    self.errorMessage = error.localizedDescription
+                    self.errorMessage = error.localizedDescription; self.phase = .failed
                 }
             }
             if let self, self.generation == id {
@@ -478,7 +575,7 @@ final class SessionPlaybackCoordinator {
         player?.pause()
         player = nil
         playing = nil
-        loading = false
+        loading = false; phase = .idle; sourceName = nil; errorMessage = nil
         position = 0
         duration = 0
         isPlaying = false

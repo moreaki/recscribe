@@ -1,4 +1,5 @@
 import Combine
+import Darwin
 import Foundation
 import RecScribeCore
 import os
@@ -76,6 +77,14 @@ nonisolated struct LiveChunkTiming: Sendable {
 @MainActor
 final class LiveTranscription: ObservableObject {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
+    private nonisolated static let activeDirectoryRegistry = OSAllocatedUnfairLock(initialState: [UUID: Set<String>]())
+    private nonisolated static let draftMarkerFiles: Set<String> = [
+        "latest.json", "consent.json", "manifest.json", "chunk.json", "review.md",
+        "audio-report.json", "source-session.snapshot.json", "transcript.raw.json", "transcript.json"
+    ]
+    private nonisolated static let attemptOrTurnMarkerFiles: Set<String> = [
+        "chunk.json", "result.json", "timings.json"
+    ]
     struct CloudRequest: Identifiable {
         let id: UUID
         let source: URL
@@ -97,6 +106,9 @@ final class LiveTranscription: ObservableObject {
     @Published private(set) var modelName: String?
     @Published private(set) var audioSeconds: Double = 0
     private(set) var cursor: Int64 = 0
+    private let instanceID = UUID()
+    private let liveRoot: URL
+    private var activeWorkerDirectory: URL?
     private var manifest: URL?
     private var capturing = false
     private var generation = UUID()
@@ -111,7 +123,8 @@ final class LiveTranscription: ObservableObject {
     var onBusyChange: (Bool) -> Void = { _ in }
     var onCloudTranscript: (URL, URL) -> Void = { _, _ in }
 
-    init(settings: @escaping () -> AppSettings.Values = { .init() },
+    init(liveRoot: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
+         settings: @escaping () -> AppSettings.Values = { .init() },
          work: @escaping @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult? = { source, output, cursor, final, settings, token in
              try await Task.detached(priority: .utility) {
                  try LiveWhisperTranscriber.step(manifest: source, directory: output, cursor: cursor,
@@ -120,11 +133,40 @@ final class LiveTranscription: ObservableObject {
          }, wait: @escaping @Sendable () async throws -> Void = { try await Task.sleep(for: LiveTranscriptionPolicy.pollInterval) },
          cloudKey: @escaping () throws -> Data = { try IntelligenceCredentials().key() },
          cloudClient: RealtimeTranscriber = .init()) {
+        self.liveRoot = liveRoot
         self.settings = settings
         self.work = work
         self.wait = wait
         self.cloudKey = cloudKey
         self.cloudClient = cloudClient
+    }
+
+    deinit {
+        let id = instanceID
+        Self.activeDirectoryRegistry.withLock { _ = $0.removeValue(forKey: id) }
+    }
+
+    var activeDirectories: Set<URL> {
+        var urls: Set<URL> = []
+        if capturing || busy || task != nil || pendingCloudRequest != nil, let directory {
+            urls.insert(directory.standardizedFileURL)
+        }
+        if let activeWorkerDirectory {
+            urls.insert(activeWorkerDirectory.standardizedFileURL)
+        }
+        return urls
+    }
+
+    private func syncActiveDirectoryRegistration() {
+        let paths = Self.normalizedPaths(for: activeDirectories)
+        let id = instanceID
+        Self.activeDirectoryRegistry.withLock { registry in
+            if paths.isEmpty {
+                registry.removeValue(forKey: id)
+            } else {
+                registry[id] = paths
+            }
+        }
     }
 
     func setEnabled(_ value: Bool) {
@@ -137,6 +179,7 @@ final class LiveTranscription: ObservableObject {
             pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
             invalidate(); status = capturing ? "Live transcription is off · audio is still recorded" : "Live transcription is off"
         }
+        syncActiveDirectoryRegistration()
     }
 
     func configurationChanged() {
@@ -148,6 +191,7 @@ final class LiveTranscription: ObservableObject {
         guard capturing, let manifest else { status = "Cloud armed · approval required when recording starts"; return }
         pendingCloudRequest = CloudRequest(id: generation, source: manifest, model: settings().cloudTranscriptionModel)
         status = "Waiting for cloud audio approval · recording stays local"
+        syncActiveDirectoryRegistration()
     }
 
     func dismissCloudAudio() {
@@ -163,9 +207,10 @@ final class LiveTranscription: ObservableObject {
         let token = WorkCancellation(), client = cloudClient
         let key: Data
         do { key = try cloudKey() }
-        catch { enabled = false; errorMessage = error.localizedDescription; status = "Cloud setup needs attention"; return }
+        catch { enabled = false; errorMessage = error.localizedDescription; status = "Cloud setup needs attention"; syncActiveDirectoryRegistration(); return }
         self.token = token
         busy = true; onBusyChange(true)
+        syncActiveDirectoryRegistration()
         task = Task { [weak self] in
             do {
                 let consent = try await Task.detached(priority: .utility) {
@@ -176,10 +221,11 @@ final class LiveTranscription: ObservableObject {
                 try token.check()
                 guard let self, generation == request.id, capturing else { throw CancellationError() }
                 cursor = consent.startSample
-                directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
+                directory = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
                 segments = []; lastChunk = nil; lagSeconds = 0
                 isCloudDraft = true; modelName = consent.model
                 cloudWorker = CloudTranscriptionWorker(consent: consent, key: key, client: client)
+                syncActiveDirectoryRegistration()
             } catch is CancellationError {
                 if let self, generation == request.id, !capturing {
                     enabled = false; status = "Recording ended before cloud approval was prepared; no audio sent"
@@ -190,6 +236,7 @@ final class LiveTranscription: ObservableObject {
             }
             guard let self else { return }
             task = nil; self.token = nil; busy = false; onBusyChange(false)
+            syncActiveDirectoryRegistration()
             start()
         }
     }
@@ -201,7 +248,7 @@ final class LiveTranscription: ObservableObject {
         sourceURL = manifest
         modelName = nil
         audioSeconds = 0
-        directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
+        directory = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
         cursor = 0
         segments = []
         lagSeconds = 0
@@ -209,6 +256,7 @@ final class LiveTranscription: ObservableObject {
         captureNeedsReview = false
         capturing = true
         errorMessage = nil
+        syncActiveDirectoryRegistration()
         if enabled { setEnabled(true) }
         else { status = "Live transcription is off · audio is still recorded" }
     }
@@ -217,41 +265,192 @@ final class LiveTranscription: ObservableObject {
         capturing = false
         if pendingCloudRequest != nil { dismissCloudAudio() }
         captureNeedsReview = captureNeedsReview || needsReview
-        let activeDir = directory
-        Task.detached(priority: .utility) {
-            Self.pruneOrphanedDraftDirectories(retaining: activeDir)
-        }
         if enabled { status = "Finishing remaining audio chunks…"; start() }
         else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
+        syncActiveDirectoryRegistration()
+        let root = liveRoot
+        let retained = activeDirectories
+        Task.detached(priority: .utility) {
+            Self.pruneDisposableWorkingFiles(in: root, retaining: retained)
+        }
     }
 
-    /// Removes abandoned `Live/<UUID>` draft directories older than `maxAge` that have not been
-    /// finalized into a canonical `transcript.json` artifact (#44).
-    nonisolated static func pruneOrphanedDraftDirectories(
+    /// Removes only provably disposable temporary working audio files (`working.wav`,
+    /// `channel-<N>.wav`, `working-channel-<N>.wav`, region working WAV slices) inside
+    /// inactive owned `Live/<UUID>` draft directories (#44). Raw draft directories, raw ASR
+    /// JSON, chunk checkpoints, silence markers, cloud journals, and canonical transcripts
+    /// are always preserved regardless of age or `transcript.json` presence.
+    nonisolated static func pruneDisposableWorkingFiles(
         in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
-        retaining activeDirectory: URL? = nil,
-        olderThan maxAge: TimeInterval = 24 * 60 * 60,
-        now: Date = Date()
+        retaining activeDirectory: URL?,
+        expectedOwnerUID: uid_t = Darwin.getuid()
     ) {
+        pruneDisposableWorkingFiles(
+            in: root,
+            retaining: activeDirectory.map { [$0] } ?? [],
+            expectedOwnerUID: expectedOwnerUID
+        )
+    }
+
+    nonisolated static func pruneDisposableWorkingFiles(
+        in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
+        retaining activeDirectories: Set<URL> = [],
+        expectedOwnerUID: uid_t = Darwin.getuid()
+    ) {
+        var rootStat = Darwin.stat()
+        guard Darwin.lstat(root.path, &rootStat) == 0,
+              (rootStat.st_mode & S_IFMT) == S_IFDIR,
+              rootStat.st_uid == expectedOwnerUID else {
+            return
+        }
         let fm = FileManager.default
         guard let children = try? fm.contentsOfDirectory(
             at: root,
-            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey, .creationDateKey],
+            includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
         ) else { return }
-        let activeStandardized = activeDirectory?.standardizedFileURL
+
+        let retainedPaths = activeDirectoryRegistry.withLock { registry in
+            Set(registry.values.joined()).union(normalizedPaths(for: activeDirectories))
+        }
+        let rootPrefix = root.standardizedFileURL.path.hasSuffix("/")
+            ? root.standardizedFileURL.path
+            : root.standardizedFileURL.path + "/"
+
         for child in children {
-            guard child.standardizedFileURL != activeStandardized else { continue }
-            guard let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey, .creationDateKey]),
-                  values.isDirectory == true else { continue }
-            // Never delete a promoted cloud transcript directory containing transcript.json.
-            if fm.fileExists(atPath: child.appendingPathComponent("transcript.json").path) {
+            guard isOwnedNonSymlinkDirectory(child, expectedOwnerUID: expectedOwnerUID),
+                  !isRetained(child, in: retainedPaths) else {
                 continue
             }
-            let referenceDate = values.contentModificationDate ?? values.creationDate ?? .distantPast
-            guard now.timeIntervalSince(referenceDate) >= maxAge else { continue }
-            try? fm.removeItem(at: child)
+            let childEntries = (try? fm.contentsOfDirectory(
+                at: child,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )) ?? []
+            guard isOwnedDraftDirectory(child, entries: childEntries, expectedOwnerUID: expectedOwnerUID) else {
+                continue
+            }
+            for entry in childEntries {
+                if isDisposableWorkingAudioName(entry.lastPathComponent) {
+                    unlinkDisposableFileIfOwned(entry, rootPrefix: rootPrefix, expectedOwnerUID: expectedOwnerUID)
+                    continue
+                }
+                guard isOwnedNonSymlinkDirectory(entry, expectedOwnerUID: expectedOwnerUID),
+                      !isRetained(entry, in: retainedPaths) else {
+                    continue
+                }
+                let subEntries = (try? fm.contentsOfDirectory(
+                    at: entry,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                )) ?? []
+                guard isOwnedAttemptOrTurnDirectory(entry, entries: subEntries, expectedOwnerUID: expectedOwnerUID) else {
+                    continue
+                }
+                for subFile in subEntries where isDisposableWorkingAudioName(subFile.lastPathComponent) {
+                    unlinkDisposableFileIfOwned(subFile, rootPrefix: rootPrefix, expectedOwnerUID: expectedOwnerUID)
+                }
+            }
         }
+    }
+
+    nonisolated static func isDisposableWorkingAudioName(_ name: String) -> Bool {
+        if name == "working.wav" { return true }
+        guard name.hasSuffix(".wav") else { return false }
+        let stem = String(name.dropLast(4))
+        for prefix in ["channel-", "working-channel-"] where stem.hasPrefix(prefix) {
+            let digits = stem.dropFirst(prefix.count)
+            return !digits.isEmpty && digits.allSatisfy(\.isASCII) && digits.allSatisfy(\.isNumber)
+        }
+        for prefix in ["asr-channel-", "verify-channel-"] where stem.hasPrefix(prefix) {
+            let remainder = stem.dropFirst(prefix.count)
+            guard let range = remainder.range(of: "-region-") else { return false }
+            let channelDigits = remainder[..<range.lowerBound]
+            let regionDigits = remainder[range.upperBound...]
+            return !channelDigits.isEmpty && channelDigits.allSatisfy { $0.isASCII && $0.isNumber }
+                && !regionDigits.isEmpty && regionDigits.allSatisfy { $0.isASCII && $0.isNumber }
+        }
+        return false
+    }
+
+    private nonisolated static func isTurnDirectoryName(_ name: String) -> Bool {
+        guard name.hasPrefix("turn-") else { return false }
+        let digits = name.dropFirst(5)
+        return !digits.isEmpty && digits.allSatisfy { $0.isASCII && $0.isNumber }
+    }
+
+    private nonisolated static func isRawChannelEvidenceName(_ name: String) -> Bool {
+        guard name.hasPrefix("channel-") else { return false }
+        for suffix in [".raw.json", ".silence.txt", ".events.jsonl"] where name.hasSuffix(suffix) {
+            let middle = name.dropFirst("channel-".count).dropLast(suffix.count)
+            return !middle.isEmpty && middle.allSatisfy { $0.isASCII && $0.isNumber }
+        }
+        return false
+    }
+
+    private nonisolated static func isOwnedNonSymlinkDirectory(_ url: URL, expectedOwnerUID: uid_t) -> Bool {
+        var st = Darwin.stat()
+        guard Darwin.lstat(url.path, &st) == 0 else { return false }
+        return (st.st_mode & S_IFMT) == S_IFDIR && st.st_uid == expectedOwnerUID
+    }
+
+    private nonisolated static func isOwnedNonSymlinkRegularFile(_ url: URL, expectedOwnerUID: uid_t) -> Bool {
+        var st = Darwin.stat()
+        guard Darwin.lstat(url.path, &st) == 0 else { return false }
+        return (st.st_mode & S_IFMT) == S_IFREG && st.st_uid == expectedOwnerUID
+    }
+
+    private nonisolated static func isOwnedDraftDirectory(_ url: URL, entries: [URL], expectedOwnerUID: uid_t) -> Bool {
+        if UUID(uuidString: url.lastPathComponent) != nil { return true }
+        for entry in entries {
+            let name = entry.lastPathComponent
+            if draftMarkerFiles.contains(name), isOwnedNonSymlinkRegularFile(entry, expectedOwnerUID: expectedOwnerUID) {
+                return true
+            }
+            if isOwnedNonSymlinkDirectory(entry, expectedOwnerUID: expectedOwnerUID) {
+                let subEntries = (try? FileManager.default.contentsOfDirectory(
+                    at: entry,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                )) ?? []
+                if isOwnedAttemptOrTurnDirectory(entry, entries: subEntries, expectedOwnerUID: expectedOwnerUID) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private nonisolated static func isOwnedAttemptOrTurnDirectory(_ url: URL, entries: [URL], expectedOwnerUID: uid_t) -> Bool {
+        let name = url.lastPathComponent
+        if UUID(uuidString: name) != nil || isTurnDirectoryName(name) { return true }
+        for entry in entries {
+            let fileName = entry.lastPathComponent
+            if (attemptOrTurnMarkerFiles.contains(fileName) || isRawChannelEvidenceName(fileName)),
+               isOwnedNonSymlinkRegularFile(entry, expectedOwnerUID: expectedOwnerUID) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private nonisolated static func unlinkDisposableFileIfOwned(_ file: URL, rootPrefix: String, expectedOwnerUID: uid_t) {
+        guard file.standardizedFileURL.path.hasPrefix(rootPrefix),
+              isOwnedNonSymlinkRegularFile(file, expectedOwnerUID: expectedOwnerUID) else {
+            return
+        }
+        _ = Darwin.unlink(file.path)
+    }
+
+    private nonisolated static func normalizedPaths(for urls: Set<URL>) -> Set<String> {
+        Set(urls.flatMap { url in
+            [url.standardizedFileURL.path, url.resolvingSymlinksInPath().standardizedFileURL.path]
+        })
+    }
+
+    private nonisolated static func isRetained(_ url: URL, in retainedPaths: Set<String>) -> Bool {
+        retainedPaths.contains(url.standardizedFileURL.path)
+            || retainedPaths.contains(url.resolvingSymlinksInPath().standardizedFileURL.path)
     }
 
     func shutdown() async {
@@ -259,6 +458,8 @@ final class LiveTranscription: ObservableObject {
         pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
         invalidate()
         await task?.value
+        syncActiveDirectoryRegistration()
+        Self.pruneDisposableWorkingFiles(in: liveRoot, retaining: activeDirectories)
     }
 
     private func invalidate() {
@@ -273,8 +474,10 @@ final class LiveTranscription: ObservableObject {
         let cloud = cloudWorker
         guard values.processingLocation != .cloud || cloud != nil else { return }
         self.token = token
+        activeWorkerDirectory = directory
         busy = true
         onBusyChange(true)
+        syncActiveDirectoryRegistration()
         task = Task { [weak self] in
             var cloudJobCreated = false
             var attempt = 0
@@ -356,11 +559,18 @@ final class LiveTranscription: ObservableObject {
             guard let self else { return }
             task = nil
             self.token = nil
+            activeWorkerDirectory = nil
             busy = false
             cloudAudioActive = false
             if cloud != nil, generation == id { enabled = false; cloudWorker = nil }
             onBusyChange(false)
             if generation != id { start() } // A cancelled worker must exit before a replacement starts.
+            syncActiveDirectoryRegistration()
+            let root = liveRoot
+            let retained = activeDirectories
+            Task.detached(priority: .utility) {
+                Self.pruneDisposableWorkingFiles(in: root, retaining: retained)
+            }
         }
     }
 

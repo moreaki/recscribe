@@ -20,13 +20,11 @@ struct AudioRoutingView: View {
     @State private var expandedPanel: AudioRoutingPanel?
     @FocusState private var focusedPanel: AudioRoutingPanel?
     private let embeddedInStudio: Bool
-    private let onClose: (() -> Void)?
 
     init(levels: AudioLevels, monitor: CapturedAudioMonitor,
          playbackLevels: PlaybackLevels, hardwareObserver: AudioHardwareObserver = .shared,
          expandedPanel: AudioRoutingPanel? = nil,
-         embeddedInStudio: Bool = false,
-         onClose: (() -> Void)? = nil) {
+         embeddedInStudio: Bool = false) {
         _levels = Bindable(wrappedValue: levels)
         _monitor = Bindable(wrappedValue: monitor)
         _monitorLevels = Bindable(wrappedValue: monitor.levels)
@@ -34,7 +32,6 @@ struct AudioRoutingView: View {
         _hardwareObserver = Bindable(wrappedValue: hardwareObserver)
         _expandedPanel = State(initialValue: expandedPanel)
         self.embeddedInStudio = embeddedInStudio
-        self.onClose = onClose
     }
 
     private var source: AudioSource { recorder.selectedSource }
@@ -126,14 +123,10 @@ struct AudioRoutingView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
-            Button(embeddedInStudio ? "Back to Studio" : "Close") {
-                if let onClose {
-                    onClose()
-                } else {
-                    dismissWindow(id: AppWindow.routing.rawValue)
-                }
+            if !embeddedInStudio {
+                Button("Close") { dismissWindow(id: AppWindow.routing.rawValue) }
+                    .controlSize(.small)
             }
-            .controlSize(.small)
         }.padding(.horizontal, 20).padding(.vertical, 16)
     }
 

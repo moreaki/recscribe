@@ -87,7 +87,7 @@ struct StudioView: View {
                     case .routing:
                         AudioRoutingView(levels: recorder.audio.levels, monitor: recorder.audio.monitor,
                             playbackLevels: recorder.audio.playbackLevels,
-                            embeddedInStudio: true, onClose: { workspaceMode = .studio })
+                            embeddedInStudio: true)
                     case .recordings:
                         RecordingLibraryView(makePlayback: { recorder.audio.makePlayback() },
                             embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })

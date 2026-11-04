@@ -4,7 +4,7 @@ import SwiftUI
 /// Capture controls observe the waveform; transcript and chrome are siblings
 /// and do not subscribe to these high-frequency updates.
 struct RecorderView: View {
-    @EnvironmentObject var viewModel: RecorderViewModel
+    @Environment(RecorderViewModel.self) var viewModel
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
 
@@ -15,6 +15,7 @@ struct RecorderView: View {
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
             HStack {
                 WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.mint)
@@ -28,7 +29,7 @@ struct RecorderView: View {
             RecorderStatusBar(state: viewModel.state, statusText: viewModel.statusText, telemetry: viewModel.telemetry)
             CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
             MultipleInputsView(recorder: viewModel)
-            if viewModel.audioSource.selectedSource.kind != .multiple {
+            if viewModel.selectedSource.kind != .multiple {
                 RecordingLevelsView(recorder: viewModel)
             }
             if case .error = viewModel.state {
@@ -76,7 +77,7 @@ struct RecorderView: View {
             Button("Keep recording", role: .cancel) { viewModel.showLongRecordingWarning = false }
             Button("Stop") { Task { await viewModel.stopRecording() } }
         } message: { Text("Long recordings use disk space. WAV parts are split automatically; originals are retained.") }
-        .sheet(isPresented: $viewModel.showOnboarding) { OnboardingView().environmentObject(viewModel) }
+        .sheet(isPresented: $viewModel.showOnboarding) { OnboardingView().environment(viewModel) }
         .onAppear { viewModel.mainWindowDidAppear() }
         .onDisappear { viewModel.mainWindowDidDisappear() }
     }
@@ -113,7 +114,7 @@ struct StatusBar: View {
 struct RecorderStatusBar: View {
     let state: RecordingState
     let statusText: String
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
         StatusBar(state: state, duration: telemetry.formattedDuration, statusText: statusText)
@@ -121,7 +122,7 @@ struct RecorderStatusBar: View {
 }
 
 struct RecorderWaveformSection: View {
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
         GlassLiveWaveform(

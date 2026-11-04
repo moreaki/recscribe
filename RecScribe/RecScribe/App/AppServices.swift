@@ -1,6 +1,6 @@
 import AppKit
-import Combine
 import Foundation
+import Observation
 
 /// The only composition root. Features receive dependencies, not global peers.
 @MainActor
@@ -14,7 +14,7 @@ final class AppServices {
     let navigation = StudioNavigation()
     let overflowMenu: OverflowMenu
     private(set) var menuBarController: MenuBarController?
-    private var locationObservation: AnyCancellable?
+    private var locationObservation: ObservationSubscription<AppSettings.Values>?
 
     init(defaults: UserDefaults = .standard, supportDirectory: URL = AppSettings.supportDirectory) {
         let settings = AppSettings(defaults: defaults)
@@ -60,9 +60,13 @@ final class AppServices {
             guard let recorder else { return false }
             return recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording && !recorder.isFinalizingAfterFailure
         }
-        locationObservation = settings.$values.removeDuplicates {
-            $0.processingLocation == $1.processingLocation && $0.cloudTranscriptionModel == $1.cloudTranscriptionModel
-        }.dropFirst().sink { [weak live] _ in live?.configurationChanged() }
+        var previous = settings.values
+        locationObservation = ObservationSubscription(read: { settings.values }) { [weak live] value in
+            defer { previous = value }
+            if previous.processingLocation != value.processingLocation || previous.cloudTranscriptionModel != value.cloudTranscriptionModel {
+                live?.configurationChanged()
+            }
+        }
     }
 
     func start() {
@@ -75,6 +79,7 @@ final class AppServices {
     }
 
     func shutdown() async {
+        locationObservation?.cancel()
         menuBarController?.close()
         menuBarController = nil
         await recorder.audioTest?.close()
@@ -84,5 +89,33 @@ final class AppServices {
         await live.shutdown()
         await library.shutdown()
         await runtime.shutdown()
+    }
+}
+
+/// Coalesces a non-View side effect to the latest value and rearms before delivery.
+/// SwiftUI observes model properties directly; this is only for AppKit/audio effects.
+@MainActor
+final class ObservationSubscription<Value: Equatable & Sendable> {
+    private let read: () -> Value
+    private let onChange: (Value) -> Void
+    private var previous: Value?
+    private var active = true
+
+    init(read: @escaping () -> Value, onChange: @escaping (Value) -> Void) {
+        self.read = read
+        self.onChange = onChange
+        observe()
+    }
+
+    func cancel() { active = false }
+
+    private func observe() {
+        guard active else { return }
+        let value = withObservationTracking { read() } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.observe() }
+        }
+        let changed = previous.map { $0 != value } ?? false
+        previous = value
+        if changed { onChange(value) }
     }
 }

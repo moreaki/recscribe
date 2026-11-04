@@ -1,3 +1,5 @@
+import os
+import Observation
 import AppKit
 import Combine
 import SwiftUI
@@ -7,6 +9,20 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct WorkspaceRegressionTests {
+    @Test func observationEffectsCoalesceLatestValueAndStopAfterCancellation() async throws {
+        let model = RecorderTelemetry()
+        var values: [TimeInterval] = []
+        let subscription = ObservationSubscription(read: { model.duration }) { values.append($0) }
+        model.waveformSamples = [0.5]
+        model.duration = 1
+        model.duration = 2
+        for _ in 0..<50 where values.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(values == [2])
+        model.duration = 3 // An already queued callback must also respect cancel.
+        subscription.cancel()
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(values == [2])
+    }
     @Test func startupAndShutdownAreInstalledWithoutAnyStudioView() async throws {
         let suite = "recscribe-startup-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
@@ -131,9 +147,12 @@ struct WorkspaceRegressionTests {
         let recorder = RecorderViewModel(controller: MockRecordingControlling(),
             permissions: MockPermissionProviding(.granted), clock: ManualClock(),
             audioSource: MockAudioSourceProviding(), defaults: defaults)
-        var parentUpdates = 0
-        let observation = recorder.objectWillChange.sink { parentUpdates += 1 }
-        defer { withExtendedLifetime(observation) {} }
+        let parentUpdates = OSAllocatedUnfairLock(initialState: 0)
+        withObservationTracking {
+            _ = recorder.state
+            _ = recorder.statusText
+            _ = recorder.canRecord
+        } onChange: { parentUpdates.withLock { $0 += 1 } }
         let host = NSHostingView(rootView: CaptureSourceMeter(telemetry: recorder.telemetry, track: .playback)
             .frame(width: 360, height: 90, alignment: .topLeading))
         host.frame = NSRect(x: 0, y: 0, width: 360, height: 90)
@@ -162,7 +181,7 @@ struct WorkspaceRegressionTests {
         recorder.healthTime = 60 // No new packet: the same source must now display stalled status.
         let stalled = try await pixels()
         #expect(stalled != receiving)
-        #expect(parentUpdates == 0)
+        #expect(parentUpdates.withLock { $0 } == 0)
     }
 }
 

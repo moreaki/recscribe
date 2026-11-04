@@ -19,6 +19,12 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- SwiftUI state uses per-property Observation. Capture telemetry and test meters
+  update their leaf views without broadcasting to Settings or workspace chrome.
+  Recorder commands, permissions, installation notices and preferences have
+  separate owners. The menu-bar popover resizes to content within screen bounds
+  with one scrolling area and a persistent Quit footer.
+
 - Startup validates the saved transcript and recording before restoring Studio.
   Missing recordings or audio parts leave a clean workspace; retained transcripts
   can still be opened explicitly, with unavailable audio actions disabled.

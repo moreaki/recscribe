@@ -1,5 +1,5 @@
+import Observation
 import AppKit
-import Combine
 import Foundation
 import Metal
 import os
@@ -123,13 +123,13 @@ nonisolated enum LocalSoftware: String, Hashable, Sendable {
 }
 
 @MainActor
-final class RuntimeManager: ObservableObject {
+@Observable final class RuntimeManager {
     private let settings: AppSettings
     private let aiModels: @Sendable () async throws -> [String]
     var isRecording: () -> Bool = { false }
-    @Published private(set) var detectedTools: [String: String] = [:]
-    @Published private(set) var availability: RuntimeAvailability?
-    @Published private(set) var checkingAvailability = false
+    private(set) var detectedTools: [String: String] = [:]
+    private(set) var availability: RuntimeAvailability?
+    private(set) var checkingAvailability = false
     private var availabilityGeneration = UUID()
 
     func dependency(_ software: LocalSoftware) -> RuntimeAvailability.Dependency? {
@@ -175,14 +175,14 @@ final class RuntimeManager: ObservableObject {
     init(settings: AppSettings, aiModels: @escaping @Sendable () async throws -> [String] = {
         try await IntelligenceClient().models(provider: .ollama)
     }) { self.settings = settings; self.aiModels = aiModels }
-    @Published private(set) var status = "Detection has not run"
-    @Published private(set) var diagnostics = ""
-    @Published private(set) var localAIModels: [String] = []
-    @Published private(set) var localAIAvailable = false
-    @Published private(set) var progress = 0.0
-    @Published private(set) var busy = false
-    private var task: Task<Void, Never>?
-    private var token: WorkCancellation?
+    private(set) var status = "Detection has not run"
+    private(set) var diagnostics = ""
+    private(set) var localAIModels: [String] = []
+    private(set) var localAIAvailable = false
+    private(set) var progress = 0.0
+    private(set) var busy = false
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var token: WorkCancellation?
     private let logger = Logger(subsystem: "com.moreaki.recscribe", category: "Runtime")
 
     func cancel() { token?.cancel(); task?.cancel() }

@@ -19,10 +19,10 @@ struct AudioMuteBadge: View {
 /// Observe listening preferences directly: the monitor does not republish them.
 struct AudioMuteSummary: View {
     let source: AudioSource
-    @ObservedObject private var levels: AudioLevels
-    @ObservedObject private var playback: PlaybackLevels
-    @ObservedObject private var monitor: CapturedAudioMonitor
-    @ObservedObject private var monitorLevels: PlaybackLevels
+    @Bindable private var levels: AudioLevels
+    @Bindable private var playback: PlaybackLevels
+    @Bindable private var monitor: CapturedAudioMonitor
+    @Bindable private var monitorLevels: PlaybackLevels
 
     init(source: AudioSource, audio: AudioServices) {
         self.source = source

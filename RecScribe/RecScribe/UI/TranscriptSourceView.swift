@@ -2,12 +2,12 @@ import AVKit
 import SwiftUI
 
 struct TranscriptSourceView: View {
-    @EnvironmentObject private var library: SessionLibrary
+    @Environment(SessionLibrary.self) private var library
     let source: URL
     let duration: Double?
     let detail: String
     let recording: Bool
-    @ObservedObject var playback: SessionPlayback
+    @Bindable var playback: SessionPlayback
     @Binding var pendingSeekSeconds: Double?
     @State private var entry: SessionEntry?
     @State private var error: String?

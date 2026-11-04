@@ -37,7 +37,7 @@ struct AudioRoutingViewTests {
 
         for (name, panel) in panels {
             let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback, expandedPanel: panel)
-                .environmentObject(recorder).preferredColorScheme(.dark)
+                .environment(recorder).preferredColorScheme(.dark)
             let hosting = NSHostingView(rootView: root)
             hosting.frame = CGRect(origin: .zero, size: CGSize(width: 1120, height: panel == nil ? 500 : 700))
             let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)

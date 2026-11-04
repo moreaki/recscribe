@@ -1,4 +1,4 @@
-import Combine
+import Observation
 import CoreAudio
 import Foundation
 import os
@@ -251,15 +251,15 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
 /// services with `AudioObjectAddPropertyListenerBlock` subscriptions and scoped
 /// per-device watches.
 @MainActor
-final class AudioHardwareObserver: ObservableObject {
+@Observable final class AudioHardwareObserver {
     static let shared = AudioHardwareObserver()
 
-    @Published private(set) var inputDevices: [InputDeviceInfo] = []
-    @Published private(set) var outputDevices: [AudioOutputDevice] = []
-    @Published private(set) var defaultInputUID: String?
-    @Published private(set) var defaultOutputUID: String?
-    @Published private(set) var revision: Int = 0
-    @Published private(set) var hasListenerRegistrationFailure: Bool = false
+    private(set) var inputDevices: [InputDeviceInfo] = []
+    private(set) var outputDevices: [AudioOutputDevice] = []
+    private(set) var defaultInputUID: String?
+    private(set) var defaultOutputUID: String?
+    private(set) var revision: Int = 0
+    private(set) var hasListenerRegistrationFailure: Bool = false
 
     private struct DeviceWatch {
         let uid: String
@@ -276,8 +276,8 @@ final class AudioHardwareObserver: ObservableObject {
     private var watches: [UUID: DeviceWatch] = [:]
     private var pendingSystemRefresh = false
     private var pendingWatchTokens = Set<UUID>()
-    private var coalesceTask: Task<Void, Never>?
-    private var fallbackPollTask: Task<Void, Never>?
+    @ObservationIgnored private var coalesceTask: Task<Void, Never>?
+    @ObservationIgnored private var fallbackPollTask: Task<Void, Never>?
     private(set) var isObserving = false
     private var observerGeneration = UUID()
 

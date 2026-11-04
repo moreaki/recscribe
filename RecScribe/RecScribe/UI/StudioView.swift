@@ -36,9 +36,9 @@ extension EnvironmentValues {
 }
 
 struct StudioView: View {
-    @EnvironmentObject private var recorder: RecorderViewModel
-    @EnvironmentObject private var live: LiveTranscription
-    @EnvironmentObject private var settings: AppSettings
+    @Environment(RecorderViewModel.self) private var recorder
+    @Environment(LiveTranscription.self) private var live
+    @Environment(AppSettings.self) private var settings
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @State private var initialMode: StudioWorkspaceMode

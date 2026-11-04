@@ -15,6 +15,10 @@ enum WorkspaceStyle {
     static let iconSize: CGFloat = 34
     static let navigationHeight: CGFloat = 34
     static let popoverWidth: CGFloat = 380
+    static let popoverMaximumHeight: CGFloat = 720
+    static let popoverScreenMargin: CGFloat = 80
+    static let popoverFooterHeight: CGFloat = 50
+    static let popoverDividerHeight: CGFloat = 1
     static let previewWidth: CGFloat = 480
     static let previewHeight: CGFloat = 320
     static let readingWidth: CGFloat = 720

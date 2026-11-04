@@ -21,7 +21,7 @@ struct MarkdownReadingText: View {
 }
 
 struct LiveTranscriptView: View {
-    @ObservedObject var live: LiveTranscription
+    @Bindable var live: LiveTranscription
     var compact = false
     @State private var followsLatest = true
     var body: some View {
@@ -87,7 +87,7 @@ struct LiveTranscriptView: View {
 }
 
 struct LiveTranscriptionControl: View {
-    @ObservedObject var live: LiveTranscription
+    @Bindable var live: LiveTranscription
     @State private var preview = false
     var body: some View {
         HStack {
@@ -115,8 +115,8 @@ struct LiveTranscriptionControl: View {
 }
 
 struct TranscriptWorkspace: View {
-    @EnvironmentObject private var live: LiveTranscription
-    @EnvironmentObject private var library: SessionLibrary
+    @Environment(LiveTranscription.self) private var live
+    @Environment(SessionLibrary.self) private var library
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @State private var playback: SessionPlayback

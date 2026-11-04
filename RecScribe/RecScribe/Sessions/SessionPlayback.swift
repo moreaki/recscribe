@@ -1,3 +1,4 @@
+import Observation
 import AVFoundation
 import Combine
 import Foundation
@@ -97,7 +98,7 @@ final class SessionPlaybackCoordinator {
 /// Uses event-driven AVPlayer observers, latest-wins coalesced seeking, and
 /// single-active-player preemption (#13, #41).
 @MainActor
-final class SessionPlayback: ObservableObject {
+@Observable final class SessionPlayback {
 
     private nonisolated final class PlayerObserverCleanup: @unchecked Sendable {
         weak var player: AVPlayer?
@@ -130,15 +131,15 @@ final class SessionPlayback: ObservableObject {
         }
     }
 
-    @Published private(set) var position = 0.0
-    @Published private(set) var duration = 0.0
-    @Published private(set) var isPlaying = false
-    @Published private(set) var player: AVPlayer?
-    @Published private(set) var playing: UUID?
-    @Published private(set) var loading = false
-    @Published private(set) var errorMessage: String?
-    @Published private(set) var outputDevices: [AudioOutputDevice] = []
-    @Published private(set) var effectiveOutput = "System output"
+    private(set) var position = 0.0
+    private(set) var duration = 0.0
+    private(set) var isPlaying = false
+    private(set) var player: AVPlayer?
+    private(set) var playing: UUID?
+    private(set) var loading = false
+    private(set) var errorMessage: String?
+    private(set) var outputDevices: [AudioOutputDevice] = []
+    private(set) var effectiveOutput = "System output"
 
     let levels: PlaybackLevels
     private let hardwareObserver: AudioHardwareObserver
@@ -147,14 +148,14 @@ final class SessionPlayback: ObservableObject {
     private let activate: (AVPlayer) -> Void
     private let sourceReader: @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry
     private let asyncSourceReader: ((RecordingSession.SourceTrack, RecordingSession, URL) async throws -> SessionEntry)?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var task: Task<Void, Never>?
     private var generation = UUID()
     private var ownedRequestToken: UInt64 = 0
     private var recordingActive = false
-    private var levelObservation: AnyCancellable?
-    private var hardwareObservation: AnyCancellable?
+    @ObservationIgnored private var levelObservation: ObservationSubscription<ListeningLevel>?
+    @ObservationIgnored private var hardwareObservation: ObservationSubscription<Int>?
     private var statusObservation: AnyCancellable?
-    private var observerCleanup: PlayerObserverCleanup?
+    @ObservationIgnored private var observerCleanup: PlayerObserverCleanup?
     private var seekInFlight = false
     private var pendingSeekTarget: Double?
 
@@ -194,12 +195,8 @@ final class SessionPlayback: ObservableObject {
         self.coordinator = coordinator ?? SessionPlaybackCoordinator()
         self.sourceReader = sourceReader
         self.asyncSourceReader = asyncSourceReader
-        levelObservation = self.levels.$value.dropFirst().sink { [weak self] _ in
-            Task { @MainActor [weak self] in self?.refreshOutput() }
-        }
-        hardwareObservation = hardwareObserver.$revision.dropFirst().sink { [weak self] _ in
-            Task { @MainActor [weak self] in self?.refreshOutput() }
-        }
+        levelObservation = ObservationSubscription(read: { [levels = self.levels] in levels.value }) { [weak self] _ in self?.refreshOutput() }
+        hardwareObservation = ObservationSubscription(read: { hardwareObserver.revision }) { [weak self] _ in self?.refreshOutput() }
     }
 
     func togglePlayback() {
@@ -495,8 +492,8 @@ nonisolated struct ListeningLevel: Codable, Equatable, Sendable {
 
 /// Shared by every app player; output controls never enter the capture pipeline.
 @MainActor
-final class PlaybackLevels: ObservableObject {
-    @Published private(set) var value: ListeningLevel
+@Observable final class PlaybackLevels {
+    private(set) var value: ListeningLevel
     private let defaults: UserDefaults
     private let key: String
     init(defaults: UserDefaults = .standard, key: String = "audio.playbackLevels.v1", initialVolume: Float = 1) {

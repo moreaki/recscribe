@@ -1,191 +1,141 @@
-//
-//  MenuBarPopoverView.swift
-//  RecScribe
-//
-//  Compact popover UI shown from the menu bar icon.
-//
-
+import Observation
 import SwiftUI
 
 struct MenuBarPopoverView: View {
 
-    @EnvironmentObject var viewModel: RecorderViewModel
+    @Environment(RecorderViewModel.self) var viewModel
     var live: LiveTranscription?
-    @State private var contentHeight: CGFloat = WorkspaceStyle.previewHeight
+    var layout = PopoverLayout()
 
     var body: some View {
-        VStack(spacing: 0) {
-        ScrollView {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header: logo, with secondary actions collected under "•••" (BL-110)
-            HStack(alignment: .top) {
-                GlassBrandLockup(size: .compact)
+        PopoverFrame(layout: layout) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    GlassBrandLockup(size: .compact)
 
-                Spacer()
+                    Spacer()
 
-                OverflowMenuButton()
-            }
-
-            // Status row
-            HStack(spacing: 8) {
-                if viewModel.isRecording {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 8, height: 8)
+                    OverflowMenuButton()
                 }
 
-                Text(viewModel.statusText)
-                    .workspaceFont(.status)
-                    .foregroundColor(viewModel.isRecording ? .red : .primary)
-                    // Wrap rather than truncate. At 17pt there are 248pt to work
-                    // with here (280 less the 16pt padding), and the idle line
-                    // "Play something, then hit record" is wider than that — it
-                    // shipped reading "…then hit rec…", which looks like a
-                    // rendering bug rather than a sentence.
-                    //
-                    // Not fixed by shortening that one string: `statusText` also
-                    // returns "Recording <source>" and "Ready to record
-                    // <source>", and a source can be any app name the user
-                    // happens to be capturing. Any single-line treatment is one
-                    // long app name away from the same ellipsis, so the row has
-                    // to be able to take a second line.
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    if viewModel.isRecording {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 8, height: 8)
+                    }
 
-                Spacer()
+                    Text(viewModel.statusText)
+                        .workspaceFont(.status)
+                        .foregroundColor(viewModel.isRecording ? .red : .primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer()
+
+                    if viewModel.isRecording {
+                        PopoverDurationText(telemetry: viewModel.telemetry)
+                    }
+                }
+
+                CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
+                MultipleInputsView(recorder: viewModel)
+                if viewModel.selectedSource.kind != .multiple {
+                    RecordingLevelsView(recorder: viewModel)
+                }
+
+                if case .error = viewModel.state, let message = viewModel.errorMessage {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(message)
+                            .workspaceFont(.detail)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let recovery = viewModel.recoverySuggestion {
+                            GlassPillButton(
+                                recovery.label,
+                                emphasis: .secondary,
+                                size: .mini
+                            ) {
+                                viewModel.performRecovery()
+                            }
+                        }
+                    }
+                }
 
                 if viewModel.isRecording {
-                    PopoverDurationText(telemetry: viewModel.telemetry)
+                    PopoverWaveformSection(telemetry: viewModel.telemetry)
                 }
-            }
 
-            CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
-            MultipleInputsView(recorder: viewModel)
-            if viewModel.audioSource.selectedSource.kind != .multiple {
-                RecordingLevelsView(recorder: viewModel)
-            }
-
-            // Inline error with recovery action
-            if case .error = viewModel.state, let message = viewModel.errorMessage {
-                VStack(alignment: .leading, spacing: 6) {
+                if viewModel.installLocationBlocksRecording, let message = viewModel.installNotice {
                     Text(message)
                         .workspaceFont(.detail)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if let recovery = viewModel.recoverySuggestion {
-                        GlassPillButton(
-                            recovery.label,
-                            emphasis: .secondary,
-                            size: .mini
-                        ) {
-                            viewModel.performRecovery()
+                    GlassPillButton(
+                        "Reveal in Finder",
+                        emphasis: .primaryNeutral,
+                        size: .medium,
+                        isFullWidth: true
+                    ) {
+                        viewModel.revealAppInFinder()
+                    }
+                } else {
+                    GlassPillButton(
+                        viewModel.isRecording ? "Stop recording" : "Start recording",
+                        systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle",
+                        emphasis: .primary,
+                        size: .medium,
+                        isFullWidth: true
+                    ) {
+                        Task {
+                            await viewModel.toggleRecording()
                         }
                     }
                 }
-            }
 
-            // Mini waveform (only while recording)
-            if viewModel.isRecording {
-                PopoverWaveformSection(telemetry: viewModel.telemetry)
-            }
-
-            // Primary action. A red "Start recording" on an app that cannot record
-            // is a false affordance, so when the bundle is translocated (BL-082a)
-            // the button carries the corrective action instead — and the popover
-            // explains the block itself rather than spawning the floating panel
-            // out of a transient surface (BL-086).
-            //
-            // The status row above and this explanation are title and body, not a
-            // duplication: the row compresses the action, this states the fact and
-            // the procedure. Accent fill rather than grey — grey is the system's
-            // *disabled* costume, and this is the only thing on the surface the
-            // user can do. Red is unavailable; it means "record" in this app.
-            if viewModel.installLocationBlocksRecording, let message = viewModel.installNotice {
-                Text(message)
-                    .workspaceFont(.detail)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                // The neutral fill is what the system accent was standing in for
-                // here: primary rank without borrowing the record red for an
-                // action that cannot record.
-                GlassPillButton(
-                    "Reveal in Finder",
-                    emphasis: .primaryNeutral,
-                    size: .medium,
-                    isFullWidth: true
-                ) {
-                    viewModel.revealAppInFinder()
+                if let live {
+                    Divider()
+                    LiveTranscriptionControl(live: live)
+                    Text(live.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
-            } else {
-                GlassPillButton(
-                    viewModel.isRecording ? "Stop recording" : "Start recording",
-                    systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle",
-                    emphasis: .primary,
-                    size: .medium,
-                    isFullWidth: true
-                ) {
-                    Task {
-                        await viewModel.toggleRecording()
+
+                if let url = viewModel.lastRecordingURL,
+                    !viewModel.isRecording,
+                    !viewModel.installLocationBlocksRecording
+                {
+                    HStack {
+                        Image(systemName: "doc.fill")
+                            .foregroundColor(.secondary)
+                        Text(url.lastPathComponent)
+                            .workspaceFont(.detail)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        GlassPillButton(
+                            "Reveal",
+                            emphasis: .tertiary,
+                            size: .mini
+                        ) {
+                            viewModel.revealInFinder()
+                        }
                     }
                 }
+
             }
-
-            if let live {
-                Divider()
-                LiveTranscriptionControl(live: live)
-                Text(live.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            }
-
-            // Last recording info. Hidden while blocked: its "Reveal" targets the
-            // recording, and the block's "Reveal in Finder" targets the app bundle
-            // — two near-identical affordances with different targets, 40pt apart
-            // on a 280pt surface. The file stays where it is; only the row waits.
-            if let url = viewModel.lastRecordingURL,
-               !viewModel.isRecording,
-               !viewModel.installLocationBlocksRecording {
-                HStack {
-                    Image(systemName: "doc.fill")
-                        .foregroundColor(.secondary)
-                    Text(url.lastPathComponent)
-                        .workspaceFont(.detail)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    GlassPillButton(
-                        "Reveal",
-                        emphasis: .tertiary,
-                        size: .mini
-                    ) {
-                        viewModel.revealInFinder()
-                    }
-                }
-            }
-
+            .padding(WorkspaceStyle.contentPadding)
+            .frame(width: WorkspaceStyle.popoverWidth)
+        } footer: {
+            footer
         }
-        .padding(WorkspaceStyle.contentPadding)
-        .frame(width: WorkspaceStyle.popoverWidth)
-        .background(GeometryReader { geometry in Color.clear.preference(key: PopoverContentHeight.self, value: geometry.size.height) })
-        }
-        .frame(width: WorkspaceStyle.popoverWidth, height: min(max(contentHeight, WorkspaceStyle.previewHeight), min(720, (NSScreen.main?.visibleFrame.height ?? 800) - 80) - 51))
-        .onPreferenceChange(PopoverContentHeight.self) { contentHeight = $0 }
-        Divider()
-        footer
-        }
-        // The same ground as the window, deliberately. This was a flat opaque
-        // fill first, reasoning that an NSPopover already draws its own vibrancy
-        // and a second material would read as mud. What an opaque fill actually
-        // does is *cover* that vibrancy, so the popover came out visibly darker
-        // than the window it belongs to — the app looking like two apps.
+        .fixedSize(horizontal: false, vertical: true)
         .background(WorkspaceStyle.background)
         .glassThemeAdaptingToContrast()
     }
 
-    /// Match Quantivane's persistent footer; quitting uses the app delegate's
-    /// existing asynchronous recording finalization and cleanup.
     private var footer: some View {
         HStack {
             Spacer()
@@ -205,17 +155,63 @@ struct MenuBarPopoverView: View {
         }
         .padding(.horizontal, 14)
         .frame(width: WorkspaceStyle.popoverWidth)
-        .frame(minHeight: 50)
+        .frame(minHeight: WorkspaceStyle.popoverFooterHeight)
+    }
+}
+
+/// One scrolling viewport with a separately measured persistent footer.
+struct PopoverFrame<Content: View, Footer: View>: View {
+    var layout: PopoverLayout
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var footer: () -> Footer
+    @State private var contentHeight = WorkspaceStyle.previewHeight
+    @State private var footerHeight = WorkspaceStyle.popoverFooterHeight
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView(.vertical) {
+                content()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear.preference(
+                                key: PopoverContentHeight.self, value: geometry.size.height)
+                        })
+            }
+            .frame(height: layout.scrollHeight(content: contentHeight, footer: footerHeight))
+            .onPreferenceChange(PopoverContentHeight.self) { contentHeight = $0 }
+            Divider().frame(height: WorkspaceStyle.popoverDividerHeight)
+            footer()
+                .fixedSize(horizontal: false, vertical: true)
+                .background(
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: PopoverFooterHeight.self, value: geometry.size.height)
+                    }
+                )
+                .onPreferenceChange(PopoverFooterHeight.self) { footerHeight = $0 }
+        }
+        .frame(width: WorkspaceStyle.popoverWidth)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct PopoverFooterHeight: PreferenceKey {
+    static let defaultValue: CGFloat = WorkspaceStyle.popoverFooterHeight
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
 private struct PopoverContentHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
 }
 
 private struct PopoverDurationText: View {
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
         Text(telemetry.formattedDuration)
@@ -226,7 +222,7 @@ private struct PopoverDurationText: View {
 }
 
 private struct PopoverWaveformSection: View {
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
         GlassLiveWaveform(
@@ -236,5 +232,22 @@ private struct PopoverWaveformSection: View {
             )
         )
         .frame(height: 36)
+    }
+}
+
+@MainActor
+@Observable final class PopoverLayout {
+    var availableHeight: CGFloat
+    init(availableHeight: CGFloat = WorkspaceStyle.popoverMaximumHeight) {
+        self.availableHeight = availableHeight
+    }
+    func update(screen: NSScreen?) {
+        availableHeight = min(
+            WorkspaceStyle.popoverMaximumHeight,
+            (screen?.visibleFrame.height ?? WorkspaceStyle.popoverMaximumHeight)
+                - WorkspaceStyle.popoverScreenMargin)
+    }
+    func scrollHeight(content: CGFloat, footer: CGFloat) -> CGFloat {
+        max(0, min(content, availableHeight - footer - WorkspaceStyle.popoverDividerHeight))
     }
 }

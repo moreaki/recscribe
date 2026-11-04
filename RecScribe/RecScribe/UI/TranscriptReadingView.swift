@@ -5,7 +5,7 @@ struct TranscriptReadingView: View {
     let document: TranscriptPreview
     private let hasPlayback: Bool
     private let playbackPosition: Double?
-    @ObservedObject private var playback: SessionPlayback
+    @Bindable private var playback: SessionPlayback
     var onSeek: ((Double) -> Void)? = nil
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
@@ -25,7 +25,7 @@ struct TranscriptReadingView: View {
         self.document = document
         self.hasPlayback = playback != nil
         self.playbackPosition = playbackPosition
-        self._playback = ObservedObject(wrappedValue: playback ?? SessionPlayback())
+        self._playback = Bindable(wrappedValue: playback ?? SessionPlayback())
         self.onSeek = onSeek
         _mode = State(initialValue: mode)
         _expandedGroups = State(initialValue: expandedGroups)

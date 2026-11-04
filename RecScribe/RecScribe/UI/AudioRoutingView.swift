@@ -2,13 +2,13 @@ import SwiftUI
 
 /// An editor for the existing graph. Disclosure changes never write audio settings.
 struct AudioRoutingView: View {
-    @EnvironmentObject private var recorder: RecorderViewModel
+    @Environment(RecorderViewModel.self) private var recorder
     @Environment(\.dismissWindow) private var dismissWindow
-    @ObservedObject private var levels: AudioLevels
-    @ObservedObject private var monitor: CapturedAudioMonitor
-    @ObservedObject private var monitorLevels: PlaybackLevels
-    @ObservedObject private var playbackLevels: PlaybackLevels
-    @ObservedObject private var hardwareObserver = AudioHardwareObserver.shared
+    @Bindable private var levels: AudioLevels
+    @Bindable private var monitor: CapturedAudioMonitor
+    @Bindable private var monitorLevels: PlaybackLevels
+    @Bindable private var playbackLevels: PlaybackLevels
+    @Bindable private var hardwareObserver = AudioHardwareObserver.shared
     @State private var devices: [InputDeviceInfo] = []
     @State private var outputs: [AudioOutputDevice] = []
     @State private var systemOutputUID: String?
@@ -26,17 +26,17 @@ struct AudioRoutingView: View {
          expandedPanel: AudioRoutingPanel? = nil,
          embeddedInStudio: Bool = false,
          onClose: (() -> Void)? = nil) {
-        _levels = ObservedObject(wrappedValue: levels)
-        _monitor = ObservedObject(wrappedValue: monitor)
-        _monitorLevels = ObservedObject(wrappedValue: monitor.levels)
-        _playbackLevels = ObservedObject(wrappedValue: playbackLevels)
-        _hardwareObserver = ObservedObject(wrappedValue: hardwareObserver)
+        _levels = Bindable(wrappedValue: levels)
+        _monitor = Bindable(wrappedValue: monitor)
+        _monitorLevels = Bindable(wrappedValue: monitor.levels)
+        _playbackLevels = Bindable(wrappedValue: playbackLevels)
+        _hardwareObserver = Bindable(wrappedValue: hardwareObserver)
         _expandedPanel = State(initialValue: expandedPanel)
         self.embeddedInStudio = embeddedInStudio
         self.onClose = onClose
     }
 
-    private var source: AudioSource { recorder.audioSource.selectedSource }
+    private var source: AudioSource { recorder.selectedSource }
     private var inputs: [InputSelection] { source.inputSelections }
     private var editable: Bool { recorder.allowsCaptureSourceChange }
     private var eligible: [InputDeviceInfo] { devices.filter { (1...32).contains($0.inputChannels ?? 0) } }
@@ -480,7 +480,7 @@ struct AudioRoutingView: View {
 
 /// Only this leaf subscribes to incoming level and health updates.
 struct CaptureSourceMeter: View {
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var telemetry: RecorderTelemetry
     let track: CaptureTrack
 
     var body: some View {
@@ -557,10 +557,10 @@ nonisolated enum AudioRoutingSummary {
 
 /// Compact entry point shared by the Studio, menu-bar popover and Settings.
 struct MultipleInputsView: View {
-    @ObservedObject var recorder: RecorderViewModel
+    @Bindable var recorder: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
-    private var source: AudioSource { recorder.audioSource.selectedSource }
+    private var source: AudioSource { recorder.selectedSource }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -586,12 +586,12 @@ struct MultipleInputsView: View {
 }
 
 struct CaptureHealthView: View {
-    @ObservedObject var recorder: RecorderViewModel
-    @ObservedObject var telemetry: RecorderTelemetry
+    @Bindable var recorder: RecorderViewModel
+    @Bindable var telemetry: RecorderTelemetry
 
     init(recorder: RecorderViewModel, telemetry: RecorderTelemetry? = nil) {
         self.recorder = recorder
-        self._telemetry = ObservedObject(wrappedValue: telemetry ?? recorder.telemetry)
+        self._telemetry = Bindable(wrappedValue: telemetry ?? recorder.telemetry)
     }
 
     var body: some View {

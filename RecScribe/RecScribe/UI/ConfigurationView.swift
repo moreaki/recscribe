@@ -2,11 +2,12 @@ import SwiftUI
 import RecScribeCore
 
 struct ConfigurationView: View {
-    @EnvironmentObject private var recorder: RecorderViewModel
-    @EnvironmentObject private var settings: AppSettings
+    @Environment(RecorderViewModel.self) private var recorder
+    @Environment(AppSettings.self) private var settings
+    private var settingsBinding: Bindable<AppSettings> { Bindable(settings) }
     @Environment(\.glassTheme) private var theme
-    @EnvironmentObject private var runtime: RuntimeManager
-    @EnvironmentObject private var library: SessionLibrary
+    @Environment(RuntimeManager.self) private var runtime
+    @Environment(SessionLibrary.self) private var library
     @State private var section: SettingsSection
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
@@ -163,15 +164,15 @@ struct ConfigurationView: View {
                 HStack { Text(recorder.saveLocationPath).lineLimit(1).truncationMode(.middle); Spacer(); Button("Choose folder…") { recorder.chooseSaveLocation() } }
             }.disabled(library.recordingActive)
             card("Archive after recording", detail: "Optional conversion runs after finalization and verification, at utility priority. Originals are always retained.") {
-                Picker("Archive", selection: $settings.values.storage.archiveFormat) {
+                Picker("Archive", selection: settingsBinding.values.storage.archiveFormat) {
                     ForEach(ArchiveFormat.allCases, id: \.self) { Text($0 == .wav ? "WAV only" : $0.rawValue.uppercased()).tag($0) }
                 }.pickerStyle(.segmented)
                 if settings.values.storage.archiveFormat == .flac {
-                    Stepper("FLAC compression: \(settings.values.storage.flacCompression)", value: $settings.values.storage.flacCompression, in: RecordingStorageOptions.flacCompressionRange)
+                    Stepper("FLAC compression: \(settings.values.storage.flacCompression)", value: settingsBinding.values.storage.flacCompression, in: RecordingStorageOptions.flacCompressionRange)
                 } else if settings.values.storage.archiveFormat != .wav {
-                    Picker("Bitrate", selection: $settings.values.storage.bitrateKbps) { ForEach(RecordingStorageOptions.bitrateChoices, id: \.self) { Text("\($0) kbps").tag($0) } }
+                    Picker("Bitrate", selection: settingsBinding.values.storage.bitrateKbps) { ForEach(RecordingStorageOptions.bitrateChoices, id: \.self) { Text("\($0) kbps").tag($0) } }
                 }
-                file("FFmpeg executable", value: $settings.values.ffmpegPath)
+                file("FFmpeg executable", value: settingsBinding.values.ffmpegPath)
                 dependencyStatus(.ffmpeg, name: "FFmpeg")
             }
         }
@@ -179,13 +180,13 @@ struct ConfigurationView: View {
     private var transcription: some View {
         Group {
         card("Processing location", detail: settings.values.processingLocation.detail) {
-            Picker("Processing location", selection: $settings.values.processingLocation) {
+            Picker("Processing location", selection: settingsBinding.values.processingLocation) {
                 ForEach(ProcessingLocation.allCases, id: \.self) { Text($0.label).tag($0) }
             }.pickerStyle(.segmented)
             Text("Changing location stops optional live transcription and revokes audio approval. Recording continues locally. There is no automatic fallback.")
                 .font(.caption).foregroundStyle(.secondary)
             if settings.values.processingLocation == .cloud {
-                Picker("Cloud transcription model", selection: $settings.values.cloudTranscriptionModel) {
+                Picker("Cloud transcription model", selection: settingsBinding.values.cloudTranscriptionModel) {
                     Text(RealtimePolicy.model).tag(RealtimePolicy.model)
                 }
                 Label("Audio leaves this Mac only after you approve each recording activation. Internet and API usage charges apply, separately for every channel.", systemImage: "cloud")
@@ -198,10 +199,10 @@ struct ConfigurationView: View {
         card("Live draft", detail: settings.values.processingLocation == .cloud
              ? "Swift prepares 24-kHz mono PCM for each channel independently. Only new audio after approval is streamed in bounded windows; incremental text arrives with a delay. Turn timestamps are approximate."
              : "Switch on in the recorder at any time. Native Swift prepares 16-kHz chunks; one local Whisper worker catches up from disk. Different channels stay separate. Text is provisional, with a small delay.") {
-            Picker("Chunk duration", selection: $settings.values.liveChunkSeconds) {
+            Picker("Chunk duration", selection: settingsBinding.values.liveChunkSeconds) {
                 ForEach(LiveTranscriptionPolicy.chunkChoices, id: \.self) { Text("\($0) seconds").tag($0) }
             }.pickerStyle(.segmented)
-            Stepper("Whisper CPU threads: \(settings.values.liveThreads)", value: $settings.values.liveThreads, in: LiveTranscriptionPolicy.threadRange)
+            Stepper("Whisper CPU threads: \(settings.values.liveThreads)", value: settingsBinding.values.liveThreads, in: LiveTranscriptionPolicy.threadRange)
                 .disabled(settings.values.processingLocation == .cloud)
             Text(settings.values.processingLocation == .cloud
                  ? "Each window uses an isolated Realtime connection. Shorter windows reduce the initial wait, but increase connection overhead. No history is uploaded when enabling mid-recording."
@@ -209,21 +210,21 @@ struct ConfigurationView: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         card("Completed recordings", detail: "Final transcription runs natively on this Mac with whisper.cpp. Recording remains independent of transcription and AI.") {
-            Toggle("Automatically transcribe completed recordings", isOn: $settings.values.autoTranscribe)
+            Toggle("Automatically transcribe completed recordings", isOn: settingsBinding.values.autoTranscribe)
                 .disabled(settings.values.processingLocation == .cloud)
             if settings.values.processingLocation == .cloud {
                 Text("Approved cloud results appear in Transcript after recording stops. Full-recording recognition requires Local or Hybrid; completed files are never silently uploaded.").font(.caption).foregroundStyle(.secondary)
             }
-            Picker("Text mode", selection: $settings.values.mode) {
+            Picker("Text mode", selection: settingsBinding.values.mode) {
                 Text("Verbatim ASR").tag(TranscriptionMode.verbatim); Text("Normalize").tag(TranscriptionMode.normalize); Text("Translate").tag(TranscriptionMode.translate)
             }.pickerStyle(.segmented)
-            HStack { TextField("Source language (auto, de-CH, en…)", text: $settings.values.sourceLanguage); TextField("Target language", text: $settings.values.targetLanguage).disabled(settings.values.mode == .verbatim) }.textFieldStyle(.roundedBorder)
-            Picker("Recognition profile", selection: $settings.values.profile) {
+            HStack { TextField("Source language (auto, de-CH, en…)", text: settingsBinding.values.sourceLanguage); TextField("Target language", text: settingsBinding.values.targetLanguage).disabled(settings.values.mode == .verbatim) }.textFieldStyle(.roundedBorder)
+            Picker("Recognition profile", selection: settingsBinding.values.profile) {
                 Text("Single pass").tag(RecognitionProfile.fast); Text("Two distinct models, compare").tag(RecognitionProfile.verified)
             }
-            if settings.values.profile == .verified { file("Verification model", value: $settings.values.verificationModelPath) }
+            if settings.values.profile == .verified { file("Verification model", value: settingsBinding.values.verificationModelPath) }
             verificationWarning
-            file("Optional whisper.cpp VAD model", value: $settings.values.vadModelPath)
+            file("Optional whisper.cpp VAD model", value: settingsBinding.values.vadModelPath)
             Text(VADModel.guidance).font(.caption).foregroundStyle(.secondary)
             if !settings.values.vadModelPath.isEmpty {
                 Button("Clear optional VAD model") { settings.values.vadModelPath = "" }
@@ -236,8 +237,8 @@ struct ConfigurationView: View {
     private var models: some View {
         Group {
             card("Whisper · accelerated locally", detail: "whisper.cpp is the reference adapter. Hardware availability is not proof that a particular inference used Metal.") {
-                file("Whisper executable", value: $settings.values.whisperPath)
-                file("Selected local ggml model", value: $settings.values.modelPath)
+                file("Whisper executable", value: settingsBinding.values.whisperPath)
+                file("Selected local ggml model", value: settingsBinding.values.modelPath)
                 verificationWarning
                 if !runtime.detectedTools.isEmpty {
                     ForEach(runtime.detectedTools.keys.sorted(), id: \.self) { name in

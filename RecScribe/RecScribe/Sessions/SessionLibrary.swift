@@ -1,32 +1,32 @@
+import Observation
 import AVFoundation
-import Combine
 import Foundation
 import os
 import RecScribeCore
 
 @MainActor
-final class SessionLibrary: ObservableObject {
+@Observable final class SessionLibrary {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "Pipeline")
     typealias Entry = SessionEntry
-    @Published private(set) var readFailures: [ManifestFailure] = []
-    @Published private(set) var refreshing = false
+    private(set) var readFailures: [ManifestFailure] = []
+    private(set) var refreshing = false
     private var refreshTask: Task<Void, Never>?
     private var refreshID = UUID()
     private let readSessions: @Sendable (URL) async throws -> SessionSnapshot
     private let readJob: @Sendable (URL) async throws -> JobSnapshot
     private let settings: () -> AppSettings.Values
     private let progressMonitor: JobProgressMonitor
-    @Published private(set) var entries: [Entry] = []
-    @Published private(set) var activity = "Ready"
-    @Published private(set) var progress = 0.0
-    @Published private(set) var recordingActive = false
-    @Published private(set) var liveWorkActive = false
-    @Published private(set) var latestJob: URL?
-    @Published private(set) var latestSource: URL?
-    @Published private(set) var previousJob: URL?
-    @Published private(set) var busy = false
-    @Published var pendingTextRequest: TextProcessingRequest?
-    @Published var errorMessage: String?
+    private(set) var entries: [Entry] = []
+    private(set) var activity = "Ready"
+    private(set) var progress = 0.0
+    private(set) var recordingActive = false
+    private(set) var liveWorkActive = false
+    private(set) var latestJob: URL?
+    private(set) var latestSource: URL?
+    private(set) var previousJob: URL?
+    private(set) var busy = false
+    var pendingTextRequest: TextProcessingRequest?
+    var errorMessage: String?
     private struct PendingSession {
         let manifest: URL
         let recover: Bool
@@ -35,14 +35,14 @@ final class SessionLibrary: ObservableObject {
     private var pending: [PendingSession] = []
     private var pendingRecoveryDirectory: URL?
     private var activeManifest: URL?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
     private let rememberJob: (URL?, URL?) -> Void
-    private var restorationTask: Task<Void, Never>?
-    @Published private(set) var restoringTranscript = false
+    @ObservationIgnored private var restorationTask: Task<Void, Never>?
+    private(set) var restoringTranscript = false
     private var rememberedJob: URL?
     private let jobsDirectory: URL
 

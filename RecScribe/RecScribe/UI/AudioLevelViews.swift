@@ -2,12 +2,12 @@ import AVKit
 import SwiftUI
 
 struct RecordingLevelsView: View {
-    @ObservedObject var recorder: RecorderViewModel
-    @ObservedObject private var levels: AudioLevels
-    @ObservedObject private var monitor: CapturedAudioMonitor
+    @Bindable var recorder: RecorderViewModel
+    @Bindable private var levels: AudioLevels
+    @Bindable private var monitor: CapturedAudioMonitor
     private let playbackLevels: PlaybackLevels
     @State private var expanded = false
-    private var source: AudioSource { recorder.audioSource.selectedSource }
+    private var source: AudioSource { recorder.selectedSource }
     init(recorder: RecorderViewModel) {
         self.recorder = recorder
         levels = recorder.audio.levels
@@ -47,8 +47,8 @@ struct RecordingLevelsView: View {
 }
 
 private struct RecordingPlaybackFader: View {
-    @ObservedObject var telemetry: RecorderTelemetry
-    @ObservedObject var levels: AudioLevels
+    @Bindable var telemetry: RecorderTelemetry
+    @Bindable var levels: AudioLevels
     let source: AudioSource
 
     var body: some View {
@@ -61,7 +61,7 @@ private struct RecordingPlaybackFader: View {
 struct SourceFader: View {
     let id: String
     let title: String
-    @ObservedObject var levels: AudioLevels
+    @Bindable var levels: AudioLevels
     let channels: Int
     var preservesSources = false
     var context: String? = nil
@@ -104,9 +104,9 @@ struct SourceFader: View {
 }
 
 struct ListeningControls: View {
-    @ObservedObject var levels: PlaybackLevels
+    @Bindable var levels: PlaybackLevels
     let title: String
-    @ObservedObject var hardwareObserver: AudioHardwareObserver = .shared
+    @Bindable var hardwareObserver: AudioHardwareObserver = .shared
     private var devices: [AudioOutputDevice] { hardwareObserver.outputDevices }
     private var systemUID: String? { hardwareObserver.defaultOutputUID }
     private func change(_ body: (inout ListeningLevel) -> Void) { var next = levels.value; body(&next); levels.set(next) }
@@ -212,7 +212,7 @@ struct DeviceVolumeView: View {
 
 /// Shared audio transport and app-owned listening controls.
 struct SessionPlaybackView: View {
-    @ObservedObject var playback: SessionPlayback
+    @Bindable var playback: SessionPlayback
     var showListeningControls = true
     @State private var showOutput = false
     var body: some View {

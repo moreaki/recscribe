@@ -30,7 +30,7 @@ struct AudioTestViewTests {
             clock: ManualClock(), audioSource: provider, defaults: defaults, audioTest: test)
         recorder.permissionStatus = .granted
         let hosting = NSHostingView(rootView: AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: listening)
-            .environmentObject(recorder).preferredColorScheme(.dark))
+            .environment(recorder).preferredColorScheme(.dark))
         hosting.frame = CGRect(x: 0, y: 0, width: 1120, height: 700)
         let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.appearance = NSAppearance(named: .darkAqua); window.contentView = hosting

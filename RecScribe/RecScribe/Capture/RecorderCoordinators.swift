@@ -1,17 +1,17 @@
 import AppKit
-import Combine
 import Foundation
+import Observation
 import SwiftUI
 
 /// Isolates high-frequency capture telemetry (`duration`, `waveformSamples`,
-/// `sourceHealth`, and `healthTime`) from `RecorderViewModel.objectWillChange`
+/// `sourceHealth`, and `healthTime`) from capture controls
 /// so only leaf status, waveform, and health subviews re-evaluate at 10–30 Hz (#41).
 @MainActor
-final class RecorderTelemetry: ObservableObject {
-    @Published var sourceHealth: [SourceRecordingHealth] = []
-    @Published var healthTime = ProcessInfo.processInfo.systemUptime
-    @Published var duration: TimeInterval = 0
-    @Published var waveformSamples: [Float] = Array(repeating: 0, count: 200)
+@Observable final class RecorderTelemetry {
+    var sourceHealth: [SourceRecordingHealth] = []
+    var healthTime = ProcessInfo.processInfo.systemUptime
+    var duration: TimeInterval = 0
+    var waveformSamples: [Float] = Array(repeating: 0, count: 200)
 
     var formattedDuration: String {
         let minutes = Int(duration) / 60
@@ -23,7 +23,12 @@ final class RecorderTelemetry: ObservableObject {
 /// Coordinates Screen Recording and Microphone permission probing, registration waits,
 /// and live grant polling (#41).
 @MainActor
-final class PermissionCoordinator {
+@Observable final class PermissionCoordinator {
+    var permissionStatus: PermissionStatus
+    private(set) var isOpeningSystemSettings = false
+    private let blocked: Bool
+    private let notificationCenter: NotificationCenter
+    @ObservationIgnored nonisolated(unsafe) private var activationObserver: NSObjectProtocol?
     private let permissions: PermissionProviding
     private let pollClock: PollClock
     private let registrationTimeout: TimeInterval
@@ -35,25 +40,38 @@ final class PermissionCoordinator {
     init(
         permissions: PermissionProviding,
         pollClock: PollClock,
-        registrationTimeout: TimeInterval
+        registrationTimeout: TimeInterval,
+        blocked: Bool = false,
+        notificationCenter: NotificationCenter = .default
     ) {
         self.permissions = permissions
         self.pollClock = pollClock
         self.registrationTimeout = registrationTimeout
+        self.blocked = blocked
+        self.notificationCenter = notificationCenter
+        // Silent preflight only. Authoritative probes require an explicit request.
+        self.permissionStatus = permissions.preflight()
+        activationObserver = notificationCenter.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.hasSoughtPermission, !self.blocked,
+                    self.permissionStatus != .granted
+                else { return }
+                await self.checkPermission()
+            }
+        }
     }
 
     var isPolling: Bool { grantWatcher?.isPolling ?? false }
-
-    func preflight() -> PermissionStatus {
-        permissions.preflight()
-    }
 
     func markPermissionSought() {
         hasSoughtPermission = true
         permissions.beginUserRequest(.screenCapture)
     }
 
-    func checkPermission(onUpdate: (PermissionStatus) -> Void) async {
+    func checkPermission() async {
         if let inFlight = permissionProbe {
             _ = await inFlight.value
             return
@@ -64,17 +82,19 @@ final class PermissionCoordinator {
         let status = await probe.value
         permissionProbe = nil
         guard generation == permissionGeneration else { return }
-        onUpdate(status)
+        permissionStatus = status
     }
 
-    func applyObservedGrant(onUpdate: (PermissionStatus) -> Void) {
+    private func applyObservedGrant() {
         permissionGeneration += 1
-        onUpdate(.granted)
+        permissionStatus = .granted
     }
 
     func requestScreenCapturePermission() async -> Bool {
         hasSoughtPermission = true
-        return await permissions.requestPermission()
+        let granted = await permissions.requestPermission()
+        permissionStatus = granted ? .granted : .denied
+        return granted
     }
 
     func requestMicrophoneAccess() async -> Bool {
@@ -105,8 +125,24 @@ final class PermissionCoordinator {
         }
     }
 
-    func openSystemPreferences() {
-        permissions.openSystemPreferences()
+    deinit {
+        if let activationObserver { notificationCenter.removeObserver(activationObserver) }
+    }
+
+    /// One deliberate retry registers the app before opening Settings. A slow
+    /// probe outlives the deadline without fabricating a denial or being cancelled.
+    func openSystemSettings() {
+        guard !blocked, !isOpeningSystemSettings else { return }
+        markPermissionSought()
+        startGrantWatcher { [weak self] in self?.applyObservedGrant() }
+        isOpeningSystemSettings = true
+        Task { [weak self] in
+            guard let self else { return }
+            await self.awaitRegistration { [weak self] in await self?.checkPermission() }
+            self.isOpeningSystemSettings = false
+            guard self.permissionStatus != .granted else { return }
+            self.permissions.openSystemPreferences()
+        }
     }
 
     func openSystemPreferences(for kind: PermissionKind) {
@@ -116,18 +152,47 @@ final class PermissionCoordinator {
 
 /// Manages install-location visibility tracking and fallback floating-panel presentation (#41).
 @MainActor
-final class InstallLocationMonitor {
+@Observable final class InstallLocationMonitor {
+    let installLocation: InstallLocation
     private let provider: InstallLocationProviding
     private let presenter: (() -> Void)?
+    private let notificationCenter: NotificationCenter
+    @ObservationIgnored nonisolated(unsafe) private var launchObserver: NSObjectProtocol?
     private var panel: FloatingPanelHost?
     private(set) var visibleWindowCount = 0
+    private(set) var showsInstallLocationNotice: Bool
+    private(set) var installNoticeDismissed = false
+
+    var installNotice: String? {
+        guard let text = installLocation.explanation else { return nil }
+        if installLocation.noticeIsDismissible && installNoticeDismissed { return nil }
+        return text
+    }
 
     init(
-        provider: InstallLocationProviding,
-        presenter: (() -> Void)? = nil
+        provider: InstallLocationProviding, presenter: (() -> Void)? = nil,
+        notificationCenter: NotificationCenter = .default
     ) {
         self.provider = provider
+        self.installLocation = provider.location
         self.presenter = presenter
+        self.notificationCenter = notificationCenter
+        showsInstallLocationNotice = provider.location.blocksRecording
+        if provider.location.blocksRecording {
+            launchObserver = notificationCenter.addObserver(
+                forName: NSApplication.didFinishLaunchingNotification,
+                object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.visibleWindowCount == 0 else { return }
+                    self.showNotice()
+                }
+            }
+        }
+    }
+
+    deinit {
+        if let launchObserver { notificationCenter.removeObserver(launchObserver) }
     }
 
     func mainWindowDidAppear() {
@@ -135,19 +200,16 @@ final class InstallLocationMonitor {
         panel?.dismiss()
     }
 
-    func mainWindowDidDisappear(onLastWindowClosedWhenBlocked: () -> Void) {
+    func mainWindowDidDisappear() {
         visibleWindowCount = max(0, visibleWindowCount - 1)
-        if provider.location.blocksRecording && visibleWindowCount == 0 {
-            onLastWindowClosedWhenBlocked()
-        }
+        if installLocation.blocksRecording && visibleWindowCount == 0 { showNotice() }
     }
 
-    func showNotice(
-        message: String,
-        onReveal: @escaping () -> Void,
-        onDismiss: @escaping () -> Void,
-        onPanelWillClose: @escaping () -> Void
-    ) {
+    /// Main windows carry the notice inline; a floating panel is only a fallback
+    /// for a blocked menu-bar-only launch or after the last window closes.
+    func showNotice() {
+        guard let message = installNotice else { return }
+        showsInstallLocationNotice = true
         if visibleWindowCount > 0 {
             panel?.dismiss()
             return
@@ -157,22 +219,22 @@ final class InstallLocationMonitor {
             return
         }
         if panel == nil {
-            let host = FloatingPanelHost(title: "RecScribe", width: 340) {
+            let host = FloatingPanelHost(title: "RecScribe", width: 340) { [weak self] in
                 AnyView(
                     InstallLocationNoticeView(
                         message: message,
-                        onReveal: onReveal,
-                        onDismiss: onDismiss
-                    )
-                )
+                        onReveal: { [weak self] in self?.revealAppInFinder() },
+                        onDismiss: { [weak self] in self?.dismissNotice() }))
             }
-            host.onWillClose = onPanelWillClose
+            host.onWillClose = { [weak self] in self?.showsInstallLocationNotice = false }
             panel = host
         }
         panel?.show()
     }
 
-    func dismissPanel() {
+    func dismissNotice() {
+        showsInstallLocationNotice = false
+        if installLocation.noticeIsDismissible { installNoticeDismissed = true }
         panel?.dismiss()
     }
 

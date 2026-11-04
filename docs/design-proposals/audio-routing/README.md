@@ -14,6 +14,12 @@ without Codex; the routing export includes navigation between both variants.
 - [Compact routing: inline expansion and focused inspector](compact-routing.html)
 - [Test audio: simulated signal, gain/mute and peak meters](audio-test.html)
 
+## Follow-up: routing actions and mute (#59)
+
+[Interactive UI mocks and state previews](../routing-controls-59/README.md) extend
+the compact routing design with always-visible Mute/Unmute, source removal,
+monitor-off and appropriate reset actions for fixed mix/output functions.
+
 ## Compact routing
 
 ![Compact overview](compact-overview.png)

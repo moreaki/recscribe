@@ -31,14 +31,14 @@ import Testing
         func stop() -> String? { stops += 1; return nil }
         func checkHardwareStatus() {}
     }
-    @Test func returningInputAndNewVirtualDeviceJoinWithoutRestartingOtherInputs() async throws {
+    @Test func returningInputJoinsWhileUnselectedVirtualDeviceStaysExcluded() async throws {
         let backend = Backend()
         let observer = AudioHardwareObserver(backend: backend)
         defer { observer.stopObserving() }
         var inputs: [Input] = []
         let capture = ScreenCaptureAudioManager(hardwareObserver: observer, inputFactory: { request in
             let input = Input(request); inputs.append(input); return input
-        }, canOpenInput: { true })
+        }, allowsAutomaticInput: { !$0.mayLoopBack }, canOpenInput: { true })
         var prepared: [String] = []
         capture.onInputAvailable = { device, _ in prepared.append(device.uid); return true }
         try await capture.setupMultiCapture(source: .inputsOnly([.init(deviceUID: "mic")])) { _ in }
@@ -53,14 +53,45 @@ import Testing
                            .init(uid: "virtual", name: "Teams virtual", inputChannels: 2, sampleRate: 48000,
                                  transport: kAudioDeviceTransportTypeVirtual)]
         backend.changed?()
-        await waitUntil("rejoined and new virtual input") { inputs.count == 3 }
-        #expect(inputs.count == 3, "Constructed inputs: \(inputs.map(\.uid)), prepared: \(prepared)")
-        #expect(Set(prepared) == ["mic", "virtual"])
+        await waitUntil("rejoined microphone") { inputs.count == 2 }
+        await settle()
+        #expect(inputs.count == 2, "Constructed inputs: \(inputs.map(\.uid)), prepared: \(prepared)")
+        #expect(Set(prepared) == ["mic"])
         #expect(inputs[0].starts == 1 && inputs[0].stops == 1)
-        #expect(inputs[1].starts == 1 && inputs[2].starts == 1)
+        #expect(inputs[1].starts == 1)
         try await capture.stopCapture()
-        #expect(inputs[1].stops == 1 && inputs[2].stops == 1)
+        #expect(inputs[1].stops == 1)
     }
+    @Test func optedInVirtualInputHotplugsAndRejoinsWithoutRestartingMicrophone() async throws {
+        let suite = "virtual-live-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let device = InputDeviceInfo(uid: "virtual", name: "Virtual", inputChannels: 2, sampleRate: 44100, transport: kAudioDeviceTransportTypeVirtual)
+        let policy = AutomaticRoutingSources(defaults: defaults)
+        policy.setVirtualCapture(device, enabled: true)
+        let backend = Backend(), observer: AudioHardwareObserver
+        observer = AudioHardwareObserver(backend: backend)
+        defer { observer.stopObserving() }
+        var inputs: [Input] = []
+        let capture = ScreenCaptureAudioManager(hardwareObserver: observer, inputFactory: { request in
+            let input = Input(request); inputs.append(input); return input
+        }, allowsAutomaticInput: { policy.allowsCapture($0) }, canOpenInput: { true })
+        capture.onInputAvailable = { _, _ in true }
+        try await capture.setupMultiCapture(source: .inputsOnly([.init(deviceUID: "mic")])) { _ in }
+        try await capture.startCapture()
+        backend.devices.append(device); backend.changed?()
+        await waitUntil("opted virtual hotplug") { inputs.count == 2 }
+        inputs[1].request.failure("Synthetic startup exhausted")
+        await settle()
+        #expect(inputs.count == 2, "A startup failure must wait for a hardware event, not retry forever")
+        backend.changed?()
+        for changed in backend.deviceChanges { changed() }
+        await waitUntil("opted virtual rejoin") { inputs.count == 3 }
+        #expect(inputs[0].starts == 1 && inputs[0].stops == 0)
+        #expect(inputs[2].uid == "virtual")
+        try await capture.stopCapture()
+    }
+
     @Test func stopDuringSuspendedWriterPreparationPreventsLateEngineStart() async throws {
         let backend = Backend()
         let observer = AudioHardwareObserver(backend: backend)

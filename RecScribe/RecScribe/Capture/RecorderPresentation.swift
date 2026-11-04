@@ -144,7 +144,7 @@ extension RecorderViewModel {
         switch source.kind {
         case .multiple:
             return
-                "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. Available devices are added automatically between recordings. Manual mute settings are kept."
+                "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. Microphones and interfaces are added automatically between recordings. Enable virtual inputs explicitly in Audio routing. Manual mute settings are kept."
         case .mixed:
             return
                 "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture."

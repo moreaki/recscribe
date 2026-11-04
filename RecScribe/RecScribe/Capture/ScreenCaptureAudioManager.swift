@@ -76,6 +76,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var watchedInputTracks: Set<CaptureTrack> = []
     private var deviceWatchTokens: [UUID] = []
     private let inputFactory: (InputCaptureRequest) -> any InputCaptureSession
+    private let allowsAutomaticInput: (InputDeviceInfo) -> Bool
     private let canOpenInput: () -> Bool
     private let hardwareObserver: AudioHardwareObserver
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
@@ -87,7 +88,9 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     init(hardwareObserver: AudioHardwareObserver = .shared,
          inputFactory: @escaping (InputCaptureRequest) -> any InputCaptureSession = {
              DeviceInputCapture(uid: $0.uid, track: $0.track, callback: $0.callback, onFailure: $0.failure)
-         }, canOpenInput: @escaping () -> Bool = { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) {
+         }, allowsAutomaticInput: @escaping (InputDeviceInfo) -> Bool = { AutomaticRoutingSources(defaults: .standard).allowsCapture($0) },
+         canOpenInput: @escaping () -> Bool = { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) {
+        self.allowsAutomaticInput = allowsAutomaticInput
         self.inputFactory = inputFactory
         self.canOpenInput = canOpenInput
         self.hardwareObserver = hardwareObserver
@@ -252,7 +255,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                             self.isCapturing = false
                             self.onStreamError?(message)
                         } else {
-                            self.inputFailed(track, message: message, generation: generation)
+                            self.inputFailed(track, message: message, generation: generation, attemptRecovery: false)
                         }
                     }))
                     deviceInputs[track] = input
@@ -317,12 +320,13 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             for device in self.hardwareObserver.inputDevices where (1...32).contains(device.inputChannels ?? 0) {
                 guard !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { return }
                 let track = CaptureTrack.input(device.uid)
+                guard self.pendingInputs.contains(where: { $0.deviceUID == device.uid }) || self.allowsAutomaticInput(device) else { continue }
                 guard self.deviceInputs[track] == nil else { continue }
                 let selection = self.pendingInputs.first { $0.deviceUID == device.uid } ?? InputSelection(device: device)
                 guard let available = self.onInputAvailable, await available(device, selection),
                       !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { continue }
                 let input = self.inputFactory(.init(uid: device.uid, track: track, callback: callback, failure: { [weak self] message in
-                    self?.inputFailed(track, message: message, generation: generation, attemptRecovery: self?.recoveryTask == nil)
+                    self?.inputFailed(track, message: message, generation: generation, attemptRecovery: false)
                 }))
                     if !self.watchedInputTracks.contains(track) {
                     let token = self.hardwareObserver.watchDevice(uid: device.uid, inputScope: true, includeVolumes: false) { [weak self] in

@@ -254,10 +254,26 @@ import Observation
 
     func refreshAvailableRoutingSources(_ devices: [InputDeviceInfo]) {
         guard allowsCaptureSourceChange, !isFinalizingAfterFailure else { return }
-        setCaptureSource(automaticRouting.selection(from: selectedSource, devices: devices, levels: audio.levels))
+        applyCaptureSource(automaticRouting.selection(from: selectedSource, devices: devices, levels: audio.levels))
+    }
+
+    func setVirtualInputCapture(_ device: InputDeviceInfo, enabled: Bool) {
+        guard allowsCaptureSourceChange, !isFinalizingAfterFailure, device.mayLoopBack else { return }
+        automaticRouting.setVirtualCapture(device, enabled: enabled)
+        refreshAvailableRoutingSources(audioSource.availableInputDevices())
     }
 
     func setCaptureSource(_ source: AudioSource) {
+        guard allowsCaptureSourceChange, source != selectedSource else { return }
+        let before = Set(selectedSource.inputSelections.map(\.deviceUID))
+        let after = Set(source.inputSelections.map(\.deviceUID))
+        for device in audioSource.availableInputDevices() where device.mayLoopBack && before.contains(device.uid) != after.contains(device.uid) {
+            automaticRouting.setVirtualCapture(device, enabled: after.contains(device.uid))
+        }
+        applyCaptureSource(source)
+    }
+
+    private func applyCaptureSource(_ source: AudioSource) {
         guard allowsCaptureSourceChange, source != selectedSource else { return }
         sourceRevision &+= 1
         audioSource.setSelectedSource(source)

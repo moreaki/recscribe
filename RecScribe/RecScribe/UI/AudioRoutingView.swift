@@ -136,7 +136,7 @@ struct AudioRoutingView: View {
                 columnTitle("Sources", symbol: "waveform")
                 Spacer()
             }.padding(.bottom, 3)
-            Text("Available sources are added automatically. Mute settings are kept.\nNew virtual inputs start muted in the mix; original tracks are kept. Up to eight input identities per take.")
+            Text("Microphones and audio interfaces are added automatically. Virtual inputs are recorded only when enabled below. Mute controls the mix; enabled inputs also save original tracks. Up to eight inputs per take.")
                 .font(.caption).foregroundStyle(.secondary)
             if eligible.count > InputSelection.maximumDevices {
                 Text("At most \(InputSelection.maximumDevices) input devices can be captured at once.")
@@ -158,6 +158,14 @@ struct AudioRoutingView: View {
                     }
                 }
             }
+            }
+            ForEach(eligible.filter(\.mayLoopBack)) { device in
+                Toggle("Record \(device.name)", isOn: Binding(
+                    get: { inputs.contains { $0.deviceUID == device.uid } },
+                    set: { recorder.setVirtualInputCapture(device, enabled: $0) }
+                ))
+                .disabled(!editable || (!inputs.contains { $0.deviceUID == device.uid } && inputs.count >= InputSelection.maximumDevices))
+                .help("Include this virtual device in capture and preserve its original source track.")
             }
             ForEach(inputs) { input in
                 inputCard(input, device: devices.first { $0.uid == input.deviceUID })

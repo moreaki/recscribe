@@ -70,7 +70,7 @@ struct MultipleInputTests {
         #expect(!AudioSource.multiple(appBundleID: nil, inputs: []).requiresMicrophone)
     }
 
-    @Test func automaticallySelectedTeamsAndSquirrelsDoNotBlockPreviewOrRecording() async throws {
+    @Test func explicitlyEnabledTeamsAndSquirrelsDoNotBlockPreviewOrRecording() async throws {
         let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
         let suite = "virtual-capture-\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
@@ -80,7 +80,9 @@ struct MultipleInputTests {
                        InputDeviceInfo(uid: "squirrels", name: "Squirrels Audio", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)]
         let manager = AudioSourceManager(defaults: defaults, deviceEnumerator: SelectedTestDevices(devices))
         let audio = AudioServices(defaults: defaults)
-        manager.setSelectedSource(AutomaticRoutingSources(defaults: defaults).selection(from: .systemAll, devices: devices, levels: audio.levels))
+        let policy = AutomaticRoutingSources(defaults: defaults)
+        for device in devices where device.mayLoopBack { policy.setVirtualCapture(device, enabled: true) }
+        manager.setSelectedSource(policy.selection(from: .systemAll, devices: devices, levels: audio.levels))
         let capture = MockAudioCapturing()
         let preview = AudioTestController(capture: capture, source: manager, permissions: MockPermissionProviding(.granted),
             levels: audio.levels, monitor: audio.monitor, saveDirectory: { root })

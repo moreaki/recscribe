@@ -65,6 +65,7 @@ struct SourceFader: View {
     let channels: Int
     var preservesSources = false
     var context: String? = nil
+    var showsMuteToggle = true
     private var value: SourceLevel { levels.level(id) }
     private func change(_ body: (inout SourceLevel) -> Void) { var next = value; body(&next); levels.set(id, next) }
     var body: some View {
@@ -82,10 +83,12 @@ struct SourceFader: View {
             GainSlider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }),
                        label: context.map { "\($0) \(title)" } ?? title).frame(height: 30)
                 .opacity(value.muted ? 0.5 : 1)
-            Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
-                .font(.caption).fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
-                .help(preservesSources ? "Only the derived mix is muted. Original source tracks are still saved at unity gain." : "Muted audio is saved in this single-source recording.")
+            if showsMuteToggle {
+                Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
+                    .font(.caption).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
+                    .help(preservesSources ? "Only the derived mix is muted. Original source tracks are still saved at unity gain." : "Muted audio is saved in this single-source recording.")
+            }
             if channels > 1 {
                 DisclosureGroup("Mix channel trims (dB)") {
                     ForEach(0..<min(32, channels), id: \.self) { ch in

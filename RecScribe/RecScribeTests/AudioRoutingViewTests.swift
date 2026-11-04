@@ -102,7 +102,7 @@ struct AudioRoutingViewTests {
             #expect(sizes[0] == sizes[1] && sizes[1] == sizes[2], "Mute must not move this or the following cards")
         }
         levels.set("input:mic", .init())
-        let fader = SourceFader(id: "input:mic", title: "Input gain", levels: levels, channels: 1, preservesSources: true)
+        let fader = SourceFader(id: "input:mic", title: "Input gain", levels: levels, channels: 1, preservesSources: true, showsMuteToggle: false)
         let before = try await measuredSize(fader, width: width)
         levels.set("input:mic", .init(muted: true))
         let after = try await measuredSize(fader, width: width)

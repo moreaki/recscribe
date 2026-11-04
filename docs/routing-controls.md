@@ -6,7 +6,10 @@ unchanged. All sources keep separate original tracks at unity gain, independentl
 of mix mute. Output mute affects listening only.
 
 Routing cards expose Mute/Unmute independently of their disclosure button.
-The header and expanded fader share AudioLevels / PlaybackLevels settings. Muting
+Expanded routing gain controls omit the redundant mute checkbox; the card header
+is the mute control in either disclosure state. Standalone level controls retain
+their checkbox because they have no card header. Both use the same AudioLevels /
+PlaybackLevels settings. Muting
 does not collapse/expand a card, reset gain, or enable monitoring. Mute feedback
 uses the existing action row, and the mute button and expanded status keep the
 same footprint so toggling does not resize the card. During an audio test, every

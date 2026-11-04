@@ -157,7 +157,7 @@ struct AudioRoutingView: View {
                            track: source.requiresScreenCapture ? .playback : nil) {
                 playbackChooser
                 if source.requiresScreenCapture {
-                    SourceFader(id: source.playbackLevelID, title: "Playback gain", levels: levels, channels: 2, preservesSources: source.isMixed)
+                    SourceFader(id: source.playbackLevelID, title: "Playback gain", levels: levels, channels: 2, preservesSources: source.isMixed, showsMuteToggle: false)
                     if let test = recorder.audioTest {
                         DisclosureGroup("Live channel levels") {
                             AudioTestSourceMeterView(test: test, track: .playback, muted: levels.level(source.playbackLevelID).muted, channels: true)
@@ -236,7 +236,7 @@ struct AudioRoutingView: View {
                 Spacer(minLength: 8)
             }
             SourceFader(id: id, title: "Input gain", levels: levels,
-                        channels: min(32, device?.inputChannels ?? 1), preservesSources: source.isMixed, context: name)
+                        channels: min(32, device?.inputChannels ?? 1), preservesSources: source.isMixed, context: name, showsMuteToggle: false)
             if let test = recorder.audioTest {
                 DisclosureGroup("Live channel levels") {
                     AudioTestSourceMeterView(test: test, track: .input(input.deviceUID), muted: levels.level(id).muted, channels: true)
@@ -278,7 +278,7 @@ struct AudioRoutingView: View {
             disclosureCard(.mix, title: "Stereo recording mix", symbol: "slider.horizontal.3",
                            subtitle: "L / R · 48 kHz WAV", value: gain("master"), muted: levels.level("master").muted) {
                 HStack(spacing: 8) { outputPort("1 · Left"); outputPort("2 · Right") }
-                SourceFader(id: "master", title: "Master gain", levels: levels, channels: 0, preservesSources: source.isMixed)
+                SourceFader(id: "master", title: "Master gain", levels: levels, channels: 0, preservesSources: source.isMixed, showsMuteToggle: false)
                 Text("Selected channels are averaged per side, then across sources for headroom. Gain above 0 dB can clip the mix.")
                     .font(.caption).foregroundStyle(.secondary)
             }

@@ -81,6 +81,45 @@ struct AudioRoutingViewTests {
         #expect(controller.startCount == 0)
     }
 
+    @Test func collapsedVirtualCardExposesCaptureCheckboxWithoutDisclosure() async throws {
+        let suite = "routing-capture-checkbox-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let mic = InputDeviceInfo(uid: "mic", name: "Microphone", inputChannels: 1)
+        let virtual = InputDeviceInfo(uid: "virtual", name: "Meeting loopback", inputChannels: 2,
+            transport: kAudioDeviceTransportTypeVirtual)
+        let original = InputSelection(deviceUID: virtual.uid, routes: [.init(channel: 1, placement: .right)])
+        let source = AudioSource.multiple(appBundleID: nil, inputs: [.init(device: mic), original])
+        let provider = MockAudioSourceProviding(selectedSource: source)
+        provider.availableInputDevicesResult = [mic, virtual]
+        let controller = MockRecordingControlling()
+        let audio = AudioServices(defaults: defaults)
+        audio.levels.set("input:virtual", .init(decibels: -3, muted: true))
+        let recorder = RecorderViewModel(controller: controller, permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(), audioSource: provider, defaults: defaults, audio: audio)
+        let view = AudioRoutingView(levels: audio.levels, monitor: audio.monitor, playbackLevels: audio.playbackLevels,
+            hardwareObserver: audio.hardware).environment(recorder)
+        let host = NSHostingView(rootView: view)
+        host.frame = CGRect(x: 0, y: 0, width: 760, height: 900)
+        let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = host
+        defer { window.contentView = nil; window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        host.layoutSubtreeIfNeeded()
+        func native(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(native) }
+        // SwiftUI draws ordinary card buttons itself; the capture checkbox is
+        // the sole native non-popup button in this collapsed fixture.
+        let checkboxes = native(host).compactMap { $0 as? NSButton }.filter { !($0 is NSPopUpButton) }
+        #expect(checkboxes.count == 1, "Capture checkbox must exist without expanding the card")
+        let checkbox = try #require(checkboxes.first)
+        #expect(checkbox.state == .on)
+        #expect(checkbox.isEnabled)
+        #expect(provider.selectedSource == source, "Rendering the direct control must not change capture selection")
+        #expect(audio.levels.level("input:virtual") == .init(decibels: -3, muted: true))
+        #expect(controller.startCount == 0)
+        await audio.shutdown()
+    }
+
     @Test(arguments: [250.0, 450.0, 720.0])
     func muteKeepsCollapsedHeadersAndExpandedFadersTheSameSize(_ width: Double) async throws {
         let suite = "routing-mute-layout-\(UUID())"

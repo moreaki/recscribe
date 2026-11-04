@@ -253,7 +253,6 @@ struct AudioRoutingView: View {
                 }.font(.caption)
             }
             if let device {
-                if device.mayLoopBack { virtualCaptureToggle(device) }
                 channelConnections(input, device: device).disabled(!editable)
                 DeviceVolumeView(uid: input.deviceUID, input: true, hardwareObserver: hardwareObserver)
             }
@@ -368,6 +367,12 @@ struct AudioRoutingView: View {
                 focusedPanel = panel
             } actions: {
                 cardActions(panel, title: title, muted: muted)
+            }
+            if case .input(let uid) = panel,
+               let device = devices.first(where: { $0.uid == uid && $0.mayLoopBack }) {
+                virtualCaptureToggle(device)
+                    .font(.caption)
+                    .padding(.horizontal, 12).padding(.bottom, 10)
             }
             if let track { sourceMeter(track).padding(.horizontal, 12) }
             if panel == .mix, let test = recorder.audioTest { AudioTestMixMeterView(test: test).padding(.horizontal, 12) }

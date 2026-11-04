@@ -1,5 +1,8 @@
+import AppKit
 import AVFoundation
+import Combine
 import Foundation
+import SwiftUI
 import Testing
 @testable import RecScribe
 
@@ -291,6 +294,348 @@ struct RecordingSessionTests {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         #expect(library.readFailures.map(\.id) == [missing])
+        await library.shutdown()
+    }
+
+    @Test("Session title validation, SessionLibrary.rename, and Live disposable temp cleanup preserving raw drafts (#44)")
+    @MainActor
+    func sessionTitleRenameAndLiveDisposableTempCleanup() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+
+        var session = try RecordingSession.read(manifest)
+        #expect(session.title == nil)
+        let initialEntry = SessionEntry(id: manifest, session: session)
+        #expect(initialEntry.displayTitle == "OutputName")
+
+        session.title = "   "
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+        session.title = String(repeating: "a", count: 257)
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+        session.title = "Line 1\nLine 2"
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.load(directory)
+        for _ in 0..<50 where library.refreshing {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let loaded = try #require(library.entries.first)
+        library.rename(loaded, title: "  Weekly Architecture Sync  ")
+        #expect(library.entries.first?.displayTitle == "Weekly Architecture Sync")
+        #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
+
+        // Recording active blocks rename
+        library.setRecording(true)
+        library.rename(library.entries[0], title: "Blocked Rename")
+        #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
+        library.setRecording(false)
+
+        // Empty title resets back to filename stem
+        library.rename(library.entries[0], title: "   ")
+        #expect(library.entries.first?.session.title == nil)
+        #expect(library.entries.first?.displayTitle == "OutputName")
+        #expect(try RecordingSession.read(manifest).title == nil)
+        await library.shutdown()
+
+        // 1. Completed local draft (>48h old, NO transcript.json): raw ASR JSON, checkpoints, and silence notes must be preserved; only disposable working WAVs are removed.
+        let fm = FileManager.default
+        let liveRoot = directory.appendingPathComponent("Live", isDirectory: true)
+        let completedLocalDraft = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let completedAttempt = completedLocalDraft.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: completedAttempt, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: completedLocalDraft.appendingPathComponent("latest.json"))
+        try Data("{}".utf8).write(to: completedAttempt.appendingPathComponent("chunk.json"))
+        try Data("{\"transcription\":[]}".utf8).write(to: completedAttempt.appendingPathComponent("channel-0.raw.json"))
+        try Data("Digital silence; no ASR run.\n".utf8).write(to: completedAttempt.appendingPathComponent("channel-1.silence.txt"))
+        try Data("non-disposable".utf8).write(to: completedAttempt.appendingPathComponent("reference.wav"))
+        try Data("temp".utf8).write(to: completedAttempt.appendingPathComponent("working.wav"))
+        try Data("temp".utf8).write(to: completedAttempt.appendingPathComponent("channel-0.wav"))
+        try Data("temp".utf8).write(to: completedLocalDraft.appendingPathComponent("working-channel-1.wav"))
+        try Data("temp".utf8).write(to: completedLocalDraft.appendingPathComponent("asr-channel-0-region-0.wav"))
+
+        // 2. Failed/interrupted local draft (>48h old, NO transcript.json, NO latest.json, NO chunk.json): raw ASR JSON must still be preserved.
+        let failedLocalDraft = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let failedAttempt = failedLocalDraft.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: failedAttempt, withIntermediateDirectories: true)
+        try Data("{\"transcription\":[]}".utf8).write(to: failedAttempt.appendingPathComponent("channel-0.raw.json"))
+        try Data("temp".utf8).write(to: failedAttempt.appendingPathComponent("working.wav"))
+        try Data("temp".utf8).write(to: failedAttempt.appendingPathComponent("channel-0.wav"))
+
+        // 3. Interrupted cloud draft (NO transcript.json): turn evidence and consent/manifest/review must be preserved; turn working WAVs are removed.
+        let cloudDraft = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let cloudTurn = cloudDraft.appendingPathComponent("turn-0", isDirectory: true)
+        try fm.createDirectory(at: cloudTurn, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: cloudDraft.appendingPathComponent("consent.json"))
+        try Data("{}".utf8).write(to: cloudDraft.appendingPathComponent("manifest.json"))
+        try Data("# Review".utf8).write(to: cloudDraft.appendingPathComponent("review.md"))
+        try Data("{}".utf8).write(to: cloudTurn.appendingPathComponent("result.json"))
+        try Data("[]".utf8).write(to: cloudTurn.appendingPathComponent("timings.json"))
+        try Data("{}\n".utf8).write(to: cloudTurn.appendingPathComponent("channel-0.events.jsonl"))
+        try Data("temp".utf8).write(to: cloudTurn.appendingPathComponent("working.wav"))
+        try Data("temp".utf8).write(to: cloudTurn.appendingPathComponent("channel-0.wav"))
+
+        // 4. Explicit ownership checks: unowned folder (non-UUID, no draft markers) and symlinked working.wav must never be deleted.
+        let unownedFolder = liveRoot.appendingPathComponent("foreign-folder", isDirectory: true)
+        try fm.createDirectory(at: unownedFolder, withIntermediateDirectories: true)
+        try Data("foreign".utf8).write(to: unownedFolder.appendingPathComponent("working.wav"))
+
+        let externalTarget = directory.appendingPathComponent("external-protected.wav")
+        try Data("protected".utf8).write(to: externalTarget)
+        let symlinkedWorking = completedLocalDraft.appendingPathComponent("working.wav")
+        try fm.createSymbolicLink(at: symlinkedWorking, withDestinationURL: externalTarget)
+
+        // 5. Explicit retention of an active draft directory
+        let retainedDraft = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let retainedAttempt = retainedDraft.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: retainedAttempt, withIntermediateDirectories: true)
+        try Data("in-flight".utf8).write(to: retainedAttempt.appendingPathComponent("working.wav"))
+        try Data("in-flight".utf8).write(to: retainedAttempt.appendingPathComponent("channel-0.wav"))
+
+        let twoDaysAgo = Date().addingTimeInterval(-48 * 60 * 60)
+        for dir in [completedLocalDraft, completedAttempt, failedLocalDraft, failedAttempt, cloudDraft, cloudTurn, retainedDraft, retainedAttempt] {
+            try fm.setAttributes([.modificationDate: twoDaysAgo], ofItemAtPath: dir.path)
+        }
+
+        // Wrong UID check: nothing is deleted when expectedOwnerUID does not match.
+        LiveTranscription.pruneDisposableWorkingFiles(
+            in: liveRoot,
+            retaining: [retainedDraft],
+            expectedOwnerUID: Darwin.getuid() &+ 1
+        )
+        #expect(fm.fileExists(atPath: completedAttempt.appendingPathComponent("working.wav").path))
+
+        // Owned cleanup with explicit retention
+        LiveTranscription.pruneDisposableWorkingFiles(
+            in: liveRoot,
+            retaining: [retainedDraft]
+        )
+
+        // Completed local draft preserved (even >48h old without transcript.json), only disposable WAVs removed
+        #expect(fm.fileExists(atPath: completedLocalDraft.path))
+        #expect(fm.fileExists(atPath: completedLocalDraft.appendingPathComponent("latest.json").path))
+        #expect(fm.fileExists(atPath: completedAttempt.appendingPathComponent("chunk.json").path))
+        #expect(fm.fileExists(atPath: completedAttempt.appendingPathComponent("channel-0.raw.json").path))
+        #expect(fm.fileExists(atPath: completedAttempt.appendingPathComponent("channel-1.silence.txt").path))
+        #expect(fm.fileExists(atPath: completedAttempt.appendingPathComponent("reference.wav").path))
+        #expect(!fm.fileExists(atPath: completedAttempt.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: completedAttempt.appendingPathComponent("channel-0.wav").path))
+        #expect(!fm.fileExists(atPath: completedLocalDraft.appendingPathComponent("working-channel-1.wav").path))
+        #expect(!fm.fileExists(atPath: completedLocalDraft.appendingPathComponent("asr-channel-0-region-0.wav").path))
+
+        // Failed local draft preserved, only disposable WAVs removed
+        #expect(fm.fileExists(atPath: failedLocalDraft.path))
+        #expect(fm.fileExists(atPath: failedAttempt.appendingPathComponent("channel-0.raw.json").path))
+        #expect(!fm.fileExists(atPath: failedAttempt.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: failedAttempt.appendingPathComponent("channel-0.wav").path))
+
+        // Interrupted cloud draft preserved, only turn working WAVs removed
+        #expect(fm.fileExists(atPath: cloudDraft.path))
+        #expect(fm.fileExists(atPath: cloudDraft.appendingPathComponent("consent.json").path))
+        #expect(fm.fileExists(atPath: cloudDraft.appendingPathComponent("manifest.json").path))
+        #expect(fm.fileExists(atPath: cloudDraft.appendingPathComponent("review.md").path))
+        #expect(fm.fileExists(atPath: cloudTurn.appendingPathComponent("result.json").path))
+        #expect(fm.fileExists(atPath: cloudTurn.appendingPathComponent("timings.json").path))
+        #expect(fm.fileExists(atPath: cloudTurn.appendingPathComponent("channel-0.events.jsonl").path))
+        #expect(!fm.fileExists(atPath: cloudTurn.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: cloudTurn.appendingPathComponent("channel-0.wav").path))
+
+        // Unowned folder and symlinked file untouched
+        #expect(fm.fileExists(atPath: unownedFolder.appendingPathComponent("working.wav").path))
+        #expect(fm.fileExists(atPath: externalTarget.path))
+        #expect((try? symlinkedWorking.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true)
+
+        // Retained active draft untouched
+        #expect(fm.fileExists(atPath: retainedAttempt.appendingPathComponent("working.wav").path))
+        #expect(fm.fileExists(atPath: retainedAttempt.appendingPathComponent("channel-0.wav").path))
+
+        // 6. LiveTranscription lifecycle check: active session/worker automatically retains its owned draft directory until the worker finishes.
+        @MainActor final class WorkerGate {
+            var continuation: CheckedContinuation<LiveChunkResult?, any Error>?
+            func wait(cursor: Int64) async throws -> LiveChunkResult? {
+                guard cursor == 0 else { return nil }
+                return try await withCheckedThrowingContinuation { continuation = $0 }
+            }
+            func resume() {
+                continuation?.resume(returning: nil)
+                continuation = nil
+            }
+        }
+        let gate = WorkerGate()
+        let live = LiveTranscription(
+            liveRoot: liveRoot,
+            work: { _, _, cursor, _, _, _ in
+                try await gate.wait(cursor: cursor)
+            }
+        )
+        live.setEnabled(true)
+        live.recordingStarted(manifest.deletingPathExtension().deletingPathExtension().appendingPathExtension("wav"))
+        for _ in 0..<50 where gate.continuation == nil {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let activeLiveDir = try #require(live.directory)
+        let activeLiveAttempt = activeLiveDir.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: activeLiveAttempt, withIntermediateDirectories: true)
+        try Data("{\"transcription\":[]}".utf8).write(to: activeLiveAttempt.appendingPathComponent("channel-0.raw.json"))
+        try Data("in-flight".utf8).write(to: activeLiveAttempt.appendingPathComponent("working.wav"))
+        try Data("in-flight".utf8).write(to: activeLiveAttempt.appendingPathComponent("channel-0.wav"))
+
+        // Even after recordingStopped() while the final worker pass is still in-flight, automatic registry ownership protects activeLiveDir.
+        live.recordingStopped()
+        LiveTranscription.pruneDisposableWorkingFiles(in: liveRoot)
+        #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
+        #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
+
+        // Once the worker completes and LiveTranscription reaches a terminal state, disposable working WAVs are cleaned on a utility worker while raw ASR JSON stays intact.
+        gate.resume()
+        for _ in 0..<50 where live.busy {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        await live.shutdown()
+        #expect(!live.lastCleanupReport.ranOnMainThread)
+        #expect(live.lastCleanupFailures.isEmpty)
+        #expect(fm.fileExists(atPath: activeLiveDir.path))
+        #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.raw.json").path))
+        #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
+
+        // 7. Bounded and cancellable traversal + surfaced enumeration/unlink failures on utility-worker shutdown.
+        let boundedRoot = directory.appendingPathComponent("LiveBounded", isDirectory: true)
+        let draft1 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000001", isDirectory: true)
+        let draft2 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000002", isDirectory: true)
+        let draft3 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000003", isDirectory: true)
+        for draft in [draft1, draft2, draft3] {
+            try fm.createDirectory(at: draft, withIntermediateDirectories: true)
+            try Data("{}".utf8).write(to: draft.appendingPathComponent("latest.json"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("working.wav"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("channel-0.wav"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("channel-1.wav"))
+        }
+
+        // Pre-cancelled token stops immediately without unlinking files.
+        let cancelledToken = WorkCancellation()
+        cancelledToken.cancel()
+        let cancelledReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            cancel: cancelledToken
+        )
+        #expect(cancelledReport.cancelled)
+        #expect(cancelledReport.removedFiles.isEmpty)
+        #expect(fm.fileExists(atPath: draft1.appendingPathComponent("working.wav").path))
+
+        // Streaming enumeration bounds I/O without sorting/loading the entire directory.
+        let boundedReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            maxDraftDirectories: 1,
+            maxEntriesPerDirectory: 2
+        )
+        #expect(boundedReport.stoppedByLimit)
+        #expect(boundedReport.inspectedDraftDirectories == 1)
+        #expect((1...2).contains(boundedReport.removedFiles.count))
+        #expect(Set(boundedReport.removedFiles.map { $0.deletingLastPathComponent() }).count == 1)
+        #expect(boundedReport.inspectedEntries <= LiveTranscriptionPolicy.maximumCleanupEntries)
+        for draft in [draft1, draft2, draft3] {
+            #expect(fm.fileExists(atPath: draft.appendingPathComponent("latest.json").path))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("working.wav"))
+        }
+
+        // Mid-scan cancellation stops after the first removal.
+        var checks = 0
+        let midCancelReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            shouldCancel: {
+                checks += 1
+                return checks > 4
+            }
+        )
+        #expect(midCancelReport.cancelled)
+        #expect(midCancelReport.removedFiles.count < 3)
+
+        // Enumeration failure (unreadable draft directory 0o000) and unlink failure (read-only attempt directory 0o500) are surfaced on shutdown() while accessible sibling drafts are cleaned.
+        let LockedAttempt = draft2.appendingPathComponent("00000000-0000-0000-0000-000000000020", isDirectory: true)
+        try fm.createDirectory(at: LockedAttempt, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: LockedAttempt.appendingPathComponent("chunk.json"))
+        let lockedWav = LockedAttempt.appendingPathComponent("working.wav")
+        try Data("locked".utf8).write(to: lockedWav)
+        try fm.setAttributes([.posixPermissions: 0o500], ofItemAtPath: LockedAttempt.path)
+        try fm.setAttributes([.posixPermissions: 0o000], ofItemAtPath: draft1.path)
+        defer {
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: LockedAttempt.path)
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: draft1.path)
+        }
+
+        let shutdownLive = LiveTranscription(liveRoot: boundedRoot)
+        await shutdownLive.shutdown()
+        #expect(!shutdownLive.lastCleanupReport.ranOnMainThread)
+        #expect(shutdownLive.lastCleanupFailures.contains {
+            $0.url.standardizedFileURL == draft1.standardizedFileURL
+                && $0.operation == .enumerate
+                && $0.posixErrorCode == EACCES
+        })
+        #expect(shutdownLive.lastCleanupFailures.contains {
+            $0.url.standardizedFileURL == lockedWav.standardizedFileURL
+                && $0.operation == .unlink
+                && $0.posixErrorCode == EACCES
+        })
+        #expect(fm.fileExists(atPath: lockedWav.path))
+        // Accessible sibling draft3 was still cleaned during the same shutdown pass.
+        #expect(fm.fileExists(atPath: draft3.appendingPathComponent("latest.json").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("channel-0.wav").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("channel-1.wav").path))
+    }
+
+    @Test("RecorderTelemetry isolates 10-30 Hz waveform/duration updates and StudioView keeps capture controls in all modes (#41, #44)")
+    @MainActor
+    func recorderTelemetryIsolationAndUnifiedStudioCaptureControls() async {
+        let defaults = UserDefaults(suiteName: "com.moreaki.recscribe.telemetry-test.\(UUID().uuidString)")!
+        let recorder = RecorderViewModel(
+            controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(),
+            saveLocation: MockSaveLocationProviding(directory: URL(fileURLWithPath: "/tmp")),
+            audioSource: MockAudioSourceProviding(),
+            installLocation: MockInstallLocationProviding(.applications),
+            defaults: defaults
+        )
+
+        var viewModelInvalidations = 0
+        var telemetryInvalidations = 0
+        let vmCancellable = recorder.objectWillChange.sink { _ in viewModelInvalidations += 1 }
+        let telemetryCancellable = recorder.telemetry.objectWillChange.sink { _ in telemetryInvalidations += 1 }
+        defer {
+            withExtendedLifetime((vmCancellable, telemetryCancellable)) {}
+        }
+
+        // High-frequency duration, waveform, and healthy source-health ticks only notify RecorderTelemetry, not RecorderViewModel
+        for step in 1...30 {
+            recorder.duration = Double(step) * 0.1
+            recorder.waveformSamples = Array(repeating: Float(step) / 30.0, count: 200)
+            recorder.healthTime = Double(step)
+        }
+        #expect(viewModelInvalidations == 0)
+        #expect(telemetryInvalidations == 90)
+        #expect(recorder.formattedDuration == "00:03")
+
+        // Verify StudioView renders with persistent capture controls in .studio, .routing, and .recordings workspace modes
+        let live = LiveTranscription()
+        let library = SessionLibrary()
+        let settings = AppSettings()
+        for mode in StudioWorkspaceMode.allCases {
+            let studio = StudioView(workspaceMode: mode)
+                .environmentObject(recorder)
+                .environmentObject(live)
+                .environmentObject(library)
+                .environmentObject(settings)
+            let host = NSHostingView(rootView: studio)
+            host.frame = NSRect(origin: .zero, size: AppWindow.studio.defaultSize)
+            host.layoutSubtreeIfNeeded()
+            #expect(host.fittingSize.width >= AppWindow.studio.minimumSize.width)
+        }
+        await live.shutdown()
         await library.shutdown()
     }
 }

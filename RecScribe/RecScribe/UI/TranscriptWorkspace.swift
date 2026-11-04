@@ -96,7 +96,6 @@ struct LiveTranscriptionControl: View {
             Spacer()
             Button { preview.toggle() } label: { Image(systemName: "text.bubble") }
                 .buttonStyle(.plain).accessibilityLabel("Preview live transcript").help("Preview the live draft")
-                .onHover { hovering in if hovering { preview = true } }
                 .popover(isPresented: $preview, arrowEdge: .bottom) {
                     LiveTranscriptView(live: live, compact: true).padding(WorkspaceStyle.contentPadding)
                         .frame(width: WorkspaceStyle.previewWidth, height: WorkspaceStyle.previewHeight)
@@ -119,6 +118,9 @@ struct TranscriptWorkspace: View {
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
+    @State private var playback = SessionPlayback()
+    @State private var pendingSeekSeconds: Double?
     @State private var section: Section
     @State private var document: TranscriptPreview?
     @State private var error: String?
@@ -143,6 +145,13 @@ struct TranscriptWorkspace: View {
         }
     }
     init(section: Section = .live) { _section = State(initialValue: section) }
+
+    private func copyToPasteboard(_ text: String) {
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(text, forType: .string)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
             HStack {
@@ -152,13 +161,30 @@ struct TranscriptWorkspace: View {
                     Text("From lossless audio to a readable, traceable draft.").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                if let document, section != .live {
+                    let markdownExport = document.exportText(for: section, markdown: true)
+                    let plainExport = document.exportText(for: section, markdown: false)
+                    Button("Copy Markdown", systemImage: "doc.on.doc") {
+                        copyToPasteboard(markdownExport)
+                    }.disabled(markdownExport.isEmpty)
+                    Button("Copy Text", systemImage: "doc.plaintext") {
+                        copyToPasteboard(plainExport)
+                    }.disabled(plainExport.isEmpty)
+                    if !markdownExport.isEmpty {
+                        ShareLink(item: markdownExport) {
+                            Label("Share…", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                }
             }
             WorkspaceTabs(title: "Text view", selection: $section)
             if let source {
                 TranscriptSourceView(source: source,
                     duration: section == .live ? live.audioSeconds : document?.source.map { Double($0.durationMs) / 1_000 },
                     detail: section == .live ? live.modelName ?? "Local live draft" : document?.recognitionLabel ?? "Full recording · final recognition",
-                    recording: library.recordingActive)
+                    recording: library.recordingActive,
+                    playback: playback,
+                    pendingSeekSeconds: $pendingSeekSeconds)
             }
             if section != .live {
                 HStack {
@@ -177,9 +203,13 @@ struct TranscriptWorkspace: View {
             }
             if section == .live { LiveTranscriptView(live: live) }
             else if let document {
-                let content = section == .summary ? document.summaryText : section == .review ? document.reviewReasons.joined(separator: "\n\n") : ""
+                let content = section == .summary ? document.summaryText : section == .review ? document.reviewPlainText : ""
                 if section == .transcript && !document.segments.isEmpty {
-                    TranscriptReadingView(document: document)
+                    TranscriptReadingView(
+                        document: document,
+                        playback: playback,
+                        onSeek: { seconds in pendingSeekSeconds = seconds }
+                    )
                 } else if content.isEmpty {
                     ContentUnavailableView(section == .summary ? "No summary yet" : "No review notes", systemImage: section == .summary ? "sparkles" : "checkmark.shield",
                         description: Text(section == .summary ? "Choose Ollama or OpenAI in Settings → Intelligence, then Generate summary above. Cloud text transfer always asks for confirmation." : "Inspect the transcript before relying on it."))
@@ -191,7 +221,7 @@ struct TranscriptWorkspace: View {
             } else {
                 ContentUnavailableView(library.busy ? "Processing your recording" : "Create a final transcript", systemImage: "doc.text",
                     description: Text(source == nil ? "Choose a recording or import a WAV. Live drafts and final transcripts are separate." : "The Live tab is a provisional chunk preview. Create a final transcript from the complete recording, then improve its text or generate a summary."))
-                if source == nil { Button("Choose recording / import…") { openWindow(id: AppWindow.recordings.rawValue) } }
+                if source == nil { Button("Choose recording / import…") { AppWindow.open(.recordings, using: openWindow, navigation: navigation) } }
                 Spacer(minLength: 0)
             }
             if let message = error ?? library.errorMessage {

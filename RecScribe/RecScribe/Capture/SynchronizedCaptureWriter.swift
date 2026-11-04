@@ -31,6 +31,7 @@ nonisolated final class SynchronizedCaptureWriter {
     }
     let mix: SessionWAVWriter?
     let epoch: Double
+    private(set) var timelineEpoch: Double
     private let options: RecordingStorageOptions
     private let policy: Policy
     private var descriptors: [RecordingSession.SourceTrack]
@@ -50,6 +51,7 @@ nonisolated final class SynchronizedCaptureWriter {
     private(set) var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
     private(set) var mixMeter = CapturePeakMeter()
     private let maximumFrames: Int64?
+    private var timelineAnchored: Bool
     var onMix: ((AVAudioPCMBuffer) -> Void)?
 
     init(mix: SessionWAVWriter? = nil, descriptors: [RecordingSession.SourceTrack], epoch: Double,
@@ -63,8 +65,10 @@ nonisolated final class SynchronizedCaptureWriter {
               policy.maximumPacketSeconds > 0 else { throw SessionError.invalid("Invalid mixer policy") }
         self.levels = levels; self.automation = GainAutomation(levels(), tracks: descriptors.map(\.role))
         self.mix = mix; self.descriptors = descriptors; self.epoch = epoch
+        self.timelineEpoch = epoch
         self.options = options; self.policy = policy
         self.maximumFrames = maximumFrames
+        self.timelineAnchored = (maximumFrames == nil)
         left = Array(repeating: 0, count: policy.mixWindowFrames)
         right = left
         try journal()
@@ -76,12 +80,29 @@ nonisolated final class SynchronizedCaptureWriter {
         guard seconds.isFinite, seconds >= -0.001, seconds <= policy.maximumDurationSeconds else {
             throw SessionError.invalid("Capture timestamp is outside the recording timeline")
         }
-        return max(0, Int64((seconds * 48_000).rounded()))
+        let relative = time - timelineEpoch
+        guard relative >= -0.001 else {
+            throw SessionError.invalid("Capture timestamp precedes the bounded pre-roll window")
+        }
+        return max(0, Int64((max(0, relative) * 48_000).rounded()))
     }
 
     func accept(_ sample: CapturedAudioSample) throws {
         guard !sealed, !failedSources.contains(sample.track), sample.buffer.frameLength > 0 else { return }
-        if let maximumFrames, try frame(sample.presentationTime) >= maximumFrames { return }
+        if let maximumFrames {
+            if !timelineAnchored {
+                let rawOffset = sample.presentationTime - epoch
+                guard rawOffset.isFinite, rawOffset >= -0.001, rawOffset <= policy.maximumDurationSeconds else {
+                    throw SessionError.invalid("Capture timestamp is outside the recording timeline")
+                }
+                let maxPreRollSeconds = min(policy.maximumEndSkewSeconds, Double(maximumFrames) / (2 * 48_000.0))
+                timelineEpoch = max(epoch, sample.presentationTime - maxPreRollSeconds)
+                timelineAnchored = true
+                try journal()
+            }
+            let candidateFrame = try frame(sample.presentationTime)
+            if candidateFrame >= maximumFrames { return }
+        }
         if try automation.update(levels(), at: max(end, head)) {
             try mix?.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
         }
@@ -108,7 +129,7 @@ nonisolated final class SynchronizedCaptureWriter {
                 try sink.createFile(at: url, sampleRate: 48_000, channels: Int(format.channelCount))
                 var identity = descriptors[index]
                 identity.channels = Int(format.channelCount); identity.nativeSampleRate = format.sampleRate; identity.manifestPath = nil
-                try sink.setParent(id, epoch: epoch, startedAt: mix.startedAt, source: identity)
+                try sink.setParent(id, epoch: timelineEpoch, startedAt: mix.startedAt, source: identity)
                 writer = sink
             }
             input = Input(writer: writer, format: format, output: output)
@@ -291,7 +312,7 @@ nonisolated final class SynchronizedCaptureWriter {
                 descriptors[index].gapFrames = input.gaps
             }
         }
-        try mix?.setSourceTracks(descriptors, epoch: epoch)
+        try mix?.setSourceTracks(descriptors, epoch: timelineEpoch)
     }
 
     func sourceFailed(_ track: CaptureTrack, message: String) throws {

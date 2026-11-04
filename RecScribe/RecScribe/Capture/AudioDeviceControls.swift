@@ -10,6 +10,8 @@ nonisolated struct AudioOutputDevice: Identifiable, Equatable, Sendable {
 
 /// Reads capabilities. Writes only exposed, writable scalar controls, never defaults.
 nonisolated enum AudioDeviceControls {
+    static let volumeElementRange: ClosedRange<UInt32> = 0...32
+
     struct Volume: Identifiable, Sendable {
         var id: UInt32 { element }
         var device: AudioDeviceID
@@ -58,18 +60,50 @@ nonisolated enum AudioDeviceControls {
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &property, 0, nil, &size, &device) == noErr else { return nil }
         return string(device, kAudioDevicePropertyDeviceUID)
     }
+    static func defaultInputUID() -> String? {
+        var property = address(kAudioHardwarePropertyDefaultInputDevice), device = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &property, 0, nil, &size, &device) == noErr else { return nil }
+        return string(device, kAudioDevicePropertyDeviceUID)
+    }
+    static func aggregateSubDeviceUIDs(device: AudioDeviceID) -> [String] {
+        var transport: UInt32 = 0
+        var transportProp = address(kAudioDevicePropertyTransportType)
+        var bytes = UInt32(MemoryLayout<UInt32>.size)
+        _ = AudioObjectGetPropertyData(device, &transportProp, 0, nil, &bytes, &transport)
+        guard transport == kAudioDeviceTransportTypeAggregate else { return [] }
+        var property = address(kAudioAggregateDevicePropertyActiveSubDeviceList)
+        bytes = 0
+        guard AudioObjectGetPropertyDataSize(device, &property, 0, nil, &bytes) == noErr, bytes > 0 else { return [] }
+        var ids = [AudioDeviceID](repeating: 0, count: Int(bytes) / MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, &ids) == noErr else { return [] }
+        return ids.compactMap { string($0, kAudioDevicePropertyDeviceUID) }
+    }
+    static func supportedVolumeElements(
+        device: AudioDeviceID,
+        input: Bool,
+        isSupported: (AudioDeviceID, inout AudioObjectPropertyAddress) -> Bool = { dev, property in
+            var writable = DarwinBoolean(false)
+            return AudioObjectHasProperty(dev, &property)
+                && AudioObjectIsPropertySettable(dev, &property, &writable) == noErr
+                && writable.boolValue
+        }
+    ) -> [UInt32] {
+        let elements = volumeElementRange.filter { element in
+            var property = address(kAudioDevicePropertyVolumeScalar, input: input, element: element)
+            return isSupported(device, &property)
+        }
+        return elements.first == 0 ? Array(elements.prefix(1)) : elements
+    }
     static func volumes(uid: String?, input: Bool) -> [Volume] {
         guard let device = device(uid: uid) else { return [] }
-        let controls = (0...32).compactMap { element -> Volume? in
-            var property = address(kAudioDevicePropertyVolumeScalar, input: input, element: UInt32(element))
-            var writable = DarwinBoolean(false), value: Float = 0
+        return supportedVolumeElements(device: device, input: input).compactMap { element -> Volume? in
+            var property = address(kAudioDevicePropertyVolumeScalar, input: input, element: element)
+            var value: Float = 0
             var size = UInt32(MemoryLayout<Float>.size)
-            guard AudioObjectHasProperty(device, &property),
-                  AudioObjectIsPropertySettable(device, &property, &writable) == noErr, writable.boolValue,
-                  AudioObjectGetPropertyData(device, &property, 0, nil, &size, &value) == noErr, value.isFinite else { return nil }
-            return .init(device: device, input: input, element: UInt32(element), value: value)
+            guard AudioObjectGetPropertyData(device, &property, 0, nil, &size, &value) == noErr, value.isFinite else { return nil }
+            return .init(device: device, input: input, element: element, value: value)
         }
-        return controls.first?.element == 0 ? Array(controls.prefix(1)) : controls
     }
     static func set(_ control: Volume, value: Float) -> Bool {
         guard value.isFinite, (0...1).contains(value) else { return false }

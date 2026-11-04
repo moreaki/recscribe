@@ -11,24 +11,13 @@ struct RecScribeApp: App {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environmentObject(services.recorder)
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
-                .onAppear {
-                    appDelegate.prepareForTermination = {
-                        await services.recorder.audioTest?.close()
-                        if services.recorder.isRecording { await services.recorder.stopRecording() }
-                        await services.recorder.waitForFailureFinalization()
-                        await services.live.shutdown()
-                        await services.library.shutdown()
-                        await services.runtime.shutdown()
-                    }
-                    if appDelegate.menuBarController == nil {
-                        appDelegate.menuBarController = MenuBarController(viewModel: services.recorder, live: services.live)
-                    }
-                }
+                .environment(\.studioNavigation, services.navigation)
+                .onAppear { services.bind(to: appDelegate) }
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
-            CommandGroup(replacing: .appSettings) { OpenSettingsCommand() }
-            CommandGroup(after: .newItem) { OpenRecordingsCommand() }
+            CommandGroup(replacing: .appSettings) { OpenSettingsCommand(navigation: services.navigation) }
+            CommandGroup(after: .newItem) { OpenRecordingsCommand(navigation: services.navigation) }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -39,32 +28,45 @@ struct RecScribeApp: App {
         Window("RecScribe Settings", id: AppWindow.settings.rawValue) {
             ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
+                .environment(\.studioNavigation, services.navigation)
+                .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
-        Window("Recordings", id: AppWindow.recordings.rawValue) {
-            RecordingLibraryView().environmentObject(services.recorder).environmentObject(services.library)
-        }.defaultSize(AppWindow.recordings.defaultSize).windowResizability(.contentMinSize)
-        Window("Audio Routing", id: AppWindow.routing.rawValue) {
-            AudioRoutingView().environmentObject(services.recorder)
-        }.defaultSize(AppWindow.routing.defaultSize).windowResizability(.contentMinSize)
     }
 }
 
 private struct OpenSettingsCommand: View {
+    let navigation: StudioNavigation
     @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }.keyboardShortcut(",") }
+    var body: some View { Button("Settings…") { AppWindow.open(.settings, using: openWindow, navigation: navigation) }.keyboardShortcut(",") }
 }
 private struct OpenRecordingsCommand: View {
+    let navigation: StudioNavigation
     @Environment(\.openWindow) private var openWindow
     var body: some View {
-        Button("Recording Studio") { openWindow(id: AppWindow.studio.rawValue) }.keyboardShortcut("1")
-        Button("Audio Routing…") { openWindow(id: AppWindow.routing.rawValue) }.keyboardShortcut("2")
-        Button("Recordings & Import…") { openWindow(id: AppWindow.recordings.rawValue) }.keyboardShortcut("o")
+        Button("Recording Studio") {
+            AppWindow.open(.studio, using: openWindow, navigation: navigation)
+        }.keyboardShortcut("1")
+        Button("Audio Routing…") {
+            AppWindow.open(.routing, using: openWindow, navigation: navigation)
+        }.keyboardShortcut("2")
+        Button("Recordings & Import…") {
+            AppWindow.open(.recordings, using: openWindow, navigation: navigation)
+        }.keyboardShortcut("3")
+        Button("Open Recordings…") {
+            AppWindow.open(.recordings, using: openWindow, navigation: navigation)
+        }.keyboardShortcut("o")
     }
 }
 
 
 enum AppWindow: String {
     case studio, settings, recordings, routing
+
+    @MainActor
+    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?) {
+        if let navigation { navigation.open(window) { openWindow(id: $0) } }
+        else { openWindow(id: (window == .settings ? AppWindow.settings : .studio).rawValue) }
+    }
     var title: String {
         switch self {
         case .studio: "Recording Studio"

@@ -1,47 +1,134 @@
 import SwiftUI
 
 struct TranscriptReadingView: View {
+    private static let inertPlayback = SessionPlayback(coordinator: SessionPlaybackCoordinator())
+
     let document: TranscriptPreview
+    private let hasPlayback: Bool
+    private let playbackPosition: Double?
+    @ObservedObject private var playback: SessionPlayback
+    var onSeek: ((Double) -> Void)? = nil
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
+    @State private var followPlayback = true
     enum Mode: String, WorkspaceTab {
         case reading = "Reading", channels = "All channels"
         var symbol: String { self == .reading ? "text.alignleft" : "square.stack.3d.up" }
     }
-    init(document: TranscriptPreview, mode: Mode = .reading, expandedGroups: Set<String> = []) {
+    init(
+        document: TranscriptPreview,
+        mode: Mode = .reading,
+        expandedGroups: Set<String> = [],
+        playback: SessionPlayback? = nil,
+        playbackPosition: Double? = nil,
+        onSeek: ((Double) -> Void)? = nil
+    ) {
         self.document = document
+        self.hasPlayback = playback != nil
+        self.playbackPosition = playbackPosition
+        self._playback = ObservedObject(wrappedValue: playback ?? Self.inertPlayback)
+        self.onSeek = onSeek
         _mode = State(initialValue: mode)
         _expandedGroups = State(initialValue: expandedGroups)
     }
 
+    var effectivePositionSeconds: Double? {
+        if let playbackPosition {
+            return playbackPosition
+        }
+        guard hasPlayback, (playback.player != nil || playback.isPlaying || playback.position > 0) else {
+            return nil
+        }
+        return playback.position
+    }
+
+    var displayedGroups: [TranscriptReading.Group] {
+        document.groups(for: mode)
+    }
+
+    var activeGroupID: String? {
+        TranscriptReading.activeGroupID(in: displayedGroups, positionSeconds: effectivePositionSeconds)
+    }
+
     var body: some View {
+        let groups = displayedGroups
+        let currentActiveGroupID = TranscriptReading.activeGroupID(
+            in: groups,
+            positionSeconds: effectivePositionSeconds
+        )
+        let showFollowControl = playbackPosition != nil || (hasPlayback && (playback.player != nil || playback.isPlaying || playback.position > 0))
         VStack(alignment: .leading, spacing: GlassSpacing.md) {
-            WorkspaceTabs(title: "Transcript presentation", selection: $mode)
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: GlassSpacing.xl) {
-                    ForEach(mode == .reading ? TranscriptReading.groups(document.segments) : document.segments.map { .init(segments: [$0]) }) { group in
-                        VStack(alignment: .leading, spacing: GlassSpacing.sm) {
-                            HStack {
-                                Text(group.timing).monospacedDigit()
-                                Text(group.channels)
-                                if group.segments.contains(where: \.needsReview) {
-                                    Label("Review", systemImage: "exclamationmark.circle")
-                                }
-                            }.font(.caption).foregroundStyle(.secondary)
-                            if group.isShared(in: document) {
-                                MarkdownReadingText(text: document.displayedText(group.segments[0]))
-                                DisclosureGroup("Sources & review", isExpanded: expansion(group.id)) { sources(group) }
-                                    .font(.caption).foregroundStyle(.secondary)
-                            } else {
-                                DisclosureGroup("Overlapping channel texts · compare \(group.segments.count) variants", isExpanded: expansion(group.id)) {
-                                    sources(group)
-                                }.font(.callout).tint(WorkspaceStyle.blue)
-                            }
-                        }
+            HStack {
+                WorkspaceTabs(title: "Transcript presentation", selection: $mode)
+                if showFollowControl {
+                    Spacer()
+                    Button(followPlayback ? "Following audio" : "Follow audio", systemImage: "arrow.down.to.line") {
+                        followPlayback.toggle()
                     }
-                }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, GlassSpacing.s)
+                    .buttonStyle(.borderless)
+                    .font(.caption)
+                    .tint(WorkspaceStyle.blue)
+                }
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: GlassSpacing.xl) {
+                        ForEach(groups) { group in
+                            let isActive = currentActiveGroupID == group.id
+                            VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+                                HStack {
+                                    if let startSeconds = group.startSeconds, (onSeek != nil || hasPlayback) {
+                                        Button {
+                                            if hasPlayback {
+                                                playback.seek(to: startSeconds)
+                                            }
+                                            onSeek?(startSeconds)
+                                        } label: {
+                                            Text(group.timing).monospacedDigit().underline()
+                                        }
+                                        .buttonStyle(.plain)
+                                        .foregroundStyle(isActive ? WorkspaceStyle.mint : .secondary)
+                                        .help("Seek audio to \(group.timing)")
+                                    } else {
+                                        Text(group.timing).monospacedDigit()
+                                    }
+                                    Text(group.channels)
+                                    if group.segments.contains(where: \.needsReview) {
+                                        Label("Review", systemImage: "exclamationmark.circle")
+                                    }
+                                }.font(.caption).foregroundStyle(isActive ? WorkspaceStyle.mint : .secondary)
+                                if group.isShared(in: document) {
+                                    MarkdownReadingText(text: document.displayedText(group.segments[0]))
+                                    DisclosureGroup("Sources & review", isExpanded: expansion(group.id)) { sources(group) }
+                                        .font(.caption).foregroundStyle(.secondary)
+                                } else {
+                                    DisclosureGroup("Overlapping channel texts · compare \(group.segments.count) variants", isExpanded: expansion(group.id)) {
+                                        sources(group)
+                                    }.font(.callout).tint(WorkspaceStyle.blue)
+                                }
+                            }
+                            .padding(isActive ? GlassSpacing.s : 0)
+                            .background(
+                                isActive
+                                    ? RoundedRectangle(cornerRadius: 8).fill(WorkspaceStyle.mint.opacity(0.1))
+                                    : nil
+                            )
+                            .id(group.id)
+                        }
+                    }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, GlassSpacing.s)
+                }
+                .onChange(of: currentActiveGroupID) { _, nextID in
+                    if followPlayback, let nextID {
+                        proxy.scrollTo(nextID, anchor: .center)
+                    }
+                }
+                .onChange(of: followPlayback) { _, follow in
+                    if follow, let currentActiveGroupID {
+                        proxy.scrollTo(currentActiveGroupID, anchor: .center)
+                    }
+                }
             }
         }
     }

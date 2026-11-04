@@ -1,4 +1,5 @@
 import Combine
+import Darwin
 import Foundation
 import RecScribeCore
 import os
@@ -18,6 +19,10 @@ nonisolated enum LiveTranscriptionPolicy {
     static let pollInterval: Duration = .seconds(1)
     /// Retry malformed local ASR output once, always at the committed cursor.
     static let maximumLocalChunkAttempts = 2
+    /// Bounds a single disposable working-file cleanup pass so large Live trees cannot stall shutdown.
+    static let maximumCleanupDraftDirectories = 256
+    static let maximumCleanupEntriesPerDirectory = 256
+    static let maximumCleanupEntries = 4_096
 }
 
 nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
@@ -76,6 +81,7 @@ nonisolated struct LiveChunkTiming: Sendable {
 @MainActor
 final class LiveTranscription: ObservableObject {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
+    private nonisolated static let activeDirectoryRegistry = OSAllocatedUnfairLock(initialState: [UUID: Set<String>]())
     struct CloudRequest: Identifiable {
         let id: UUID
         let source: URL
@@ -96,12 +102,19 @@ final class LiveTranscription: ObservableObject {
     @Published private(set) var sourceURL: URL?
     @Published private(set) var modelName: String?
     @Published private(set) var audioSeconds: Double = 0
+    @Published private(set) var lastCleanupReport = LiveCleanupReport()
+    var lastCleanupFailures: [LiveCleanupFailure] { lastCleanupReport.failures }
     private(set) var cursor: Int64 = 0
+    private let instanceID = UUID()
+    private let liveRoot: URL
+    private var activeWorkerDirectory: URL?
     private var manifest: URL?
     private var capturing = false
     private var generation = UUID()
     private var task: Task<Void, Never>?
     private var token: WorkCancellation?
+    private var cleanupTask: Task<LiveCleanupReport, Never>?
+    private var cleanupToken: WorkCancellation?
     private let settings: () -> AppSettings.Values
     private let work: @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult?
     private let wait: @Sendable () async throws -> Void
@@ -111,7 +124,8 @@ final class LiveTranscription: ObservableObject {
     var onBusyChange: (Bool) -> Void = { _ in }
     var onCloudTranscript: (URL, URL) -> Void = { _, _ in }
 
-    init(settings: @escaping () -> AppSettings.Values = { .init() },
+    init(liveRoot: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
+         settings: @escaping () -> AppSettings.Values = { .init() },
          work: @escaping @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult? = { source, output, cursor, final, settings, token in
              try await Task.detached(priority: .utility) {
                  try LiveWhisperTranscriber.step(manifest: source, directory: output, cursor: cursor,
@@ -120,11 +134,48 @@ final class LiveTranscription: ObservableObject {
          }, wait: @escaping @Sendable () async throws -> Void = { try await Task.sleep(for: LiveTranscriptionPolicy.pollInterval) },
          cloudKey: @escaping () throws -> Data = { try IntelligenceCredentials().key() },
          cloudClient: RealtimeTranscriber = .init()) {
+        self.liveRoot = liveRoot
         self.settings = settings
         self.work = work
         self.wait = wait
         self.cloudKey = cloudKey
         self.cloudClient = cloudClient
+    }
+
+    deinit {
+        token?.cancel()
+        task?.cancel()
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
+        let id = instanceID
+        let worker = task
+        Task {
+            await worker?.value
+            Self.activeDirectoryRegistry.withLock { _ = $0.removeValue(forKey: id) }
+        }
+    }
+
+    var activeDirectories: Set<URL> {
+        var urls: Set<URL> = []
+        if capturing || busy || task != nil || pendingCloudRequest != nil, let directory {
+            urls.insert(directory.standardizedFileURL)
+        }
+        if let activeWorkerDirectory {
+            urls.insert(activeWorkerDirectory.standardizedFileURL)
+        }
+        return urls
+    }
+
+    private func syncActiveDirectoryRegistration() {
+        let paths = Self.normalizedPaths(for: activeDirectories)
+        let id = instanceID
+        Self.activeDirectoryRegistry.withLock { registry in
+            if paths.isEmpty {
+                registry.removeValue(forKey: id)
+            } else {
+                registry[id] = paths
+            }
+        }
     }
 
     func setEnabled(_ value: Bool) {
@@ -137,6 +188,7 @@ final class LiveTranscription: ObservableObject {
             pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
             invalidate(); status = capturing ? "Live transcription is off · audio is still recorded" : "Live transcription is off"
         }
+        syncActiveDirectoryRegistration()
     }
 
     func configurationChanged() {
@@ -148,6 +200,7 @@ final class LiveTranscription: ObservableObject {
         guard capturing, let manifest else { status = "Cloud armed · approval required when recording starts"; return }
         pendingCloudRequest = CloudRequest(id: generation, source: manifest, model: settings().cloudTranscriptionModel)
         status = "Waiting for cloud audio approval · recording stays local"
+        syncActiveDirectoryRegistration()
     }
 
     func dismissCloudAudio() {
@@ -163,9 +216,10 @@ final class LiveTranscription: ObservableObject {
         let token = WorkCancellation(), client = cloudClient
         let key: Data
         do { key = try cloudKey() }
-        catch { enabled = false; errorMessage = error.localizedDescription; status = "Cloud setup needs attention"; return }
+        catch { enabled = false; errorMessage = error.localizedDescription; status = "Cloud setup needs attention"; syncActiveDirectoryRegistration(); return }
         self.token = token
         busy = true; onBusyChange(true)
+        syncActiveDirectoryRegistration()
         task = Task { [weak self] in
             do {
                 let consent = try await Task.detached(priority: .utility) {
@@ -176,10 +230,11 @@ final class LiveTranscription: ObservableObject {
                 try token.check()
                 guard let self, generation == request.id, capturing else { throw CancellationError() }
                 cursor = consent.startSample
-                directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
+                directory = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
                 segments = []; lastChunk = nil; lagSeconds = 0
                 isCloudDraft = true; modelName = consent.model
                 cloudWorker = CloudTranscriptionWorker(consent: consent, key: key, client: client)
+                syncActiveDirectoryRegistration()
             } catch is CancellationError {
                 if let self, generation == request.id, !capturing {
                     enabled = false; status = "Recording ended before cloud approval was prepared; no audio sent"
@@ -190,18 +245,21 @@ final class LiveTranscription: ObservableObject {
             }
             guard let self else { return }
             task = nil; self.token = nil; busy = false; onBusyChange(false)
+            syncActiveDirectoryRegistration()
             start()
         }
     }
 
     func recordingStarted(_ audio: URL) {
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
         invalidate()
         pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false; isCloudDraft = false
         manifest = RecordingSession.manifestURL(for: audio)
         sourceURL = manifest
         modelName = nil
         audioSeconds = 0
-        directory = AppSettings.supportDirectory.appendingPathComponent("Live/\(UUID())", isDirectory: true)
+        directory = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
         cursor = 0
         segments = []
         lagSeconds = 0
@@ -209,6 +267,7 @@ final class LiveTranscription: ObservableObject {
         captureNeedsReview = false
         capturing = true
         errorMessage = nil
+        syncActiveDirectoryRegistration()
         if enabled { setEnabled(true) }
         else { status = "Live transcription is off · audio is still recorded" }
     }
@@ -219,6 +278,78 @@ final class LiveTranscription: ObservableObject {
         captureNeedsReview = captureNeedsReview || needsReview
         if enabled { status = "Finishing remaining audio chunks…"; start() }
         else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
+        syncActiveDirectoryRegistration()
+        scheduleBackgroundCleanup()
+    }
+
+    private func scheduleBackgroundCleanup() { _ = startCleanup() }
+
+    private func startCleanup() -> Task<LiveCleanupReport, Never>? {
+        guard !capturing, !busy else { return nil }
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
+        let previousCleanup = cleanupTask
+        let root = liveRoot
+        let retained = activeDirectories
+        let token = WorkCancellation()
+        cleanupToken = token
+        let worker = Task.detached(priority: .utility) { [weak self] in
+            // Never overlap scans, including a cancelled pass still draining its I/O.
+            _ = await previousCleanup?.value
+            let report = Self.pruneDisposableWorkingFiles(in: root, retaining: retained, cancel: token)
+            await self?.applyCleanupReport(report, token: token)
+            return report
+        }
+        cleanupTask = worker
+        return worker
+    }
+
+    private func applyCleanupReport(_ report: LiveCleanupReport, token: WorkCancellation) {
+        guard cleanupToken?.id == token.id else { return }
+        lastCleanupReport = report
+        cleanupTask = nil
+        cleanupToken = nil
+    }
+
+    @discardableResult
+    func performCleanup() async -> LiveCleanupReport {
+        guard let worker = startCleanup() else { return .init(cancelled: true) }
+        let token = cleanupToken
+        return await withTaskCancellationHandler {
+            await worker.value
+        } onCancel: {
+            token?.cancel()
+            worker.cancel()
+        }
+    }
+
+    /// Kept here as the lifecycle entry point; all traversal runs on a utility worker.
+    @discardableResult
+    nonisolated static func pruneDisposableWorkingFiles(
+        in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
+        retaining activeDirectories: Set<URL> = [],
+        expectedOwnerUID: uid_t = Darwin.getuid(),
+        maxDraftDirectories: Int = LiveTranscriptionPolicy.maximumCleanupDraftDirectories,
+        maxEntriesPerDirectory: Int = LiveTranscriptionPolicy.maximumCleanupEntriesPerDirectory,
+        cancel: WorkCancellation? = nil,
+        shouldCancel: () -> Bool = { Task.isCancelled }
+    ) -> LiveCleanupReport {
+        let retained = normalizedPaths(for: activeDirectories)
+        return LiveWorkingAudioCleanup.run(
+            in: root, ownerUID: expectedOwnerUID, maxDrafts: maxDraftDirectories,
+            maxEntries: maxEntriesPerDirectory,
+            isRetained: { directory in
+                let path = directory.standardizedFileURL.path
+                return retained.contains(path) || activeDirectoryRegistry.withLock { registry in
+                    registry.values.contains { $0.contains(path) }
+                }
+            },
+            shouldCancel: { cancel?.isCancelled == true || shouldCancel() }
+        )
+    }
+
+    private nonisolated static func normalizedPaths(for urls: Set<URL>) -> Set<String> {
+        Set(urls.map { $0.standardizedFileURL.path })
     }
 
     func shutdown() async {
@@ -226,6 +357,8 @@ final class LiveTranscription: ObservableObject {
         pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false
         invalidate()
         await task?.value
+        syncActiveDirectoryRegistration()
+        _ = await performCleanup()
     }
 
     private func invalidate() {
@@ -240,8 +373,10 @@ final class LiveTranscription: ObservableObject {
         let cloud = cloudWorker
         guard values.processingLocation != .cloud || cloud != nil else { return }
         self.token = token
+        activeWorkerDirectory = directory
         busy = true
         onBusyChange(true)
+        syncActiveDirectoryRegistration()
         task = Task { [weak self] in
             var cloudJobCreated = false
             var attempt = 0
@@ -323,11 +458,14 @@ final class LiveTranscription: ObservableObject {
             guard let self else { return }
             task = nil
             self.token = nil
+            activeWorkerDirectory = nil
             busy = false
             cloudAudioActive = false
             if cloud != nil, generation == id { enabled = false; cloudWorker = nil }
             onBusyChange(false)
             if generation != id { start() } // A cancelled worker must exit before a replacement starts.
+            syncActiveDirectoryRegistration()
+            scheduleBackgroundCleanup()
         }
     }
 

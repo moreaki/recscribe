@@ -119,8 +119,11 @@ class RecordingController: RecordingControlling {
         if source.isMixed {
             let bundle = source.appBundleID
             let devices = audioSource.availableInputDevices()
-            let playbackName = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
-            var descriptors: [RecordingSession.SourceTrack] = [.init(role: .playback, name: playbackName, bundleID: bundle)]
+            var descriptors: [RecordingSession.SourceTrack] = []
+            if source.requiresScreenCapture {
+                let playbackName = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
+                descriptors.append(.init(role: .playback, name: playbackName, bundleID: bundle))
+            }
             let multiple = source.kind == .multiple
             for selection in source.inputSelections {
                 let device = devices.first { $0.uid == selection.deviceUID }

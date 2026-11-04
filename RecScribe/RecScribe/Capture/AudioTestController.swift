@@ -50,6 +50,8 @@ final class AudioTestController: ObservableObject {
     private var closed = false
     private var recordingRequested = false
     private var sampleRun = false
+    private(set) var previewRebuildCount = 0
+    private static let maxPreviewRebuilds = 3
     private let previewLimit: TimeInterval
     private let sampleSeconds: TimeInterval
 
@@ -66,8 +68,11 @@ final class AudioTestController: ObservableObject {
         self.saveDirectory = saveDirectory; self.sampleSeconds = sampleSeconds; self.previewLimit = previewLimit
     }
 
-    func opened() { closed = false }
-    func startPreview() async { await start(sample: false) }
+    func opened() { closed = false; previewRebuildCount = 0 }
+    func startPreview() async {
+        previewRebuildCount = 0
+        await start(sample: false)
+    }
 
     /// A deliberately fresh take, using the real writers and a shared host-clock epoch.
     /// No competing capture engine is left running during the ten-second sample.
@@ -77,10 +82,10 @@ final class AudioTestController: ObservableObject {
         await start(sample: true)
     }
 
-    private func start(sample: Bool) async {
+    private func start(sample: Bool, preservingNotice: String? = nil) async {
         guard !closed, !recordingRequested, canStart(), !locksSources, self.sample == nil,
               startTask == nil, stopTask == nil else { return }
-        state = .starting; errorMessage = nil; notice = nil
+        state = .starting; errorMessage = nil; notice = preservingNotice
         health = []; meters = [:]; mixMeter = .init(); elapsed = 0
         let id = UUID(); runID = id
         let task = Task { await self.runStart(sample: sample, id: id) }
@@ -94,10 +99,14 @@ final class AudioTestController: ObservableObject {
         do {
             try gate.acquire(owner); acquired = true
             onActivity(true); playback.stop(); playback.setRecording(true)
-            guard source.selectedSource.kind == .multiple else { throw SessionError.invalid("Enable multiple inputs + playback before testing audio.") }
             let selected = source.selectedSource
-            guard await permissions.checkPermission(.screenCapture) == .granted else {
-                throw SessionError.invalid("Allow Screen & System Audio Recording in System Settings before testing playback capture.")
+            guard selected.valid else {
+                throw SessionError.invalid("Select at least one playback or input source before testing audio.")
+            }
+            if selected.requiresScreenCapture {
+                guard await permissions.checkPermission(.screenCapture) == .granted else {
+                    throw SessionError.invalid("Allow Screen & System Audio Recording in System Settings before testing playback capture.")
+                }
             }
             try Task.checkCancellation()
             if selected.requiresMicrophone {
@@ -107,8 +116,11 @@ final class AudioTestController: ObservableObject {
             try await source.validate(selected)
             try Task.checkCancellation()
             let devices = source.availableInputDevices()
-            var tracks: [RecordingSession.SourceTrack] = [.init(role: .playback,
-                name: selected.appBundleID.map { source.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback", bundleID: selected.appBundleID)]
+            var tracks: [RecordingSession.SourceTrack] = []
+            if selected.requiresScreenCapture {
+                tracks.append(.init(role: .playback,
+                    name: selected.appBundleID.map { source.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback", bundleID: selected.appBundleID))
+            }
             tracks += selected.inputSelections.map { input in
                 let device = devices.first { $0.uid == input.deviceUID }
                 return .init(role: .input(input.deviceUID), name: device?.name ?? "Unavailable input", deviceUID: input.deviceUID,
@@ -120,7 +132,11 @@ final class AudioTestController: ObservableObject {
                 Task { await self.stop() }
             }, monitor: monitor)
             worker = recorder; sampleRun = sample; sampleStartedAt = nil
-            capture.onSourceFailure = { [weak recorder] track, message in recorder?.sourceFailed(track, message: message) }
+            capture.onSourceFailure = { [weak self, weak recorder] track, message in
+                recorder?.sourceFailed(track, message: message)
+                guard let self, self.runID == id, !sample, self.state == .testing else { return }
+                self.attemptPreviewRebuildIfEligible(reason: message)
+            }
             capture.onStreamError = { [weak self] message in
                 guard let self, self.runID == id else { return }
                 self.errorMessage = message
@@ -132,7 +148,7 @@ final class AudioTestController: ObservableObject {
             try await capture.setupMultiCapture(source: selected) { recorder.accept($0) }
             try Task.checkCancellation()
             let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
-            sampleStartedAt = ProcessInfo.processInfo.systemUptime
+            sampleStartedAt = nil
             if sample {
                 try prepareTemporaryRoot()
                 let directory = temporaryRoot.appendingPathComponent("sample-" + UUID().uuidString, isDirectory: true)
@@ -187,6 +203,26 @@ final class AudioTestController: ObservableObject {
         mixMeter = worker?.mixMeter ?? mixMeter
         if sampleRun, sampleStartedAt == nil, let first = health.compactMap({ $0.health.firstReceivedAt }).min() { sampleStartedAt = first }
         elapsed = max(0, now - (sampleRun ? sampleStartedAt ?? now : startedAt))
+    }
+
+    /// Bounded automatic preview rebuild during idle/Audio Test preview (#36) when an input
+    /// undergoes a Bluetooth A2DP ↔ HFP duplex switch / format change or reconnects with
+    /// the same verified UID while no recording files are open.
+    func attemptPreviewRebuildIfEligible(reason: String) {
+        guard state == .testing, !sampleRun, !closed, !recordingRequested,
+              previewRebuildCount < Self.maxPreviewRebuilds else { return }
+        let selected = source.selectedSource
+        let availableUIDs = Set(source.availableInputDevices().map(\.uid))
+        guard selected.inputSelections.allSatisfy({ availableUIDs.contains($0.deviceUID) }) else { return }
+        previewRebuildCount += 1
+        let rebuildNotice = reason.localizedCaseInsensitiveContains("format")
+            ? "Input audio format changed (such as a Bluetooth headset mic switch); audio test preview was automatically restarted."
+            : "Selected input reconnected; audio test preview was automatically restarted."
+        Task { @MainActor [weak self] in
+            guard let self, self.state == .testing, !self.sampleRun else { return }
+            await self.stop()
+            await self.start(sample: false, preservingNotice: rebuildNotice)
+        }
     }
 
     func stop() async {

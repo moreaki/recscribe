@@ -124,6 +124,30 @@ final class SessionLibrary: ObservableObject {
         !shuttingDown && !recordingActive && !liveWorkActive && task == nil
     }
 
+    func rename(_ entry: Entry, title: String) {
+        guard canDeleteRecording else {
+            errorMessage = "Wait for capture/background work to finish before renaming"
+            return
+        }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+        let normalized: String? = trimmed.isEmpty ? nil : String(trimmed.prefix(RecordingSession.maximumTitleLength))
+        do {
+            var updated = try RecordingSession.read(entry.id)
+            updated.title = normalized
+            _ = try updated.validated(beside: entry.id)
+            try updated.save(entry.id)
+            if let index = entries.firstIndex(where: { $0.id == entry.id }) {
+                entries[index].session = updated
+            }
+            errorMessage = nil
+            activity = normalized == nil ? "Recording title reset" : "Recording renamed"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func moveToTrash(_ entry: Entry) {
         guard canDeleteRecording else {
             errorMessage = "Wait for capture/background work to finish before deleting"

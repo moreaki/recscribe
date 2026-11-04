@@ -315,6 +315,7 @@ final class ManualClock: DurationClock {
 final class MockRecordingControlling: RecordingControlling {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     var onStreamError: (@MainActor (String) -> Void)?
+    var sourceHealth: [SourceRecordingHealth] = []
     private(set) var isRecording = false
     private(set) var recordingURL: URL?
 

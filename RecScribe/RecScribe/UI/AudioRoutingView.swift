@@ -8,6 +8,7 @@ struct AudioRoutingView: View {
     @ObservedObject private var monitor = CapturedAudioMonitor.shared
     @ObservedObject private var monitorLevels = CapturedAudioMonitor.shared.levels
     @ObservedObject private var playbackLevels = PlaybackLevels.shared
+    @ObservedObject private var hardwareObserver = AudioHardwareObserver.shared
     @State private var devices: [InputDeviceInfo] = []
     @State private var outputs: [AudioOutputDevice] = []
     @State private var systemOutputUID: String?
@@ -17,14 +18,22 @@ struct AudioRoutingView: View {
     @State private var appError: String?
     @State private var expandedPanel: AudioRoutingPanel?
     @FocusState private var focusedPanel: AudioRoutingPanel?
+    private let embeddedInStudio: Bool
+    private let onClose: (() -> Void)?
 
     init(levels: AudioLevels = .shared, monitor: CapturedAudioMonitor = .shared,
-         playbackLevels: PlaybackLevels = .shared, expandedPanel: AudioRoutingPanel? = nil) {
+         playbackLevels: PlaybackLevels = .shared, hardwareObserver: AudioHardwareObserver = .shared,
+         expandedPanel: AudioRoutingPanel? = nil,
+         embeddedInStudio: Bool = false,
+         onClose: (() -> Void)? = nil) {
         _levels = ObservedObject(wrappedValue: levels)
         _monitor = ObservedObject(wrappedValue: monitor)
         _monitorLevels = ObservedObject(wrappedValue: monitor.levels)
         _playbackLevels = ObservedObject(wrappedValue: playbackLevels)
+        _hardwareObserver = ObservedObject(wrappedValue: hardwareObserver)
         _expandedPanel = State(initialValue: expandedPanel)
+        self.embeddedInStudio = embeddedInStudio
+        self.onClose = onClose
     }
 
     private var source: AudioSource { recorder.audioSource.selectedSource }
@@ -45,65 +54,66 @@ struct AudioRoutingView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
-            if source.kind != .multiple {
-                legacySource
-            } else {
-                if let test = recorder.audioTest {
-                    AudioTestControls(test: test, enabled: recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording)
-                    Divider()
-                }
-                GeometryReader { geometry in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            if geometry.size.width >= 1040 {
-                                HStack(alignment: .top, spacing: 12) {
-                                    sourcesColumn.frame(maxWidth: .infinity)
-                                    flowArrow
-                                    mixColumn.frame(width: 250)
-                                    flowArrow
-                                    outputsColumn.frame(width: 280)
-                                }
-                            } else {
-                                sourcesColumn
-                                HStack(alignment: .top, spacing: 18) {
-                                    mixColumn.frame(maxWidth: .infinity)
-                                    flowArrow
-                                    outputsColumn.frame(maxWidth: .infinity)
-                                }
-                            }
-                        }.padding(20)
-                    }
-                }
-                if recorder.permissionStatus != .granted || !warnings.isEmpty || monitor.warning != nil {
-                    notices.padding(.horizontal, 20).padding(.vertical, 12)
-                }
+            if let test = recorder.audioTest {
+                AudioTestControls(test: test, enabled: recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording)
                 Divider()
-                footer
             }
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        if geometry.size.width >= 1040 {
+                            HStack(alignment: .top, spacing: 12) {
+                                sourcesColumn.frame(maxWidth: .infinity)
+                                flowArrow
+                                mixColumn.frame(width: 250)
+                                flowArrow
+                                outputsColumn.frame(width: 280)
+                            }
+                        } else {
+                            sourcesColumn
+                            HStack(alignment: .top, spacing: 18) {
+                                mixColumn.frame(maxWidth: .infinity)
+                                flowArrow
+                                outputsColumn.frame(maxWidth: .infinity)
+                            }
+                        }
+                    }.padding(20)
+                }
+            }
+            if (source.requiresScreenCapture && recorder.permissionStatus != .granted) || !warnings.isEmpty || monitor.warning != nil || recorder.hasInterruptedSource {
+                notices.padding(.horizontal, 20).padding(.vertical, 12)
+            }
+            Divider()
+            footer
         }
-        .frame(minWidth: AppWindow.routing.minimumSize.width, minHeight: AppWindow.routing.minimumSize.height)
+        .frame(
+            minWidth: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.width,
+            minHeight: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.height
+        )
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onExitCommand { collapsePanel() }
-        .onAppear { recorder.audioTest?.opened() }
+        .onAppear {
+            recorder.audioTest?.opened()
+            refreshHardware()
+        }
         .onDisappear {
             expandedPanel = nil; focusedPanel = nil
             Task { await recorder.audioTest?.close() }
         }
         .onChange(of: source) { _, next in
-            if next.kind != .multiple {
-                expandedPanel = nil; focusedPanel = nil
-            } else if case .input(let uid) = expandedPanel, !next.inputSelections.contains(where: { $0.deviceUID == uid }) {
+            if case .input(let uid) = expandedPanel, !next.inputSelections.contains(where: { $0.deviceUID == uid }) {
                 expandedPanel = nil; focusedPanel = .playback
             }
         }
-        .task {
-            while !Task.isCancelled {
-                devices = recorder.audioSource.availableInputDevices()
-                outputs = AudioDeviceControls.outputs()
-                systemOutputUID = AudioDeviceControls.defaultOutputUID()
-                try? await Task.sleep(for: .seconds(2))
-            }
+        .onChange(of: hardwareObserver.revision) { _, _ in
+            refreshHardware()
         }
+    }
+
+    private func refreshHardware() {
+        devices = recorder.audioSource.availableInputDevices()
+        outputs = hardwareObserver.outputDevices
+        systemOutputUID = hardwareObserver.defaultOutputUID
     }
 
     private var header: some View {
@@ -115,23 +125,15 @@ struct AudioRoutingView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
-            Button("Close") { dismissWindow(id: AppWindow.routing.rawValue) }
-                .controlSize(.small)
+            Button(embeddedInStudio ? "Back to Studio" : "Close") {
+                if let onClose {
+                    onClose()
+                } else {
+                    dismissWindow(id: AppWindow.routing.rawValue)
+                }
+            }
+            .controlSize(.small)
         }.padding(.horizontal, 20).padding(.vertical, 16)
-    }
-
-    private var legacySource: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Build a mix from apps and inputs").font(.title3.bold())
-            Text("Your current capture source stays selected until you enable this routing workspace. Each selected input keeps its own original recording alongside the stereo mix.")
-            Button("Use multiple inputs + playback") {
-                save(inputs.map { selected in
-                    devices.first { $0.uid == selected.deviceUID }.map(InputSelection.init(device:)) ?? selected
-                })
-            }.buttonStyle(.borderedProminent).disabled(!editable)
-            AudioMuteSummary(source: source)
-            Spacer()
-        }.padding(24)
     }
 
     private var sourcesColumn: some View {
@@ -140,6 +142,12 @@ struct AudioRoutingView: View {
                 columnTitle("Sources", symbol: "waveform")
                 Spacer()
                 Menu {
+                    if !source.requiresScreenCapture {
+                        Button("Include system playback", systemImage: "speaker.wave.2") {
+                            save(inputs, playbackState: .systemAll)
+                        }
+                        Divider()
+                    }
                     ForEach(eligible) { device in
                         Button(device.name, systemImage: inputs.contains { $0.deviceUID == device.uid } ? "checkmark" : "plus") {
                             save(inputs + [.init(device: device)])
@@ -148,20 +156,23 @@ struct AudioRoutingView: View {
                     Divider()
                     Button("Select all available inputs") { save(eligible.map(InputSelection.init(device:))) }
                         .disabled(eligible.isEmpty || eligible.count > InputSelection.maximumDevices)
-                    Button("Remove all inputs") { save([]) }.disabled(inputs.isEmpty)
+                    Button("Remove all inputs") { save([]) }.disabled(inputs.isEmpty || !source.requiresScreenCapture)
                 } label: { Label("Add input", systemImage: "plus") }
                     .controlSize(.small).disabled(!editable)
             }.padding(.bottom, 3)
             disclosureCard(.playback, title: playbackName, symbol: "app.connected.to.app.below.fill",
-                           subtitle: source.appBundleID == nil ? "All system playback → L / R" : "Application playback → L / R",
-                           value: gain(source.playbackLevelID), muted: levels.level(source.playbackLevelID).muted,
-                           track: .playback) {
+                           subtitle: !source.requiresScreenCapture ? "Playback excluded · inputs only" : (source.appBundleID == nil ? "All system playback → L / R" : "Application playback → L / R"),
+                           value: source.requiresScreenCapture ? gain(source.playbackLevelID) : "Off",
+                           muted: source.requiresScreenCapture && levels.level(source.playbackLevelID).muted,
+                           track: source.requiresScreenCapture ? .playback : nil) {
                 playbackChooser
-                SourceFader(id: source.playbackLevelID, title: "Playback gain", levels: levels, channels: 2, preservesSources: true)
-                if let test = recorder.audioTest {
-                    DisclosureGroup("Live channel levels") {
-                        AudioTestSourceMeterView(test: test, track: .playback, muted: levels.level(source.playbackLevelID).muted, channels: true)
-                    }.font(.caption)
+                if source.requiresScreenCapture {
+                    SourceFader(id: source.playbackLevelID, title: "Playback gain", levels: levels, channels: 2, preservesSources: true)
+                    if let test = recorder.audioTest {
+                        DisclosureGroup("Live channel levels") {
+                            AudioTestSourceMeterView(test: test, track: .playback, muted: levels.level(source.playbackLevelID).muted, channels: true)
+                        }.font(.caption)
+                    }
                 }
             }
             ForEach(inputs) { input in
@@ -175,7 +186,8 @@ struct AudioRoutingView: View {
     }
 
     private var playbackName: String {
-        source.appBundleID.map { recorder.audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+        guard source.requiresScreenCapture else { return "Playback off" }
+        return source.appBundleID.map { recorder.audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
     }
 
     private var playbackChooser: some View {
@@ -187,17 +199,30 @@ struct AudioRoutingView: View {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Application playback").font(.headline)
-                                if apps.isEmpty { Text("No audio-capable apps found. Play audio, then try again.").font(.caption) }
+                                if apps.isEmpty { Text("No open applications found.").font(.caption) }
                                 ForEach(apps) { app in
-                                    Button(app.applicationName) {
-                                        save(inputs, playback: app.bundleID, changePlayback: true); showApps = false
+                                    Button {
+                                        save(inputs, playbackState: .app(bundleID: app.bundleID)); showApps = false
+                                    } label: {
+                                        HStack {
+                                            Text(app.applicationName)
+                                            if app.isAudioActive {
+                                                Spacer(minLength: 8)
+                                                Text("Playing audio")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(WorkspaceStyle.mint)
+                                            }
+                                        }
                                     }
                                 }
                             }.padding().frame(minWidth: 240, alignment: .leading)
                         }.frame(maxHeight: 360)
                     }
-                if source.appBundleID != nil {
-                    Button("All system audio") { save(inputs, changePlayback: true) }.disabled(!editable)
+                if source.appBundleID != nil || !source.requiresScreenCapture {
+                    Button("All system audio") { save(inputs, playbackState: .systemAll) }.disabled(!editable)
+                }
+                if source.requiresScreenCapture && !inputs.isEmpty {
+                    Button("Exclude playback") { save(inputs, playbackState: AudioSource.Playback.none) }.disabled(!editable)
                 }
             }.controlSize(.small)
             if let appError { Text(appError).font(.caption).foregroundStyle(.orange) }
@@ -232,7 +257,7 @@ struct AudioRoutingView: View {
             }
             if let device {
                 channelConnections(input, device: device).disabled(!editable)
-                DeviceVolumeView(uid: input.deviceUID, input: true)
+                DeviceVolumeView(uid: input.deviceUID, input: true, hardwareObserver: hardwareObserver)
             }
         }
     }
@@ -286,14 +311,14 @@ struct AudioRoutingView: View {
                            muted: monitorLevels.value.muted, warning: outputWarning(monitorLevels.value)) {
                 Toggle("Listen to recording mix", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
                     .toggleStyle(.switch)
-                ListeningControls(levels: monitor.levels, title: "Live monitor output")
+                ListeningControls(levels: monitor.levels, title: "Live monitor output", hardwareObserver: hardwareObserver)
                 Text("Use headphones. Listening volume is independent of the saved recording mix. Monitoring turns off after each take.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             disclosureCard(.recordingPlayback, title: "Recording playback", symbol: "play.circle",
                            subtitle: output(playbackLevels.value), value: volume(playbackLevels.value),
                            muted: playbackLevels.value.muted, warning: outputWarning(playbackLevels.value)) {
-                ListeningControls(levels: playbackLevels, title: "Playback output")
+                ListeningControls(levels: playbackLevels, title: "Playback output", hardwareObserver: hardwareObserver)
                 Text("Changes what you hear when playing saved recordings. The recorded audio stays unchanged.")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -302,7 +327,18 @@ struct AudioRoutingView: View {
 
     private var notices: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if recorder.permissionStatus != .granted {
+            if let summary = recorder.interruptedSourceSummary {
+                HStack(spacing: 10) {
+                    Label(summary, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Spacer(minLength: 8)
+                    Button("Stop & start new take") {
+                        Task { await recorder.stopAndStartNewTake() }
+                    }
+                    .controlSize(.small)
+                }
+            }
+            if source.requiresScreenCapture && recorder.permissionStatus != .granted {
                 Label("Screen & System Audio Recording permission is required for playback capture. Review permissions in the recording panel.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
             }
@@ -314,7 +350,7 @@ struct AudioRoutingView: View {
                         .foregroundStyle(.orange)
                 }
                 Toggle("Include these possible duplicate / loopback routes", isOn: Binding(get: {
-                    if case .multiple(_, _, let allowed) = source { return allowed }; return false
+                    source.allowDuplicateRoutes
                 }, set: { save(inputs, acknowledge: $0) })).disabled(!editable)
             }
             if let warning = monitor.warning {
@@ -396,22 +432,37 @@ struct AudioRoutingView: View {
             .background(WorkspaceStyle.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
     @ViewBuilder private func sourceMeter(_ track: CaptureTrack) -> some View {
-        if let test = recorder.audioTest, !test.health.isEmpty {
+        if let test = recorder.audioTest, test.locksSources {
             AudioTestSourceMeterView(test: test, track: track,
                 muted: levels.level(track == .playback ? source.playbackLevelID : inputs.first(where: { CaptureTrack.input($0.deviceUID) == track }).map { "input:" + $0.deviceUID } ?? "").muted)
-        } else if recorder.isRecording, let item = recorder.sourceHealth.first(where: { $0.id == track.rawValue }) {
-            VStack(alignment: .leading, spacing: 4) {
-                ProgressView(value: Double(min(1, item.health.peak))).accessibilityLabel("\(item.name) raw input level")
-                let status = item.health.status(at: recorder.healthTime)
-                Text(status.label).foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
-                if let failure = item.health.failureMessage { Text(failure).foregroundStyle(.orange) }
-                if item.health.clipped { Text("Clipping detected · reduce recording gain").foregroundStyle(.orange) }
-            }.font(.caption2).padding(.bottom, 10)
+        } else if recorder.isRecording {
+            CaptureSourceMeter(telemetry: recorder.telemetry, track: track)
         }
     }
-    private func save(_ inputs: [InputSelection], acknowledge: Bool = false, playback: String? = nil, changePlayback: Bool = false) {
+    static func makeUpdatedSource(
+        from current: AudioSource,
+        inputs: [InputSelection],
+        acknowledge: Bool? = nil,
+        playbackState: AudioSource.Playback? = nil
+    ) -> AudioSource {
+        let nextPlayback = playbackState ?? current.playback
+        let routeGraphChanged = nextPlayback != current.playback || inputs != current.inputs
+        let nextAck = acknowledge ?? (routeGraphChanged ? false : current.allowDuplicateRoutes)
+        return AudioSource(
+            playback: nextPlayback,
+            inputs: inputs,
+            allowDuplicateRoutes: nextAck,
+            usesMultiInputRouting: nextPlayback != .none || inputs.count != 1 || nextAck || inputs.contains(where: \.hasCustomRoutes)
+        )
+    }
+    private func save(_ inputs: [InputSelection], acknowledge: Bool? = nil, playbackState: AudioSource.Playback? = nil) {
         guard editable else { return }
-        recorder.setCaptureSource(.multiple(appBundleID: changePlayback ? playback : source.appBundleID, inputs: inputs, allowDuplicateRoutes: acknowledge))
+        recorder.setCaptureSource(Self.makeUpdatedSource(
+            from: source,
+            inputs: inputs,
+            acknowledge: acknowledge,
+            playbackState: playbackState
+        ))
     }
     private func loadApps() {
         guard editable, !loadingApps else { return }
@@ -423,6 +474,25 @@ struct AudioRoutingView: View {
             defer { loadingApps = false }
             do { apps = try await recorder.audioSource.availableApps(); showApps = true }
             catch { appError = error.localizedDescription }
+        }
+    }
+}
+
+/// Only this leaf subscribes to incoming level and health updates.
+struct CaptureSourceMeter: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+    let track: CaptureTrack
+
+    var body: some View {
+        if let item = telemetry.sourceHealth.first(where: { $0.id == track.rawValue }) {
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: Double(min(1, item.health.peak)))
+                    .accessibilityLabel("\(item.name) raw input level")
+                let status = item.health.status(at: telemetry.healthTime)
+                Text(status.label).foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
+                if let failure = item.health.failureMessage { Text(failure).foregroundStyle(.orange) }
+                if item.health.clipped { Text("Clipping detected · reduce recording gain").foregroundStyle(.orange) }
+            }.font(.caption2).padding(.bottom, 10)
         }
     }
 }
@@ -489,13 +559,14 @@ nonisolated enum AudioRoutingSummary {
 struct MultipleInputsView: View {
     @ObservedObject var recorder: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     private var source: AudioSource { recorder.audioSource.selectedSource }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button("Audio routing…", systemImage: "point.3.connected.trianglepath.dotted") {
                 NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: AppWindow.routing.rawValue)
+                AppWindow.open(.routing, using: openWindow, navigation: navigation)
             }
             if source.kind == .multiple {
                 let count = source.inputSelections.count
@@ -516,12 +587,30 @@ struct MultipleInputsView: View {
 
 struct CaptureHealthView: View {
     @ObservedObject var recorder: RecorderViewModel
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    init(recorder: RecorderViewModel, telemetry: RecorderTelemetry? = nil) {
+        self.recorder = recorder
+        self._telemetry = ObservedObject(wrappedValue: telemetry ?? recorder.telemetry)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.sm) {
             Text(recorder.captureSourceHint).font(.caption).foregroundStyle(.secondary)
             if recorder.isRecording {
-                ForEach(recorder.sourceHealth) { source in
-                    let status = source.health.status(at: recorder.healthTime)
+                if let summary = recorder.interruptedSourceSummary {
+                    VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                        Label(summary, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.orange)
+                        Button("Stop & start new take") {
+                            Task { await recorder.stopAndStartNewTake() }
+                        }
+                        .controlSize(.small)
+                    }
+                }
+                ForEach(telemetry.sourceHealth) { source in
+                    let status = source.health.status(at: telemetry.healthTime)
                     VStack(alignment: .leading, spacing: GlassSpacing.xs) {
                         Text("\(source.name): \(status.label)")
                             .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)

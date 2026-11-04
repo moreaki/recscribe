@@ -263,4 +263,80 @@ struct AudioTestTests {
         #expect(recording.startCount == 2 && preview.startCount == 2)
         #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("scratch").path))
     }
+
+    @Test func inputsOnlyPreviewAndSampleBypassScreenRecordingPermission() async throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let settings = defaults(), capture = MockAudioCapturing()
+        let device = InputDeviceInfo(uid: "mic", name: "Studio Mic", inputChannels: 2, sampleRate: 48_000)
+        let provider = MockAudioSourceProviding(selectedSource: .inputsOnly([.init(device: device)]))
+        provider.availableInputDevicesResult = [device]
+        let permissions = MockPermissionProviding(.denied)
+        permissions.micStatus = .granted
+        let test = AudioTestController(
+            capture: capture,
+            source: provider,
+            permissions: permissions,
+            levels: AudioLevels(defaults: settings),
+            monitor: CapturedAudioMonitor(defaults: settings),
+            temporaryRoot: directory.appendingPathComponent("scratch"),
+            saveDirectory: { directory },
+            sampleSeconds: 0.05
+        )
+        await test.startPreview()
+        #expect(test.state == .testing && capture.capturing)
+        #expect(permissions.requestedPermissionKinds == [.microphone])
+        await test.close()
+    }
+
+    @Test func outOfOrderMultiSourceStartupWithMaximumFramesPreservesCrossSourceOffsetsAndManifestTiming() throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let sink = SessionWAVWriter()
+        try sink.createFile(at: directory.appendingPathComponent("out-of-order-sample.wav"), sampleRate: 48_000, channels: 2)
+        let epoch = 100.0
+        let writer = try SynchronizedCaptureWriter(
+            mix: sink,
+            descriptors: descriptors,
+            epoch: epoch,
+            options: .init(),
+            maximumFrames: 2_400
+        )
+
+        // Source A (.playback) arrives first at epoch + 1.00 (101.00).
+        // Delayed Source B (.input("mic")) buffers arrive next stamped epoch + 0.98 and epoch + 0.99.
+        try writer.accept(.init(track: .playback, presentationTime: epoch + 1.00, buffer: pcm(0.4)))
+        try writer.accept(.init(track: .input("mic"), presentationTime: epoch + 0.98, buffer: pcm(0.8)))
+        try writer.accept(.init(track: .input("mic"), presentationTime: epoch + 0.99, buffer: pcm(0.8)))
+        try writer.accept(.init(track: .playback, presentationTime: epoch + 1.01, buffer: pcm(0.4)))
+        try writer.accept(.init(track: .input("mic"), presentationTime: epoch + 1.00, buffer: pcm(0.8)))
+        try writer.accept(.init(track: .playback, presentationTime: epoch + 1.02, buffer: pcm(0.4)))
+        try writer.accept(.init(track: .input("mic"), presentationTime: epoch + 1.01, buffer: pcm(0.8)))
+        try writer.finish()
+
+        let manifest = try #require(sink.manifestURL)
+        let result = try SessionProcessing.process(manifest, ffmpeg: URL(fileURLWithPath: "/unused"), cancel: WorkCancellation())
+        #expect(result.totalFrames == 2_400)
+        // Bounded pre-roll for maximumFrames=2400 is 25 ms (0.025 s = 1200 frames) before 101.00 -> timelineEpoch = 100.975.
+        let expectedEpoch = 100.975
+        #expect(abs((result.captureEpoch ?? 0) - expectedEpoch) < 0.0001)
+
+        let playbackTrack = try #require(result.sourceTracks?.first { $0.role == .playback })
+        let micTrack = try #require(result.sourceTracks?.first { $0.role == .input("mic") })
+        let playbackSession = try LinkedSourceSessions.read(playbackTrack, parent: result, at: manifest)
+        let micSession = try LinkedSourceSessions.read(micTrack, parent: result, at: manifest)
+
+        #expect(abs((playbackSession.session.captureEpoch ?? 0) - expectedEpoch) < 0.0001)
+        #expect(abs((micSession.session.captureEpoch ?? 0) - expectedEpoch) < 0.0001)
+        #expect(playbackSession.session.totalFrames == 2_400)
+        #expect(micSession.session.totalFrames == 2_400)
+
+        let playbackSamples = try decoded(playbackSession.id)[0]
+        let micSamples = try decoded(micSession.id)[0]
+        // Mic starts at 100.98 - 100.975 = 5 ms = frame 240; Playback starts at 101.00 - 100.975 = 25 ms = frame 1200.
+        // Exact 960-frame (20 ms) cross-source offset is preserved!
+        let firstMicNonZero = try #require(micSamples.firstIndex { abs($0) > 0.01 })
+        let firstPlaybackNonZero = try #require(playbackSamples.firstIndex { abs($0) > 0.01 })
+        #expect(firstMicNonZero == 240)
+        #expect(firstPlaybackNonZero == 1_200)
+        #expect(firstPlaybackNonZero - firstMicNonZero == 960)
+    }
 }

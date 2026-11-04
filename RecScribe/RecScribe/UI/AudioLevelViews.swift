@@ -9,11 +9,9 @@ struct RecordingLevelsView: View {
     private var source: AudioSource { recorder.audioSource.selectedSource }
     var body: some View {
         DisclosureGroup("Audio levels", isExpanded: $expanded) {
-            ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 if source.isMixed || source.microphoneUID == nil {
-                    SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
-                                channels: source.isMixed ? 2 : (recorder.sourceHealth.first?.health.channels ?? 2), preservesSources: source.isMixed)
+                    RecordingPlaybackFader(telemetry: recorder.telemetry, levels: levels, source: source)
                 }
                 if source.kind == .multiple {
                     ForEach(source.inputSelections) { selection in
@@ -37,8 +35,19 @@ struct RecordingLevelsView: View {
                 if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output") }
                 if let warning = monitor.warning { Text(warning).font(.caption).foregroundStyle(.orange) }
             }.padding(.top, 8)
-            }.frame(height: 340)
         }.font(.callout).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct RecordingPlaybackFader: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+    @ObservedObject var levels: AudioLevels
+    let source: AudioSource
+
+    var body: some View {
+        SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
+                    channels: source.isMixed ? 2 : (telemetry.sourceHealth.first?.health.channels ?? 2),
+                    preservesSources: source.isMixed)
     }
 }
 
@@ -90,8 +99,9 @@ struct SourceFader: View {
 struct ListeningControls: View {
     @ObservedObject var levels: PlaybackLevels
     let title: String
-    @State private var devices: [AudioOutputDevice] = []
-    @State private var systemUID: String?
+    @ObservedObject var hardwareObserver: AudioHardwareObserver = .shared
+    private var devices: [AudioOutputDevice] { hardwareObserver.outputDevices }
+    private var systemUID: String? { hardwareObserver.defaultOutputUID }
     private func change(_ body: (inout ListeningLevel) -> Void) { var next = levels.value; body(&next); levels.set(next) }
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -122,17 +132,18 @@ struct ListeningControls: View {
                 if let uid = levels.value.outputUID, !devices.contains(where: { $0.uid == uid }) { Text("Unavailable output").tag(uid) }
             }.accessibilityLabel("\(title) device")
             if let uid = levels.value.outputUID, !devices.contains(where: { $0.uid == uid }) {
-                Text("Selected output unavailable · following system output").font(.caption).foregroundStyle(.orange)
+                Text(title == "Live monitor output"
+                    ? "Selected output unavailable · live monitoring is muted to prevent speaker feedback"
+                    : "Selected output unavailable · following system output")
+                    .font(.caption).foregroundStyle(.orange)
             } else {
                 Text("Listening on \(devices.first { $0.uid == (levels.value.outputUID ?? systemUID) }?.name ?? "system output")").font(.caption).foregroundStyle(.secondary)
             }
-            DeviceVolumeView(uid: devices.contains(where: { $0.uid == levels.value.outputUID }) ? levels.value.outputUID : systemUID, input: false)
-        }
-        .task {
-            while !Task.isCancelled {
-                devices = AudioDeviceControls.outputs(); systemUID = AudioDeviceControls.defaultOutputUID()
-                try? await Task.sleep(for: .seconds(2))
-            }
+            DeviceVolumeView(
+                uid: devices.contains(where: { $0.uid == levels.value.outputUID }) ? levels.value.outputUID : systemUID,
+                input: false,
+                hardwareObserver: hardwareObserver
+            )
         }
     }
 }
@@ -140,10 +151,17 @@ struct ListeningControls: View {
 struct DeviceVolumeView: View {
     let uid: String?
     let input: Bool
+    var hardwareObserver: AudioHardwareObserver = .shared
+    @State private var expanded = false
     @State private var controls: [AudioDeviceControls.Volume] = []
     @State private var error: String?
+    @State private var watchToken: UUID?
+
     var body: some View {
-        DisclosureGroup(input ? "Hardware input level (system-wide)" : "Hardware output volume (system-wide)") {
+        DisclosureGroup(
+            input ? "Hardware input level (system-wide)" : "Hardware output volume (system-wide)",
+            isExpanded: $expanded
+        ) {
             if controls.isEmpty { Text("This device has no writable software volume control. Use its hardware controls or Sound settings.").font(.caption).foregroundStyle(.secondary) }
             ForEach(controls) { control in
                 HStack {
@@ -160,11 +178,27 @@ struct DeviceVolumeView: View {
                 .controlSize(.small)
             if input { Text("Software gain cannot repair clipping that already occurred in the input hardware.").font(.caption).foregroundStyle(.secondary) }
         }.font(.caption)
-        .task(id: uid) {
-            while !Task.isCancelled {
-                controls = AudioDeviceControls.volumes(uid: uid, input: input)
-                try? await Task.sleep(for: .seconds(2))
+        .onChange(of: expanded) { _, isExpanded in
+            updateWatch(isExpanded: isExpanded, currentUID: uid)
+        }
+        .onChange(of: uid) { _, nextUID in
+            if expanded {
+                updateWatch(isExpanded: true, currentUID: nextUID)
             }
+        }
+        .onDisappear {
+            hardwareObserver.unwatchDevice(watchToken)
+            watchToken = nil
+        }
+    }
+
+    private func updateWatch(isExpanded: Bool, currentUID: String?) {
+        hardwareObserver.unwatchDevice(watchToken)
+        watchToken = nil
+        guard isExpanded, let currentUID, !currentUID.isEmpty else { return }
+        controls = AudioDeviceControls.volumes(uid: currentUID, input: input)
+        watchToken = hardwareObserver.watchDevice(uid: currentUID, inputScope: input, includeVolumes: true) {
+            controls = AudioDeviceControls.volumes(uid: currentUID, input: input)
         }
     }
 }
@@ -173,19 +207,31 @@ struct DeviceVolumeView: View {
 struct SessionPlaybackView: View {
     @ObservedObject var playback: SessionPlayback
     var showListeningControls = true
+    @State private var showOutput = false
     var body: some View {
         if playback.player != nil {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                HStack(spacing: 8) {
                     Button { playback.togglePlayback() } label: {
                         Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
                     }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
+                    Button { playback.skip(by: -15) } label: {
+                        Image(systemName: "gobackward.15")
+                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip back 15 seconds")
+                    Button { playback.skip(by: 15) } label: {
+                        Image(systemName: "goforward.15")
+                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip forward 15 seconds")
                     Slider(value: Binding(get: { min(playback.position, max(0.001, playback.duration)) }, set: { playback.seek(to: $0) }), in: 0...max(0.001, playback.duration))
                         .disabled(playback.duration <= 0).accessibilityLabel("Playback position")
-                    Text(String(format: "%.0f / %.0f s", playback.position, playback.duration)).font(.caption).monospacedDigit()
+                    Text("\(playback.formattedPosition) / \(playback.formattedDuration)").font(.caption).monospacedDigit()
                     Button("Stop") { playback.stop() }
                 }
-                if showListeningControls { ListeningControls(levels: playback.levels, title: "Playback output") }
+                if showListeningControls {
+                    DisclosureGroup("Playback output", isExpanded: $showOutput) {
+                        ListeningControls(levels: playback.levels, title: "Playback output")
+                            .padding(.top, 4)
+                    }.font(.caption)
+                }
             }
         }
     }

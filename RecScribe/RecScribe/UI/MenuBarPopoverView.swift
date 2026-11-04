@@ -54,14 +54,11 @@ struct MenuBarPopoverView: View {
                 Spacer()
 
                 if viewModel.isRecording {
-                    Text(viewModel.formattedDuration)
-                        .workspaceFont(.timer)
-                        .foregroundColor(.secondary)
-                        .fixedSize()
+                    PopoverDurationText(telemetry: viewModel.telemetry)
                 }
             }
 
-            CaptureHealthView(recorder: viewModel)
+            CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
             MultipleInputsView(recorder: viewModel)
             if viewModel.audioSource.selectedSource.kind != .multiple {
                 RecordingLevelsView(recorder: viewModel)
@@ -89,13 +86,7 @@ struct MenuBarPopoverView: View {
 
             // Mini waveform (only while recording)
             if viewModel.isRecording {
-                GlassLiveWaveform(
-                    samples: RecorderWaveformAdapter.magnitudes(
-                        viewModel.waveformSamples,
-                        bucketedTo: RecorderWaveformAdapter.popoverBarCount
-                    )
-                )
-                .frame(height: 36)
+                PopoverWaveformSection(telemetry: viewModel.telemetry)
             }
 
             // Primary action. A red "Start recording" on an app that cannot record
@@ -221,4 +212,29 @@ struct MenuBarPopoverView: View {
 private struct PopoverContentHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct PopoverDurationText: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        Text(telemetry.formattedDuration)
+            .workspaceFont(.timer)
+            .foregroundColor(.secondary)
+            .fixedSize()
+    }
+}
+
+private struct PopoverWaveformSection: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        GlassLiveWaveform(
+            samples: RecorderWaveformAdapter.magnitudes(
+                telemetry.waveformSamples,
+                bucketedTo: RecorderWaveformAdapter.popoverBarCount
+            )
+        )
+        .frame(height: 36)
+    }
 }

@@ -12,17 +12,26 @@ icon. Settings → Storage also has a Capture sources card.
 - **All System Audio** records what the Mac plays, excluding RecScribe. It is the
   default when no source has been saved. It does not include microphone input.
 - **App** records playback from the chosen application. Browser selection means
-  the browser application, not a verified isolated tab or meeting.
-- **Microphone** records one input alone, preserving the existing stereo behavior.
+  the browser application, not a verified isolated tab or meeting. Open user-facing
+  applications remain selectable before a call starts even when idle; applications
+  whose main or helper processes are actively playing audio are badged (`Playing audio`)
+  and sorted first (#16).
+- **Microphone** records one input alone via `DeviceInputCapture` (`playback == .none`),
+  requiring only Microphone permission without starting an `SCStream` or requiring
+  Screen Recording permission (#40).
 - **Playback + microphone** adds one explicitly chosen input to system playback,
   or to the app currently selected in the App menu. To record a meeting, select
-  system audio (or the browser first), then choose the input in this submenu.
+  system audio (or the browser first, even before joining the call), then choose
+  the input in this submenu or open **Audio routing…** (`⌘2`).
 
-Selection is persisted and locked from Start through finalization. An unavailable
-app/input fails preflight; RecScribe never silently substitutes another microphone
-or starts capturing newly connected devices. Microphone permission is requested
-when Record is pressed for a source that needs it. System/audio permission remains
-required by the ScreenCaptureKit backend. Input discovery itself does not capture.
+Selection is persisted in a composable `{ playback, inputs, allowDuplicateRoutes }`
+model and locked from Start through finalization. Legacy persisted source values
+migrate transparently on load. An unavailable app/input fails preflight; RecScribe
+never silently substitutes another microphone or starts capturing newly connected
+devices. Microphone permission is requested when Record is pressed for a source
+that includes inputs. Screen & System Audio Recording permission is required only
+when `playback` is enabled (`.systemAll` or `.app`). Input discovery itself does
+not capture.
 
 Use headphones when recording playback and a microphone together: sound from
 speakers can also enter the microphone. Interface loopback, aggregate and virtual

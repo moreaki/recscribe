@@ -712,4 +712,27 @@ struct CaptureSourceErrorTests {
         #expect(PermissionKind.microphone.settingsAnchor == "Privacy_Microphone")
         #expect(PermissionKind.screenCapture.settingsAnchor == "Privacy_ScreenCapture")
     }
+
+    @Test("Mic-only recording starts without Screen Recording permission when Microphone permission is granted (#40)")
+    func micOnlyRecordingDoesNotRequireScreenRecordingPermission() async {
+        let controller = MockRecordingControlling()
+        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
+        let permission = MockPermissionProviding(.denied)
+        permission.micStatus = .granted
+        let viewModel = RecorderViewModel(
+            controller: controller,
+            permissions: permission,
+            clock: ManualClock(),
+            audioSource: source
+        )
+
+        #expect(viewModel.canRecord)
+        #expect(viewModel.statusText.contains("Ready to record"))
+
+        await viewModel.startRecording()
+
+        #expect(viewModel.state == .recording)
+        #expect(controller.startCount == 1)
+        #expect(permission.requestedPermissionKinds == [.microphone])
+    }
 }

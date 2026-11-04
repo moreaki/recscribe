@@ -40,6 +40,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // the open/save panels run out of process in the sandbox, so they stay
         // on the system setting whatever we do here.
         NSApp.appearance = NSAppearance(named: .darkAqua)
+        MainActor.assumeIsolated {
+            if prepareForTermination == nil {
+                AppServices.shared?.bind(to: self)
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

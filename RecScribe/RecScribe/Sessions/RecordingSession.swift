@@ -70,8 +70,10 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     static let currentSchemaVersion = 3
     static let singleSourceSchemaVersion = 1
     static let maximumManifestBytes = 16 * 1_024 * 1_024
+    static let maximumTitleLength = 256
     var schemaVersion = singleSourceSchemaVersion
     var id = UUID()
+    var title: String?
     var startedAt = Date()
     var endedAt: Date?
     var status = SessionStatus.recording
@@ -155,6 +157,13 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         guard (Self.singleSourceSchemaVersion...Self.currentSchemaVersion).contains(session.schemaVersion), (1...32).contains(session.channels),
               (1...384000).contains(session.sampleRate), session.bitDepth == PCM16WAV.bitDepth,
               session.channelMap.count == session.channels else { throw SessionError.invalid("Unsupported session schema or audio format") }
+        if let title = session.title {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, title.count <= Self.maximumTitleLength,
+                  !title.contains("\n"), !title.contains("\r"), !title.contains("\0") else {
+                throw SessionError.invalid("Session title must be 1–256 characters on a single line")
+            }
+        }
         guard schemaVersion < 2 || sourceTracks != nil else { throw SessionError.invalid("Version 2 requires a source track group") }
         if let epoch = captureEpoch, !epoch.isFinite || epoch < 0 { throw SessionError.invalid("Invalid capture clock") }
         if let tracks = sourceTracks {

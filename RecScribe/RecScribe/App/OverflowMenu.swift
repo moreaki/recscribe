@@ -207,10 +207,9 @@ enum OverflowMenu {
     /// Per-App gate here — its rationale does not apply, and a pasted-in reason
     /// rots into a mystery.
     static func microphoneSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
-        let selectedUID: String? = {
-            if case .mic(let uid) = context.selectedSource { return uid }
-            return nil
-        }()
+        let selectedUID: String? = context.selectedSource.kind == .microphone
+            ? context.selectedSource.microphoneUID
+            : nil
         let devices = context.inputDevices
         let liveName = devices.first { $0.uid == selectedUID }?.name
 
@@ -265,10 +264,9 @@ enum OverflowMenu {
     /// choice. Runtime-enumerated contents always live behind a submenu, so
     /// launching an app can never reshape the menu the user is looking at.
     static func perAppSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
-        let selectedBundleID: String? = {
-            if case .app(let bundleID) = context.selectedSource { return bundleID }
-            return nil
-        }()
+        let selectedBundleID: String? = context.selectedSource.kind == .app
+            ? context.selectedSource.appBundleID
+            : nil
 
         return OverflowSubmenu(
             id: "sourcePerApp",
@@ -342,7 +340,7 @@ enum OverflowMenu {
         entries.append(contentsOf: apps.map { app in
             .action(OverflowAction(
                 id: "sourceApp:\(app.bundleID)",
-                title: app.applicationName,
+                title: app.isAudioActive ? "\(app.applicationName) · Playing audio" : app.applicationName,
                 isChecked: app.bundleID == selectedBundleID,
                 isSourceRow: true,
                 perform: { onSelectSource(.app(bundleID: app.bundleID)) }

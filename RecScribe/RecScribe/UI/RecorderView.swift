@@ -6,10 +6,11 @@ import SwiftUI
 struct RecorderView: View {
     @EnvironmentObject var viewModel: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
 
     private var mainButtonTitle: String {
         if viewModel.installLocationBlocksRecording { return "Reveal in Finder" }
-        if viewModel.permissionStatus != .granted { return "Open System Settings" }
+        if !viewModel.canRecord { return "Open System Settings" }
         return viewModel.isRecording ? "Stop recording" : "Start recording"
     }
 
@@ -24,21 +25,18 @@ struct RecorderView: View {
                 Spacer()
                 OverflowMenuButton()
             }
-            StatusBar(state: viewModel.state, duration: viewModel.formattedDuration, statusText: viewModel.statusText)
-            CaptureHealthView(recorder: viewModel)
+            RecorderStatusBar(state: viewModel.state, statusText: viewModel.statusText, telemetry: viewModel.telemetry)
+            CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
             MultipleInputsView(recorder: viewModel)
             if viewModel.audioSource.selectedSource.kind != .multiple {
                 RecordingLevelsView(recorder: viewModel)
             }
             if case .error = viewModel.state {
                 Button("Review saved recordings", systemImage: "waveform.path.badge.exclamationmark") {
-                    openWindow(id: AppWindow.recordings.rawValue)
+                    AppWindow.open(.recordings, using: openWindow, navigation: navigation)
                 }.buttonStyle(.borderless)
             }
-            GlassLiveWaveform(samples: RecorderWaveformAdapter.magnitudes(viewModel.waveformSamples,
-                bucketedTo: RecorderWaveformAdapter.popoverBarCount))
-                .frame(height: WorkspaceStyle.waveformHeight)
-                .padding(GlassSpacing.md).background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
+            RecorderWaveformSection(telemetry: viewModel.telemetry)
             if let notice = viewModel.installNotice {
                 HStack(alignment: .top) {
                     Text(notice).font(.caption).foregroundStyle(.secondary)
@@ -47,14 +45,14 @@ struct RecorderView: View {
                     }
                 }
             }
-            if !viewModel.installLocationBlocksRecording && viewModel.permissionStatus != .granted {
+            if !viewModel.installLocationBlocksRecording && !viewModel.canRecord {
                 Text(PermissionKind.screenCapture.navigationHint).font(.caption).foregroundStyle(.secondary)
             }
             GlassPillButton(mainButtonTitle,
                 systemImage: viewModel.canRecord ? (viewModel.isRecording ? "stop.circle.fill" : "record.circle") : nil,
                 emphasis: viewModel.canRecord ? .primary : .primaryNeutral, size: .large, isFullWidth: true) {
                     if viewModel.installLocationBlocksRecording { viewModel.revealAppInFinder() }
-                    else if viewModel.permissionStatus != .granted { viewModel.openSystemSettings() }
+                    else if !viewModel.canRecord { viewModel.openSystemSettings() }
                     else { Task { await viewModel.toggleRecording() } }
                 }
                 .disabled(viewModel.isFinalizingAfterFailure || !viewModel.state.allowsCaptureSourceChange && !viewModel.isRecording)
@@ -83,7 +81,7 @@ struct RecorderView: View {
             viewModel.mainWindowDidAppear()
             OverflowMenu.openWindow = { window in
                 NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: window.rawValue)
+                AppWindow.open(window, using: openWindow, navigation: navigation)
             }
         }
         .onDisappear { viewModel.mainWindowDidDisappear() }
@@ -115,5 +113,31 @@ struct StatusBar: View {
     private var color: Color {
         if case .error = state { return .orange }
         return state == .recording ? .red : .secondary
+    }
+}
+
+struct RecorderStatusBar: View {
+    let state: RecordingState
+    let statusText: String
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        StatusBar(state: state, duration: telemetry.formattedDuration, statusText: statusText)
+    }
+}
+
+struct RecorderWaveformSection: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        GlassLiveWaveform(
+            samples: RecorderWaveformAdapter.magnitudes(
+                telemetry.waveformSamples,
+                bucketedTo: RecorderWaveformAdapter.popoverBarCount
+            )
+        )
+        .frame(height: WorkspaceStyle.waveformHeight)
+        .padding(GlassSpacing.md)
+        .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
     }
 }

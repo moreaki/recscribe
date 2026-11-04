@@ -16,6 +16,7 @@ import os
 @MainActor
 class RecorderViewModel: ObservableObject {
     let audioTest: AudioTestController?
+    let telemetry = RecorderTelemetry()
     private var audioTestObservation: AnyCancellable?
     var allowsCaptureSourceChange: Bool { state.allowsCaptureSourceChange && audioTest?.locksSources != true }
 
@@ -23,9 +24,24 @@ class RecorderViewModel: ObservableObject {
 
     /// Single source of truth for the recording lifecycle. The UI derives from this.
     @Published private(set) var state: RecordingState = .idle
-    @Published private(set) var sourceHealth: [SourceRecordingHealth] = []
-    @Published private(set) var healthTime = ProcessInfo.processInfo.systemUptime
-    @Published var duration: TimeInterval = 0
+    var sourceHealth: [SourceRecordingHealth] {
+        get { telemetry.sourceHealth }
+        set {
+            let previousInterrupted = hasInterruptedSource
+            telemetry.sourceHealth = newValue
+            if hasInterruptedSource != previousInterrupted {
+                objectWillChange.send()
+            }
+        }
+    }
+    var healthTime: TimeInterval {
+        get { telemetry.healthTime }
+        set { telemetry.healthTime = newValue }
+    }
+    var duration: TimeInterval {
+        get { telemetry.duration }
+        set { telemetry.duration = newValue }
+    }
     @Published var errorMessage: String?
     @Published var showError = false
     @Published private(set) var isFinalizingAfterFailure = false
@@ -38,7 +54,10 @@ class RecorderViewModel: ObservableObject {
     @Published var showOnboarding = false
     @Published var lastRecordingURL: URL?
     @Published var permissionStatus: PermissionStatus = .notDetermined
-    @Published var waveformSamples: [Float] = Array(repeating: 0, count: 200)
+    var waveformSamples: [Float] {
+        get { telemetry.waveformSamples }
+        set { telemetry.waveformSamples = newValue }
+    }
     /// Display name of the current save location (folder name, or "Desktop").
     @Published private(set) var saveLocationName: String = "Desktop"
     /// Whether a non-default save location is configured (controls the Reset affordance).
@@ -80,10 +99,13 @@ class RecorderViewModel: ObservableObject {
     /// a SwiftUI `if` is why the divergence went unnoticed.
     var showsSettingsShelf: Bool { allowsCaptureSourceChange }
 
-    /// Whether the app is actually in a position to record: permission granted and
+    /// Whether the currently selected capture source requires Screen Recording permission (#40).
+    var requiresScreenCapturePermission: Bool { audioSource.selectedSource.requiresScreenCapture }
+
+    /// Whether the app is actually in a position to record: required permission granted and
     /// the bundle in a location where that grant will survive. The record button is
     /// live only in this state; otherwise it carries a corrective action instead.
-    var canRecord: Bool { permissionStatus == .granted && !installLocation.blocksRecording }
+    var canRecord: Bool { (!requiresScreenCapturePermission || permissionStatus == .granted) && !installLocation.blocksRecording }
 
     /// Recording is refused outright only for a translocated bundle: the grant it
     /// needs cannot survive, so "it worked once and then stopped" is the *best*
@@ -107,7 +129,8 @@ class RecorderViewModel: ObservableObject {
     // MARK: - Private Properties
 
     private let controller: RecordingControlling
-    private let permissions: PermissionProviding
+    private let permissionCoordinator: PermissionCoordinator
+    private let installLocationMonitor: InstallLocationMonitor
     private let clock: DurationClock
     private let saveLocation: SaveLocationProviding
     /// Capture-source selection, shared with the `RecordingController` that reads it
@@ -123,41 +146,6 @@ class RecorderViewModel: ObservableObject {
     /// deinitializers are nonisolated, so teardown needs direct access to remove
     /// them without leaking observers.
     nonisolated(unsafe) private var activationObserver: NSObjectProtocol?
-    /// Whether the user has done something that asks for permission.
-    ///
-    /// The activation re-probe exists for exactly one scenario — the user granted
-    /// in System Settings and came back (BL-040) — so it fires only once they have
-    /// been sent there. Counting activations instead ("skip the first, it must be
-    /// launch") makes correctness depend on whether SwiftUI built this object
-    /// before or after the launch activation, which is not contracted: on a
-    /// background launch (`open -g`, a login item) or late scene evaluation the
-    /// swallowed activation is a real return, and the grant goes unnoticed.
-    ///
-    /// Gating on resignation instead was considered and rejected: it re-probes any
-    /// ungranted return, so launch → switch to another app → switch back prompts
-    /// with no click behind it, which is the whole bug class (BL-085). What intent
-    /// gives up is noticing a *spontaneous* grant — a near-empty set, since an app
-    /// that has never probed is not listed in System Settings to be granted.
-    private var hasSoughtPermission = false
-    /// In-flight permission probe, so overlapping callers share one result
-    /// rather than racing to write `permissionStatus`. See `checkPermission()`.
-    private var permissionProbe: Task<PermissionStatus, Never>?
-    /// Watches for a grant made in System Settings while the app runs (BL-088).
-    /// Created on first use; started only from a user's own click.
-    private var grantWatcher: PermissionGrantWatcher?
-    /// Bumped whenever an authoritative observation writes `permissionStatus`.
-    /// A probe that was issued before the bump answers an older question and is
-    /// discarded rather than applied on top of it.
-    private var permissionGeneration = 0
-    private let installLocationProvider: InstallLocationProviding
-    /// The install-location panel, created on first use for the same reason.
-    private var installNoticePanel: FloatingPanelHost?
-    /// Overrides how the install-location notice is presented.
-    ///
-    /// Exists for tests: the default presenter materialises a real `NSPanel` and
-    /// orders it on screen, which a unit test asserting "translocation blocks
-    /// recording" has no business doing. Production never passes this.
-    private let installNoticePresenter: (() -> Void)?
     /// Visible main windows, reported by the windows themselves.
     ///
     /// Deliberately *not* inferred from `NSApp.windows`: at init no window exists
@@ -165,17 +153,13 @@ class RecorderViewModel: ObservableObject {
     /// process — so "any visible non-panel window" answers `false` exactly when a
     /// window is about to appear, and `true` forever after even with every real
     /// window closed. Both answers are wrong at the moment they matter.
-    private(set) var visibleWindowCount = 0
+    var visibleWindowCount: Int { installLocationMonitor.visibleWindowCount }
     nonisolated(unsafe) private var launchNoticeObserver: NSObjectProtocol?
     /// Injected so tests get their own activation notifications. `.default` is
     /// process-global, and the suites are unserialized: one suite's synthetic
     /// `didBecomeActive` would otherwise reach every other suite's live view
     /// model, which is both a false pass and a false failure waiting to happen.
     private let notificationCenter: NotificationCenter
-    /// Clock for the registration deadline. Injected so the bounded wait is
-    /// deterministic under test — the suite has a no-sleeps rule.
-    private let pollClock: PollClock
-    private let registrationTimeout: TimeInterval
     private let defaults: UserDefaults
     private let onboardingCompletedKey = "hasCompletedOnboarding"
     private let selectedFormatKey = "selectedFormat"
@@ -198,12 +182,12 @@ class RecorderViewModel: ObservableObject {
     ) {
         self.audioTest = audioTest
         self.notificationCenter = notificationCenter
-        self.pollClock = pollClock ?? SystemPollClock()
-        self.registrationTimeout = registrationTimeout
         let resolvedInstallLocation = installLocation ?? BundleInstallLocation()
-        self.installLocationProvider = resolvedInstallLocation
         self.installLocation = resolvedInstallLocation.location
-        self.installNoticePresenter = installNoticePresenter
+        self.installLocationMonitor = InstallLocationMonitor(
+            provider: resolvedInstallLocation,
+            presenter: installNoticePresenter
+        )
         let resolvedSaveLocation = saveLocation ?? SaveLocationManager(defaults: defaults)
         self.saveLocation = resolvedSaveLocation
         // Resolved once and handed to the controller, so the menu's writes and the
@@ -214,7 +198,11 @@ class RecorderViewModel: ObservableObject {
             saveLocation: resolvedSaveLocation,
             audioSource: resolvedAudioSource
         )
-        self.permissions = permissions ?? PermissionManager()
+        self.permissionCoordinator = PermissionCoordinator(
+            permissions: permissions ?? PermissionManager(),
+            pollClock: pollClock ?? SystemPollClock(),
+            registrationTimeout: registrationTimeout
+        )
         self.clock = clock ?? SystemDurationClock()
         self.defaults = defaults
         self.showOnboarding = !defaults.bool(forKey: onboardingCompletedKey)
@@ -241,7 +229,7 @@ class RecorderViewModel: ObservableObject {
                 // permission. Launch, and any idle activation before then, stays
                 // silent — the app wanting to know its own state is never a reason
                 // to raise a system dialog (BL-085).
-                guard self.hasSoughtPermission else { return }
+                guard self.permissionCoordinator.hasSoughtPermission else { return }
                 guard self.permissionStatus != .granted else { return }
                 // A translocated bundle must never be walked into the permission
                 // flow (BL-082a): the authoritative probe raises the system prompt,
@@ -256,8 +244,10 @@ class RecorderViewModel: ObservableObject {
         // someone who has not asked for anything yet — the app wanting to know its
         // own state is not a good enough reason to interrupt. Preflight is accurate
         // at launch, which is exactly and only what is needed here.
-        permissionStatus = self.permissions.preflight()
-        audioTestObservation = audioTest?.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        permissionStatus = self.permissionCoordinator.preflight()
+        audioTestObservation = audioTest?.$state.removeDuplicates().dropFirst().sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
         // A translocated bundle is broken from the first launch, so the block state
         // is set now — but nothing is *presented* from here. At this point the view
         // model is still being constructed as a `@StateObject`, so no window exists
@@ -307,17 +297,9 @@ class RecorderViewModel: ObservableObject {
     /// has since been observed — so this guard drops any answer that a newer
     /// authoritative observation has already superseded.
     func checkPermission() async {
-        if let inFlight = permissionProbe {
-            _ = await inFlight.value
-            return
+        await permissionCoordinator.checkPermission { [weak self] status in
+            self?.permissionStatus = status
         }
-        let generation = permissionGeneration
-        let probe = Task { await permissions.checkPermission() }
-        permissionProbe = probe
-        let status = await probe.value
-        permissionProbe = nil
-        guard generation == permissionGeneration else { return }
-        permissionStatus = status
     }
 
     /// Record a grant the watcher observed directly.
@@ -332,14 +314,14 @@ class RecorderViewModel: ObservableObject {
     /// so nothing ever asked again and the app sat at "Almost ready" until
     /// relaunch: the exact failure the watcher exists to prevent.
     private func applyObservedGrant() {
-        permissionGeneration += 1
-        permissionStatus = .granted
+        permissionCoordinator.applyObservedGrant { [weak self] status in
+            self?.permissionStatus = status
+        }
     }
 
     /// Request permission
     func requestPermission() async {
-        hasSoughtPermission = true
-        let granted = await permissions.requestPermission()
+        let granted = await permissionCoordinator.requestScreenCapturePermission()
         permissionStatus = granted ? .granted : .denied
 
         if !granted {
@@ -365,8 +347,8 @@ class RecorderViewModel: ObservableObject {
             return
         }
 
-        // Check permission first; if not granted, remain in the current state.
-        if permissionStatus != .granted {
+        // Check Screen Recording permission only when the selected source captures playback (#40).
+        if audioSource.selectedSource.requiresScreenCapture && permissionStatus != .granted {
             await requestPermission()
             if permissionStatus != .granted {
                 return
@@ -488,6 +470,30 @@ class RecorderViewModel: ObservableObject {
         }
     }
 
+    /// True when at least one active source track has failed mid-recording while
+    /// other sources continue (#36).
+    var hasInterruptedSource: Bool {
+        isRecording && sourceHealth.contains(where: { $0.health.failed })
+    }
+
+    /// Concise summary of interrupted sources during an active multi-source take (#36).
+    var interruptedSourceSummary: String? {
+        guard isRecording else { return nil }
+        let failed = sourceHealth.filter { $0.health.failed }
+        guard !failed.isEmpty else { return nil }
+        let names = failed.map(\.name).joined(separator: ", ")
+        return "\(names) interrupted; unaffected sources continue recording."
+    }
+
+    /// Safely finalize the current take (preserving partial and unaffected tracks)
+    /// and immediately start a fresh take (#36).
+    func stopAndStartNewTake() async {
+        guard state == .recording else { return }
+        await stopRecording()
+        guard state == .idle else { return }
+        await startRecording()
+    }
+
     /// Reveal recording in Finder
     func revealInFinder() {
         guard let url = lastRecordingURL else { return }
@@ -530,7 +536,7 @@ class RecorderViewModel: ObservableObject {
         // Routed through `PermissionProviding` rather than calling
         // `AVCaptureDevice` here. The direct call was unmockable, so the denial
         // branch had no test — which is how BL-161 reached users.
-        await permissions.requestPermission(.microphone)
+        await permissionCoordinator.requestMicrophoneAccess()
     }
 
     /// Change the capture source (BL-111).
@@ -548,27 +554,28 @@ class RecorderViewModel: ObservableObject {
     /// Human-readable name of the current capture source, for the status line.
     /// `nil` for all-system-audio, which needs no qualifier.
     var captureSourceName: String? {
-        switch audioSource.selectedSource {
-        case .multiple(let bundle, let inputs, _):
-            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
-            return "\(playback) + \(inputs.count) inputs"
-        case .mixed(let bundle, let uid):
-            let playback = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+        let source = audioSource.selectedSource
+        switch source.kind {
+        case .multiple:
+            if source.requiresScreenCapture {
+                let playback = source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+                return "\(playback) + \(source.inputs.count) inputs"
+            }
+            return "\(source.inputs.count) inputs"
+        case .mixed:
+            let playback = source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System audio"
+            let uid = source.microphoneUID ?? ""
             let mic = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Microphone"
             return "\(playback) + \(mic)"
         case .systemAll:
             return nil
-        case .app(let bundleID):
-            // Falls back to the bundle ID only if this app has never been seen
-            // in the picker — which cannot happen for a source the user chose
-            // there, but can for a value restored from a much older build.
+        case .app:
+            guard let bundleID = source.appBundleID else { return nil }
             return audioSource.knownAppName(forBundleID: bundleID) ?? bundleID
-        case .mic(let deviceUID):
-            // Devices are enumerable at any time without a prompt, so unlike an
-            // app name this never has to fall back to a raw identifier in
-            // practice — only if the device was unplugged.
+        case .microphone:
+            let uid = source.microphoneUID ?? ""
             return audioSource.availableInputDevices()
-                .first { $0.uid == deviceUID }?.name ?? "Microphone"
+                .first { $0.uid == uid }?.name ?? "Microphone"
         }
     }
 
@@ -580,7 +587,7 @@ class RecorderViewModel: ObservableObject {
         // Set here explicitly, not as a side effect of some other call (BL-088):
         // the activation observer's re-probe is gated on this flag, and losing it
         // silently breaks the grant re-detection on returning from Settings.
-        hasSoughtPermission = true
+        permissionCoordinator.markPermissionSought()
         // The main window is the only in-app surface now (BL-088) — no panel. But
         // the grant must still be *noticed* without the user doing anything: a
         // single probe on return can race the TCC write (observed: stuck at
@@ -594,21 +601,16 @@ class RecorderViewModel: ObservableObject {
             // Now that the answer is known: if it was already granted, there is
             // nothing to send the user to Settings for.
             guard permissionStatus != .granted else { return }
-            permissions.openSystemPreferences()
+            permissionCoordinator.openSystemPreferences()
         }
     }
 
     /// Start (or resume) watching for the grant. Idempotent.
     private func startGrantWatcher() {
-        if grantWatcher == nil {
-            let watcher = PermissionGrantWatcher(permissions: permissions, clock: pollClock)
-            watcher.onGranted = { [weak self] in
-                // Mirror into the app's own state so every surface updates.
-                self?.applyObservedGrant()
-            }
-            grantWatcher = watcher
+        permissionCoordinator.startGrantWatcher { [weak self] in
+            // Mirror into the app's own state so every surface updates.
+            self?.applyObservedGrant()
         }
-        grantWatcher?.startPolling()
     }
 
     /// Wait for one authoritative probe, but not forever.
@@ -624,24 +626,8 @@ class RecorderViewModel: ObservableObject {
     /// registration is the whole point of running it, and it completes in the
     /// background either way. We simply stop waiting.
     private func awaitRegistration() async {
-        let probe = Task { await checkPermission() }
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            // Whichever finishes first wins; the loser's resume is dropped.
-            //
-            // Deliberately *not* a task group: a group waits for every child as it
-            // exits scope, so the deadline could never actually win — it would fire,
-            // and then the group would go on waiting for the probe anyway, which is
-            // the opposite of a bounded wait. Everything here is main-actor
-            // isolated, so the once-only flag needs no locking.
-            let resumer = OnceResumer(continuation)
-            Task { @MainActor in
-                await probe.value
-                resumer.resume()
-            }
-            Task { @MainActor [pollClock, registrationTimeout] in
-                try? await pollClock.sleep(for: registrationTimeout)
-                resumer.resume()
-            }
+        await permissionCoordinator.awaitRegistration { [weak self] in
+            await self?.checkPermission()
         }
     }
 
@@ -649,18 +635,14 @@ class RecorderViewModel: ObservableObject {
 
     /// A main window appeared and will render the block itself.
     func mainWindowDidAppear() {
-        visibleWindowCount += 1
-        // The window is the canonical surface. Anything the panel was saying, it
-        // now says — and saying one fact twice at once reads as two faults.
-        installNoticePanel?.dismiss()
+        installLocationMonitor.mainWindowDidAppear()
     }
 
     /// A main window went away. If that was the last one and the app is blocked,
     /// nothing on screen carries the block any more — which for a menu-bar app
     /// means a silently dead app. That is the panel's remaining job.
     func mainWindowDidDisappear() {
-        visibleWindowCount = max(0, visibleWindowCount - 1)
-        if installLocation.blocksRecording && visibleWindowCount == 0 {
+        installLocationMonitor.mainWindowDidDisappear {
             showInstallLocationNotice()
         }
     }
@@ -675,38 +657,12 @@ class RecorderViewModel: ObservableObject {
     func showInstallLocationNotice() {
         guard let message = installNotice else { return }
         showsInstallLocationNotice = true
-
-        // The window check comes first, ahead of the test seam, so the seam models
-        // *panel presentation* rather than "this method was called" — otherwise a
-        // test can't tell the suppressed case from the presented one.
-        if visibleWindowCount > 0 {
-            // A window is already showing this; `orderOut` deliberately leaves
-            // `showsInstallLocationNotice` true — the block state persists, only
-            // the duplicate surface goes away. (`orderOut` does not fire
-            // `windowWillClose`, so `onWillClose` won't clear it either.)
-            installNoticePanel?.dismiss()
-            return
-        }
-
-        if let installNoticePresenter {
-            installNoticePresenter()
-            return
-        }
-
-        if installNoticePanel == nil {
-            let panel = FloatingPanelHost(title: "RecScribe", width: 340) { [weak self] in
-                AnyView(
-                    InstallLocationNoticeView(
-                        message: message,
-                        onReveal: { self?.revealAppInFinder() },
-                        onDismiss: { self?.dismissInstallLocationNotice() }
-                    )
-                )
-            }
-            panel.onWillClose = { [weak self] in self?.showsInstallLocationNotice = false }
-            installNoticePanel = panel
-        }
-        installNoticePanel?.show()
+        installLocationMonitor.showNotice(
+            message: message,
+            onReveal: { [weak self] in self?.revealAppInFinder() },
+            onDismiss: { [weak self] in self?.dismissInstallLocationNotice() },
+            onPanelWillClose: { [weak self] in self?.showsInstallLocationNotice = false }
+        )
     }
 
     /// Dismiss the notice. A soft note stays dismissed; the hard block will come
@@ -716,19 +672,19 @@ class RecorderViewModel: ObservableObject {
         if installLocation.noticeIsDismissible {
             installNoticeDismissed = true
         }
-        installNoticePanel?.dismiss()
+        installLocationMonitor.dismissPanel()
     }
 
     /// Reveal the app bundle itself in Finder. The translocated path is randomised
     /// and unguessable, so this is the only practical way for the user to get hold
     /// of the bundle they've been asked to drag.
     func revealAppInFinder() {
-        NSWorkspace.shared.activateFileViewerSelecting([installLocationProvider.bundleURL])
+        installLocationMonitor.revealAppInFinder()
     }
 
     /// Whether the guide panel is currently on screen.
     /// Whether the grant watcher's poll is currently running (BL-088 test seam).
-    var grantWatcherIsPolling: Bool { grantWatcher?.isPolling ?? false }
+    var grantWatcherIsPolling: Bool { permissionCoordinator.isPolling }
 
     /// Present the folder chooser; persist the picked directory.
     func chooseSaveLocation() {
@@ -837,13 +793,19 @@ class RecorderViewModel: ObservableObject {
     }
 
     var captureSourceHint: String {
-        if case .multiple = audioSource.selectedSource { return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically." }
-        if audioSource.selectedSource.isMixed { return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture." }
-        if case .systemAll = audioSource.selectedSource {
+        let source = audioSource.selectedSource
+        switch source.kind {
+        case .multiple:
+            return "System or selected-app playback plus the selected inputs. Each device has a separate source track and contributes to the derived mix. New devices are never added automatically."
+        case .mixed:
+            return "Playback + selected input · separate source tracks and a stereo mix. Use headphones to avoid speaker recapture."
+        case .systemAll:
             return "System playback only · microphone excluded"
+        case .app:
+            return "Selected app playback only · microphone excluded"
+        case .microphone:
+            return "Selected input only · system playback excluded"
         }
-        if case .app = audioSource.selectedSource { return "Selected app playback only · microphone excluded" }
-        return "Selected input only · system playback excluded"
     }
 
     /// Stop duration timer
@@ -869,7 +831,7 @@ class RecorderViewModel: ObservableObject {
             // Straight to the Microphone pane. The screen-capture flow's
             // registering probe and grant watcher do not apply here: mic access
             // is re-promptable and its status is live rather than latched.
-            permissions.openSystemPreferences(for: .microphone)
+            permissionCoordinator.openSystemPreferences(for: .microphone)
         case .tryAgain:
             Task { await startRecording() }
         case .chooseFolder:
@@ -904,9 +866,7 @@ class RecorderViewModel: ObservableObject {
 
     /// Formatted duration string (MM:SS)
     var formattedDuration: String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        telemetry.formattedDuration
     }
 
     /// Status text.
@@ -937,29 +897,14 @@ class RecorderViewModel: ObservableObject {
             // A translocated bundle can't hold a permission grant, so "Almost
             // ready / grant permission" would be a lie — point at the real fix.
             if installLocation.blocksRecording { return "Move to Applications" }
-            guard permissionStatus == .granted else { return "Almost ready" }
+            if audioSource.selectedSource.requiresScreenCapture {
+                guard permissionStatus == .granted else { return "Almost ready" }
+            }
             // Naming the source here also pre-announces the failure that
             // `AudioSourceManager.validate()` would otherwise only raise *after*
             // the user commits to a click.
             if let name = captureSourceName { return "Ready to record \(name)" }
             return "Play something, then hit record"
         }
-    }
-}
-
-
-/// Resumes a continuation exactly once, whichever racer gets there first.
-/// Main-actor isolated, so "exactly once" needs no synchronisation.
-@MainActor
-private final class OnceResumer {
-    private var continuation: CheckedContinuation<Void, Never>?
-
-    init(_ continuation: CheckedContinuation<Void, Never>) {
-        self.continuation = continuation
-    }
-
-    func resume() {
-        continuation?.resume()
-        continuation = nil
     }
 }

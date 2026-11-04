@@ -50,9 +50,9 @@ final class AudioRecorder: AudioFileWriting {
     private var gainSource: AudioSource?
     nonisolated(unsafe) private var gain: SingleSourceGain? // encoding queue only
     nonisolated(unsafe) private var levelProvider: (@Sendable () -> RecordingLevels)? // configured before admission
-    func configureLevels(source: AudioSource, levels: AudioLevels) {
+    func configureLevels(source: AudioSource, levels: AudioLevels, monitor: CapturedAudioMonitor? = nil) {
         guard !recording else { return }
-        monitor = .shared
+        self.monitor = monitor
         gainSource = source
         levelProvider = { levels.snapshot(for: source) }
     }

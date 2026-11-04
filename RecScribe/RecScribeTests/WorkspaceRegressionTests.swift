@@ -11,21 +11,15 @@ struct WorkspaceRegressionTests {
         let suite = "recscribe-startup-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
-        let oldSelect = OverflowMenu.onSelectSource
-        let oldPermission = OverflowMenu.onRequestPermission
-        let oldMenu = OverflowMenu.makeConfiguredMenu
-        let oldRecovery = OverflowMenu.onRecoverRecordings
         let oldAppearance = NSApp.appearance
         defer {
             defaults.removePersistentDomain(forName: suite)
-            OverflowMenu.onSelectSource = oldSelect
-            OverflowMenu.onRequestPermission = oldPermission
-            OverflowMenu.makeConfiguredMenu = oldMenu
-            OverflowMenu.onRecoverRecordings = oldRecovery
             NSApp.appearance = oldAppearance
         }
         let services = AppServices(defaults: defaults, supportDirectory: root)
         let delegate = AppDelegate(services: services)
+        #expect(services.recorder.audio === services.audio)
+        #expect(services.recorder.audioTest?.playback.levels === services.audio.playbackLevels)
         #expect(services.menuBarController == nil)
         #expect(services.recorder.visibleWindowCount == 0)
         let launch = Notification(name: NSApplication.willFinishLaunchingNotification)
@@ -52,10 +46,8 @@ struct WorkspaceRegressionTests {
     @Test func repeatedQuitWaitsForCleanupAndRepliesOnlyOnce() async throws {
         let suite = "recscribe-quit-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
-        let oldRecovery = OverflowMenu.onRecoverRecordings
         defer {
             defaults.removePersistentDomain(forName: suite)
-            OverflowMenu.onRecoverRecordings = oldRecovery
         }
         let services = AppServices(defaults: defaults,
             supportDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(suite))

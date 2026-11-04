@@ -111,35 +111,33 @@ indirect enum OverflowEntry {
 }
 
 @MainActor
-enum OverflowMenu {
-    static func openWindow(_ destination: AppWindow) {
-        AppWindow.openFromMenu(destination)
-    }
+struct OverflowMenu {
+    let onSelectSource: @MainActor (AudioSource) -> Void
+    let onRequestPermission: @MainActor () -> Void
+    let onRecoverRecordings: @MainActor () -> Void
+    let openWindow: @MainActor (AppWindow) -> Void
 
-    /// Writes the user's capture-source choice. Set once at startup by
-    /// `MenuBarController`. The single write path — checkmarks are derived from
-    /// the selection, so nothing else may set it.
-    static var onSelectSource: @MainActor (AudioSource) -> Void = { _ in }
+    init(onSelectSource: @escaping @MainActor (AudioSource) -> Void = { _ in },
+         onRequestPermission: @escaping @MainActor () -> Void = {},
+         onRecoverRecordings: @escaping @MainActor () -> Void = {},
+         openWindow: @escaping @MainActor (AppWindow) -> Void = AppWindow.openFromMenu) {
+        self.onSelectSource = onSelectSource
+        self.onRequestPermission = onRequestPermission
+        self.onRecoverRecordings = onRecoverRecordings
+        self.openWindow = openWindow
+    }
 
     /// Stable identifier stamped onto the Per-App submenu row, so the controller
     /// can attach its delegate without matching on the row's title (which now
     /// changes to reflect the selection).
     static let perAppItemIdentifier = "sourcePerApp"
 
-    /// Builds the fully-configured menu — current context, submenu delegate and
-    /// all. Set once at startup by `MenuBarController`, which owns the app-list
-    /// cache the delegate fills.
-    ///
-    /// Both surfaces call this, so "the popover menu matches the right-click
-    /// menu" stops being a property to test and becomes the same object.
-    static var makeConfiguredMenu: @MainActor () -> NSMenu = { makeNSMenu() }
-
     /// The menu's contents for `context`, in display order.
     ///
     /// A pure function of the snapshot: same context in, same rows out, no I/O.
     /// That is what lets the whole menu — including sections BL-130 and BL-131
     /// will add — be tested without AppKit, a live status item, or permission.
-    static func entries(_ context: OverflowContext) -> [OverflowEntry] {
+    func entries(_ context: OverflowContext) -> [OverflowEntry] {
         captureSourceEntries(context) + appActionEntries(context)
     }
 
@@ -151,7 +149,7 @@ enum OverflowMenu {
     /// rules for locked settings would be worse than either rule. The user's
     /// question — "why is this grey?" — never arises, and the state stays legible
     /// where it belongs: a red menu-bar icon and a source-aware status line.
-    static func captureSourceEntries(_ context: OverflowContext) -> [OverflowEntry] {
+    func captureSourceEntries(_ context: OverflowContext) -> [OverflowEntry] {
         guard context.allowsCaptureSourceChange else { return [] }
 
         return [
@@ -179,7 +177,7 @@ enum OverflowMenu {
         ]
     }
 
-    static func mixedSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
+    func mixedSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
         let selected = context.selectedSource
         let bundle = selected.appBundleID
         let playback = bundle.map { context.selectedAppName ?? $0 } ?? "System audio"
@@ -208,7 +206,7 @@ enum OverflowMenu {
     /// access still undetermined. Only capturing prompts. Do not copy the
     /// Per-App gate here — its rationale does not apply, and a pasted-in reason
     /// rots into a mystery.
-    static func microphoneSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
+    func microphoneSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
         let selectedUID: String? = context.selectedSource.kind == .microphone
             ? context.selectedSource.microphoneUID
             : nil
@@ -265,7 +263,7 @@ enum OverflowMenu {
     /// One root row for the whole per-app *kind*, whose title carries the current
     /// choice. Runtime-enumerated contents always live behind a submenu, so
     /// launching an app can never reshape the menu the user is looking at.
-    static func perAppSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
+    func perAppSubmenu(_ context: OverflowContext) -> OverflowSubmenu {
         let selectedBundleID: String? = context.selectedSource.kind == .app
             ? context.selectedSource.appBundleID
             : nil
@@ -278,7 +276,7 @@ enum OverflowMenu {
         )
     }
 
-    private static func selectedAppTitle(
+    private func selectedAppTitle(
         _ context: OverflowContext,
         selectedBundleID: String?
     ) -> String {
@@ -292,7 +290,7 @@ enum OverflowMenu {
         return context.selectedAppName ?? selectedBundleID
     }
 
-    private static func perAppEntries(
+    private func perAppEntries(
         _ context: OverflowContext,
         selectedBundleID: String?
     ) -> [OverflowEntry] {
@@ -351,15 +349,11 @@ enum OverflowMenu {
         return entries
     }
 
-    /// Opens System Settings at the Screen Recording pane. Set by
-    /// `MenuBarController`, which has the view model that owns the navigation.
-    static var onRequestPermission: @MainActor () -> Void = {}
-
     /// The app-level actions — always present.
     ///
     /// Takes the context only for the update row's enabled state. Everything else
     /// here is context-free and stays that way.
-    static func appActionEntries(_ context: OverflowContext) -> [OverflowEntry] {
+    func appActionEntries(_ context: OverflowContext) -> [OverflowEntry] {
         [
             .action(OverflowAction(id: "showWindow", title: "Show Window", perform: showMainWindow)),
             .action(OverflowAction(id: "recordings", title: AppWindow.recordings.title) { openWindow(.recordings) }),
@@ -388,11 +382,11 @@ enum OverflowMenu {
     /// Recursing matters: the mid-recording lock and one-checkmark invariants are
     /// asserted over this, and a per-app row that stayed clickable would hide
     /// inside a submenu where a top-level-only walk could never see it.
-    static func actions(_ context: OverflowContext = OverflowContext()) -> [OverflowAction] {
+    func actions(_ context: OverflowContext = OverflowContext()) -> [OverflowAction] {
         flatten(entries(context))
     }
 
-    private static func flatten(_ entries: [OverflowEntry]) -> [OverflowAction] {
+    private func flatten(_ entries: [OverflowEntry]) -> [OverflowAction] {
         entries.flatMap { entry -> [OverflowAction] in
             switch entry {
             case .action(let action):
@@ -418,22 +412,20 @@ enum OverflowMenu {
 
     // MARK: - Action implementations
 
-    private static func showMainWindow() {
+    private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
         openWindow(.studio)
     }
 
     /// Enqueues any unfinalized `.recscribe.json` sessions in the active save
     /// folder for session recovery before opening the Recordings window.
-    static var onRecoverRecordings: @MainActor () -> Void = {}
-
-    private static func showRecovery() {
+    private func showRecovery() {
         NSApp.activate(ignoringOtherApps: true)
         onRecoverRecordings()
         openWindow(.recordings)
     }
 
-    private static func showAbout() {
+    private func showAbout() {
         // Activate first: as a menu-bar app RecScribe is often not frontmost, and
         // the panel would otherwise open behind whatever the user is working in.
         NSApp.activate(ignoringOtherApps: true)
@@ -469,9 +461,9 @@ extension OverflowMenu {
     /// now call this. They used to render the same list twice, once as `NSMenu`
     /// and once as a SwiftUI `Menu`, and parity between them was an assertion.
     /// It is now an identity.
-    static func makeNSMenu(_ context: OverflowContext = OverflowContext()) -> NSMenu {
+    func makeNSMenu(_ context: OverflowContext = OverflowContext()) -> NSMenu {
         let menu = NSMenu()
-        populate(menu, with: entries(context))
+        Self.populate(menu, with: entries(context))
         return menu
     }
 
@@ -547,13 +539,18 @@ extension OverflowMenu {
 /// `SCShareableContent` on *popover appearance*: a zero-click permission dialog,
 /// the exact bug class BL-085 removed. A plain `Button` that builds the menu in
 /// its action keeps enumeration behind a real click.
+extension EnvironmentValues {
+    @Entry var makeOverflowMenu: @MainActor () -> NSMenu = { OverflowMenu().makeNSMenu() }
+}
+
 struct OverflowMenuButton: View {
+    @Environment(\.makeOverflowMenu) private var makeMenu
 
     var body: some View {
         Button {
             // Built in the action, never in the view body: that timing is the
             // whole point of this type.
-            let menu = OverflowMenu.makeConfiguredMenu()
+            let menu = makeMenu()
             // Screen coordinates: passing `in: nil` avoids needing a host view,
             // which SwiftUI does not hand out.
             menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)

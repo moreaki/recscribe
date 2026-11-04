@@ -3,6 +3,31 @@ import Combine
 import Foundation
 import os
 
+/// One app-owned graph for capture gain, monitoring and every playback surface.
+@MainActor
+final class AudioServices {
+    let levels: AudioLevels
+    let monitor: CapturedAudioMonitor
+    let playbackLevels: PlaybackLevels
+    private let playbackCoordinator = SessionPlaybackCoordinator()
+
+    init(defaults: UserDefaults = .standard) {
+        levels = AudioLevels(defaults: defaults)
+        monitor = CapturedAudioMonitor(defaults: defaults)
+        playbackLevels = PlaybackLevels(defaults: defaults)
+    }
+
+    func makePlayback(build: ((SessionEntry) async throws -> AVPlayerItem)? = nil,
+                      activate: ((AVPlayer) -> Void)? = nil) -> SessionPlayback {
+        SessionPlayback(build: build, activate: activate, levels: playbackLevels, coordinator: playbackCoordinator)
+    }
+
+    func shutdown() async {
+        playbackCoordinator.stop()
+        await monitor.stopAndWait()
+    }
+}
+
 /// Software levels, independent of macOS device volume. Channel trims are dB.
 nonisolated struct SourceLevel: Codable, Equatable, Sendable {
     var decibels: Double = 0
@@ -40,7 +65,6 @@ nonisolated extension AudioSource {
 
 @MainActor
 final class AudioLevels: ObservableObject {
-    static let shared = AudioLevels()
     nonisolated private let storage = OSAllocatedUnfairLock(initialState: [String: SourceLevel]())
     private let defaults: UserDefaults
     @Published private(set) var revision = 0

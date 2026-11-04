@@ -223,7 +223,7 @@ struct CombinedSourceMenuTests {
         let source = AudioSource.mixed(appBundleID: "test.browser", deviceUID: "test.input")
         let context = OverflowContext(selectedSource: source, selectedAppName: "Test browser",
             inputDevices: [.init(uid: "test.input", name: "Test input")])
-        let roots = OverflowMenu.captureSourceEntries(context)
+        let roots = OverflowMenu().captureSourceEntries(context)
         let checked = roots.filter {
             switch $0 {
             case .action(let action): action.isChecked
@@ -233,9 +233,9 @@ struct CombinedSourceMenuTests {
         }
         #expect(checked.count == 1)
         #expect(source.kind == .mixed)
-        let submenu = OverflowMenu.mixedSubmenu(context)
+        let submenu = OverflowMenu().mixedSubmenu(context)
         #expect(submenu.isChecked)
         #expect(submenu.entries.contains { if case .action(let action) = $0 { action.isChecked && action.title.contains("Test browser") } else { false } })
-        #expect(OverflowMenu.captureSourceEntries(.init(selectedSource: source, allowsCaptureSourceChange: false)).isEmpty)
+        #expect(OverflowMenu().captureSourceEntries(.init(selectedSource: source, allowsCaptureSourceChange: false)).isEmpty)
     }
 }

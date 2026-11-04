@@ -17,32 +17,21 @@ class MenuBarController: NSObject {
     private var cancellable: AnyCancellable?
     /// Held so the overflow menu can be rebuilt from live state on every open.
     private let viewModel: RecorderViewModel
+    private let actions: OverflowMenu
     /// Warmed only by a deliberate Per-App submenu open — never at launch.
     private let appListCache = PerAppListCache()
     /// Retained for the lifetime of the controller: `NSMenu.delegate` is weak.
     private var perAppDelegate: PerAppMenuDelegate?
-    init(viewModel: RecorderViewModel, live: LiveTranscription? = nil) {
+    init(viewModel: RecorderViewModel, live: LiveTranscription? = nil, actions: OverflowMenu) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.viewModel = viewModel
+        self.actions = actions
         super.init()
-
-        // The single write path for the capture source. Checkmarks are derived
-        // from the selection at build time, so nothing else may set it.
-        OverflowMenu.onSelectSource = { [weak viewModel] source in
-            viewModel?.setCaptureSource(source)
-        }
-        OverflowMenu.onRequestPermission = { [weak viewModel] in
-            viewModel?.openSystemSettings()
-        }
-        // One factory for both surfaces — the popover's "•••" and the status
-        // item's right-click render the identical menu, delegate included.
-        OverflowMenu.makeConfiguredMenu = { [weak self] in
-            self?.makeOverflowMenu() ?? OverflowMenu.makeNSMenu()
-        }
 
         // Configure popover
         let popoverView = MenuBarPopoverView(live: live)
             .environmentObject(viewModel)
+            .environment(\.makeOverflowMenu, { [weak self] in self?.makeOverflowMenu() ?? actions.makeNSMenu() })
         popover.contentViewController = NSHostingController(rootView: popoverView)
         popover.contentSize = NSSize(width: WorkspaceStyle.popoverWidth, height: WorkspaceStyle.previewHeight)
         popover.behavior = .transient
@@ -144,13 +133,14 @@ class MenuBarController: NSObject {
 
     /// Build the menu for right now, and attach the delegate that fills the
     /// Per-App submenu lazily when (and only when) it is opened.
-    private func makeOverflowMenu() -> NSMenu {
+    func makeOverflowMenu() -> NSMenu {
         let context = currentContext()
-        let menu = OverflowMenu.makeNSMenu(context)
+        let menu = actions.makeNSMenu(context)
 
         let delegate = PerAppMenuDelegate(
             cache: appListCache,
             source: viewModel.audioSource,
+            actions: actions,
             makeContext: { [weak self] in self?.currentContext() ?? OverflowContext() }
         )
         // Retained here because `NSMenu.delegate` is weak.

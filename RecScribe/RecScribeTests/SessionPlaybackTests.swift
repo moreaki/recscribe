@@ -4,6 +4,25 @@ import Testing
 
 @MainActor
 struct SessionPlaybackTests {
+    @Test func appOwnedPlayersShareOutputAndPreemptAcrossSurfaces() async throws {
+        let suite = "recscribe-playback-graph-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let audio = AudioServices(defaults: defaults)
+        let first = audio.makePlayback(build: { _ in AVPlayerItem(asset: AVMutableComposition()) }, activate: { $0.pause() })
+        let second = audio.makePlayback(build: { _ in AVPlayerItem(asset: AVMutableComposition()) }, activate: { $0.pause() })
+        first.play(entry())
+        await waitUntil("first app-owned player") { first.player != nil }
+        audio.playbackLevels.set(.init(volume: 0.25, muted: true))
+        #expect(first.levels === second.levels)
+        #expect(second.levels.value.muted)
+        second.play(entry())
+        #expect(first.player == nil)
+        await waitUntil("second app-owned player") { second.player != nil }
+        await audio.shutdown()
+        #expect(second.player == nil)
+        #expect(!audio.monitor.enabled)
+    }
     @MainActor final class Loader {
         var pending: [UUID: CheckedContinuation<AVPlayerItem, any Error>] = [:]
         func load(_ entry: SessionEntry) async throws -> AVPlayerItem {

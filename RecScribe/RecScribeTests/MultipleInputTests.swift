@@ -65,7 +65,7 @@ struct MultipleInputTests {
         await #expect(throws: SessionError.self) { try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")])) }
         try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")], allowDuplicateRoutes: true))
         let source = AudioSource.multiple(appBundleID: nil, inputs: [.init(deviceUID: "physical")])
-        let actions = OverflowMenu.actions(OverflowContext(selectedSource: source))
+        let actions = OverflowMenu().actions(OverflowContext(selectedSource: source))
         #expect(actions.filter { $0.isSourceRow && $0.isChecked }.map(\.id) == ["sourceMultiple"])
         #expect(!AudioSource.multiple(appBundleID: nil, inputs: []).requiresMicrophone)
     }

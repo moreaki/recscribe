@@ -738,7 +738,7 @@ struct AudioCapableFilterTests {
             audioSource: provider,
             levels: AudioLevels(defaults: UserDefaults(suiteName: "custom-route-\(UUID())")!)
         )
-        let audio = try await controller.startRecording(format: .wav)
+        let audio = try await controller.startRecording()
         #expect(capture.setupCount == 1)
         #expect(capture.lastSource == customInputsOnly)
         let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds

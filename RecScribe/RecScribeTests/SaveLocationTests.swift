@@ -128,7 +128,7 @@ struct SaveLocationTests {
             saveLocation: MockSaveLocationProviding(directory: dir),
             audioSource: MockAudioSourceProviding()
         )
-        let url = controller.generateFilePath(format: .wav)
+        let url = controller.generateFilePath()
         #expect(url.deletingLastPathComponent().path == dir.path)
         #expect(url.lastPathComponent.hasPrefix("recording_"))
         #expect(url.pathExtension == "wav")
@@ -146,9 +146,9 @@ struct SaveLocationTests {
             audioSource: MockAudioSourceProviding()
         )
 
-        let first = controller.generateFilePath(format: .wav)
+        let first = controller.generateFilePath()
         try Data().write(to: first)               // occupy that name
-        let second = controller.generateFilePath(format: .wav)
+        let second = controller.generateFilePath()
 
         #expect(second.path != first.path)
         #expect(FileManager.default.fileExists(atPath: second.path) == false)

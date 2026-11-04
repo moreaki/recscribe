@@ -658,7 +658,6 @@ struct RecordingSessionTests {
                 _ = recorder.canRecord
                 _ = recorder.showsSettingsShelf
                 _ = recorder.saveLocationName
-                _ = recorder.selectedFormat
                 _ = recorder.permissionStatus
             } onChange: { viewModelInvalidations.withLock { $0 += 1 } }
             withObservationTracking { _ = recorder.telemetry.duration } onChange: { telemetryInvalidations.withLock { $0 += 1 } }

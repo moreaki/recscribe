@@ -6,10 +6,8 @@ import Observation
     let saveLocation: SaveLocationProviding
     private let defaults: UserDefaults
     private let onboardingCompletedKey = "hasCompletedOnboarding"
-    private let selectedFormatKey = "selectedFormat"
     private(set) var saveLocationName = "Desktop"
     private(set) var hasCustomSaveLocation = false
-    private(set) var selectedFormat: AudioFormat
     var showOnboarding: Bool
     var saveLocationPath: String { saveLocation.resolvedDirectory.path }
 
@@ -17,7 +15,6 @@ import Observation
         self.saveLocation = saveLocation
         self.defaults = defaults
         showOnboarding = !defaults.bool(forKey: onboardingCompletedKey)
-        selectedFormat = Self.loadFormat(from: defaults, key: selectedFormatKey)
         refreshSaveLocationDisplay()
     }
     func chooseSaveLocation() {
@@ -42,12 +39,6 @@ import Observation
         refreshSaveLocationDisplay()
     }
 
-    func setFormat(_ format: AudioFormat) {
-        guard AudioFormat.available.contains(format) else { return }
-        selectedFormat = format
-        defaults.set(format.rawValue, forKey: selectedFormatKey)
-    }
-
     func completeOnboarding() {
         defaults.set(true, forKey: onboardingCompletedKey)
         showOnboarding = false
@@ -56,17 +47,6 @@ import Observation
     private func refreshSaveLocationDisplay() {
         saveLocationName = saveLocation.configuredDirectory?.lastPathComponent ?? "Desktop"
         hasCustomSaveLocation = saveLocation.configuredDirectory != nil
-    }
-
-    private static func loadFormat(from defaults: UserDefaults, key: String) -> AudioFormat {
-        guard
-            let raw = defaults.string(forKey: key),
-            let format = AudioFormat(rawValue: raw),
-            AudioFormat.available.contains(format)
-        else {
-            return .wav
-        }
-        return format
     }
 }
 

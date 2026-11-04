@@ -45,7 +45,6 @@ extension RecorderViewModel {
     var saveLocationName: String { preferences.saveLocationName }
     var hasCustomSaveLocation: Bool { preferences.hasCustomSaveLocation }
     var saveLocationPath: String { preferences.saveLocationPath }
-    var selectedFormat: AudioFormat { preferences.selectedFormat }
     var permissionStatus: PermissionStatus {
         get { permissionCoordinator.permissionStatus }
         set { permissionCoordinator.permissionStatus = newValue }
@@ -85,7 +84,6 @@ extension RecorderViewModel {
     func revealAppInFinder() { installLocationMonitor.revealAppInFinder() }
     func chooseSaveLocation() { preferences.chooseSaveLocation() }
     func resetSaveLocation() { preferences.resetSaveLocation() }
-    func setFormat(_ format: AudioFormat) { preferences.setFormat(format) }
     func completeOnboarding() { preferences.completeOnboarding() }
     func showOnboardingAgain() { preferences.showOnboarding = true }
     func presentError(_ message: String, recovery: RecoverySuggestion?) {

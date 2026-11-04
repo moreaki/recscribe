@@ -57,7 +57,7 @@ struct RecordingInterruptionTests {
             let error = NSError(domain: "SyntheticCapture", code: 1)
             if failure == "setup" { capture.setupError = error }
             do {
-                _ = try await recorder.startRecording(format: .wav)
+                _ = try await recorder.startRecording()
                 #expect(activity.active)
                 writer.onStop = { #expect(activity.active) } // Released after draining/finalizing.
                 if failure == "stop" { capture.stopError = error }
@@ -78,7 +78,7 @@ struct RecordingInterruptionTests {
         let writer = MockAudioFileWriting()
         capture.onStart = { probe.center.post(name: NSWorkspace.willSleepNotification, object: nil) }
         let recorder = controller(activity, capture: capture, writer: writer)
-        await #expect(throws: ScreenCaptureAudioError.self) { try await recorder.startRecording(format: .wav) }
+        await #expect(throws: ScreenCaptureAudioError.self) { try await recorder.startRecording() }
         #expect(writer.stopCount == 1)
         #expect(capture.cleanupCount == 1)
         #expect(recorder.recordingURL == nil)

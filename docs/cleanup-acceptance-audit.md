@@ -1,9 +1,11 @@
 # Cleanup acceptance audit (#46)
 
 Audit basis: `0cf7164` (merged #65), plus playback/acceptance implementation
-`049ea7b` on `codex/playback-acceptance`. This records implementation evidence against the full
+`049ea7b` (playback) and the final WAV capture API cleanup. This records implementation evidence against the full
 ticket scopes, including the original acceptance lists. A closed issue or a test
-count alone is not acceptance evidence. Merge/check results are recorded separately
+count alone is not acceptance evidence. The final audit identified the dormant
+format API as an additional #38 gap after the playback follow-up; it is addressed
+by the accompanying cleanup rather than waived. Merge/check results are recorded separately
 below; this working audit does not close #13 or #46.
 
 ## Scope decisions retained
@@ -35,7 +37,7 @@ below; this working audit does not close #13 or #46.
 
 | Requirement | Current implementation and verification |
 | --- | --- |
-| Remove unused live M4A/FLAC encoders and skipped encoder suites | Only WAV live capture remains. `WAVWriter` owns the encoder protocol; the two encoder implementations/tests and CI skip flags are absent. The umbrella deliberately retains the active WAV-only `AudioFormat` guard and its tests; #38's older request to delete that type entirely is superseded by this narrower Stage-1 contract. |
+| Remove unused live M4A/FLAC encoders and skipped encoder suites | Only WAV live capture remains. Dormant `selectedFormat`/`setFormat` preferences/presentation state and the ignored `RecordingControlling.startRecording(format:)` argument are removed. Capture paths have no format-choice parameter. `WAVWriter` owns the encoder protocol; the two encoder implementations/tests and CI skip flags are absent. `RecordingControllerTests.obsoleteFormatPreferenceDoesNotAffectTheRealCaptureWriter` passes synthetic PCM through the real view-model/controller/WAV writer with old WAV/M4A/FLAC/invalid preference values and verifies the WAV header, frame count and independent FLAC archive policy. Obsolete preference-only mock tests are replaced, not counted as current coverage. The umbrella deliberately retains the active WAV-only `AudioFormat` guard and its encoder tests; #38's older request to delete that type entirely is superseded by this narrower Stage-1 contract. |
 | Direct recovery workflow; active sessions protected (#38) | `AppServices` routes the recovery menu to `SessionLibrary.recoverUnfinalizedSessions`, then Recordings. `RecordingLibraryView` flags unfinished sessions and now exposes **Recover session** directly. Capture/live work hides the action; worker/lease and queue gates protect in-progress files. `RecordingSessionTests.libraryRecoversUnfinalizedSessionsInDirectory`, `libraryRecoveryRespectsActiveCaptureAndScanErrors`, `recovery`, and `OverflowMenuTests` cover processing/menu contracts. |
 | Recovery I/O off MainActor; failures visible | `ManifestRepository` is an actor, performs bounded reads and checks cancellation. `SessionLibrary` injects its reader, rejects stale refresh generations, reports `readFailures` and rechecks capture gates before scheduling recovery. `FeatureLifecycleTests.manifestReadFailureIsVisibleAndCancellationIsOwned` and the recovery tests exercise failure/cancellation. No legacy recovery window/scanner remains. |
 | Archive support survives encoder removal | `SessionProcessing.archive` retains finalized verified WAV/FLAC/Opus/M4A archives. `RecordingSessionTests.archive` covers the optional real encoder when installed; cancellation/failure tests retain original parts and refuse premature completion. An unavailable optional encoder is a skip, not an executed export. |

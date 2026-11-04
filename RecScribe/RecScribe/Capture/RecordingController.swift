@@ -105,11 +105,11 @@ class RecordingController: RecordingControlling {
 
     // MARK: - Public Methods
 
-    /// Start recording system audio in the given output `format` (BL-015).
+    /// Start lossless WAV capture; archive conversion is a separate post-recording operation.
     /// - Returns: URL where the recording is being saved
     /// - Throws: Error if recording cannot start
     @MainActor
-    func startRecording(format: AudioFormat) async throws -> URL {
+    func startRecording() async throws -> URL {
         guard !starting, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
         stopReviewMessage = nil
         starting = true
@@ -127,8 +127,8 @@ class RecordingController: RecordingControlling {
         else if let bundle = source.appBundleID { activeSourceName = audioSource.knownAppName(forBundleID: bundle) ?? bundle }
         else { activeSourceName = "System playback" }
 
-        // Generate file path (extension follows the chosen format).
-        let fileURL = generateFilePath(format: .wav)
+        // Live capture always writes canonical WAV, regardless of archive preferences.
+        let fileURL = generateFilePath()
 
         // Refuse to start a doomed recording on a near-full disk.
         if let available = DiskSpace.availableBytes(at: fileURL),
@@ -139,7 +139,7 @@ class RecordingController: RecordingControlling {
         // Wire waveform callback
         audioRecorder.onWaveformData = onWaveformData
 
-        // Start audio recorder first (creates the file in the chosen format).
+        // Mark activity before opening the WAV writer and configuring capture.
         activity.start()
         if source.isMixed {
             let bundle = source.appBundleID
@@ -330,17 +330,17 @@ class RecordingController: RecordingControlling {
     // MARK: - File path
 
     /// Generate a unique file path in the resolved save directory, with the
-    /// extension for `format` (BL-015). `internal` for unit testing. The directory
+    /// WAV extension. `internal` for unit testing. The directory
     /// comes from `SaveLocationProviding`, which always resolves to a writable
     /// folder (falling back to the Desktop).
-    func generateFilePath(format: AudioFormat) -> URL {
+    func generateFilePath() -> URL {
         let directory = saveLocation.resolvedDirectory
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = formatter.string(from: Date())
         let base = "recording_\(timestamp)"
-        let ext = format.fileExtension
+        let ext = AudioFormat.wav.fileExtension
 
         // Avoid clobbering an existing file (timestamps are second-granular).
         var candidate = directory.appendingPathComponent("\(base).\(ext)")
@@ -382,7 +382,7 @@ protocol RecordingControlling: AnyObject {
     var sourceHealth: [SourceRecordingHealth] { get }
     var stopReviewMessage: String? { get }
     var recordingURL: URL? { get }
-    func startRecording(format: AudioFormat) async throws -> URL
+    func startRecording() async throws -> URL
     func stopRecording() async throws
     func finalizeAfterFailure() async
 }

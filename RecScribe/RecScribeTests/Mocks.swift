@@ -44,6 +44,7 @@ final class MockAudioCapturing: AudioCapturing {
         self.sampleCallback = sampleCallback
     }
     func emit(_ sample: CapturedAudioSample) { sampleCallback?(sample) }
+    func emitPCM(_ buffer: AVAudioPCMBuffer) { audioCallback?(buffer) }
 
     func startCapture() async throws {
         startCount += 1
@@ -324,20 +325,17 @@ final class MockRecordingControlling: RecordingControlling {
     private(set) var stopCount = 0
     private(set) var finalizeCount = 0
 
-    /// If set, `startRecording(format:)` throws this instead of succeeding.
+    /// If set, `startRecording()` throws this instead of succeeding.
     var startError: Error?
     /// If set, `stopRecording()` throws this instead of succeeding.
     var stopError: Error?
     var fileURL = URL(fileURLWithPath: "/tmp/mock-recording.wav")
-    /// Format passed to the most recent `startRecording(format:)`, for assertions.
-    private(set) var lastStartFormat: AudioFormat?
     /// Fired when `finalizeAfterFailure()` runs.
     var onFinalize: (() -> Void)?
     var beforeFinalize: (() async -> Void)?
 
-    func startRecording(format: AudioFormat) async throws -> URL {
+    func startRecording() async throws -> URL {
         startCount += 1
-        lastStartFormat = format
         if let startError { throw startError }
         isRecording = true
         recordingURL = fileURL

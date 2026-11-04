@@ -91,7 +91,7 @@ struct MultipleInputTests {
         await preview.stop()
         let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: root),
             audioSource: manager, levels: audio.levels, monitor: audio.monitor)
-        let file = try await controller.startRecording(format: .wav)
+        let file = try await controller.startRecording()
         let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         for index in 0..<3 {
             let time = now + Double(index) / 100
@@ -232,7 +232,7 @@ struct MultipleInputTests {
         provider.availableInputDevicesResult = [InputDeviceInfo(uid: "a", name: "Input A", inputChannels: 2, channelLabels: ["A left", "A right"]), InputDeviceInfo(uid: "b", name: "Input B", inputChannels: 2)]
         let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: directory), audioSource: provider,
             levels: AudioLevels(defaults: defaults))
-        let audio = try await controller.startRecording(format: .wav)
+        let audio = try await controller.startRecording()
         let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         for index in 0..<4 {
             for track in [CaptureTrack.playback, .input("a"), .input("b")] {

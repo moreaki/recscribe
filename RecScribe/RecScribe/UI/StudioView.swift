@@ -45,28 +45,29 @@ struct StudioView: View {
                 SettingsWindowButton()
             }.padding(WorkspaceStyle.contentPadding)
             Divider()
-            switch workspaceMode {
-            case .studio:
-                HStack(alignment: .top, spacing: 0) {
-                    ScrollView {
-                        VStack(spacing: GlassSpacing.xl) {
-                            RecorderView()
-                            Divider()
-                            LiveTranscriptionControl(live: live)
-                            Text("Recording always comes first. Transcription is optional. \(settings.values.processingLocation.detail)")
-                                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                        }.padding(WorkspaceStyle.contentPadding)
-                    }.frame(width: WorkspaceStyle.railWidth)
-                    Divider()
-                    TranscriptWorkspace().frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack(alignment: .top, spacing: 0) {
+                ScrollView {
+                    VStack(spacing: GlassSpacing.xl) {
+                        RecorderView()
+                        Divider()
+                        LiveTranscriptionControl(live: live)
+                        Text("Recording always comes first. Transcription is optional. \(settings.values.processingLocation.detail)")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }.padding(WorkspaceStyle.contentPadding)
+                }.frame(width: WorkspaceStyle.railWidth)
+                Divider()
+                Group {
+                    switch workspaceMode {
+                    case .studio:
+                        TranscriptWorkspace()
+                    case .routing:
+                        AudioRoutingView(embeddedInStudio: true, onClose: { workspaceMode = .studio })
+                    case .recordings:
+                        RecordingLibraryView(embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
+                    }
                 }
-            case .routing:
-                AudioRoutingView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            case .recordings:
-                RecordingLibraryView(embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(minWidth: AppWindow.studio.minimumSize.width, minHeight: AppWindow.studio.minimumSize.height)

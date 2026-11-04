@@ -24,21 +24,18 @@ struct RecorderView: View {
                 Spacer()
                 OverflowMenuButton()
             }
-            StatusBar(state: viewModel.state, duration: viewModel.formattedDuration, statusText: viewModel.statusText)
-            CaptureHealthView(recorder: viewModel)
+            RecorderStatusBar(state: viewModel.state, statusText: viewModel.statusText, telemetry: viewModel.telemetry)
+            CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
             MultipleInputsView(recorder: viewModel)
             if viewModel.audioSource.selectedSource.kind != .multiple {
                 RecordingLevelsView(recorder: viewModel)
             }
             if case .error = viewModel.state {
                 Button("Review saved recordings", systemImage: "waveform.path.badge.exclamationmark") {
-                    openWindow(id: AppWindow.recordings.rawValue)
+                    AppWindow.open(.recordings, using: openWindow)
                 }.buttonStyle(.borderless)
             }
-            GlassLiveWaveform(samples: RecorderWaveformAdapter.magnitudes(viewModel.waveformSamples,
-                bucketedTo: RecorderWaveformAdapter.popoverBarCount))
-                .frame(height: WorkspaceStyle.waveformHeight)
-                .padding(GlassSpacing.md).background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
+            RecorderWaveformSection(telemetry: viewModel.telemetry)
             if let notice = viewModel.installNotice {
                 HStack(alignment: .top) {
                     Text(notice).font(.caption).foregroundStyle(.secondary)
@@ -83,7 +80,7 @@ struct RecorderView: View {
             viewModel.mainWindowDidAppear()
             OverflowMenu.openWindow = { window in
                 NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: window.rawValue)
+                AppWindow.open(window, using: openWindow)
             }
         }
         .onDisappear { viewModel.mainWindowDidDisappear() }
@@ -115,5 +112,31 @@ struct StatusBar: View {
     private var color: Color {
         if case .error = state { return .orange }
         return state == .recording ? .red : .secondary
+    }
+}
+
+struct RecorderStatusBar: View {
+    let state: RecordingState
+    let statusText: String
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        StatusBar(state: state, duration: telemetry.formattedDuration, statusText: statusText)
+    }
+}
+
+struct RecorderWaveformSection: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    var body: some View {
+        GlassLiveWaveform(
+            samples: RecorderWaveformAdapter.magnitudes(
+                telemetry.waveformSamples,
+                bucketedTo: RecorderWaveformAdapter.popoverBarCount
+            )
+        )
+        .frame(height: WorkspaceStyle.waveformHeight)
+        .padding(GlassSpacing.md)
+        .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
     }
 }

@@ -1,5 +1,8 @@
+import AppKit
 import AVFoundation
+import Combine
 import Foundation
+import SwiftUI
 import Testing
 @testable import RecScribe
 
@@ -496,5 +499,56 @@ struct RecordingSessionTests {
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.raw.json").path))
         #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
         #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
+    }
+
+    @Test("RecorderTelemetry isolates 10-30 Hz waveform/duration updates and StudioView keeps capture controls in all modes (#41, #44)")
+    @MainActor
+    func recorderTelemetryIsolationAndUnifiedStudioCaptureControls() async {
+        let defaults = UserDefaults(suiteName: "com.moreaki.recscribe.telemetry-test.\(UUID().uuidString)")!
+        let recorder = RecorderViewModel(
+            controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(),
+            saveLocation: MockSaveLocationProviding(directory: URL(fileURLWithPath: "/tmp")),
+            audioSource: MockAudioSourceProviding(),
+            installLocation: MockInstallLocationProviding(.applications),
+            defaults: defaults
+        )
+
+        var viewModelInvalidations = 0
+        var telemetryInvalidations = 0
+        let vmCancellable = recorder.objectWillChange.sink { _ in viewModelInvalidations += 1 }
+        let telemetryCancellable = recorder.telemetry.objectWillChange.sink { _ in telemetryInvalidations += 1 }
+        defer {
+            withExtendedLifetime((vmCancellable, telemetryCancellable)) {}
+        }
+
+        // High-frequency duration, waveform, and healthy source-health ticks only notify RecorderTelemetry, not RecorderViewModel
+        for step in 1...30 {
+            recorder.duration = Double(step) * 0.1
+            recorder.waveformSamples = Array(repeating: Float(step) / 30.0, count: 200)
+            recorder.healthTime = Double(step)
+        }
+        #expect(viewModelInvalidations == 0)
+        #expect(telemetryInvalidations == 90)
+        #expect(recorder.formattedDuration == "00:03")
+
+        // Verify StudioView renders with persistent capture controls in .studio, .routing, and .recordings workspace modes
+        let live = LiveTranscription()
+        let library = SessionLibrary()
+        let settings = AppSettings()
+        for mode in StudioWorkspaceMode.allCases {
+            let studio = StudioView(workspaceMode: mode)
+                .environmentObject(recorder)
+                .environmentObject(live)
+                .environmentObject(library)
+                .environmentObject(settings)
+            let host = NSHostingView(rootView: studio)
+            host.frame = NSRect(origin: .zero, size: AppWindow.studio.defaultSize)
+            host.layoutSubtreeIfNeeded()
+            #expect(host.fittingSize.width >= AppWindow.studio.minimumSize.width)
+        }
+        await live.shutdown()
+        await library.shutdown()
     }
 }

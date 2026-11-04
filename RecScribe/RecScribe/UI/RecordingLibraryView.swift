@@ -149,7 +149,10 @@ struct RecordingLibraryView: View {
                 }
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
-        }.padding(GlassSpacing.xxl).frame(minWidth: AppWindow.recordings.minimumSize.width, minHeight: AppWindow.recordings.minimumSize.height)
+        }.padding(GlassSpacing.xxl).frame(
+            minWidth: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.width,
+            minHeight: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.height
+        )
             .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast().onAppear {
                 playback.setRecording(library.recordingActive)
                 reload()

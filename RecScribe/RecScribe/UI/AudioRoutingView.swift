@@ -18,16 +18,22 @@ struct AudioRoutingView: View {
     @State private var appError: String?
     @State private var expandedPanel: AudioRoutingPanel?
     @FocusState private var focusedPanel: AudioRoutingPanel?
+    private let embeddedInStudio: Bool
+    private let onClose: (() -> Void)?
 
     init(levels: AudioLevels = .shared, monitor: CapturedAudioMonitor = .shared,
          playbackLevels: PlaybackLevels = .shared, hardwareObserver: AudioHardwareObserver = .shared,
-         expandedPanel: AudioRoutingPanel? = nil) {
+         expandedPanel: AudioRoutingPanel? = nil,
+         embeddedInStudio: Bool = false,
+         onClose: (() -> Void)? = nil) {
         _levels = ObservedObject(wrappedValue: levels)
         _monitor = ObservedObject(wrappedValue: monitor)
         _monitorLevels = ObservedObject(wrappedValue: monitor.levels)
         _playbackLevels = ObservedObject(wrappedValue: playbackLevels)
         _hardwareObserver = ObservedObject(wrappedValue: hardwareObserver)
         _expandedPanel = State(initialValue: expandedPanel)
+        self.embeddedInStudio = embeddedInStudio
+        self.onClose = onClose
     }
 
     private var source: AudioSource { recorder.audioSource.selectedSource }
@@ -80,7 +86,10 @@ struct AudioRoutingView: View {
             Divider()
             footer
         }
-        .frame(minWidth: AppWindow.routing.minimumSize.width, minHeight: AppWindow.routing.minimumSize.height)
+        .frame(
+            minWidth: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.width,
+            minHeight: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.height
+        )
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onExitCommand { collapsePanel() }
         .onAppear {
@@ -116,8 +125,14 @@ struct AudioRoutingView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
-            Button("Close") { dismissWindow(id: AppWindow.routing.rawValue) }
-                .controlSize(.small)
+            Button(embeddedInStudio ? "Back to Studio" : "Close") {
+                if let onClose {
+                    onClose()
+                } else {
+                    dismissWindow(id: AppWindow.routing.rawValue)
+                }
+            }
+            .controlSize(.small)
         }.padding(.horizontal, 20).padding(.vertical, 16)
     }
 
@@ -537,7 +552,7 @@ struct MultipleInputsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Button("Audio routing…", systemImage: "point.3.connected.trianglepath.dotted") {
                 NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: AppWindow.routing.rawValue)
+                AppWindow.open(.routing, using: openWindow)
             }
             if source.kind == .multiple {
                 let count = source.inputSelections.count
@@ -558,6 +573,13 @@ struct MultipleInputsView: View {
 
 struct CaptureHealthView: View {
     @ObservedObject var recorder: RecorderViewModel
+    @ObservedObject var telemetry: RecorderTelemetry
+
+    init(recorder: RecorderViewModel, telemetry: RecorderTelemetry? = nil) {
+        self.recorder = recorder
+        self._telemetry = ObservedObject(wrappedValue: telemetry ?? recorder.telemetry)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.sm) {
             Text(recorder.captureSourceHint).font(.caption).foregroundStyle(.secondary)
@@ -573,8 +595,8 @@ struct CaptureHealthView: View {
                         .controlSize(.small)
                     }
                 }
-                ForEach(recorder.sourceHealth) { source in
-                    let status = source.health.status(at: recorder.healthTime)
+                ForEach(telemetry.sourceHealth) { source in
+                    let status = source.health.status(at: telemetry.healthTime)
                     VStack(alignment: .leading, spacing: GlassSpacing.xs) {
                         Text("\(source.name): \(status.label)")
                             .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)

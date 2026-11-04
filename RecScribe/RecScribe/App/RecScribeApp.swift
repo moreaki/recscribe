@@ -29,38 +29,27 @@ struct RecScribeApp: App {
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
                 .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
-        Window("Recordings", id: AppWindow.recordings.rawValue) {
-            RecordingLibraryView().environmentObject(services.recorder).environmentObject(services.library)
-                .onAppear { services.bind(to: appDelegate) }
-        }.defaultSize(AppWindow.recordings.defaultSize).windowResizability(.contentMinSize)
-        Window("Audio Routing", id: AppWindow.routing.rawValue) {
-            AudioRoutingView().environmentObject(services.recorder)
-                .onAppear { services.bind(to: appDelegate) }
-        }.defaultSize(AppWindow.routing.defaultSize).windowResizability(.contentMinSize)
     }
 }
 
 private struct OpenSettingsCommand: View {
     @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }.keyboardShortcut(",") }
+    var body: some View { Button("Settings…") { AppWindow.open(.settings, using: openWindow) }.keyboardShortcut(",") }
 }
 private struct OpenRecordingsCommand: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Button("Recording Studio") {
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.studio)
+            AppWindow.open(.studio, using: openWindow)
         }.keyboardShortcut("1")
         Button("Audio Routing…") {
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.routing)
+            AppWindow.open(.routing, using: openWindow)
         }.keyboardShortcut("2")
         Button("Recordings & Import…") {
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.recordings)
+            AppWindow.open(.recordings, using: openWindow)
         }.keyboardShortcut("3")
-        Button("Open Recordings Window…") {
-            openWindow(id: AppWindow.recordings.rawValue)
+        Button("Open Recordings…") {
+            AppWindow.open(.recordings, using: openWindow)
         }.keyboardShortcut("o")
     }
 }
@@ -68,6 +57,23 @@ private struct OpenRecordingsCommand: View {
 
 enum AppWindow: String {
     case studio, settings, recordings, routing
+
+    @MainActor
+    static func open(_ window: AppWindow, using openWindow: OpenWindowAction) {
+        switch window {
+        case .studio:
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.studio)
+        case .routing:
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.routing)
+        case .recordings:
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.recordings)
+        case .settings:
+            openWindow(id: AppWindow.settings.rawValue)
+        }
+    }
     var title: String {
         switch self {
         case .studio: "Recording Studio"

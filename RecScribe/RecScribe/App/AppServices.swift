@@ -4,31 +4,31 @@ import Foundation
 /// The only composition root. Features receive dependencies, not global peers.
 @MainActor
 final class AppServices: ObservableObject {
-    private(set) static weak var shared: AppServices?
     let settings: AppSettings
     let runtime: RuntimeManager
     let library: SessionLibrary
     let recorder: RecorderViewModel
     let live: LiveTranscription
     let navigation = StudioNavigation()
+    private(set) var menuBarController: MenuBarController?
     private var locationObservation: AnyCancellable?
 
-    init() {
-        let settings = AppSettings()
+    init(defaults: UserDefaults = .standard, supportDirectory: URL = AppSettings.supportDirectory) {
+        let settings = AppSettings(defaults: defaults)
         let runtime = RuntimeManager(settings: settings)
         let repository = ManifestRepository()
-        let defaults = UserDefaults.standard
         let library = SessionLibrary(cancelRuntime: { runtime.cancel() }, settings: { settings.values },
             readSessions: { try await repository.sessions(in: $0) }, readJob: { try await repository.job(at: $0) },
             initialJob: defaults.url(forKey: "workspace.lastJob"), initialSource: defaults.url(forKey: "workspace.lastSource"),
             rememberJob: { job, source in
                 defaults.set(job, forKey: "workspace.lastJob"); defaults.set(source, forKey: "workspace.lastSource")
-            })
-        let live = LiveTranscription(settings: { settings.values })
+            }, jobsDirectory: supportDirectory.appendingPathComponent("Jobs", isDirectory: true))
+        let live = LiveTranscription(liveRoot: supportDirectory.appendingPathComponent("Live", isDirectory: true),
+                                     settings: { settings.values })
         live.onBusyChange = { [weak library] in library?.setLiveWork($0) }
         live.onCloudTranscript = { [weak library] job, source in library?.acceptCloudTranscript(job, source: source) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
-        let source = AudioSourceManager(), location = SaveLocationManager()
+        let source = AudioSourceManager(defaults: defaults), location = SaveLocationManager(defaults: defaults)
         OverflowMenu.onRecoverRecordings = { [weak library] in
             library?.recoverUnfinalizedSessions(in: location.resolvedDirectory)
         }
@@ -43,7 +43,8 @@ final class AppServices: ObservableObject {
         self.runtime = runtime
         self.library = library
         self.live = live
-        let recorder = RecorderViewModel(controller: controller, saveLocation: location, audioSource: source, audioTest: test)
+        let recorder = RecorderViewModel(controller: controller, saveLocation: location, audioSource: source,
+                                         defaults: defaults, audioTest: test)
         self.recorder = recorder
         test.canStart = { [weak recorder] in
             guard let recorder else { return false }
@@ -52,21 +53,21 @@ final class AppServices: ObservableObject {
         locationObservation = settings.$values.removeDuplicates {
             $0.processingLocation == $1.processingLocation && $0.cloudTranscriptionModel == $1.cloudTranscriptionModel
         }.dropFirst().sink { [weak live] _ in live?.configurationChanged() }
-        Self.shared = self
     }
 
-    func bind(to appDelegate: AppDelegate) {
-        appDelegate.prepareForTermination = { [weak self] in
-            guard let self else { return }
-            await self.recorder.audioTest?.close()
-            if self.recorder.isRecording { await self.recorder.stopRecording() }
-            await self.recorder.waitForFailureFinalization()
-            await self.live.shutdown()
-            await self.library.shutdown()
-            await self.runtime.shutdown()
-        }
-        if appDelegate.menuBarController == nil {
-            appDelegate.menuBarController = MenuBarController(viewModel: recorder, live: live)
-        }
+    func start() {
+        guard menuBarController == nil else { return }
+        menuBarController = MenuBarController(viewModel: recorder, live: live)
+    }
+
+    func shutdown() async {
+        menuBarController?.close()
+        menuBarController = nil
+        await recorder.audioTest?.close()
+        if recorder.isRecording { await recorder.stopRecording() }
+        await recorder.waitForFailureFinalization()
+        await live.shutdown()
+        await library.shutdown()
+        await runtime.shutdown()
     }
 }

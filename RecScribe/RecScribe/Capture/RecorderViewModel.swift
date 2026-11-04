@@ -250,7 +250,7 @@ class RecorderViewModel: ObservableObject {
         }
         // A translocated bundle is broken from the first launch, so the block state
         // is set now — but nothing is *presented* from here. At this point the view
-        // model is still being constructed as a `@StateObject`, so no window exists
+        // model is still being constructed by AppServices, so no window exists
         // yet; presenting here would always take the no-window branch and put the
         // panel up moments before the main window appears saying the same thing.
         // The window announces itself via `mainWindowDidAppear()`; a launch that

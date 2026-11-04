@@ -14,6 +14,8 @@ import Observation
     let preferences: RecorderPreferences
     let alerts = RecorderAlerts()
     let audioSource: AudioSourceProviding
+    private var automaticRoutingEnabled = false
+    private let automaticRouting: AutomaticRoutingSources
     private let controller: RecordingControlling
     private let clock: DurationClock
     private var sourceRevision = 0
@@ -39,6 +41,7 @@ import Observation
         registrationTimeout: TimeInterval = 2.0,
         audioTest: AudioTestController? = nil
     ) {
+        automaticRouting = AutomaticRoutingSources(defaults: defaults)
         self.audioTest = audioTest
         self.audio = audio ?? AudioServices(defaults: defaults)
         let installation = installLocation ?? BundleInstallLocation()
@@ -78,6 +81,7 @@ import Observation
     }
 
     func startRecording() async {
+        if automaticRoutingEnabled, allowsCaptureSourceChange { refreshAvailableRoutingSources(audioSource.availableInputDevices()) }
         guard !isFinalizingAfterFailure, state.canTransition(to: .starting) else { return }
 
         guard !installLocation.blocksRecording else {
@@ -240,6 +244,16 @@ import Observation
 
     private func stopTimer() {
         clock.stopTicking()
+    }
+
+    func enableAutomaticRouting(_ devices: [InputDeviceInfo]) {
+        automaticRoutingEnabled = true
+        refreshAvailableRoutingSources(devices)
+    }
+
+    func refreshAvailableRoutingSources(_ devices: [InputDeviceInfo]) {
+        guard allowsCaptureSourceChange, !isFinalizingAfterFailure else { return }
+        setCaptureSource(automaticRouting.selection(from: selectedSource, devices: devices))
     }
 
     func setCaptureSource(_ source: AudioSource) {

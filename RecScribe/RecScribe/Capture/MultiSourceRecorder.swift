@@ -98,6 +98,30 @@ final class MultiSourceRecorder {
         }
     }
 
+    func hasSource(_ track: CaptureTrack) -> Bool { descriptors.contains { $0.role == track } }
+
+    func prepareSource(_ descriptor: RecordingSession.SourceTrack) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            state.withLock { s in
+                guard s.accepting else { continuation.resume(throwing: AudioRecorderError.notRecording); return }
+                queue.async { [self] in
+                    do {
+                        guard let writer else { throw AudioRecorderError.notRecording }
+                        try writer.prepareSource(descriptor)
+                        state.withLock { s in
+                            if !s.tracks.contains(descriptor.role) { s.tracks.append(descriptor.role) }
+                            s.failedTracks.remove(descriptor.role); s.closedSources.remove(descriptor.role)
+                            s.health[descriptor.role, default: .init(startedAt: ProcessInfo.processInfo.systemUptime)].failed = false
+                            s.health[descriptor.role]?.failureMessage = nil
+                        }
+                        continuation.resume()
+                    } catch { continuation.resume(throwing: error) }
+                }
+            }
+        }
+        if !hasSource(descriptor.role) { descriptors.append(descriptor) }
+    }
+
     nonisolated func accept(_ sample: CapturedAudioSample) {
         guard sample.buffer.frameLength > 0 else { return }
         let bytes = Int(sample.buffer.frameCapacity) * Int(sample.buffer.format.channelCount) * MemoryLayout<Float>.size

@@ -135,7 +135,26 @@ import Foundation
             capture.onSourceFailure = { [weak self, weak recorder] track, message in
                 recorder?.sourceFailed(track, message: message)
                 guard let self, self.runID == id, !sample, self.state == .testing else { return }
-                self.attemptPreviewRebuildIfEligible(reason: message)
+                if !(capture is ScreenCaptureAudioManager) { self.attemptPreviewRebuildIfEligible(reason: message) }
+            }
+            capture.onInputAvailable = { [weak self, weak recorder] device, selection in
+                guard let self, self.runID == id, let recorder else { return false }
+                let track = CaptureTrack.input(device.uid)
+                if !recorder.hasSource(track), !self.levels.hasSetting("input:" + device.uid) {
+                    self.levels.set("input:" + device.uid, .init(muted: true))
+                }
+                do {
+                    try await recorder.prepareSource(.init(role: track, name: device.name, deviceUID: device.uid,
+                        channelRoutes: selection.routes, channelLabels: device.channelLabels))
+                    var current = self.source.selectedSource
+                    if !current.inputs.contains(where: { $0.deviceUID == device.uid }) {
+                        current.inputs.append(selection)
+                        current.allowDuplicateRoutes = false
+                    }
+                    self.source.setSelectedSource(current)
+                    if device.mayLoopBack, self.monitor.enabled { self.monitor.setEnabled(true, source: current) }
+                    return true
+                } catch { return false }
             }
             capture.onStreamError = { [weak self] message in
                 guard let self, self.runID == id else { return }
@@ -156,10 +175,10 @@ import Foundation
                 folder = directory
                 let url = directory.appendingPathComponent("audio_test_" + UUID().uuidString + ".wav")
                 try recorder.start(at: url, descriptors: tracks, options: .init(), epoch: epoch,
-                    levels: { [levels] in levels.snapshot(for: selected) }, continueOnSourceFailure: true,
+                    levels: { [levels] in levels.snapshot(for: selected, includingDiscoveredInputs: true) }, continueOnSourceFailure: true,
                     maximumFrames: Int64(sampleSeconds * 48_000))
             } else {
-                try recorder.startPreview(descriptors: tracks, epoch: epoch, levels: { [levels] in levels.snapshot(for: selected) })
+                try recorder.startPreview(descriptors: tracks, epoch: epoch, levels: { [levels] in levels.snapshot(for: selected, includingDiscoveredInputs: true) })
             }
             if monitor.enabled { monitor.setEnabled(true, source: selected) }
             try await capture.startCapture()

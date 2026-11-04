@@ -1,3 +1,4 @@
+import Observation
 //
 //  AudioSourceManager.swift
 //  RecScribe
@@ -81,7 +82,7 @@ protocol AudioSourceProviding: AnyObject {
 }
 
 @MainActor
-final class AudioSourceManager: AudioSourceProviding {
+@Observable final class AudioSourceManager: AudioSourceProviding {
     private let defaults: UserDefaults
     private let deviceEnumerator: InputDeviceEnumerating
     private let audioProcesses: AudioCapableProcessListing
@@ -136,11 +137,13 @@ final class AudioSourceManager: AudioSourceProviding {
     /// been enumerated yet (that needs a deliberate submenu open), so without
     /// this the status line would show a raw bundle ID until the user happened
     /// to open the picker again.
-    private lazy var knownAppNames: [String: String] =
+    private var appNameRevision = 0
+    @ObservationIgnored private lazy var knownAppNames: [String: String] =
         defaults.dictionary(forKey: namesKey) as? [String: String] ?? [:]
 
     func knownAppName(forBundleID bundleID: String) -> String? {
-        knownAppNames[bundleID]
+        _ = appNameRevision
+        return knownAppNames[bundleID]
     }
 
     private func rememberNames(_ apps: [RunningAppInfo]) {
@@ -151,7 +154,7 @@ final class AudioSourceManager: AudioSourceProviding {
         }
         // Only touch UserDefaults when something actually moved — this runs on
         // every submenu open.
-        if changed { defaults.set(knownAppNames, forKey: namesKey) }
+        if changed { appNameRevision += 1; defaults.set(knownAppNames, forKey: namesKey) }
     }
 
     var selectedSource: AudioSource {

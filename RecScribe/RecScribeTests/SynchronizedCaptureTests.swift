@@ -215,6 +215,62 @@ struct SynchronizedCaptureTests {
         }
         #expect(!FileManager.default.fileExists(atPath: manifest.path))
     }
+    @Test(arguments: [0.02, 5.0, 12.0])
+    func disconnectResumesOnSameTimelineAndRetainsActualGapEvidence(gapSeconds: Double) throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let writer = try worker(root)
+        for i in 0..<5 {
+            try writer.accept(sample(.playback, time: Double(i) / 100))
+            try writer.accept(sample(.microphone, time: Double(i) / 100, channels: 1))
+        }
+        try writer.sourceFailed(.microphone, message: "Synthetic disconnect")
+        let rejoin = 5 + Int((gapSeconds * 100).rounded())
+        for i in 5..<rejoin { try writer.accept(sample(.playback, time: Double(i) / 100)) }
+        try writer.prepareSource(.init(role: .microphone, name: "Test input", deviceUID: "test-device"))
+        for i in rejoin..<(rejoin + 4) {
+            try writer.accept(sample(.playback, time: Double(i) / 100))
+            try writer.accept(sample(.microphone, time: Double(i) / 100, frames: 240, channels: 1, rate: 24000))
+        }
+        try writer.finish()
+        let manifest = try #require(writer.mix?.manifestURL)
+        let parent = try RecordingSession.read(manifest)
+        let descriptor = try #require(parent.sourceTracks?.first { $0.role == .microphone })
+        #expect(descriptor.gapFrames == Int64((gapSeconds * 48000).rounded()))
+        #expect(descriptor.failure != nil)
+        let child = try LinkedSourceSessions.read(descriptor, parent: parent, at: manifest)
+        let data = try decoded(child.session, beside: child.id)[0]
+        #expect(child.session.totalFrames == parent.totalFrames)
+        #expect(data[2400..<(rejoin * 480)].allSatisfy { $0 == 0 })
+        #expect(data.suffix(480).contains { $0 > 0.1 })
+        #expect(parent.totalFrames == Int64((rejoin + 4) * 480))
+    }
+
+    @Test func liveSourceAdditionExtendsAutomationWithoutChangingExistingMasterLane() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let mix = SessionWAVWriter(options: .init())
+        try mix.createFile(at: root.appendingPathComponent("dynamic.wav"), sampleRate: 48000, channels: 2)
+        let track = CaptureTrack.input("new")
+        let levels = OSAllocatedUnfairLock(initialState: RecordingLevels(master: .init(decibels: -6), inputs: [track: .init(muted: true)]))
+        let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: [.init(role: .playback, name: "System")],
+            epoch: 100, options: .init(), levels: { levels.withLock { $0 } })
+        for i in 0..<10 { try writer.accept(sample(.playback, time: Double(i) / 100)) }
+        try writer.prepareSource(.init(role: track, name: "New mic", deviceUID: "new"))
+        for i in 10..<20 {
+            try writer.accept(sample(.playback, time: Double(i) / 100))
+            try writer.accept(sample(track, time: Double(i) / 100, channels: 1))
+        }
+        try writer.finish()
+        let manifest = try #require(mix.manifestURL)
+        let parent = try RecordingSession.read(manifest)
+        #expect(parent.gainTracks == [.playback, track])
+        #expect(parent.gainAutomation?.allSatisfy { $0.to.count == 65 && abs($0.to[64] - 0.5011872) < 0.0001 } == true)
+        let descriptor = try #require(parent.sourceTracks?.first { $0.role == track })
+        let child = try LinkedSourceSessions.read(descriptor, parent: parent, at: manifest)
+        let raw = try decoded(child.session, beside: child.id)[0]
+        #expect(raw.prefix(4800).allSatisfy { $0 == 0 })
+        #expect(raw.suffix(480).allSatisfy { $0 > 0.5 }) // Original survives mix mute.
+    }
+
 }
 
 @MainActor
@@ -238,4 +294,5 @@ struct CombinedSourceMenuTests {
         #expect(submenu.entries.contains { if case .action(let action) = $0 { action.isChecked && action.title.contains("Test browser") } else { false } })
         #expect(OverflowMenu().captureSourceEntries(.init(selectedSource: source, allowsCaptureSourceChange: false)).isEmpty)
     }
+
 }

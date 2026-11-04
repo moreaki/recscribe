@@ -18,22 +18,22 @@ struct AudioMuteBadge: View {
 /// Always visible beside the routing entry point, even with Audio levels closed.
 /// Observe listening preferences directly: the monitor does not republish them.
 struct AudioMuteSummary: View {
+    private let appName: (String) -> String?
+    private let names = RoutingSourceNames.shared
+    private let hardware = AudioHardwareObserver.shared
     let source: AudioSource
     @Bindable private var levels: AudioLevels
     @Bindable private var playback: PlaybackLevels
     @Bindable private var monitor: CapturedAudioMonitor
     @Bindable private var monitorLevels: PlaybackLevels
 
-    init(source: AudioSource, audio: AudioServices) {
+    init(source: AudioSource, audio: AudioServices, appName: @escaping (String) -> String? = { _ in nil }) {
+        self.appName = appName
         self.source = source
         levels = audio.levels
         playback = audio.playbackLevels
         monitor = audio.monitor
         monitorLevels = audio.monitor.levels
-    }
-
-    private var mutedInputs: Int {
-        source.inputSelections.filter { levels.level("input:" + $0.deviceUID).muted }.count
     }
 
     var body: some View {
@@ -43,13 +43,8 @@ struct AudioMuteSummary: View {
                 Text(source.isMixed ? "Original source tracks are still saved." : "The saved recording will be silent.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            if (source.isMixed || source.microphoneUID == nil), levels.level(source.playbackLevelID).muted {
-                AudioMuteBadge(title: source.isMixed ? "Playback muted in mix" : "Playback capture muted")
-            }
-            if mutedInputs > 0 {
-                AudioMuteBadge(title: source.isMixed
-                    ? "\(mutedInputs) \(mutedInputs == 1 ? "input" : "inputs") muted in mix"
-                    : "Input recording muted")
+            ForEach(Array(names.mutedSources(source, levels: levels, appName: appName).enumerated()), id: \.offset) { _, name in
+                AudioMuteBadge(title: "\(name) \(source.isMixed ? "muted in mix" : "capture muted")")
             }
             if monitorLevels.value.muted {
                 AudioMuteBadge(title: monitor.enabled ? "Monitor output muted" : "Monitor off · output muted")
@@ -62,5 +57,7 @@ struct AudioMuteSummary: View {
                 AudioMuteBadge(title: "Recording playback at 0%")
             }
         }
+        .onAppear { names.remember(hardware.inputDevices) }
+        .onChange(of: hardware.revision) { _, _ in names.remember(hardware.inputDevices) }
     }
 }

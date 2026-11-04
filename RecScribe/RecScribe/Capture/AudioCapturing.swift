@@ -18,6 +18,7 @@ import CryptoKit
 @MainActor
 protocol AudioCapturing: AnyObject, Sendable {
     var capturing: Bool { get }
+    var onInputAvailable: (@MainActor (InputDeviceInfo, InputSelection) async -> Bool)? { get set }
     /// Called when the capture stream stops unexpectedly (e.g. permission revoked,
     /// display sleep, another capturer). The argument is a plain-language detail.
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)? { get set }
@@ -32,6 +33,7 @@ protocol AudioCapturing: AnyObject, Sendable {
 }
 
 extension AudioCapturing {
+    var onInputAvailable: (@MainActor (InputDeviceInfo, InputSelection) async -> Bool)? { get { nil } set { } }
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)? { get { nil } set { } }
     func setupMultiCapture(source: AudioSource, sampleCallback: @escaping @Sendable (CapturedAudioSample) -> Void) async throws {
         throw SessionError.invalid("This capture backend does not support multiple sources")

@@ -63,13 +63,20 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var stream: SCStream?
     private var isCapturing = false
     private var output: AudioCaptureOutput?
-    private var deviceInputs: [CaptureTrack: DeviceInputCapture] = [:]
+    private var deviceInputs: [CaptureTrack: any InputCaptureSession] = [:]
     private var pendingInputs: [InputSelection] = []
     private var useLegacyMicrophoneTrack = false
     private(set) var singleInputNormalizer: SingleInputAudioNormalizer?
     private(set) var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
     private var inputGeneration = UUID()
+    private var availabilityObservation: ObservationSubscription?
+    private var reconcileRequested = false
+    private var recoveryTask: Task<Void, Never>?
+    var onInputAvailable: (@MainActor (InputDeviceInfo, InputSelection) async -> Bool)?
+    private var watchedInputTracks: Set<CaptureTrack> = []
     private var deviceWatchTokens: [UUID] = []
+    private let inputFactory: (InputCaptureRequest) -> any InputCaptureSession
+    private let canOpenInput: () -> Bool
     private let hardwareObserver: AudioHardwareObserver
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     private var stopTask: Task<Void, Error>?
@@ -77,7 +84,12 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     /// Called when the stream stops unexpectedly. See `AudioCapturing`.
     var onStreamError: (@MainActor (String) -> Void)?
 
-    init(hardwareObserver: AudioHardwareObserver = .shared) {
+    init(hardwareObserver: AudioHardwareObserver = .shared,
+         inputFactory: @escaping (InputCaptureRequest) -> any InputCaptureSession = {
+             DeviceInputCapture(uid: $0.uid, track: $0.track, callback: $0.callback, onFailure: $0.failure)
+         }, canOpenInput: @escaping () -> Bool = { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) {
+        self.inputFactory = inputFactory
+        self.canOpenInput = canOpenInput
         self.hardwareObserver = hardwareObserver
         super.init()
     }
@@ -233,7 +245,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             if let inputCallback {
                 for selection in pendingInputs {
                     let track: CaptureTrack = useLegacyMicrophoneTrack ? .microphone : .input(selection.deviceUID)
-                    let input = DeviceInputCapture(uid: selection.deviceUID, track: track, callback: inputCallback) { [weak self] message in
+                    let input = inputFactory(.init(uid: selection.deviceUID, track: track, callback: inputCallback, failure: { [weak self] message in
                         guard let self else { return }
                         if isSingleInputOnly {
                             guard self.inputGeneration == generation, self.isCapturing else { return }
@@ -242,22 +254,27 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                         } else {
                             self.inputFailed(track, message: message, generation: generation)
                         }
-                    }
+                    }))
                     deviceInputs[track] = input
-                    try input.start()
+                    do { try input.start() }
+                    catch {
+                        if useLegacyMicrophoneTrack { throw error }
+                        inputFailed(track, message: "Input could not start; other sources continue. \(error.localizedDescription)", generation: generation)
+                    }
                 }
             }
             if let stream {
                 try await stream.startCapture()
             }
             isCapturing = true
-            if !deviceInputs.isEmpty {
-                for (track, input) in deviceInputs {
-                    let uid = input.uid
+            if !pendingInputs.isEmpty {
+                for selection in pendingInputs {
+                    let track: CaptureTrack = useLegacyMicrophoneTrack ? .microphone : .input(selection.deviceUID)
+                    let uid = selection.deviceUID
                     let token = hardwareObserver.watchDevice(uid: uid, inputScope: true, includeVolumes: false) { [weak self] in
-                        guard let self, self.isCapturing, self.inputGeneration == generation,
-                              let currentInput = self.deviceInputs[track] else { return }
-                        currentInput.checkHardwareStatus()
+                        guard let self, self.isCapturing, self.inputGeneration == generation else { return }
+                        self.deviceInputs[track]?.checkHardwareStatus()
+                        if self.deviceInputs[track] == nil, !isSingleInputOnly { self.reconcileAvailableInputs() }
                         let connected = Set(self.hardwareObserver.inputDevices.map(\.uid))
                         if !connected.contains(uid), self.deviceInputs[track] != nil {
                             if isSingleInputOnly {
@@ -269,6 +286,12 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                         }
                     }
                     deviceWatchTokens.append(token)
+                    watchedInputTracks.insert(track)
+                }
+            }
+            if !useLegacyMicrophoneTrack, onInputAvailable != nil {
+                availabilityObservation = ObservationSubscription(read: { [hardwareObserver] in hardwareObserver.revision }) { [weak self] _ in
+                    self?.reconcileAvailableInputs()
                 }
             }
             Log.capture.info("Capture started")
@@ -281,23 +304,66 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         }
     }
 
+    private func reconcileAvailableInputs() {
+        guard isCapturing, canOpenInput(), !useLegacyMicrophoneTrack, let callback = inputCallback else { return }
+        if recoveryTask != nil { reconcileRequested = true; return }
+        let generation = inputGeneration
+        recoveryTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.recoveryTask = nil
+                if self.reconcileRequested { self.reconcileRequested = false; self.reconcileAvailableInputs() }
+            }
+            for device in self.hardwareObserver.inputDevices where (1...32).contains(device.inputChannels ?? 0) {
+                guard !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { return }
+                let track = CaptureTrack.input(device.uid)
+                guard self.deviceInputs[track] == nil else { continue }
+                let selection = self.pendingInputs.first { $0.deviceUID == device.uid } ?? InputSelection(device: device)
+                guard let available = self.onInputAvailable, await available(device, selection),
+                      !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { continue }
+                let input = self.inputFactory(.init(uid: device.uid, track: track, callback: callback, failure: { [weak self] message in
+                    self?.inputFailed(track, message: message, generation: generation, attemptRecovery: self?.recoveryTask == nil)
+                }))
+                    if !self.watchedInputTracks.contains(track) {
+                    let token = self.hardwareObserver.watchDevice(uid: device.uid, inputScope: true, includeVolumes: false) { [weak self] in
+                        guard let self, self.isCapturing, self.inputGeneration == generation else { return }
+                        self.deviceInputs[track]?.checkHardwareStatus()
+                        if self.deviceInputs[track] == nil { self.reconcileAvailableInputs() }
+                    }
+                    self.deviceWatchTokens.append(token)
+                    self.watchedInputTracks.insert(track)
+                    }
+                do {
+                    self.deviceInputs[track] = input
+                    try input.start()
+                    if !self.pendingInputs.contains(where: { $0.deviceUID == device.uid }) { self.pendingInputs.append(selection) }
+                } catch { self.inputFailed(track, message: "Input could not rejoin: \(error.localizedDescription)", generation: generation, attemptRecovery: false) }
+            }
+        }
+    }
+
     private func clearDeviceWatches() {
+        availabilityObservation?.cancel(); availabilityObservation = nil
+        recoveryTask?.cancel()
         for token in deviceWatchTokens {
             hardwareObserver.unwatchDevice(token)
         }
         deviceWatchTokens.removeAll()
+        watchedInputTracks.removeAll()
     }
 
-    private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID) {
+    private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID, attemptRecovery: Bool = true) {
         guard inputGeneration == generation, let input = deviceInputs.removeValue(forKey: track) else { return }
         input.stop()
         onSourceFailure?(track, message)
+        if attemptRecovery { reconcileAvailableInputs() }
     }
 
     /// Stop audio capture
     func stopCapture() async throws {
         if let stopTask { return try await stopTask.value }
         guard stream != nil || !deviceInputs.isEmpty || isCapturing else { return }
+        inputGeneration = UUID()
         clearDeviceWatches()
         for (track, input) in deviceInputs {
             if let message = input.stop() { onSourceFailure?(track, message) }

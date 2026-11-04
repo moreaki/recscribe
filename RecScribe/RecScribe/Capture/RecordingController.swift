@@ -79,6 +79,25 @@ class RecordingController: RecordingControlling {
         self.captureManager.onSourceFailure = { [weak self] track, message in
             self?.multiRecorder?.sourceFailed(track, message: message)
         }
+        self.captureManager.onInputAvailable = { [weak self] device, selection in
+            guard let self, let worker = self.multiRecorder else { return false }
+            let track = CaptureTrack.input(device.uid)
+            if !worker.hasSource(track), !self.levels.hasSetting("input:" + device.uid) {
+                self.levels.set("input:" + device.uid, .init(muted: true))
+            }
+            do {
+                try await worker.prepareSource(.init(role: track, name: device.name, deviceUID: device.uid,
+                    channelRoutes: selection.routes, channelLabels: device.channelLabels))
+                var current = self.audioSource.selectedSource
+                if !current.inputs.contains(where: { $0.deviceUID == device.uid }) {
+                    current.inputs.append(selection)
+                    current.allowDuplicateRoutes = false
+                }
+                self.audioSource.setSelectedSource(current)
+                if device.mayLoopBack, self.monitor.enabled { self.monitor.setEnabled(true, source: current) }
+                return true
+            } catch { return false }
+        }
         self.audioRecorder.onWriteError = { [weak self] message in
             self?.onStreamError?(message)
         }
@@ -141,7 +160,7 @@ class RecordingController: RecordingControlling {
             multiRecorder = recorder
             do {
                 try recorder.start(at: fileURL, descriptors: descriptors, options: storageOptions(),
-                    levels: { [levels] in levels.snapshot(for: source) }, continueOnSourceFailure: multiple)
+                    levels: { [levels] in levels.snapshot(for: source, includingDiscoveredInputs: true) }, continueOnSourceFailure: multiple)
                 try await captureManager.setupMultiCapture(source: source) { recorder.accept($0) }
                 try await captureManager.startCapture()
                 guard !activity.interrupted else { throw ScreenCaptureAudioError.interruptedBySleep }

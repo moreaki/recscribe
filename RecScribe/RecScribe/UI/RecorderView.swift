@@ -28,7 +28,7 @@ struct RecorderView: View {
             }
             RecorderStatusBar(state: viewModel.state, statusText: viewModel.statusText, telemetry: viewModel.telemetry)
             CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
-            MultipleInputsView(recorder: viewModel)
+            MultipleInputsView(recorder: viewModel, showsRoutingLink: false)
             if viewModel.selectedSource.kind != .multiple {
                 RecordingLevelsView(recorder: viewModel)
             }

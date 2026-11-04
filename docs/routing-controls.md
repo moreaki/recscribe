@@ -48,7 +48,9 @@ offer a volume/mute reset preserving the selected output device. Monitor off is
 available in the card header and menu; muting/resetting a disabled monitor never
 enables it. No new output buses are introduced.
 
-Studio and menu-bar summaries list selected muted sources by the same names as
+Studio and menu-bar summaries omit the redundant “Audio routing…” shortcut;
+the Studio's Audio Routing tab provides navigation. The separate Settings window
+retains its shortcut. These summaries list selected muted sources by the same names as
 routing: System audio, cached application display name, or hardware input name.
 A bounded persisted name cache retains unplugged input names; never-seen devices
 show their UID. Unselected sources are not reported just because a mute preference survives;

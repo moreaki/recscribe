@@ -93,21 +93,27 @@ struct SessionPlaybackTests {
         await #expect(throws: (any Error).self) { try await SessionPlaybackBuilder.item(for: selected) }
     }
 
-    private nonisolated static func wait(_ semaphore: DispatchSemaphore) -> Bool {
-        semaphore.wait(timeout: .now() + 5) == .success
+    @MainActor final class SourceReaderGate {
+        var pending: CheckedContinuation<SessionEntry, any Error>?
+        func read(_ entry: SessionEntry) async throws -> SessionEntry {
+            try await withCheckedThrowingContinuation { pending = $0 }
+        }
+        func finish(_ entry: SessionEntry) {
+            let continuation = pending
+            pending = nil
+            continuation?.resume(returning: entry)
+        }
     }
 
     @Test func playSourceClaimsLatestWinsOwnershipAtStartAndNeverPreemptsNewerInstance() async {
         let loader = Loader()
+        let sourceGate1 = SourceReaderGate()
+        let sourceGate2 = SourceReaderGate()
         let sharedCoordinator = SessionPlaybackCoordinator()
         let parentEntry = entry()
         let childEntry = entry()
         let otherEntry = entry()
         let track = RecordingSession.SourceTrack(role: .input("mic-1"), name: "Mic 1", deviceUID: "mic-1")
-
-        let readEntered = DispatchSemaphore(value: 0)
-        let releaseRead = DispatchSemaphore(value: 0)
-        defer { releaseRead.signal() }
 
         var activationsA = 0
         var activationsB = 0
@@ -115,11 +121,7 @@ struct SessionPlaybackTests {
             build: { try await loader.load($0) },
             activate: { _ in activationsA += 1 },
             coordinator: sharedCoordinator,
-            sourceReader: { _, _, _ in
-                readEntered.signal()
-                _ = Self.wait(releaseRead)
-                return childEntry
-            }
+            asyncSourceReader: { _, _, _ in try await sourceGate1.read(childEntry) }
         )
         let playbackB = SessionPlayback(
             build: { try await loader.load($0) },
@@ -129,14 +131,14 @@ struct SessionPlaybackTests {
 
         // 1. A.playSource starts, then B.play starts while A's read is in flight.
         playbackA.playSource(track, parent: parentEntry)
-        #expect(await Task.detached { Self.wait(readEntered) }.value)
+        await waitUntil("A source read started") { sourceGate1.pending != nil }
         playbackB.play(otherEntry)
         await waitUntil("B load pending") { loader.pending[otherEntry.session.id] != nil }
         loader.finish(otherEntry)
         await waitUntil("B playing") { playbackB.playing == otherEntry.session.id }
 
         // Release A's delayed source read; A must NOT steal playback from newer B.
-        releaseRead.signal()
+        sourceGate1.finish(childEntry)
         await settle()
         #expect(activationsA == 0)
         #expect(playbackA.playing == nil)
@@ -144,27 +146,21 @@ struct SessionPlaybackTests {
         #expect(activationsB == 1)
 
         // 2. Starting A.playSource while B is playing immediately preempts B at request start.
-        let secondRelease = DispatchSemaphore(value: 0)
-        defer { secondRelease.signal() }
         let playbackA2 = SessionPlayback(
             build: { _ in AVPlayerItem(asset: AVMutableComposition()) },
             activate: { _ in activationsA += 1 },
             coordinator: sharedCoordinator,
-            sourceReader: { _, _, _ in
-                readEntered.signal()
-                _ = Self.wait(secondRelease)
-                return childEntry
-            }
+            asyncSourceReader: { _, _, _ in try await sourceGate2.read(childEntry) }
         )
         playbackA2.playSource(track, parent: parentEntry)
         // B must be stopped immediately at A2.playSource request start, before A2's read finishes.
         #expect(playbackB.playing == nil)
         #expect(playbackB.player == nil)
-        #expect(await Task.detached { Self.wait(readEntered) }.value)
+        await waitUntil("A2 source read started") { sourceGate2.pending != nil }
 
         // 3. Starting recording while A2.playSource is reading cancels A2 and prevents late playback.
         playbackA2.setRecording(true)
-        secondRelease.signal()
+        sourceGate2.finish(childEntry)
         await settle()
         #expect(activationsA == 0)
         #expect(playbackA2.playing == nil)

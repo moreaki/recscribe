@@ -7,6 +7,7 @@
   "properties": {
     "schemaVersion": {"const": 1},
     "id": {"type": "string", "format": "uuid"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 256},
     "startedAt": {"type": "string", "format": "date-time"},
     "endedAt": {"type": "string", "format": "date-time"},
     "status": {"enum": ["recording", "finalized", "verified", "completed", "needs_review"]},

@@ -143,6 +143,7 @@ final class SessionPlayback: ObservableObject {
     private let build: (SessionEntry) async throws -> AVPlayerItem
     private let activate: (AVPlayer) -> Void
     private let sourceReader: @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry
+    private let asyncSourceReader: ((RecordingSession.SourceTrack, RecordingSession, URL) async throws -> SessionEntry)?
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private var ownedRequestToken: UInt64 = 0
@@ -180,7 +181,8 @@ final class SessionPlayback: ObservableObject {
         levels: PlaybackLevels? = nil,
         hardwareObserver: AudioHardwareObserver = .shared,
         coordinator: SessionPlaybackCoordinator? = nil,
-        sourceReader: @escaping @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry = LinkedSourceSessions.read
+        sourceReader: @escaping @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry = LinkedSourceSessions.read,
+        asyncSourceReader: ((RecordingSession.SourceTrack, RecordingSession, URL) async throws -> SessionEntry)? = nil
     ) {
         self.build = build ?? SessionPlaybackBuilder.item
         self.activate = activate ?? { $0.play() }
@@ -188,6 +190,7 @@ final class SessionPlayback: ObservableObject {
         self.hardwareObserver = hardwareObserver
         self.coordinator = coordinator ?? ((build == nil && activate == nil) ? .shared : SessionPlaybackCoordinator())
         self.sourceReader = sourceReader
+        self.asyncSourceReader = asyncSourceReader
         levelObservation = self.levels.$value.dropFirst().sink { [weak self] _ in
             Task { @MainActor [weak self] in self?.refreshOutput() }
         }
@@ -411,17 +414,23 @@ final class SessionPlayback: ObservableObject {
         let requestToken = claimGlobalPlayback()
         let id = generation
         let reader = sourceReader
+        let asyncReader = asyncSourceReader
         loading = true
         errorMessage = nil
         task = Task { [weak self] in
-            let readTask = Task.detached(priority: .utility) {
-                try reader(source, parent.session, parent.id)
-            }
             do {
-                let entry = try await withTaskCancellationHandler {
-                    try await readTask.value
-                } onCancel: {
-                    readTask.cancel()
+                let entry: SessionEntry
+                if let asyncReader {
+                    entry = try await asyncReader(source, parent.session, parent.id)
+                } else {
+                    let readTask = Task.detached(priority: .utility) {
+                        try reader(source, parent.session, parent.id)
+                    }
+                    entry = try await withTaskCancellationHandler {
+                        try await readTask.value
+                    } onCancel: {
+                        readTask.cancel()
+                    }
                 }
                 guard !Task.isCancelled, let self, self.ownsPlayback(id: id, requestToken: requestToken) else { return }
                 let item = try await self.build(entry)

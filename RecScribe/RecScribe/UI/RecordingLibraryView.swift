@@ -10,6 +10,18 @@ struct RecordingLibraryView: View {
     @StateObject private var playback = SessionPlayback()
     @State private var recordingToDelete: SessionEntry?
     @State private var showingDeleteConfirmation = false
+    @State private var renamingEntryID: URL?
+    @State private var draftTitle = ""
+    var embeddedInStudio = false
+    var onOpenStudio: (() -> Void)? = nil
+
+    private func navigateToStudio() {
+        if let onOpenStudio {
+            onOpenStudio()
+        } else {
+            openWindow(id: AppWindow.studio.rawValue)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.xl) {
@@ -22,10 +34,13 @@ struct RecordingLibraryView: View {
                 Spacer()
                 Button("Import WAV / session…") {
                     let panel = NSOpenPanel(); panel.canChooseDirectories = false
-                    if panel.runModal() == .OK, let url = panel.url { library.transcribe(url) }
+                    if panel.runModal() == .OK, let url = panel.url {
+                        library.transcribe(url)
+                        navigateToStudio()
+                    }
                 }.disabled(library.recordingActive)
                 Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }
-                Button("Studio", systemImage: "macwindow") { openWindow(id: AppWindow.studio.rawValue) }
+                Button("Studio", systemImage: "macwindow") { navigateToStudio() }
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
             if playback.loading { ProgressView("Loading session…") }
@@ -35,7 +50,28 @@ struct RecordingLibraryView: View {
                     HStack(alignment: .top) {
                         WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")).font(.headline)
+                            if renamingEntryID == entry.id {
+                                HStack(spacing: GlassSpacing.s) {
+                                    TextField("Recording title", text: $draftTitle)
+                                        .textFieldStyle(.roundedBorder)
+                                        .onSubmit {
+                                            library.rename(entry, title: draftTitle)
+                                            renamingEntryID = nil
+                                        }
+                                    Button("Save") {
+                                        library.rename(entry, title: draftTitle)
+                                        renamingEntryID = nil
+                                    }.controlSize(.small)
+                                    Button("Cancel") {
+                                        renamingEntryID = nil
+                                    }.controlSize(.small)
+                                }
+                            } else {
+                                Text(entry.displayTitle).font(.headline)
+                                if entry.session.title != nil {
+                                    Text(entry.filenameStem).font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
                             RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
                         }
                         Spacer()
@@ -45,11 +81,21 @@ struct RecordingLibraryView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
                         Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
-                        Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); openWindow(id: AppWindow.studio.rawValue) }
+                        Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
                         Menu {
+                            Button("Rename…", systemImage: "pencil") {
+                                draftTitle = entry.session.title ?? entry.filenameStem
+                                renamingEntryID = entry.id
+                            }
+                            if entry.session.title != nil {
+                                Button("Reset title", systemImage: "arrow.counterclockwise") {
+                                    library.rename(entry, title: "")
+                                    if renamingEntryID == entry.id { renamingEntryID = nil }
+                                }
+                            }
                             Button("Transcribe & summarize", systemImage: "sparkles") {
                                 library.transcribe(entry.id, summarize: true)
-                                openWindow(id: AppWindow.studio.rawValue)
+                                navigateToStudio()
                             }
                             ForEach(entry.session.sourceTracks ?? [], id: \.role) { source in
                                 Menu(source.name) {
@@ -57,7 +103,7 @@ struct RecordingLibraryView: View {
                                     Button("Transcribe source track") {
                                         if let path = source.manifestPath,
                                            let url = try? RecordingSession.safeURL(path, beside: entry.id) {
-                                            library.transcribe(url); openWindow(id: AppWindow.studio.rawValue)
+                                            library.transcribe(url); navigateToStudio()
                                         }
                                     }
                                 }.disabled(source.manifestPath == nil)
@@ -95,8 +141,12 @@ struct RecordingLibraryView: View {
                 Spacer()
                 if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
                 Button("Cancel work") { library.cancel() }
-                Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
-                    .help("Close the Recordings window; background processing continues.")
+                if embeddedInStudio {
+                    Button("Back to Studio") { navigateToStudio() }
+                } else {
+                    Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
+                        .help("Close the Recordings window; background processing continues.")
+                }
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
         }.padding(GlassSpacing.xxl).frame(minWidth: AppWindow.recordings.minimumSize.width, minHeight: AppWindow.recordings.minimumSize.height)

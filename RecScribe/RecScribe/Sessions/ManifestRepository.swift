@@ -21,6 +21,13 @@ nonisolated struct SessionEntry: Identifiable, Sendable {
     var session: RecordingSession
     var hasUnfinalizedSource = false
     var needsRecovery: Bool { session.needsRecovery || hasUnfinalizedSource }
+    var filenameStem: String { id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "") }
+    var displayTitle: String {
+        if let title = session.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+            return title
+        }
+        return filenameStem
+    }
 }
 nonisolated struct ManifestFailure: Identifiable, Sendable {
     let id: URL

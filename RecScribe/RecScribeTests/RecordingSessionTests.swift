@@ -293,4 +293,75 @@ struct RecordingSessionTests {
         #expect(library.readFailures.map(\.id) == [missing])
         await library.shutdown()
     }
+
+    @Test("Session title validation, SessionLibrary.rename, and orphaned Live draft directory pruning (#44)")
+    @MainActor
+    func sessionTitleRenameAndOrphanedLiveDraftPruning() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+
+        var session = try RecordingSession.read(manifest)
+        #expect(session.title == nil)
+        let initialEntry = SessionEntry(id: manifest, session: session)
+        #expect(initialEntry.displayTitle == "OutputName")
+
+        session.title = "   "
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+        session.title = String(repeating: "a", count: 257)
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+        session.title = "Line 1\nLine 2"
+        #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
+
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.load(directory)
+        for _ in 0..<50 where library.refreshing {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let loaded = try #require(library.entries.first)
+        library.rename(loaded, title: "  Weekly Architecture Sync  ")
+        #expect(library.entries.first?.displayTitle == "Weekly Architecture Sync")
+        #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
+
+        // Recording active blocks rename
+        library.setRecording(true)
+        library.rename(library.entries[0], title: "Blocked Rename")
+        #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
+        library.setRecording(false)
+
+        // Empty title resets back to filename stem
+        library.rename(library.entries[0], title: "   ")
+        #expect(library.entries.first?.session.title == nil)
+        #expect(library.entries.first?.displayTitle == "OutputName")
+        #expect(try RecordingSession.read(manifest).title == nil)
+        await library.shutdown()
+
+        // Orphaned Live draft pruning preserves active, recent, and promoted cloud transcripts
+        let liveRoot = directory.appendingPathComponent("Live", isDirectory: true)
+        let staleDraft = liveRoot.appendingPathComponent("stale-draft", isDirectory: true)
+        let stalePromoted = liveRoot.appendingPathComponent("stale-promoted", isDirectory: true)
+        let recentDraft = liveRoot.appendingPathComponent("recent-draft", isDirectory: true)
+        let activeDraft = liveRoot.appendingPathComponent("active-draft", isDirectory: true)
+        for dir in [staleDraft, stalePromoted, recentDraft, activeDraft] {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        try Data("{}".utf8).write(to: stalePromoted.appendingPathComponent("transcript.json"))
+        let now = Date()
+        let twoDaysAgo = now.addingTimeInterval(-48 * 60 * 60)
+        for dir in [staleDraft, stalePromoted, activeDraft] {
+            try FileManager.default.setAttributes([.modificationDate: twoDaysAgo], ofItemAtPath: dir.path)
+        }
+        LiveTranscription.pruneOrphanedDraftDirectories(
+            in: liveRoot,
+            retaining: activeDraft,
+            olderThan: 24 * 60 * 60,
+            now: now
+        )
+        #expect(!FileManager.default.fileExists(atPath: staleDraft.path))
+        #expect(FileManager.default.fileExists(atPath: stalePromoted.path))
+        #expect(FileManager.default.fileExists(atPath: recentDraft.path))
+        #expect(FileManager.default.fileExists(atPath: activeDraft.path))
+    }
 }

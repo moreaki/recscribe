@@ -6,13 +6,39 @@ struct TranscriptSourceView: View {
     let duration: Double?
     let detail: String
     let recording: Bool
-    @StateObject private var playback = SessionPlayback()
+    @ObservedObject var playback: SessionPlayback
+    @Binding var pendingSeekSeconds: Double?
     @State private var entry: SessionEntry?
     @State private var error: String?
     @State private var wavDuration: Double?
+
+    init(
+        source: URL,
+        duration: Double?,
+        detail: String,
+        recording: Bool,
+        playback: SessionPlayback,
+        pendingSeekSeconds: Binding<Double?> = .constant(nil)
+    ) {
+        self.source = source
+        self.duration = duration
+        self.detail = detail
+        self.recording = recording
+        self.playback = playback
+        self._pendingSeekSeconds = pendingSeekSeconds
+    }
+
     private var name: String {
         if let entry, entry.session.parts.count == 1 { return entry.session.parts[0].path }
         return source.lastPathComponent
+    }
+
+    private func startPlayback() {
+        if let entry {
+            playback.play(entry)
+        } else if source.pathExtension.lowercased() == "wav" {
+            playback.playFile(source)
+        }
     }
 
     var body: some View {
@@ -27,8 +53,7 @@ struct TranscriptSourceView: View {
                 }
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
-                    if let entry { playback.play(entry) }
-                    else if source.pathExtension.lowercased() == "wav" { playback.playFile(source) }
+                    startPlayback()
                 }.disabled(recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }
             }
@@ -55,6 +80,21 @@ struct TranscriptSourceView: View {
                 }
             } catch is CancellationError { }
             catch { self.error = error.localizedDescription }
+        }
+        .onChange(of: pendingSeekSeconds) { _, target in
+            guard let target, !recording else { return }
+            if playback.player != nil {
+                playback.seek(to: target)
+                pendingSeekSeconds = nil
+            } else if entry != nil || source.pathExtension.lowercased() == "wav" {
+                startPlayback()
+            }
+        }
+        .onChange(of: playback.player != nil) { _, hasPlayer in
+            if hasPlayer, let target = pendingSeekSeconds {
+                playback.seek(to: target)
+                pendingSeekSeconds = nil
+            }
         }
         .onChange(of: recording) { _, active in playback.setRecording(active) }
         .onDisappear { playback.stop() }

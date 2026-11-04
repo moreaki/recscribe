@@ -14,8 +14,17 @@ nonisolated enum TranscriptReading {
             return values.isEmpty ? "Channel unknown" : "Channel " + values.joined(separator: " + ")
         }
         var timing: String {
-            guard let start = segments.compactMap(\.startMs).min(), let end = segments.compactMap(\.endMs).max() else { return "Time unavailable" }
+            guard let start = startMs, let end = endMs else { return "Time unavailable" }
             return "\(time(start)) – \(time(end))"
+        }
+        var startMs: Int64? { segments.compactMap(\.startMs).min() }
+        var endMs: Int64? { segments.compactMap(\.endMs).max() }
+        var startSeconds: Double? { startMs.map { Double($0) / 1_000.0 } }
+        func contains(positionSeconds: Double) -> Bool {
+            guard positionSeconds.isFinite, positionSeconds >= 0,
+                  let start = startMs, let end = endMs, end >= start else { return false }
+            let ms = Int64((positionSeconds * 1_000.0).rounded())
+            return ms >= start && ms <= end
         }
         /// Equal cleaned text must not hide conflicting raw ASR or different timing.
         func isShared(in document: TranscriptPreview) -> Bool {

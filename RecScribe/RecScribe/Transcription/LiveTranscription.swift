@@ -217,8 +217,41 @@ final class LiveTranscription: ObservableObject {
         capturing = false
         if pendingCloudRequest != nil { dismissCloudAudio() }
         captureNeedsReview = captureNeedsReview || needsReview
+        let activeDir = directory
+        Task.detached(priority: .utility) {
+            Self.pruneOrphanedDraftDirectories(retaining: activeDir)
+        }
         if enabled { status = "Finishing remaining audio chunks…"; start() }
         else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
+    }
+
+    /// Removes abandoned `Live/<UUID>` draft directories older than `maxAge` that have not been
+    /// finalized into a canonical `transcript.json` artifact (#44).
+    nonisolated static func pruneOrphanedDraftDirectories(
+        in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
+        retaining activeDirectory: URL? = nil,
+        olderThan maxAge: TimeInterval = 24 * 60 * 60,
+        now: Date = Date()
+    ) {
+        let fm = FileManager.default
+        guard let children = try? fm.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey, .creationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        let activeStandardized = activeDirectory?.standardizedFileURL
+        for child in children {
+            guard child.standardizedFileURL != activeStandardized else { continue }
+            guard let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey, .creationDateKey]),
+                  values.isDirectory == true else { continue }
+            // Never delete a promoted cloud transcript directory containing transcript.json.
+            if fm.fileExists(atPath: child.appendingPathComponent("transcript.json").path) {
+                continue
+            }
+            let referenceDate = values.contentModificationDate ?? values.creationDate ?? .distantPast
+            guard now.timeIntervalSince(referenceDate) >= maxAge else { continue }
+            try? fm.removeItem(at: child)
+        }
     }
 
     func shutdown() async {

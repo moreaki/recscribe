@@ -16,6 +16,7 @@
 
 import Testing
 import AppKit
+import CoreMedia
 @testable import RecScribe
 
 @MainActor
@@ -734,18 +735,18 @@ struct AudioCapableFilterTests {
         let controller = RecordingController(
             captureManager: capture,
             saveLocation: MockSaveLocationProviding(directory: dir),
-            audioSource: provider
+            audioSource: provider,
+            levels: AudioLevels(defaults: UserDefaults(suiteName: "custom-route-\(UUID())")!)
         )
-        _ = try await controller.startRecording(format: .wav)
+        let audio = try await controller.startRecording(format: .wav)
         #expect(capture.setupCount == 1)
         #expect(capture.lastSource == customInputsOnly)
+        let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         let stereoFrame = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 480, interleaved: false) { ch, _ in ch == 1 ? 0.5 : 0.1 }
-        capture.emit(.init(track: .input("interface-1"), presentationTime: 100.0, buffer: stereoFrame))
-        capture.emit(.init(track: .input("interface-1"), presentationTime: 100.01, buffer: stereoFrame))
+        capture.emit(.init(track: .input("interface-1"), presentationTime: now, buffer: stereoFrame))
+        capture.emit(.init(track: .input("interface-1"), presentationTime: now + 0.01, buffer: stereoFrame))
         _ = try await controller.stopRecording()
-        let manifests = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
-            .filter { $0.lastPathComponent.hasSuffix(".recscribe.json") && !$0.lastPathComponent.contains(".input:") }
-        let parentSession = try RecordingSession.read(#require(manifests.first))
+        let parentSession = try RecordingSession.read(RecordingSession.manifestURL(for: audio))
         #expect(parentSession.sourceTracks?.count == 1)
         #expect(parentSession.sourceTracks?.first?.role == .input("interface-1"))
         #expect(parentSession.sourceTracks?.first?.channelRoutes == [.init(channel: 1, placement: .right)])

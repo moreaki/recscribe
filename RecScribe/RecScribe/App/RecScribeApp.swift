@@ -47,9 +47,21 @@ private struct OpenSettingsCommand: View {
 private struct OpenRecordingsCommand: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
-        Button("Recording Studio") { openWindow(id: AppWindow.studio.rawValue) }.keyboardShortcut("1")
-        Button("Audio Routing…") { openWindow(id: AppWindow.routing.rawValue) }.keyboardShortcut("2")
-        Button("Recordings & Import…") { openWindow(id: AppWindow.recordings.rawValue) }.keyboardShortcut("o")
+        Button("Recording Studio") {
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.studio)
+        }.keyboardShortcut("1")
+        Button("Audio Routing…") {
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.routing)
+        }.keyboardShortcut("2")
+        Button("Recordings & Import…") {
+            openWindow(id: AppWindow.studio.rawValue)
+            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.recordings)
+        }.keyboardShortcut("3")
+        Button("Open Recordings Window…") {
+            openWindow(id: AppWindow.recordings.rawValue)
+        }.keyboardShortcut("o")
     }
 }
 

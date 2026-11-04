@@ -87,4 +87,43 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     var summaryText: String {
         summary?.notes.map { "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))" }.joined(separator: "\n\n") ?? ""
     }
+    var markdownText: String {
+        var blocks: [String] = ["# Transcript"]
+        for group in TranscriptReading.groups(segments) {
+            let reviewTag = group.segments.contains(where: \.needsReview) ? " · [Review]" : ""
+            blocks.append("## \(group.timing) (\(group.channels)\(reviewTag))")
+            if group.isShared(in: self) {
+                blocks.append(displayedText(group.segments[0]).trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                let variants = group.segments.map { segment in
+                    let single = TranscriptReading.Group(segments: [segment])
+                    return "- **\(single.channels)** (\(single.timing)): \(displayedText(segment).trimmingCharacters(in: .whitespacesAndNewlines))"
+                }.joined(separator: "\n")
+                blocks.append(variants)
+            }
+        }
+        if !summaryText.isEmpty {
+            blocks.append("## Summary\n\n" + summaryText)
+        }
+        if !reviewReasons.isEmpty {
+            blocks.append("## Review Notes\n\n" + reviewReasons.map { "- \($0)" }.joined(separator: "\n"))
+        }
+        return blocks.joined(separator: "\n\n")
+    }
+    func exportText(for section: TranscriptWorkspace.Section, markdown: Bool) -> String {
+        switch section {
+        case .summary:
+            if markdown {
+                return summaryText.isEmpty ? "" : "# Summary\n\n\(summaryText)"
+            }
+            return summaryText
+        case .review:
+            if markdown {
+                return reviewReasons.isEmpty ? "" : "# Review Notes\n\n" + reviewReasons.map { "- \($0)" }.joined(separator: "\n")
+            }
+            return reviewReasons.joined(separator: "\n\n")
+        case .transcript, .live:
+            return markdown ? markdownText : text
+        }
+    }
 }

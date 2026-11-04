@@ -67,4 +67,29 @@ struct TranscriptReadingTests {
             ReadingFixtures.segment("s2", "Another speaker", channel: 1, start: 1800, end: 4000)])
         #expect(TranscriptReading.groups(document.segments).count == 2)
     }
+
+    @Test func interactiveTimestampSeekMappingAndMarkdownPlainTextExport() throws {
+        let document = try ReadingFixtures.preview
+        let groups = TranscriptReading.groups(document.segments)
+        #expect(groups.count == 3)
+        #expect(groups[0].startMs == 0)
+        #expect(groups[0].endMs == 2000)
+        #expect(groups[0].startSeconds == 0.0)
+        #expect(groups[0].contains(positionSeconds: 1.25))
+        #expect(!groups[0].contains(positionSeconds: 2.5))
+        #expect(groups[1].startSeconds == 3.0)
+        #expect(groups[1].contains(positionSeconds: 4.0))
+        #expect(groups[2].startSeconds == 6.0)
+
+        let markdown = document.exportText(for: .transcript, markdown: true)
+        #expect(markdown.contains("# Transcript"))
+        #expect(markdown.contains("## 00:00:00.000 – 00:00:02.000 (Channel 1 + 2 · [Review])"))
+        #expect(markdown.contains("We will meet on Monday to review the recording."))
+        #expect(markdown.contains("- **Channel 1** (00:00:03.000 – 00:00:05.000): The delivery is on Tuesday."))
+        #expect(markdown.contains("- **Channel 2** (00:00:03.050 – 00:00:05.050): The delivery is on Thursday."))
+
+        let plain = document.exportText(for: .transcript, markdown: false)
+        #expect(plain.contains("[Review] We will meet on Monday to review the recording."))
+        #expect(plain.contains("[Review] The delivery is on Tuesday."))
+    }
 }

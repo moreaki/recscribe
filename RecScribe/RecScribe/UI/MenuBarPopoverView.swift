@@ -38,6 +38,7 @@ struct MenuBarPopoverView: View {
                 }
 
                 CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
+            RecordingReviewNotice(recorder: viewModel)
                 MultipleInputsView(recorder: viewModel)
                 if viewModel.selectedSource.kind != .multiple {
                     RecordingLevelsView(recorder: viewModel)

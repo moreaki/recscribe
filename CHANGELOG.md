@@ -19,6 +19,10 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- Stopping a finalized multi-source recording reports clipping/timing/coverage
+  notes inline instead of misreporting them as a failed save. Genuine capture
+  shutdown failures have a distinct diagnosis; recoverable audio remains intact.
+
 - SwiftUI state uses per-property Observation. Capture telemetry and test meters
   update their leaf views without broadcasting to Settings or workspace chrome.
   Recorder commands, permissions, installation notices and preferences have

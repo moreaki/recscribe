@@ -37,6 +37,7 @@ struct RecorderView: View {
                     AppWindow.open(.recordings, using: openWindow, navigation: navigation)
                 }.buttonStyle(.borderless)
             }
+            RecordingReviewNotice(recorder: viewModel)
             RecorderWaveformSection(telemetry: viewModel.telemetry)
             if let notice = viewModel.installNotice {
                 HStack(alignment: .top) {
@@ -134,5 +135,23 @@ struct RecorderWaveformSection: View {
         .frame(height: WorkspaceStyle.waveformHeight)
         .padding(GlassSpacing.md)
         .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
+    }
+}
+
+/// A completed take can need review without being a failed save or blocking the next take.
+struct RecordingReviewNotice: View {
+    let recorder: RecorderViewModel
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
+    var body: some View {
+        if let message = recorder.alerts.reviewMessage {
+            VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                Button("Review saved recordings") {
+                    AppWindow.open(.recordings, using: openWindow, navigation: navigation)
+                }.buttonStyle(.borderless)
+            }.accessibilityElement(children: .contain)
+        }
     }
 }

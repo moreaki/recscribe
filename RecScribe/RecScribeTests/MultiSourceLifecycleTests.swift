@@ -45,16 +45,32 @@ struct MultiSourceLifecycleTests {
         #expect(session.status == .needsReview)
         #expect(session.totalFrames == 0)
     }
-    @Test func selectedMissingSourceFailsStopWithoutDiscardingTheOtherTrack() async throws {
+    @Test func selectedMissingSourceReportsReviewWithoutDiscardingTheOtherTrack() async throws {
         let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
         let recorder = MultiSourceRecorder(onError: { _ in })
         try recorder.start(at: directory.appendingPathComponent("test.wav"), descriptors: descriptors, options: .init(), epoch: 100)
         recorder.accept(packet(.playback, at: 100))
-        await #expect(throws: SessionError.self) { try await recorder.stop() }
+        try await recorder.stop()
+        #expect(recorder.reviewMessage?.contains("coverage") == true)
         let session = try RecordingSession.read(#require(recorder.manifestURL))
         #expect(session.status == .needsReview)
         #expect(session.totalFrames == 480)
         #expect(session.issues.contains { $0.contains("microphone") && $0.contains("no data") })
+    }
+    @Test func noSourcesDeliveringAudioRemainsAnErrorWithRecoverableManifest() async throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let recorder = MultiSourceRecorder(onError: { _ in })
+        try recorder.start(at: directory.appendingPathComponent("empty.wav"), descriptors: descriptors, options: .init(), epoch: 100)
+        do { try await recorder.stop(); Issue.record("Expected no-audio failure") }
+        catch SessionError.noAudio { }
+        catch { Issue.record("Unexpected error: \(error)") }
+        let session = try RecordingSession.read(#require(recorder.manifestURL))
+        #expect(session.status == .needsReview && session.totalFrames == 0)
+        try recorder.start(at: directory.appendingPathComponent("next.wav"), descriptors: descriptors, options: .init(), epoch: 100)
+        recorder.accept(packet(.playback, at: 100))
+        recorder.accept(packet(.microphone, at: 100))
+        try await recorder.stop()
+        #expect(recorder.reviewMessage == nil)
     }
     @Test func controllerConfiguresCombinedSourceAndWritesBothTracks() async throws {
         let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }

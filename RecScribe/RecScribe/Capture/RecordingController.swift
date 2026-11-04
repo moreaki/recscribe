@@ -11,6 +11,7 @@ import os
 /// Errors originating from the recording controller before/around capture.
 enum RecordingControllerError: Error {
     case insufficientDiskSpace
+    case captureShutdownFailed(Error)
 }
 
 /// Controller that coordinates audio recording workflow
@@ -33,6 +34,7 @@ class RecordingController: RecordingControlling {
     private var currentRecordingURL: URL?
     private var activeSourceName = "Selected source"
     private var starting = false
+    private(set) var stopReviewMessage: String?
     private var multiRecorder: MultiSourceRecorder?
     private let storageOptions: () -> RecordingStorageOptions
 
@@ -90,6 +92,7 @@ class RecordingController: RecordingControlling {
     @MainActor
     func startRecording(format: AudioFormat) async throws -> URL {
         guard !starting, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
+        stopReviewMessage = nil
         starting = true
         defer { starting = false }
         try captureGate.acquire(captureID)
@@ -197,7 +200,10 @@ class RecordingController: RecordingControlling {
         }
         // Stop capturing audio
         var captureError: Error?
-        do { try await captureManager.stopCapture() } catch { captureError = error }
+        do { try await captureManager.stopCapture() } catch {
+            Log.recordFailure(error, operation: "capture_shutdown")
+            captureError = error
+        }
 
         if let recorder = multiRecorder {
             var failure = captureError
@@ -205,11 +211,15 @@ class RecordingController: RecordingControlling {
             await captureManager.cleanup()
             currentRecordingURL = nil
             multiRecorder = nil
-            needsReview = failure != nil || activity.interrupted
+            stopReviewMessage = recorder.reviewMessage
+            needsReview = failure != nil || stopReviewMessage != nil || activity.interrupted
             if let manifest = recorder.manifestURL {
-                sessionLibrary?.enqueue(manifest, issue: failure?.localizedDescription)
+                sessionLibrary?.enqueue(manifest, issue: failure?.localizedDescription ?? stopReviewMessage)
             }
-            if let failure { throw failure }
+            if let failure {
+                if captureError != nil { throw RecordingControllerError.captureShutdownFailed(failure) }
+                throw failure
+            }
             return
         }
         // Finalize the file, but capture the error rather than rethrowing here:
@@ -238,12 +248,10 @@ class RecordingController: RecordingControlling {
         needsReview = finalizeError != nil || captureError != nil || activity.interrupted
 
         if let finalizeError {
-            Log.recorder.error(
-                "Finalize failed on stop: \(finalizeError.localizedDescription, privacy: .public)"
-            )
+            Log.recordFailure(finalizeError, operation: "audio_finalization")
             throw finalizeError
         }
-        if let captureError { throw captureError }
+        if let captureError { throw RecordingControllerError.captureShutdownFailed(captureError) }
         Log.recorder.info("Recording stopped")
     }
 
@@ -353,6 +361,7 @@ protocol RecordingControlling: AnyObject {
     var onStreamError: (@MainActor (String) -> Void)? { get set }
     var isRecording: Bool { get }
     var sourceHealth: [SourceRecordingHealth] { get }
+    var stopReviewMessage: String? { get }
     var recordingURL: URL? { get }
     func startRecording(format: AudioFormat) async throws -> URL
     func stopRecording() async throws
@@ -361,4 +370,5 @@ protocol RecordingControlling: AnyObject {
 
 extension RecordingControlling {
     var sourceHealth: [SourceRecordingHealth] { [] }
+    var stopReviewMessage: String? { nil }
 }

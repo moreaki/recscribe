@@ -94,6 +94,7 @@ import Observation
 
         transition(to: .starting)
         await audioTest?.prepareForRecording()
+        alerts.reviewMessage = nil
         errorMessage = nil
         showError = false
         recoverySuggestion = nil
@@ -153,12 +154,14 @@ import Observation
 
         do {
             try await controller.stopRecording()
+            alerts.reviewMessage = controller.stopReviewMessage
             transition(to: .idle)
 
         } catch {
-            Log.recorder.error(
-                "Failed to stop recording: \(error.localizedDescription, privacy: .public)")
-            if case SessionError.noAudio = error {
+            Log.recordFailure(error, operation: "recording_stop")
+            if case RecordingControllerError.captureShutdownFailed(let cause) = error {
+                transition(to: .error(.captureStopFailed(cause.localizedDescription)))
+            } else if case SessionError.noAudio = error {
                 transition(to: .error(.noAudio))
             } else {
                 transition(to: .error(.stopFailed(error.localizedDescription)))

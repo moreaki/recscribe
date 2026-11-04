@@ -19,6 +19,10 @@ nonisolated enum LiveTranscriptionPolicy {
     static let pollInterval: Duration = .seconds(1)
     /// Retry malformed local ASR output once, always at the committed cursor.
     static let maximumLocalChunkAttempts = 2
+    /// Bounds a single disposable working-file cleanup pass so large Live trees cannot stall shutdown.
+    static let maximumCleanupDraftDirectories = 256
+    static let maximumCleanupEntriesPerDirectory = 256
+    static let maximumCleanupEntries = 4_096
 }
 
 nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
@@ -78,13 +82,6 @@ nonisolated struct LiveChunkTiming: Sendable {
 final class LiveTranscription: ObservableObject {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
     private nonisolated static let activeDirectoryRegistry = OSAllocatedUnfairLock(initialState: [UUID: Set<String>]())
-    private nonisolated static let draftMarkerFiles: Set<String> = [
-        "latest.json", "consent.json", "manifest.json", "chunk.json", "review.md",
-        "audio-report.json", "source-session.snapshot.json", "transcript.raw.json", "transcript.json"
-    ]
-    private nonisolated static let attemptOrTurnMarkerFiles: Set<String> = [
-        "chunk.json", "result.json", "timings.json"
-    ]
     struct CloudRequest: Identifiable {
         let id: UUID
         let source: URL
@@ -105,6 +102,8 @@ final class LiveTranscription: ObservableObject {
     @Published private(set) var sourceURL: URL?
     @Published private(set) var modelName: String?
     @Published private(set) var audioSeconds: Double = 0
+    @Published private(set) var lastCleanupReport = LiveCleanupReport()
+    var lastCleanupFailures: [LiveCleanupFailure] { lastCleanupReport.failures }
     private(set) var cursor: Int64 = 0
     private let instanceID = UUID()
     private let liveRoot: URL
@@ -114,6 +113,8 @@ final class LiveTranscription: ObservableObject {
     private var generation = UUID()
     private var task: Task<Void, Never>?
     private var token: WorkCancellation?
+    private var cleanupTask: Task<LiveCleanupReport, Never>?
+    private var cleanupToken: WorkCancellation?
     private let settings: () -> AppSettings.Values
     private let work: @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult?
     private let wait: @Sendable () async throws -> Void
@@ -142,8 +143,16 @@ final class LiveTranscription: ObservableObject {
     }
 
     deinit {
+        token?.cancel()
+        task?.cancel()
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
         let id = instanceID
-        Self.activeDirectoryRegistry.withLock { _ = $0.removeValue(forKey: id) }
+        let worker = task
+        Task {
+            await worker?.value
+            Self.activeDirectoryRegistry.withLock { _ = $0.removeValue(forKey: id) }
+        }
     }
 
     var activeDirectories: Set<URL> {
@@ -242,6 +251,8 @@ final class LiveTranscription: ObservableObject {
     }
 
     func recordingStarted(_ audio: URL) {
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
         invalidate()
         pendingCloudRequest = nil; cloudWorker = nil; cloudAudioActive = false; isCloudDraft = false
         manifest = RecordingSession.manifestURL(for: audio)
@@ -268,189 +279,77 @@ final class LiveTranscription: ObservableObject {
         if enabled { status = "Finishing remaining audio chunks…"; start() }
         else { status = errorMessage == nil ? "Live transcription is off" : "Live transcription needs attention · draft is incomplete" }
         syncActiveDirectoryRegistration()
+        scheduleBackgroundCleanup()
+    }
+
+    private func scheduleBackgroundCleanup() { _ = startCleanup() }
+
+    private func startCleanup() -> Task<LiveCleanupReport, Never>? {
+        guard !capturing, !busy else { return nil }
+        cleanupToken?.cancel()
+        cleanupTask?.cancel()
+        let previousCleanup = cleanupTask
         let root = liveRoot
         let retained = activeDirectories
-        Task.detached(priority: .utility) {
-            Self.pruneDisposableWorkingFiles(in: root, retaining: retained)
+        let token = WorkCancellation()
+        cleanupToken = token
+        let worker = Task.detached(priority: .utility) { [weak self] in
+            // Never overlap scans, including a cancelled pass still draining its I/O.
+            _ = await previousCleanup?.value
+            let report = Self.pruneDisposableWorkingFiles(in: root, retaining: retained, cancel: token)
+            await self?.applyCleanupReport(report, token: token)
+            return report
+        }
+        cleanupTask = worker
+        return worker
+    }
+
+    private func applyCleanupReport(_ report: LiveCleanupReport, token: WorkCancellation) {
+        guard cleanupToken?.id == token.id else { return }
+        lastCleanupReport = report
+        cleanupTask = nil
+        cleanupToken = nil
+    }
+
+    @discardableResult
+    func performCleanup() async -> LiveCleanupReport {
+        guard let worker = startCleanup() else { return .init(cancelled: true) }
+        let token = cleanupToken
+        return await withTaskCancellationHandler {
+            await worker.value
+        } onCancel: {
+            token?.cancel()
+            worker.cancel()
         }
     }
 
-    /// Removes only provably disposable temporary working audio files (`working.wav`,
-    /// `channel-<N>.wav`, `working-channel-<N>.wav`, region working WAV slices) inside
-    /// inactive owned `Live/<UUID>` draft directories (#44). Raw draft directories, raw ASR
-    /// JSON, chunk checkpoints, silence markers, cloud journals, and canonical transcripts
-    /// are always preserved regardless of age or `transcript.json` presence.
-    nonisolated static func pruneDisposableWorkingFiles(
-        in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
-        retaining activeDirectory: URL?,
-        expectedOwnerUID: uid_t = Darwin.getuid()
-    ) {
-        pruneDisposableWorkingFiles(
-            in: root,
-            retaining: activeDirectory.map { [$0] } ?? [],
-            expectedOwnerUID: expectedOwnerUID
-        )
-    }
-
+    /// Kept here as the lifecycle entry point; all traversal runs on a utility worker.
+    @discardableResult
     nonisolated static func pruneDisposableWorkingFiles(
         in root: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
         retaining activeDirectories: Set<URL> = [],
-        expectedOwnerUID: uid_t = Darwin.getuid()
-    ) {
-        var rootStat = Darwin.stat()
-        guard Darwin.lstat(root.path, &rootStat) == 0,
-              (rootStat.st_mode & S_IFMT) == S_IFDIR,
-              rootStat.st_uid == expectedOwnerUID else {
-            return
-        }
-        let fm = FileManager.default
-        guard let children = try? fm.contentsOfDirectory(
-            at: root,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else { return }
-
-        let retainedPaths = activeDirectoryRegistry.withLock { registry in
-            Set(registry.values.joined()).union(normalizedPaths(for: activeDirectories))
-        }
-        let rootPrefix = root.standardizedFileURL.path.hasSuffix("/")
-            ? root.standardizedFileURL.path
-            : root.standardizedFileURL.path + "/"
-
-        for child in children {
-            guard isOwnedNonSymlinkDirectory(child, expectedOwnerUID: expectedOwnerUID),
-                  !isRetained(child, in: retainedPaths) else {
-                continue
-            }
-            let childEntries = (try? fm.contentsOfDirectory(
-                at: child,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            )) ?? []
-            guard isOwnedDraftDirectory(child, entries: childEntries, expectedOwnerUID: expectedOwnerUID) else {
-                continue
-            }
-            for entry in childEntries {
-                if isDisposableWorkingAudioName(entry.lastPathComponent) {
-                    unlinkDisposableFileIfOwned(entry, rootPrefix: rootPrefix, expectedOwnerUID: expectedOwnerUID)
-                    continue
+        expectedOwnerUID: uid_t = Darwin.getuid(),
+        maxDraftDirectories: Int = LiveTranscriptionPolicy.maximumCleanupDraftDirectories,
+        maxEntriesPerDirectory: Int = LiveTranscriptionPolicy.maximumCleanupEntriesPerDirectory,
+        cancel: WorkCancellation? = nil,
+        shouldCancel: () -> Bool = { Task.isCancelled }
+    ) -> LiveCleanupReport {
+        let retained = normalizedPaths(for: activeDirectories)
+        return LiveWorkingAudioCleanup.run(
+            in: root, ownerUID: expectedOwnerUID, maxDrafts: maxDraftDirectories,
+            maxEntries: maxEntriesPerDirectory,
+            isRetained: { directory in
+                let path = directory.standardizedFileURL.path
+                return retained.contains(path) || activeDirectoryRegistry.withLock { registry in
+                    registry.values.contains { $0.contains(path) }
                 }
-                guard isOwnedNonSymlinkDirectory(entry, expectedOwnerUID: expectedOwnerUID),
-                      !isRetained(entry, in: retainedPaths) else {
-                    continue
-                }
-                let subEntries = (try? fm.contentsOfDirectory(
-                    at: entry,
-                    includingPropertiesForKeys: nil,
-                    options: [.skipsHiddenFiles]
-                )) ?? []
-                guard isOwnedAttemptOrTurnDirectory(entry, entries: subEntries, expectedOwnerUID: expectedOwnerUID) else {
-                    continue
-                }
-                for subFile in subEntries where isDisposableWorkingAudioName(subFile.lastPathComponent) {
-                    unlinkDisposableFileIfOwned(subFile, rootPrefix: rootPrefix, expectedOwnerUID: expectedOwnerUID)
-                }
-            }
-        }
-    }
-
-    nonisolated static func isDisposableWorkingAudioName(_ name: String) -> Bool {
-        if name == "working.wav" { return true }
-        guard name.hasSuffix(".wav") else { return false }
-        let stem = String(name.dropLast(4))
-        for prefix in ["channel-", "working-channel-"] where stem.hasPrefix(prefix) {
-            let digits = stem.dropFirst(prefix.count)
-            return !digits.isEmpty && digits.allSatisfy(\.isASCII) && digits.allSatisfy(\.isNumber)
-        }
-        for prefix in ["asr-channel-", "verify-channel-"] where stem.hasPrefix(prefix) {
-            let remainder = stem.dropFirst(prefix.count)
-            guard let range = remainder.range(of: "-region-") else { return false }
-            let channelDigits = remainder[..<range.lowerBound]
-            let regionDigits = remainder[range.upperBound...]
-            return !channelDigits.isEmpty && channelDigits.allSatisfy { $0.isASCII && $0.isNumber }
-                && !regionDigits.isEmpty && regionDigits.allSatisfy { $0.isASCII && $0.isNumber }
-        }
-        return false
-    }
-
-    private nonisolated static func isTurnDirectoryName(_ name: String) -> Bool {
-        guard name.hasPrefix("turn-") else { return false }
-        let digits = name.dropFirst(5)
-        return !digits.isEmpty && digits.allSatisfy { $0.isASCII && $0.isNumber }
-    }
-
-    private nonisolated static func isRawChannelEvidenceName(_ name: String) -> Bool {
-        guard name.hasPrefix("channel-") else { return false }
-        for suffix in [".raw.json", ".silence.txt", ".events.jsonl"] where name.hasSuffix(suffix) {
-            let middle = name.dropFirst("channel-".count).dropLast(suffix.count)
-            return !middle.isEmpty && middle.allSatisfy { $0.isASCII && $0.isNumber }
-        }
-        return false
-    }
-
-    private nonisolated static func isOwnedNonSymlinkDirectory(_ url: URL, expectedOwnerUID: uid_t) -> Bool {
-        var st = Darwin.stat()
-        guard Darwin.lstat(url.path, &st) == 0 else { return false }
-        return (st.st_mode & S_IFMT) == S_IFDIR && st.st_uid == expectedOwnerUID
-    }
-
-    private nonisolated static func isOwnedNonSymlinkRegularFile(_ url: URL, expectedOwnerUID: uid_t) -> Bool {
-        var st = Darwin.stat()
-        guard Darwin.lstat(url.path, &st) == 0 else { return false }
-        return (st.st_mode & S_IFMT) == S_IFREG && st.st_uid == expectedOwnerUID
-    }
-
-    private nonisolated static func isOwnedDraftDirectory(_ url: URL, entries: [URL], expectedOwnerUID: uid_t) -> Bool {
-        if UUID(uuidString: url.lastPathComponent) != nil { return true }
-        for entry in entries {
-            let name = entry.lastPathComponent
-            if draftMarkerFiles.contains(name), isOwnedNonSymlinkRegularFile(entry, expectedOwnerUID: expectedOwnerUID) {
-                return true
-            }
-            if isOwnedNonSymlinkDirectory(entry, expectedOwnerUID: expectedOwnerUID) {
-                let subEntries = (try? FileManager.default.contentsOfDirectory(
-                    at: entry,
-                    includingPropertiesForKeys: nil,
-                    options: [.skipsHiddenFiles]
-                )) ?? []
-                if isOwnedAttemptOrTurnDirectory(entry, entries: subEntries, expectedOwnerUID: expectedOwnerUID) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private nonisolated static func isOwnedAttemptOrTurnDirectory(_ url: URL, entries: [URL], expectedOwnerUID: uid_t) -> Bool {
-        let name = url.lastPathComponent
-        if UUID(uuidString: name) != nil || isTurnDirectoryName(name) { return true }
-        for entry in entries {
-            let fileName = entry.lastPathComponent
-            if (attemptOrTurnMarkerFiles.contains(fileName) || isRawChannelEvidenceName(fileName)),
-               isOwnedNonSymlinkRegularFile(entry, expectedOwnerUID: expectedOwnerUID) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private nonisolated static func unlinkDisposableFileIfOwned(_ file: URL, rootPrefix: String, expectedOwnerUID: uid_t) {
-        guard file.standardizedFileURL.path.hasPrefix(rootPrefix),
-              isOwnedNonSymlinkRegularFile(file, expectedOwnerUID: expectedOwnerUID) else {
-            return
-        }
-        _ = Darwin.unlink(file.path)
+            },
+            shouldCancel: { cancel?.isCancelled == true || shouldCancel() }
+        )
     }
 
     private nonisolated static func normalizedPaths(for urls: Set<URL>) -> Set<String> {
-        Set(urls.flatMap { url in
-            [url.standardizedFileURL.path, url.resolvingSymlinksInPath().standardizedFileURL.path]
-        })
-    }
-
-    private nonisolated static func isRetained(_ url: URL, in retainedPaths: Set<String>) -> Bool {
-        retainedPaths.contains(url.standardizedFileURL.path)
-            || retainedPaths.contains(url.resolvingSymlinksInPath().standardizedFileURL.path)
+        Set(urls.map { $0.standardizedFileURL.path })
     }
 
     func shutdown() async {
@@ -459,7 +358,7 @@ final class LiveTranscription: ObservableObject {
         invalidate()
         await task?.value
         syncActiveDirectoryRegistration()
-        Self.pruneDisposableWorkingFiles(in: liveRoot, retaining: activeDirectories)
+        _ = await performCleanup()
     }
 
     private func invalidate() {
@@ -566,11 +465,7 @@ final class LiveTranscription: ObservableObject {
             onBusyChange(false)
             if generation != id { start() } // A cancelled worker must exit before a replacement starts.
             syncActiveDirectoryRegistration()
-            let root = liveRoot
-            let retained = activeDirectories
-            Task.detached(priority: .utility) {
-                Self.pruneDisposableWorkingFiles(in: root, retaining: retained)
-            }
+            scheduleBackgroundCleanup()
         }
     }
 

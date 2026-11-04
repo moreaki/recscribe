@@ -7,8 +7,9 @@ import os
 nonisolated final class WorkCancellation: Sendable {
     let id = UUID()
     private let cancelled = OSAllocatedUnfairLock(initialState: false)
+    var isCancelled: Bool { cancelled.withLock { $0 } }
     func cancel() { cancelled.withLock { $0 = true } }
-    func check() throws { if cancelled.withLock({ $0 }) { throw CancellationError() } }
+    func check() throws { if isCancelled { throw CancellationError() } }
 }
 
 /// Blocking work belongs to one utility worker, never a capture/main queue.

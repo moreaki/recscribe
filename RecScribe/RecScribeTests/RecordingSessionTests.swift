@@ -489,16 +489,103 @@ struct RecordingSessionTests {
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
 
-        // Once the worker completes and LiveTranscription reaches a terminal state, disposable working WAVs are cleaned while raw ASR JSON stays intact.
+        // Once the worker completes and LiveTranscription reaches a terminal state, disposable working WAVs are cleaned on a utility worker while raw ASR JSON stays intact.
         gate.resume()
         for _ in 0..<50 where live.busy {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         await live.shutdown()
+        #expect(!live.lastCleanupReport.ranOnMainThread)
+        #expect(live.lastCleanupFailures.isEmpty)
         #expect(fm.fileExists(atPath: activeLiveDir.path))
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.raw.json").path))
         #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
         #expect(!fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
+
+        // 7. Bounded and cancellable traversal + surfaced enumeration/unlink failures on utility-worker shutdown.
+        let boundedRoot = directory.appendingPathComponent("LiveBounded", isDirectory: true)
+        let draft1 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000001", isDirectory: true)
+        let draft2 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000002", isDirectory: true)
+        let draft3 = boundedRoot.appendingPathComponent("00000000-0000-0000-0000-000000000003", isDirectory: true)
+        for draft in [draft1, draft2, draft3] {
+            try fm.createDirectory(at: draft, withIntermediateDirectories: true)
+            try Data("{}".utf8).write(to: draft.appendingPathComponent("latest.json"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("working.wav"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("channel-0.wav"))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("channel-1.wav"))
+        }
+
+        // Pre-cancelled token stops immediately without unlinking files.
+        let cancelledToken = WorkCancellation()
+        cancelledToken.cancel()
+        let cancelledReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            cancel: cancelledToken
+        )
+        #expect(cancelledReport.cancelled)
+        #expect(cancelledReport.removedFiles.isEmpty)
+        #expect(fm.fileExists(atPath: draft1.appendingPathComponent("working.wav").path))
+
+        // Streaming enumeration bounds I/O without sorting/loading the entire directory.
+        let boundedReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            maxDraftDirectories: 1,
+            maxEntriesPerDirectory: 2
+        )
+        #expect(boundedReport.stoppedByLimit)
+        #expect(boundedReport.inspectedDraftDirectories == 1)
+        #expect((1...2).contains(boundedReport.removedFiles.count))
+        #expect(Set(boundedReport.removedFiles.map { $0.deletingLastPathComponent() }).count == 1)
+        #expect(boundedReport.inspectedEntries <= LiveTranscriptionPolicy.maximumCleanupEntries)
+        for draft in [draft1, draft2, draft3] {
+            #expect(fm.fileExists(atPath: draft.appendingPathComponent("latest.json").path))
+            try Data("temp".utf8).write(to: draft.appendingPathComponent("working.wav"))
+        }
+
+        // Mid-scan cancellation stops after the first removal.
+        var checks = 0
+        let midCancelReport = LiveTranscription.pruneDisposableWorkingFiles(
+            in: boundedRoot,
+            shouldCancel: {
+                checks += 1
+                return checks > 4
+            }
+        )
+        #expect(midCancelReport.cancelled)
+        #expect(midCancelReport.removedFiles.count < 3)
+
+        // Enumeration failure (unreadable draft directory 0o000) and unlink failure (read-only attempt directory 0o500) are surfaced on shutdown() while accessible sibling drafts are cleaned.
+        let LockedAttempt = draft2.appendingPathComponent("00000000-0000-0000-0000-000000000020", isDirectory: true)
+        try fm.createDirectory(at: LockedAttempt, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: LockedAttempt.appendingPathComponent("chunk.json"))
+        let lockedWav = LockedAttempt.appendingPathComponent("working.wav")
+        try Data("locked".utf8).write(to: lockedWav)
+        try fm.setAttributes([.posixPermissions: 0o500], ofItemAtPath: LockedAttempt.path)
+        try fm.setAttributes([.posixPermissions: 0o000], ofItemAtPath: draft1.path)
+        defer {
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: LockedAttempt.path)
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: draft1.path)
+        }
+
+        let shutdownLive = LiveTranscription(liveRoot: boundedRoot)
+        await shutdownLive.shutdown()
+        #expect(!shutdownLive.lastCleanupReport.ranOnMainThread)
+        #expect(shutdownLive.lastCleanupFailures.contains {
+            $0.url.standardizedFileURL == draft1.standardizedFileURL
+                && $0.operation == .enumerate
+                && $0.posixErrorCode == EACCES
+        })
+        #expect(shutdownLive.lastCleanupFailures.contains {
+            $0.url.standardizedFileURL == lockedWav.standardizedFileURL
+                && $0.operation == .unlink
+                && $0.posixErrorCode == EACCES
+        })
+        #expect(fm.fileExists(atPath: lockedWav.path))
+        // Accessible sibling draft3 was still cleaned during the same shutdown pass.
+        #expect(fm.fileExists(atPath: draft3.appendingPathComponent("latest.json").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("working.wav").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("channel-0.wav").path))
+        #expect(!fm.fileExists(atPath: draft3.appendingPathComponent("channel-1.wav").path))
     }
 
     @Test("RecorderTelemetry isolates 10-30 Hz waveform/duration updates and StudioView keeps capture controls in all modes (#41, #44)")

@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 
 enum StudioWorkspaceMode: String, WorkspaceTab, CaseIterable {
@@ -14,18 +15,43 @@ enum StudioWorkspaceMode: String, WorkspaceTab, CaseIterable {
     }
 }
 
-extension Notification.Name {
-    static let recScribeSwitchWorkspaceMode = Notification.Name("recScribe.switchWorkspaceMode")
+/// Scene-independent selection survives closing and recreating the Studio window.
+@MainActor @Observable
+final class StudioNavigation {
+    var mode = StudioWorkspaceMode.studio
+
+    func open(_ window: AppWindow, using open: (String) -> Void) {
+        switch window {
+        case .studio: mode = .studio
+        case .routing: mode = .routing
+        case .recordings: mode = .recordings
+        case .settings: break
+        }
+        open((window == .settings ? AppWindow.settings : .studio).rawValue)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var studioNavigation: StudioNavigation? = nil
 }
 
 struct StudioView: View {
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.openWindow) private var openWindow
-    @State private var workspaceMode: StudioWorkspaceMode
+    @Environment(\.studioNavigation) private var navigation
+    @State private var initialMode: StudioWorkspaceMode
+
+    private var workspaceMode: StudioWorkspaceMode {
+        get { navigation?.mode ?? initialMode }
+        nonmutating set {
+            if let navigation { navigation.mode = newValue }
+            else { initialMode = newValue }
+        }
+    }
 
     init(workspaceMode: StudioWorkspaceMode = .studio) {
-        _workspaceMode = State(initialValue: workspaceMode)
+        _initialMode = State(initialValue: workspaceMode)
     }
 
     var body: some View {
@@ -33,7 +59,7 @@ struct StudioView: View {
             HStack(spacing: GlassSpacing.md) {
                 GlassBrandLockup(size: .compact)
                 Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
-                WorkspaceTabs(title: "Workspace", selection: $workspaceMode)
+                WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 }))
                     .frame(maxWidth: 420)
                 Spacer()
                 Label(live.cloudAudioActive ? "Cloud audio approved" : settings.values.processingLocation == .cloud ? "Cloud audio requires approval" : "Audio stays on your Mac",
@@ -72,10 +98,5 @@ struct StudioView: View {
         }
         .frame(minWidth: AppWindow.studio.minimumSize.width, minHeight: AppWindow.studio.minimumSize.height)
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
-        .onReceive(NotificationCenter.default.publisher(for: .recScribeSwitchWorkspaceMode)) { notification in
-            if let mode = notification.object as? StudioWorkspaceMode {
-                workspaceMode = mode
-            }
-        }
     }
 }

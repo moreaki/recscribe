@@ -118,6 +118,7 @@ struct TranscriptWorkspace: View {
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     @State private var playback = SessionPlayback()
     @State private var pendingSeekSeconds: Double?
     @State private var section: Section
@@ -220,7 +221,7 @@ struct TranscriptWorkspace: View {
             } else {
                 ContentUnavailableView(library.busy ? "Processing your recording" : "Create a final transcript", systemImage: "doc.text",
                     description: Text(source == nil ? "Choose a recording or import a WAV. Live drafts and final transcripts are separate." : "The Live tab is a provisional chunk preview. Create a final transcript from the complete recording, then improve its text or generate a summary."))
-                if source == nil { Button("Choose recording / import…") { AppWindow.open(.recordings, using: openWindow) } }
+                if source == nil { Button("Choose recording / import…") { AppWindow.open(.recordings, using: openWindow, navigation: navigation) } }
                 Spacer(minLength: 0)
             }
             if let message = error ?? library.errorMessage {

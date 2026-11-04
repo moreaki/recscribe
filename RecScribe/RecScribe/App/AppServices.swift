@@ -10,6 +10,7 @@ final class AppServices: ObservableObject {
     let library: SessionLibrary
     let recorder: RecorderViewModel
     let live: LiveTranscription
+    let navigation = StudioNavigation()
     private var locationObservation: AnyCancellable?
 
     init() {

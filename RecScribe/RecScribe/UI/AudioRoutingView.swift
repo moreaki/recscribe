@@ -432,17 +432,11 @@ struct AudioRoutingView: View {
             .background(WorkspaceStyle.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
     @ViewBuilder private func sourceMeter(_ track: CaptureTrack) -> some View {
-        if let test = recorder.audioTest, !test.health.isEmpty {
+        if let test = recorder.audioTest, test.locksSources {
             AudioTestSourceMeterView(test: test, track: track,
                 muted: levels.level(track == .playback ? source.playbackLevelID : inputs.first(where: { CaptureTrack.input($0.deviceUID) == track }).map { "input:" + $0.deviceUID } ?? "").muted)
-        } else if recorder.isRecording, let item = recorder.sourceHealth.first(where: { $0.id == track.rawValue }) {
-            VStack(alignment: .leading, spacing: 4) {
-                ProgressView(value: Double(min(1, item.health.peak))).accessibilityLabel("\(item.name) raw input level")
-                let status = item.health.status(at: recorder.healthTime)
-                Text(status.label).foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
-                if let failure = item.health.failureMessage { Text(failure).foregroundStyle(.orange) }
-                if item.health.clipped { Text("Clipping detected · reduce recording gain").foregroundStyle(.orange) }
-            }.font(.caption2).padding(.bottom, 10)
+        } else if recorder.isRecording {
+            CaptureSourceMeter(telemetry: recorder.telemetry, track: track)
         }
     }
     static func makeUpdatedSource(
@@ -480,6 +474,25 @@ struct AudioRoutingView: View {
             defer { loadingApps = false }
             do { apps = try await recorder.audioSource.availableApps(); showApps = true }
             catch { appError = error.localizedDescription }
+        }
+    }
+}
+
+/// Only this leaf subscribes to incoming level and health updates.
+struct CaptureSourceMeter: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+    let track: CaptureTrack
+
+    var body: some View {
+        if let item = telemetry.sourceHealth.first(where: { $0.id == track.rawValue }) {
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: Double(min(1, item.health.peak)))
+                    .accessibilityLabel("\(item.name) raw input level")
+                let status = item.health.status(at: telemetry.healthTime)
+                Text(status.label).foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
+                if let failure = item.health.failureMessage { Text(failure).foregroundStyle(.orange) }
+                if item.health.clipped { Text("Clipping detected · reduce recording gain").foregroundStyle(.orange) }
+            }.font(.caption2).padding(.bottom, 10)
         }
     }
 }
@@ -546,13 +559,14 @@ nonisolated enum AudioRoutingSummary {
 struct MultipleInputsView: View {
     @ObservedObject var recorder: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     private var source: AudioSource { recorder.audioSource.selectedSource }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button("Audio routing…", systemImage: "point.3.connected.trianglepath.dotted") {
                 NSApp.activate(ignoringOtherApps: true)
-                AppWindow.open(.routing, using: openWindow)
+                AppWindow.open(.routing, using: openWindow, navigation: navigation)
             }
             if source.kind == .multiple {
                 let count = source.inputSelections.count

@@ -6,6 +6,7 @@ struct RecordingLibraryView: View {
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.glassTheme) private var theme
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     @Environment(\.dismissWindow) private var dismissWindow
     @StateObject private var playback = SessionPlayback()
     @State private var recordingToDelete: SessionEntry?
@@ -19,7 +20,7 @@ struct RecordingLibraryView: View {
         if let onOpenStudio {
             onOpenStudio()
         } else {
-            openWindow(id: AppWindow.studio.rawValue)
+            AppWindow.open(.studio, using: openWindow, navigation: navigation)
         }
     }
 

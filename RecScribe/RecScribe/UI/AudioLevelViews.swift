@@ -11,8 +11,7 @@ struct RecordingLevelsView: View {
         DisclosureGroup("Audio levels", isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 10) {
                 if source.isMixed || source.microphoneUID == nil {
-                    SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
-                                channels: source.isMixed ? 2 : (recorder.sourceHealth.first?.health.channels ?? 2), preservesSources: source.isMixed)
+                    RecordingPlaybackFader(telemetry: recorder.telemetry, levels: levels, source: source)
                 }
                 if source.kind == .multiple {
                     ForEach(source.inputSelections) { selection in
@@ -37,6 +36,18 @@ struct RecordingLevelsView: View {
                 if let warning = monitor.warning { Text(warning).font(.caption).foregroundStyle(.orange) }
             }.padding(.top, 8)
         }.font(.callout).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct RecordingPlaybackFader: View {
+    @ObservedObject var telemetry: RecorderTelemetry
+    @ObservedObject var levels: AudioLevels
+    let source: AudioSource
+
+    var body: some View {
+        SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
+                    channels: source.isMixed ? 2 : (telemetry.sourceHealth.first?.health.channels ?? 2),
+                    preservesSources: source.isMixed)
     }
 }
 

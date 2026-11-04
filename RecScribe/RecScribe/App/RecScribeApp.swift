@@ -11,12 +11,13 @@ struct RecScribeApp: App {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environmentObject(services.recorder)
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
+                .environment(\.studioNavigation, services.navigation)
                 .onAppear { services.bind(to: appDelegate) }
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
-            CommandGroup(replacing: .appSettings) { OpenSettingsCommand() }
-            CommandGroup(after: .newItem) { OpenRecordingsCommand() }
+            CommandGroup(replacing: .appSettings) { OpenSettingsCommand(navigation: services.navigation) }
+            CommandGroup(after: .newItem) { OpenRecordingsCommand(navigation: services.navigation) }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -27,29 +28,32 @@ struct RecScribeApp: App {
         Window("RecScribe Settings", id: AppWindow.settings.rawValue) {
             ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
+                .environment(\.studioNavigation, services.navigation)
                 .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
     }
 }
 
 private struct OpenSettingsCommand: View {
+    let navigation: StudioNavigation
     @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Settings…") { AppWindow.open(.settings, using: openWindow) }.keyboardShortcut(",") }
+    var body: some View { Button("Settings…") { AppWindow.open(.settings, using: openWindow, navigation: navigation) }.keyboardShortcut(",") }
 }
 private struct OpenRecordingsCommand: View {
+    let navigation: StudioNavigation
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Button("Recording Studio") {
-            AppWindow.open(.studio, using: openWindow)
+            AppWindow.open(.studio, using: openWindow, navigation: navigation)
         }.keyboardShortcut("1")
         Button("Audio Routing…") {
-            AppWindow.open(.routing, using: openWindow)
+            AppWindow.open(.routing, using: openWindow, navigation: navigation)
         }.keyboardShortcut("2")
         Button("Recordings & Import…") {
-            AppWindow.open(.recordings, using: openWindow)
+            AppWindow.open(.recordings, using: openWindow, navigation: navigation)
         }.keyboardShortcut("3")
         Button("Open Recordings…") {
-            AppWindow.open(.recordings, using: openWindow)
+            AppWindow.open(.recordings, using: openWindow, navigation: navigation)
         }.keyboardShortcut("o")
     }
 }
@@ -59,20 +63,9 @@ enum AppWindow: String {
     case studio, settings, recordings, routing
 
     @MainActor
-    static func open(_ window: AppWindow, using openWindow: OpenWindowAction) {
-        switch window {
-        case .studio:
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.studio)
-        case .routing:
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.routing)
-        case .recordings:
-            openWindow(id: AppWindow.studio.rawValue)
-            NotificationCenter.default.post(name: .recScribeSwitchWorkspaceMode, object: StudioWorkspaceMode.recordings)
-        case .settings:
-            openWindow(id: AppWindow.settings.rawValue)
-        }
+    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?) {
+        if let navigation { navigation.open(window) { openWindow(id: $0) } }
+        else { openWindow(id: (window == .settings ? AppWindow.settings : .studio).rawValue) }
     }
     var title: String {
         switch self {

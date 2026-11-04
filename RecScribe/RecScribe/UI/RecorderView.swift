@@ -6,6 +6,7 @@ import SwiftUI
 struct RecorderView: View {
     @EnvironmentObject var viewModel: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
 
     private var mainButtonTitle: String {
         if viewModel.installLocationBlocksRecording { return "Reveal in Finder" }
@@ -32,7 +33,7 @@ struct RecorderView: View {
             }
             if case .error = viewModel.state {
                 Button("Review saved recordings", systemImage: "waveform.path.badge.exclamationmark") {
-                    AppWindow.open(.recordings, using: openWindow)
+                    AppWindow.open(.recordings, using: openWindow, navigation: navigation)
                 }.buttonStyle(.borderless)
             }
             RecorderWaveformSection(telemetry: viewModel.telemetry)
@@ -80,7 +81,7 @@ struct RecorderView: View {
             viewModel.mainWindowDidAppear()
             OverflowMenu.openWindow = { window in
                 NSApp.activate(ignoringOtherApps: true)
-                AppWindow.open(window, using: openWindow)
+                AppWindow.open(window, using: openWindow, navigation: navigation)
             }
         }
         .onDisappear { viewModel.mainWindowDidDisappear() }

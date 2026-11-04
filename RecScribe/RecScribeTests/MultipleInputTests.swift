@@ -161,7 +161,8 @@ struct MultipleInputTests {
         for i in 3..<10 {
             for track in [CaptureTrack.playback, .input("a")] { recorder.accept(.init(track: track, presentationTime: 100 + Double(i) / 100, buffer: pcm(0.3))) }
         }
-        await #expect(throws: (any Error).self) { try await recorder.stop() }
+        try await recorder.stop()
+        #expect(recorder.reviewMessage != nil)
         let manifest = try #require(recorder.manifestURL), parent = try RecordingSession.read(manifest)
         #expect(parent.totalFrames == 4800 && parent.status == .needsReview)
         let failed = try #require(parent.sourceTracks?.first { $0.role == .input("b") })
@@ -234,7 +235,8 @@ struct MultipleInputTests {
                     buffer: pcm(0.2, channels: track == .input("b") && index >= 2 ? 1 : 2)))
             }
         }
-        await #expect(throws: (any Error).self) { try await recorder.stop() }
+        try await recorder.stop()
+        #expect(recorder.reviewMessage != nil)
         let manifest = try #require(recorder.manifestURL), session = try RecordingSession.read(manifest)
         #expect(session.totalFrames == 2400 && session.status == .needsReview)
         #expect(session.sourceTracks?.first { $0.role == .input("b") }?.failure != nil)

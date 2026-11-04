@@ -17,7 +17,7 @@ import RecScribeCore
     private let settings: () -> AppSettings.Values
     private let progressMonitor: JobProgressMonitor
     private(set) var entries: [Entry] = []
-    private(set) var activity = "Ready"
+    private var operationActivity = "Ready"
     private(set) var progress = 0.0
     private(set) var recordingActive = false
     private(set) var liveWorkActive = false
@@ -35,10 +35,12 @@ import RecScribeCore
     private var pending: [PendingSession] = []
     private var pendingRecoveryDirectory: URL?
     private var activeManifest: URL?
+    private var resumeInterruptedSession = false
     @ObservationIgnored private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
+    private let processSession: @Sendable (URL, URL, WorkCancellation, Bool, String?) throws -> RecordingSession
     private let cancelRuntime: () -> Void
     private let rememberJob: (URL?, URL?) -> Void
     @ObservationIgnored private var restorationTask: Task<Void, Never>?
@@ -50,6 +52,9 @@ import RecScribeCore
         try SessionExporter().export(manifest, to: directory, checkCancellation: token.check)
     }, cancelRuntime: @escaping () -> Void = {},
          settings: @escaping () -> AppSettings.Values = { .init() },
+         processSession: @escaping @Sendable (URL, URL, WorkCancellation, Bool, String?) throws -> RecordingSession = {
+             try SessionProcessing.process($0, ffmpeg: $1, cancel: $2, recover: $3, issue: $4)
+         },
          readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
          readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil,
          initialJob: URL? = nil, initialSource: URL? = nil,
@@ -57,6 +62,7 @@ import RecScribeCore
         let repository = ManifestRepository()
         let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
+        self.processSession = processSession
         self.cancelRuntime = cancelRuntime
         self.settings = settings
         self.rememberJob = rememberJob
@@ -97,6 +103,23 @@ import RecScribeCore
                 self?.restorationTask = nil
             }
         }
+    }
+
+    /// Waiting is derived from actual queued work, never retained as an idle label.
+    var activity: String {
+        if !pending.isEmpty, recordingActive || liveWorkActive {
+            let reason = recordingActive ? "recording" : "live transcription"
+            return "Recording verification/recovery queued (\(pending.count)) · waiting for \(reason)"
+        }
+        return operationActivity
+    }
+
+    var workInProgress: Bool {
+        cancellation != nil && !recordingActive && !liveWorkActive
+    }
+
+    var canCancelWork: Bool {
+        !pending.isEmpty || resumeInterruptedSession || (cancellation != nil && cancellation?.isCancelled == false)
     }
 
     func load(_ directory: URL) {
@@ -166,7 +189,7 @@ import RecScribeCore
         if let index = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[index].session = session
         }
-        activity = session.title == nil ? "Recording title reset" : "Recording renamed"
+        operationActivity = session.title == nil ? "Recording title reset" : "Recording renamed"
         return Entry(id: entry.id, session: session)
     }
 
@@ -179,7 +202,7 @@ import RecScribeCore
         }
         cancelRefresh()
         errorMessage = nil
-        self.activity = activity
+        self.operationActivity = activity
         busy = true
         let token = WorkCancellation()
         cancellation = token
@@ -192,10 +215,10 @@ import RecScribeCore
                 } onCancel: { token.cancel(); worker.cancel() }
                 result = value
             } catch is CancellationError {
-                self.activity = "Cancelled; originals retained"
+                self.operationActivity = "Cancelled; originals retained"
             } catch {
                 self.errorMessage = error.localizedDescription
-                self.activity = "Needs attention"
+                self.operationActivity = "Needs attention"
             }
         }
         task = edit
@@ -221,18 +244,21 @@ import RecScribeCore
             persistJob(nil, nil)
         }
         if let previousJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == previousJob.standardizedFileURL.path }) { self.previousJob = nil }
-        activity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
+        operationActivity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
     }
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active {
             cancelRestoration()
             pendingRecoveryDirectory = nil
+            if activeManifest != nil, cancellation?.isCancelled == false {
+                resumeInterruptedSession = true
+            }
             cancellation?.cancel()
             task?.cancel()
             progressMonitor.stop()
             cancelRuntime()
-            activity = "Background work paused for recording"
+            if cancellation != nil { operationActivity = "Stopping background work for recording…" }
         } else {
             startNext()
         }
@@ -242,9 +268,13 @@ import RecScribeCore
         if active {
             cancelRestoration()
             pendingRecoveryDirectory = nil
+            if activeManifest != nil, cancellation?.isCancelled == false {
+                resumeInterruptedSession = true
+            }
             cancellation?.cancel()
             task?.cancel()
             progressMonitor.stop()
+            if cancellation != nil { operationActivity = "Stopping background work for live transcription…" }
         } else {
             startNext()
         }
@@ -258,11 +288,15 @@ import RecScribeCore
         startNext()
     }
     func cancel() {
-        guard let cancellation else { return }
-        cancellation.cancel()
+        guard canCancelWork else { return }
+        pending.removeAll()
+        // An explicit Cancel must also prevent a capture-interrupted worker from
+        // putting its item back into the queue when it finishes draining.
+        resumeInterruptedSession = false
+        cancellation?.cancel()
         task?.cancel()
         progressMonitor.stop()
-        activity = "Cancelling…"
+        operationActivity = cancellation == nil ? "Cancelled; originals retained" : "Cancelling…"
     }
     func cancelRestoration() {
         restorationTask?.cancel()
@@ -300,7 +334,7 @@ import RecScribeCore
             return true
         }) == true else { startNext(); return false }
         forgetTranscript(job)
-        activity = "Transcript moved to Trash; recording retained"
+        operationActivity = "Transcript moved to Trash; recording retained"
         startNext()
         return true
     }
@@ -321,7 +355,7 @@ import RecScribeCore
         cancelRestoration()
         previousJob = latestJob; latestJob = job; latestSource = source
         progress = 1
-        activity = "Cloud transcript ready · estimated timing, review required"
+        operationActivity = "Cloud transcript ready · estimated timing, review required"
         persistJob(job, source)
     }
     func shutdown() async {
@@ -340,22 +374,26 @@ import RecScribeCore
         let item = pending.removeFirst()
         let token = WorkCancellation()
         activeManifest = item.manifest
+        resumeInterruptedSession = false
         cancellation = token
         let settings = settings()
+        let processSession = processSession
         errorMessage = nil
-        activity = item.recover ? "Recovering recording parts…" : "Verifying recording and archive…"
+        operationActivity = item.recover ? "Recovering recording parts…" : "Verifying recording and archive…"
         task = Task(priority: .utility) {
             do {
                 let result = try await Task.detached(priority: .utility) {
-                    try SessionProcessing.process(item.manifest, ffmpeg: URL(fileURLWithPath: settings.ffmpegPath), cancel: token, recover: item.recover, issue: item.issue)
+                    try processSession(item.manifest, URL(fileURLWithPath: settings.ffmpegPath), token, item.recover, item.issue)
                 }.value
-                activity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
+                try token.check()
+                operationActivity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
                 if settings.autoTranscribe && settings.processingLocation != .cloud && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
             } catch is CancellationError {
-                if (recordingActive || liveWorkActive) && !shuttingDown { pending.insert(item, at: 0) }
-                activity = recordingActive ? "Paused for recording" : "Cancelled; originals retained"
-            } catch { errorMessage = error.localizedDescription; activity = "Needs attention" }
+                if resumeInterruptedSession && !shuttingDown { pending.insert(item, at: 0) }
+                operationActivity = "Cancelled; originals retained"
+            } catch { errorMessage = error.localizedDescription; operationActivity = "Needs attention" }
             activeManifest = nil
+            resumeInterruptedSession = false
             task = nil
             cancellation = nil
             load(item.manifest.deletingLastPathComponent())
@@ -382,8 +420,8 @@ import RecScribeCore
         errorMessage = nil
         task = Task(priority: .utility) {
             do { try await runTranscription(source, settings: settings, cancel: token) }
-            catch is CancellationError { activity = "Transcription cancelled; partial job retained" }
-            catch { errorMessage = error.localizedDescription; activity = "Transcription failed" }
+            catch is CancellationError { operationActivity = "Transcription cancelled; partial job retained" }
+            catch { errorMessage = error.localizedDescription; operationActivity = "Transcription failed" }
             task = nil
             cancellation = nil
             startNext()
@@ -404,10 +442,10 @@ import RecScribeCore
         let job = jobs.appendingPathComponent(cancel.id.uuidString)
         previousJob = latestJob
         latestJob = job
-        activity = "Starting local transcription…"
+        operationActivity = "Starting local transcription…"
         progress = 0
         progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] value in
-            self?.activity = value.displayLabel
+            self?.operationActivity = value.displayLabel
             self?.progress = value.progress
         }, failure: { [weak self] message in self?.errorMessage = message })
         defer { progressMonitor.stop() }
@@ -417,7 +455,7 @@ import RecScribeCore
         let info = try await readJob(job.appendingPathComponent("manifest.json")).validated()
         try cancel.check()
         guard [.completed, .completedWithReview].contains(info.state) else { throw SessionError.invalid("Pipeline exited without a completed transcript") }
-        activity = info.state.label
+        operationActivity = info.state.label
         progress = info.progress
         persistJob(job, source)
         if settings.aiEnabled && settings.aiProvider == .ollama && (settings.mode != .verbatim || settings.summarize) {
@@ -454,7 +492,7 @@ import RecScribeCore
         cancellation = token
         busy = true
         errorMessage = nil
-        activity = request.isCloud ? "Sending approved transcript text to OpenAI…" : "Processing text on this Mac…"
+        operationActivity = request.isCloud ? "Sending approved transcript text to OpenAI…" : "Processing text on this Mac…"
         task = Task(priority: .utility) {
             defer { busy = false; task = nil; cancellation = nil; progressMonitor.stop(); startNext() }
             do {
@@ -465,9 +503,9 @@ import RecScribeCore
                 let job = jobs.appendingPathComponent(token.id.uuidString)
                 try await deriveText(from: request.transcript, source: preview.sourceURL, output: job,
                                      options: request.options(cloudConsent: cloudConsent), key: key)
-                activity = request.isCloud ? "OpenAI text derivative ready · review required" : "Local text derivative ready · review required"
-            } catch is CancellationError { activity = "Text processing cancelled; previous transcript retained" }
-            catch { errorMessage = error.localizedDescription; activity = "Text processing failed; previous transcript retained" }
+                operationActivity = request.isCloud ? "OpenAI text derivative ready · review required" : "Local text derivative ready · review required"
+            } catch is CancellationError { operationActivity = "Text processing cancelled; previous transcript retained" }
+            catch { errorMessage = error.localizedDescription; operationActivity = "Text processing failed; previous transcript retained" }
         }
     }
 
@@ -478,7 +516,7 @@ import RecScribeCore
         latestJob = output
         progress = 0
         progressMonitor.start(output.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
-            self?.activity = snapshot.displayLabel; self?.progress = snapshot.progress
+            self?.operationActivity = snapshot.displayLabel; self?.progress = snapshot.progress
         }, failure: { [weak self] message in self?.errorMessage = message })
         defer { progressMonitor.stop() }
         try await TextJob().run(source: transcript, output: output, options: options, key: key)
@@ -486,7 +524,7 @@ import RecScribeCore
         try Task.checkCancellation()
         guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
         progress = result.progress
-        activity = result.state.label
+        operationActivity = result.state.label
         if let source { persistJob(output, source) }
     }
 
@@ -498,7 +536,7 @@ import RecScribeCore
         let exportSession = exportSession
         cancellation = token
         errorMessage = nil
-        activity = "Exporting and verifying copies…"
+        operationActivity = "Exporting and verifying copies…"
         progress = 0
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -512,14 +550,14 @@ import RecScribeCore
                         let destination = try await Task.detached(priority: .utility) {
                             try exportSession(manifest, directory, token)
                         }.value
-                        activity = "Export verified; originals retained"
+                        operationActivity = "Export verified; originals retained"
                         progress = 1
                         continuation.resume(returning: destination)
                     } catch is CancellationError {
-                        activity = "Export cancelled; incomplete copies remain as .partial"
+                        operationActivity = "Export cancelled; incomplete copies remain as .partial"
                         continuation.resume(throwing: CancellationError())
                     } catch {
-                        activity = "Export failed; incomplete copies remain as .partial"
+                        operationActivity = "Export failed; incomplete copies remain as .partial"
                         errorMessage = error.localizedDescription
                         continuation.resume(throwing: error)
                     }

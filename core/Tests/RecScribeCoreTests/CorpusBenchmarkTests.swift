@@ -111,7 +111,9 @@ import Testing
           shift
         done
         mkdir "$output" || exit 1
-        echo "$$" > "$output/pid"
+        # Publish only a complete PID; existence alone is the reader's signal.
+        echo "$$" > "$output/pid.partial"
+        mv "$output/pid.partial" "$output/pid"
         while [ ! -f "$output/cancel.request" ]; do sleep 0.02; done
         touch "$output/stopped"
         """# + "\n"

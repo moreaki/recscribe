@@ -123,11 +123,15 @@ struct RecordingLibraryView: View {
                     .font(.caption).foregroundStyle(theme.colors.statusWarning).textSelection(.enabled)
             }
             HStack {
-                ProgressView(value: library.progress).frame(width: theme.metrics.controlHeightMedium * 3)
+                if library.workInProgress {
+                    ProgressView(value: library.progress).frame(width: theme.metrics.controlHeightMedium * 3)
+                }
                 Text(library.activity).font(.caption)
                 Spacer()
                 if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
-                Button("Cancel work") { library.cancel() }
+                if library.canCancelWork {
+                    Button("Cancel work") { library.cancel() }
+                }
                 if !embeddedInStudio {
                     Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
                         .help("Close the Recordings window; background processing continues.")

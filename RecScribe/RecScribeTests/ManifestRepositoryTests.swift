@@ -164,7 +164,9 @@ struct ManifestRepositoryTests {
         gate.finish(second, SessionSnapshot(entries: [.init(id: activeManifest, session: unfinalized)]))
         await waitUntil("in-flight scan finishes") { !library.refreshing }
         #expect(library.entries.map(\.id) == [activeManifest])
-        #expect(library.activity == "Background work paused for recording")
+        #expect(library.activity == "Ready")
+        #expect(!library.workInProgress)
+        #expect(!library.canCancelWork)
         await library.shutdown()
     }
 }

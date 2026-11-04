@@ -1,18 +1,18 @@
 // Based on Home Rec by Melissa de Britto Pereira; see NOTICE.
 // Modified for RecScribe's single-window studio and optional live ASR (2026).
 import SwiftUI
+import os
 
 @main
 struct RecScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var services = AppServices()
+    private var services: AppServices { appDelegate.services }
 
     var body: some Scene {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environmentObject(services.recorder)
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
                 .environment(\.studioNavigation, services.navigation)
-                .onAppear { services.bind(to: appDelegate) }
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
@@ -28,7 +28,6 @@ struct RecScribeApp: App {
             ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
                 .environment(\.studioNavigation, services.navigation)
-                .onAppear { services.bind(to: appDelegate) }
         }.windowResizability(.contentMinSize)
     }
 }
@@ -39,13 +38,13 @@ private struct OpenRecordingsCommand: View {
     var body: some View {
         Button("Recording Studio") {
             AppWindow.open(.studio, using: openWindow, navigation: navigation)
-        }.keyboardShortcut("1")
+        }.keyboardShortcut(KeyEquivalent(AppWindow.studio.commandKey))
         Button("Audio Routing…") {
             AppWindow.open(.routing, using: openWindow, navigation: navigation)
-        }.keyboardShortcut("2")
+        }.keyboardShortcut(KeyEquivalent(AppWindow.routing.commandKey))
         Button("Recordings & Import…") {
             AppWindow.open(.recordings, using: openWindow, navigation: navigation)
-        }.keyboardShortcut("3")
+        }.keyboardShortcut(KeyEquivalent(AppWindow.recordings.commandKey))
         Button("Open Recordings…") {
             AppWindow.open(.recordings, using: openWindow, navigation: navigation)
         }.keyboardShortcut("o")
@@ -55,6 +54,42 @@ private struct OpenRecordingsCommand: View {
 
 enum AppWindow: String {
     case studio, settings, recordings, routing
+
+    var commandKey: Character {
+        switch self {
+        case .studio: "1"
+        case .routing: "2"
+        case .recordings: "3"
+        case .settings: "," // SwiftUI's native Settings command.
+        }
+    }
+
+    /// AppKit surfaces invoke the same native commands as keyboard navigation.
+    /// Those commands exist without a Studio view and own SwiftUI's scene actions.
+    @MainActor
+    static func openFromMenu(_ destination: Self) {
+        NSApp.activate(ignoringOtherApps: true)
+        guard let menu = NSApp.mainMenu, performOpenCommand(destination, in: menu) else {
+            Logger(subsystem: "com.moreaki.recscribe", category: "Windows")
+                .error("Window command unavailable: \(destination.rawValue, privacy: .public)")
+            return
+        }
+    }
+
+    @MainActor
+    @discardableResult
+    static func performOpenCommand(_ destination: Self, in menu: NSMenu) -> Bool {
+        for (index, item) in menu.items.enumerated() where !item.isHidden {
+            if item.keyEquivalent == String(destination.commandKey), item.keyEquivalentModifierMask == .command {
+                menu.update()
+                guard item.isEnabled, item.action != nil else { return false }
+                menu.performActionForItem(at: index)
+                return true
+            }
+            if let submenu = item.submenu, performOpenCommand(destination, in: submenu) { return true }
+        }
+        return false
+    }
 
     @MainActor
     static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?,

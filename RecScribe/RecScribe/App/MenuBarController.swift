@@ -180,6 +180,14 @@ class MenuBarController: NSObject {
         statusItem.menu = nil
     }
 
+    func close() {
+        popover.performClose(nil)
+        popover.contentViewController = nil
+        cancellable?.cancel()
+        perAppDelegate = nil
+        NSStatusBar.system.removeStatusItem(statusItem)
+    }
+
     private func togglePopover(_ sender: AnyObject?) {
         if popover.isShown {
             popover.performClose(sender)

@@ -5,7 +5,115 @@ import Testing
 @testable import RecScribe
 
 @MainActor
+@Suite(.serialized)
 struct WorkspaceRegressionTests {
+    @Test func startupAndShutdownAreInstalledWithoutAnyStudioView() async throws {
+        let suite = "recscribe-startup-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(suite)
+        let oldSelect = OverflowMenu.onSelectSource
+        let oldPermission = OverflowMenu.onRequestPermission
+        let oldMenu = OverflowMenu.makeConfiguredMenu
+        let oldRecovery = OverflowMenu.onRecoverRecordings
+        let oldAppearance = NSApp.appearance
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            OverflowMenu.onSelectSource = oldSelect
+            OverflowMenu.onRequestPermission = oldPermission
+            OverflowMenu.makeConfiguredMenu = oldMenu
+            OverflowMenu.onRecoverRecordings = oldRecovery
+            NSApp.appearance = oldAppearance
+        }
+        let services = AppServices(defaults: defaults, supportDirectory: root)
+        let delegate = AppDelegate(services: services)
+        #expect(services.menuBarController == nil)
+        #expect(services.recorder.visibleWindowCount == 0)
+        let launch = Notification(name: NSApplication.willFinishLaunchingNotification)
+        delegate.applicationWillFinishLaunching(launch)
+        let firstController = try #require(services.menuBarController)
+        delegate.applicationWillFinishLaunching(launch)
+        #expect(services.menuBarController === firstController)
+        #expect(services.recorder.visibleWindowCount == 0)
+        #expect(!delegate.applicationShouldTerminateAfterLastWindowClosed(NSApp))
+
+        var replies = 0
+        let response = delegate.requestTermination { approved in
+            #expect(approved)
+            replies += 1
+        }
+        #expect(response == .terminateLater)
+        for _ in 0..<100 where replies == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(replies == 1)
+        #expect(services.menuBarController == nil)
+        #expect(!services.library.canDeleteRecording) // Default shutdown reached the service graph.
+        #expect(services.recorder.visibleWindowCount == 0)
+    }
+
+    @Test func repeatedQuitWaitsForCleanupAndRepliesOnlyOnce() async throws {
+        let suite = "recscribe-quit-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let oldRecovery = OverflowMenu.onRecoverRecordings
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            OverflowMenu.onRecoverRecordings = oldRecovery
+        }
+        let services = AppServices(defaults: defaults,
+            supportDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(suite))
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
+        defer { continuation.finish() }
+        var preparations = 0
+        var replies = 0
+        let delegate = AppDelegate(services: services, prepareForTermination: {
+            preparations += 1
+            for await _ in stream { break }
+            await services.shutdown()
+        })
+        #expect(delegate.requestTermination { _ in replies += 1 } == .terminateLater)
+        #expect(delegate.requestTermination { _ in Issue.record("Duplicate Quit must not create another reply") } == .terminateLater)
+        for _ in 0..<100 where preparations == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(preparations == 1)
+        #expect(replies == 0)
+        #expect(services.library.canDeleteRecording)
+        continuation.yield(())
+        continuation.finish()
+        for _ in 0..<100 where replies == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(replies == 1)
+        #expect(!services.library.canDeleteRecording)
+    }
+
+    @Test func nativeWindowCommandsWorkWithoutAStudioOrCapturedEnvironment() {
+        let target = WindowCommandTarget()
+        let menu = NSMenu()
+        let localizedFile = NSMenu()
+        localizedFile.autoenablesItems = false
+        let parent = NSMenuItem(title: "Localized menu title", action: nil, keyEquivalent: "")
+        parent.submenu = localizedFile
+        menu.addItem(parent)
+        for destination in [AppWindow.studio, .routing, .recordings, .settings] {
+            let item = NSMenuItem(title: "Localized command", action: #selector(WindowCommandTarget.open(_:)),
+                                  keyEquivalent: String(destination.commandKey))
+            item.target = target
+            item.representedObject = destination.rawValue
+            localizedFile.addItem(item)
+        }
+        for destination in [AppWindow.routing, .recordings, .settings, .studio, .routing] {
+            #expect(AppWindow.performOpenCommand(destination, in: menu))
+            #expect(target.opened.last == destination)
+        }
+        #expect(target.navigation.mode == .routing)
+        let studioCommand = localizedFile.items[0]
+        studioCommand.isEnabled = false
+        #expect(!AppWindow.performOpenCommand(.studio, in: menu))
+        studioCommand.isEnabled = true
+        studioCommand.keyEquivalentModifierMask = [.command, .shift]
+        #expect(!AppWindow.performOpenCommand(.studio, in: menu))
+        studioCommand.keyEquivalentModifierMask = .command
+        studioCommand.isHidden = true
+        #expect(!AppWindow.performOpenCommand(.studio, in: menu))
+        #expect(!AppWindow.performOpenCommand(.studio, in: NSMenu()))
+        #expect(target.opened.count == 5)
+    }
+
     @Test func destinationIsSelectedBeforeOpeningAndSurvivesWindowRecreation() {
         let navigation = StudioNavigation()
         for (destination, mode) in [(AppWindow.routing, StudioWorkspaceMode.routing),
@@ -63,5 +171,17 @@ struct WorkspaceRegressionTests {
         let stalled = try await pixels()
         #expect(stalled != receiving)
         #expect(parentUpdates == 0)
+    }
+}
+
+@MainActor
+private final class WindowCommandTarget: NSObject {
+    let navigation = StudioNavigation()
+    var opened: [AppWindow] = []
+
+    @objc func open(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? String, let destination = AppWindow(rawValue: value) else { return }
+        opened.append(destination)
+        if destination != .settings { navigation.open(destination) { _ in } }
     }
 }

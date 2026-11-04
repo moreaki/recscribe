@@ -6,7 +6,6 @@ import SwiftUI
 struct RecorderView: View {
     @EnvironmentObject var viewModel: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.studioNavigation) private var navigation
 
     private var mainButtonTitle: String {
@@ -78,13 +77,7 @@ struct RecorderView: View {
             Button("Stop") { Task { await viewModel.stopRecording() } }
         } message: { Text("Long recordings use disk space. WAV parts are split automatically; originals are retained.") }
         .sheet(isPresented: $viewModel.showOnboarding) { OnboardingView().environmentObject(viewModel) }
-        .onAppear {
-            viewModel.mainWindowDidAppear()
-            OverflowMenu.openWindow = { window in
-                NSApp.activate(ignoringOtherApps: true)
-                AppWindow.open(window, using: openWindow, navigation: navigation, openSettings: { openSettings() })
-            }
-        }
+        .onAppear { viewModel.mainWindowDidAppear() }
         .onDisappear { viewModel.mainWindowDidDisappear() }
     }
 }

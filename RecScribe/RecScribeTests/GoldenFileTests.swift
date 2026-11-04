@@ -74,6 +74,37 @@ struct GoldenFileTests {
         Array(try await recordedBytes()[44...])   // strip the 44-byte header
     }
 
+    @Test func queuedBuffersSurviveProducerAllocationChurnWithoutChangingPCMBytes() async throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let count = 256, frames = 128
+        let recorder = AudioRecorder(maxBuffers: count, maxBytes: 1_024 * 1_024)
+        try recorder.startRecording(to: url, format: .wav)
+        var expected: [UInt8] = []
+        for index in 0..<count {
+            autoreleasepool {
+                let buffer = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: frames, interleaved: false) {
+                    channel, frame in Float((index + channel + frame) % 32 - 16) / 32
+                }
+                recorder.processAudioSample(buffer)
+            } // No producer reference survives; only the queued worker owns it.
+            for frame in 0..<frames {
+                for channel in 0..<2 {
+                    let value = Float((index + channel + frame) % 32 - 16) / 32
+                    let pcm = UInt16(bitPattern: Int16(value * 32767))
+                    expected.append(UInt8(pcm & 0xff))
+                    expected.append(UInt8(pcm >> 8))
+                }
+            }
+            await Task.yield()
+        }
+        try await recorder.stopRecording()
+        #expect(Array(try Data(contentsOf: url).dropFirst(44)) == expected)
+        #expect(recorder.lastMetrics.accepted == count)
+        #expect(recorder.lastMetrics.written == count)
+        #expect(recorder.lastMetrics.rejected == 0)
+    }
+
     @Test("Canonical PCM buffer input → expected WAV PCM bytes (golden)")
     func golden() async throws {
         #expect(try await recordedPCMBytes() == expectedPCMBytes())

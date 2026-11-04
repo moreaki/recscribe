@@ -203,8 +203,14 @@ across player recreation and app restarts. It never changes recording levels or
 files. **Follow system output** passes nil to `AVPlayer.audioOutputDeviceUniqueID`;
 explicit routing uses the selected Core Audio UID. This is app-local routing, not
 a change to macOS's default device. Device availability and the effective route
-are refreshed every two seconds. An unplugged explicit output temporarily follows
+follow shared hardware events (with a centralized refresh fallback only when
+listener registration fails). An unplugged explicit output temporarily follows
 the system output, with a visible message; the UID remains selected for reconnection.
+
+While a file player is visible, **⌘⌥P** pauses/resumes playback and **⌘⌥← / ⌘⌥→**
+skip backward/forward by 15 seconds, clamped to the recording's bounds. These
+modified shortcuts leave ordinary text typing and arrow-key editing alone. Starting
+capture stops the player and removes its transport shortcuts along with the controls.
 
 Hardware input/output level controls are under separate **system-wide** disclosures.
 They appear only for available writable scalar properties, using a device's master

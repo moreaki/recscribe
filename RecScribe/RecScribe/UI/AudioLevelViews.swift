@@ -222,12 +222,18 @@ struct SessionPlaybackView: View {
                     Button { playback.togglePlayback() } label: {
                         Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
                     }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
+                        .keyboardShortcut("p", modifiers: [.command, .option])
+                        .help("Pause or resume playback (⌘⌥P)")
                     Button { playback.skip(by: -15) } label: {
                         Image(systemName: "gobackward.15")
                     }.disabled(playback.duration <= 0).accessibilityLabel("Skip back 15 seconds")
+                        .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+                        .help("Skip back 15 seconds (⌘⌥←)")
                     Button { playback.skip(by: 15) } label: {
                         Image(systemName: "goforward.15")
                     }.disabled(playback.duration <= 0).accessibilityLabel("Skip forward 15 seconds")
+                        .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+                        .help("Skip forward 15 seconds (⌘⌥→)")
                     Slider(value: Binding(get: { min(playback.position, max(0.001, playback.duration)) }, set: { playback.seek(to: $0) }), in: 0...max(0.001, playback.duration))
                         .disabled(playback.duration <= 0).accessibilityLabel("Playback position")
                     Text("\(playback.formattedPosition) / \(playback.formattedDuration)").font(.caption).monospacedDigit()

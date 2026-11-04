@@ -4,6 +4,58 @@ import Testing
 @testable import RecScribe
 
 @MainActor struct RoutingControlsTests {
+    @Test func discoveryExcludesGeneratedHelpersFromEitherAPIAndPreservesUserAggregates() {
+        let uid = "CADefaultDeviceAggregate-67758-0"
+        let helper = InputDeviceInfo(uid: uid, name: "Renamed internal helper", inputChannels: 1,
+            transport: kAudioDeviceTransportTypeAggregate, aggregateMembers: ["mic"])
+        let mic = InputDeviceInfo(uid: "mic", name: "MacBook Air Microphone", inputChannels: 1)
+        // Even an identical display name must not hide a deliberately created aggregate.
+        let aggregate = InputDeviceInfo(uid: "~:AMS2_Aggregate:0", name: uid, inputChannels: 4,
+            sampleRate: 48_000, transport: kAudioDeviceTransportTypeAggregate, aggregateMembers: ["mic", "usb"])
+        let virtual = InputDeviceInfo(uid: "teams", name: "Microsoft Teams Audio", inputChannels: 1,
+            transport: kAudioDeviceTransportTypeVirtual)
+        for discoveredHelper in [false, true] {
+            for hardwareHelper in [false, true] where discoveredHelper || hardwareHelper {
+                let discovered = [InputDeviceInfo(uid: mic.uid, name: mic.name),
+                                  InputDeviceInfo(uid: aggregate.uid, name: aggregate.name)]
+                    + (discoveredHelper ? [.init(uid: uid, name: uid)] : [])
+                let hardware = [mic, aggregate, virtual] + (hardwareHelper ? [helper] : [])
+                let result = InputDeviceEnumerator.mergedInputs(discovered: discovered, hardware: hardware)
+                #expect(result == [mic, aggregate, virtual])
+                #expect(result.first(where: { $0.uid == aggregate.uid })?.aggregateMembers == ["mic", "usb"])
+            }
+        }
+        #expect(helper.isCoreAudioDefaultHelper)
+        for uid in ["CADefaultDeviceAggregate-studio", "CADefaultDeviceAggregate-1", "CADefaultDeviceAggregate-1-",
+                    "CADefaultDeviceAggregate--0", "CADefaultDeviceAggregate-1-0-custom", "my-CADefaultDeviceAggregate-1-0"] {
+            #expect(!InputDeviceInfo(uid: uid, name: uid).isCoreAudioDefaultHelper)
+        }
+        #expect(InputDeviceInfo(uid: "CADefaultDeviceAggregate-79903-12", name: "Helper").isCoreAudioDefaultHelper)
+    }
+
+    @Test func oldHelperSelectionIsRemovedAndRealAggregateSettingsSurviveRediscovery() throws {
+        let suite = "routing59-helper-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let helper = InputDeviceInfo(uid: "CADefaultDeviceAggregate-67758-0", name: "Internal", inputChannels: 1,
+            transport: kAudioDeviceTransportTypeAggregate)
+        let aggregate = InputDeviceInfo(uid: "studio-aggregate", name: "Studio aggregate", inputChannels: 4,
+            transport: kAudioDeviceTransportTypeAggregate, aggregateMembers: ["usb", "mic"])
+        let levels = AudioLevels(defaults: defaults)
+        levels.set("input:" + aggregate.uid, .init(decibels: -9, muted: true))
+        let configured = InputSelection(deviceUID: aggregate.uid, routes: [.init(channel: 3, placement: .right)])
+        let old = AudioSource.multiple(appBundleID: nil, inputs: [InputSelection(device: helper), configured])
+        let available = InputDeviceEnumerator.mergedInputs(discovered: [helper], hardware: [helper, aggregate])
+        let policy = AutomaticRoutingSources(defaults: defaults)
+        let selected = policy.selection(from: old, devices: available, levels: levels)
+        #expect(selected.inputSelections == [configured])
+        #expect(levels.level("input:" + aggregate.uid) == .init(decibels: -9, muted: true))
+        let disconnected = policy.selection(from: selected, devices: [])
+        let returned = AutomaticRoutingSources(defaults: defaults).selection(from: disconnected, devices: available, levels: levels)
+        #expect(returned.inputSelections == [configured])
+        #expect(returned.requiresScreenCapture)
+    }
+
     @Test func mutedSummaryNamesOnlySelectedMutedSourcesAndRetainsDeviceIdentity() throws {
         let suite = "routing59-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))

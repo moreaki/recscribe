@@ -23,6 +23,7 @@ nonisolated struct InputDeviceInfo: Identifiable, Sendable, Equatable {
     var transport: UInt32 = 0
     var channelLabels: [String] = []
     var aggregateMembers: [String] = []
+    var isCoreAudioDefaultHelper: Bool { AudioDeviceControls.isInternalDefaultHelper(uid: uid) }
     var isAggregate: Bool { transport == kAudioDeviceTransportTypeAggregate }
     var isVirtual: Bool { transport == kAudioDeviceTransportTypeVirtual }
     var mayLoopBack: Bool {
@@ -48,17 +49,19 @@ final class InputDeviceEnumerator: InputDeviceEnumerating {
             mediaType: .audio,
             position: .unspecified
         )
-        var seen = Set<String>()
-        let discovered = session.devices
-            // A device can be reported by more than one type.
-            .filter { seen.insert($0.uniqueID).inserted }
-            // Names come from macOS verbatim — the user recognises "Scarlett 2i2
-            // 4th Gen" and would not recognise anything we invented.
-            .map { InputDeviceInfo(uid: $0.uniqueID, name: $0.localizedName) }
-        let hardware = Self.coreAudioInputs()
+        // Names come from macOS verbatim; capabilities and aggregate membership
+        // come from HAL. Filter only after merging so neither discovery API can
+        // reintroduce a helper excluded by the other.
+        let discovered = session.devices.map { InputDeviceInfo(uid: $0.uniqueID, name: $0.localizedName) }
+        return Self.mergedInputs(discovered: discovered, hardware: Self.coreAudioInputs())
+    }
+
+    nonisolated static func mergedInputs(discovered: [InputDeviceInfo], hardware: [InputDeviceInfo]) -> [InputDeviceInfo] {
         let capabilities = Dictionary(hardware.map { ($0.uid, $0) }, uniquingKeysWith: { first, _ in first })
-        let merged = discovered.map { capabilities[$0.uid] ?? $0 }
-        return merged + hardware.filter { !seen.contains($0.uid) }
+        var seen = Set<String>()
+        return (discovered.map { capabilities[$0.uid] ?? $0 } + hardware).filter {
+            !$0.isCoreAudioDefaultHelper && seen.insert($0.uid).inserted
+        }
     }
 
     private static func coreAudioInputs() -> [InputDeviceInfo] {

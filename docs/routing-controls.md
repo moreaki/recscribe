@@ -23,6 +23,16 @@ application-playback choice is retained. The existing eight-input-device and
 1–32-channel limits apply; the UI reports the device limit. Existing input routes
 have priority if more than eight devices are available.
 
+Discovery excludes internal default-I/O helpers whose generated UID matches
+`CADefaultDeviceAggregate-<process number>-<counter>`. The filter runs after
+AVFoundation/HAL discovery is merged, before selection and live device admission.
+It applies to helpers from any process, including old persisted helper selections
+which normal reconciliation removes. Display names and aggregate transport alone
+never exclude a device: deliberately configured aggregates retain their channels,
+member UIDs, mute/gain and reconnection settings, even with a helper-like name.
+Output-device discovery uses the same UID rule to keep helpers out of listening
+output choices as well.
+
 This policy changes selection only. It does not acquire audio or request permission
 at launch. Recording still requires applicable Screen Recording/Microphone access.
 Source health, permission checks and monitor feedback protection remain in

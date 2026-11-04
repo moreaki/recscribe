@@ -12,6 +12,17 @@ nonisolated struct AudioOutputDevice: Identifiable, Equatable, Sendable {
 nonisolated enum AudioDeviceControls {
     static let volumeElementRange: ClosedRange<UInt32> = 0...32
 
+    /// Match the generated identity of AVAudioEngine's default-I/O helpers.
+    /// Display names and aggregate transport alone never exclude a device.
+    static func isInternalDefaultHelper(uid: String) -> Bool {
+        let prefix = "CADefaultDeviceAggregate-"
+        guard uid.hasPrefix(prefix) else { return false }
+        let parts = uid.dropFirst(prefix.count).split(separator: "-", omittingEmptySubsequences: false)
+        return parts.count == 2 && parts.allSatisfy {
+            !$0.isEmpty && $0.utf8.allSatisfy { (48...57).contains($0) }
+        }
+    }
+
     struct Volume: Identifiable, Sendable {
         var id: UInt32 { element }
         var device: AudioDeviceID
@@ -43,7 +54,8 @@ nonisolated enum AudioDeviceControls {
         devices().compactMap { device in
             var property = address(kAudioDevicePropertyStreams, input: false), size: UInt32 = 0
             guard AudioObjectGetPropertyDataSize(device, &property, 0, nil, &size) == noErr, size > 0,
-                  let uid = string(device, kAudioDevicePropertyDeviceUID) else { return nil }
+                  let uid = string(device, kAudioDevicePropertyDeviceUID),
+                  !isInternalDefaultHelper(uid: uid) else { return nil }
             var rateProperty = address(kAudioDevicePropertyNominalSampleRate), rate: Double = 0
             var bytes = UInt32(MemoryLayout<Double>.size)
             _ = AudioObjectGetPropertyData(device, &rateProperty, 0, nil, &bytes, &rate)

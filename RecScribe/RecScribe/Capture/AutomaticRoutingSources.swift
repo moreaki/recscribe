@@ -1,7 +1,7 @@
 import Foundation
 
 /// Reconciles available devices, retaining channel choices independently of presence.
-/// Gain/mute live in AudioLevels and are deliberately never written here.
+/// Only unseen virtual inputs receive a safe initial mute; manual settings win.
 @MainActor
 final class AutomaticRoutingSources {
     private let defaults: UserDefaults
@@ -11,9 +11,13 @@ final class AutomaticRoutingSources {
         remembered = defaults.data(forKey: "routing.channelSelections.v1")
             .flatMap { try? JSONDecoder().decode([String: InputSelection].self, from: $0) } ?? [:]
     }
-    func selection(from current: AudioSource, devices: [InputDeviceInfo]) -> AudioSource {
+    func selection(from current: AudioSource, devices: [InputDeviceInfo], levels: AudioLevels? = nil) -> AudioSource {
         for input in current.inputSelections { remembered[input.deviceUID] = input }
         let available = devices.filter { (1...32).contains($0.inputChannels ?? 0) }
+        for device in available where device.mayLoopBack {
+            let id = "input:" + device.uid
+            if let levels, !levels.hasSetting(id) { levels.set(id, .init(muted: true)) }
+        }
         let currentIDs = Set(current.inputSelections.map(\.deviceUID))
         // Existing routes keep priority at the capture model's device limit.
         let ordered = available.sorted {

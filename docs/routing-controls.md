@@ -19,7 +19,7 @@ have priority if more than eight devices are available.
 
 This policy changes selection only. It does not acquire audio or request permission
 at launch. Recording still requires applicable Screen Recording/Microphone access.
-Existing duplicate/loopback checks, source health and recording review remain in
+Source health, permission checks and monitor feedback protection remain in
 force: automatic selection cannot guarantee useful audio from a failing, silent
 or unsupported device. A fully muted mix stays silent by user choice while the
 separate original tracks remain recorded.
@@ -63,5 +63,13 @@ Stop. Native input construction is injectable for hardware-free lifecycle tests.
 
 System/app playback is a separate source kind. Browser Webex audio is captured
 through browser/system playback, not inferred to be an independent Webex device.
-A virtual driver with input channels is an input source in its own right; duplicate
-signals still need review under the existing loopback safeguards.
+A virtual driver with input channels is an input source in its own right. Its
+presence does not block recording or testing and requires no duplicate-route
+acknowledgment. Previously unconfigured virtual/aggregate inputs default to muted
+in the mix, while their original tracks remain recorded. Existing manual level
+settings take precedence. Virtual inputs are labeled by type without speculative
+loopback warnings.
+
+Monitoring can run with muted virtual inputs. If a virtual input becomes audible,
+only monitoring pauses to prevent feedback; recording and the user's unmute choice
+continue unchanged. Listening-output device safety remains independent.

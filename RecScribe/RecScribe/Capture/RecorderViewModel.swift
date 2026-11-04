@@ -253,7 +253,7 @@ import Observation
 
     func refreshAvailableRoutingSources(_ devices: [InputDeviceInfo]) {
         guard allowsCaptureSourceChange, !isFinalizingAfterFailure else { return }
-        setCaptureSource(automaticRouting.selection(from: selectedSource, devices: devices))
+        setCaptureSource(automaticRouting.selection(from: selectedSource, devices: devices, levels: audio.levels))
     }
 
     func setCaptureSource(_ source: AudioSource) {

@@ -12,8 +12,9 @@ final class AudioServices {
     private let playbackCoordinator = SessionPlaybackCoordinator()
 
     init(defaults: UserDefaults = .standard) {
-        levels = AudioLevels(defaults: defaults)
-        monitor = CapturedAudioMonitor(defaults: defaults)
+        let levels = AudioLevels(defaults: defaults)
+        self.levels = levels
+        monitor = CapturedAudioMonitor(defaults: defaults, captureLevels: levels)
         playbackLevels = PlaybackLevels(defaults: defaults)
     }
 

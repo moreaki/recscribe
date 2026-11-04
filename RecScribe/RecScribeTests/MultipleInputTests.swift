@@ -54,7 +54,7 @@ struct MultipleInputTests {
         #expect(InputSelection(device: hardware).routes.map(\.channel) == [0, 1])
     }
 
-    @Test func preflightRejectsMissingDevicesChangedChannelsAndUnacknowledgedLoopback() async throws {
+    @Test func preflightRejectsMissingDevicesAndChangedChannelsButAllowsVirtualRecording() async throws {
         let devices = SelectedTestDevices([
             .init(uid: "physical", name: "Physical", inputChannels: 2),
             .init(uid: "virtual", name: "Virtual", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)
@@ -62,12 +62,56 @@ struct MultipleInputTests {
         let manager = AudioSourceManager(defaults: UserDefaults(suiteName: "input-preflight-" + UUID().uuidString)!, deviceEnumerator: devices)
         await #expect(throws: AudioSourceError.self) { try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "missing")])) }
         await #expect(throws: SessionError.self) { try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "physical", routes: [.init(channel: 2, placement: .left)])])) }
-        await #expect(throws: SessionError.self) { try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")])) }
+        try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")]))
         try await manager.validate(.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")], allowDuplicateRoutes: true))
         let source = AudioSource.multiple(appBundleID: nil, inputs: [.init(deviceUID: "physical")])
         let actions = OverflowMenu().actions(OverflowContext(selectedSource: source))
         #expect(actions.filter { $0.isSourceRow && $0.isChecked }.map(\.id) == ["sourceMultiple"])
         #expect(!AudioSource.multiple(appBundleID: nil, inputs: []).requiresMicrophone)
+    }
+
+    @Test func automaticallySelectedTeamsAndSquirrelsDoNotBlockPreviewOrRecording() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "virtual-capture-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let devices = [InputDeviceInfo(uid: "mic", name: "MacBook Air Microphone", inputChannels: 1),
+                       InputDeviceInfo(uid: "teams", name: "Microsoft Teams Audio", inputChannels: 1, transport: kAudioDeviceTransportTypeVirtual),
+                       InputDeviceInfo(uid: "squirrels", name: "Squirrels Audio", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)]
+        let manager = AudioSourceManager(defaults: defaults, deviceEnumerator: SelectedTestDevices(devices))
+        let audio = AudioServices(defaults: defaults)
+        manager.setSelectedSource(AutomaticRoutingSources(defaults: defaults).selection(from: .systemAll, devices: devices, levels: audio.levels))
+        let capture = MockAudioCapturing()
+        let preview = AudioTestController(capture: capture, source: manager, permissions: MockPermissionProviding(.granted),
+            levels: audio.levels, monitor: audio.monitor, saveDirectory: { root })
+        await preview.startPreview()
+        #expect(preview.state == .testing)
+        #expect(preview.errorMessage == nil)
+        #expect(capture.capturing)
+        await preview.stop()
+        let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: root),
+            audioSource: manager, levels: audio.levels, monitor: audio.monitor)
+        let file = try await controller.startRecording(format: .wav)
+        let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        for index in 0..<3 {
+            let time = now + Double(index) / 100
+            capture.emit(.init(track: .playback, presentationTime: time, buffer: pcm(0.4)))
+            for device in devices {
+                capture.emit(.init(track: .input(device.uid), presentationTime: time,
+                    buffer: pcm(0.4, channels: device.inputChannels!)))
+            }
+        }
+        try await controller.stopRecording()
+        let manifest = RecordingSession.manifestURL(for: file)
+        let session = try RecordingSession.read(manifest)
+        #expect(session.sourceTracks?.count == 4)
+        for descriptor in session.sourceTracks ?? [] {
+            let child = try LinkedSourceSessions.read(descriptor, parent: session, at: manifest)
+            #expect(try decoded(child.session, at: child.id)[0].contains { $0 > 0.3 })
+        }
+        #expect(audio.levels.level("input:teams").muted && audio.levels.level("input:squirrels").muted)
+        await preview.close()
+        await audio.shutdown()
     }
 
     @Test func tapCopiesNativePCMHostTimeAndSealsLateCallbacks() async throws {

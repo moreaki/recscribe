@@ -220,11 +220,9 @@ protocol AudioSourceProviding: AnyObject {
                 }
             }
         }
-        if source.kind == .multiple,
-           !source.allowDuplicateRoutes,
-           !InputRouteSafety.warnings(inputs: source.inputs, devices: devices).isEmpty {
-            throw SessionError.invalid("Possible duplicate or loopback routes. Review Capture inputs and remove overlapping devices or explicitly acknowledge their inclusion.")
-        }
+        // Virtual inputs are legitimate raw recording sources. Mix mute and
+        // monitor feedback protection handle listening without blocking capture.
+
     }
 
     func availableApps() async throws -> [RunningAppInfo] {

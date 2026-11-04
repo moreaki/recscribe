@@ -41,7 +41,6 @@ struct AudioRoutingView: View {
     private var inputs: [InputSelection] { source.inputSelections }
     private var editable: Bool { recorder.allowsCaptureSourceChange }
     private var eligible: [InputDeviceInfo] { devices.filter { (1...32).contains($0.inputChannels ?? 0) } }
-    private var warnings: [String] { InputRouteSafety.warnings(inputs: inputs, devices: devices) }
     private var monitorState: String {
         monitor.enabled ? (recorder.isRecording || recorder.audioTest?.isCapturing == true ? "Listening" : "Armed · waiting for capture") : "Off"
     }
@@ -81,7 +80,7 @@ struct AudioRoutingView: View {
                     }.padding(20)
                 }
             }
-            if (source.requiresScreenCapture && recorder.permissionStatus != .granted) || !warnings.isEmpty || monitor.warning != nil || recorder.hasInterruptedSource {
+            if (source.requiresScreenCapture && recorder.permissionStatus != .granted) || monitor.warning != nil || recorder.hasInterruptedSource {
                 notices.padding(.horizontal, 20).padding(.vertical, 12)
             }
             Divider()
@@ -144,7 +143,7 @@ struct AudioRoutingView: View {
                 columnTitle("Sources", symbol: "waveform")
                 Spacer()
             }.padding(.bottom, 3)
-            Text("Available sources are added automatically. Mute settings are kept.\nNew live inputs start muted. Up to eight input identities per take.")
+            Text("Available sources are added automatically. Mute settings are kept.\nNew virtual inputs start muted in the mix; original tracks are kept. Up to eight input identities per take.")
                 .font(.caption).foregroundStyle(.secondary)
             if eligible.count > InputSelection.maximumDevices {
                 Text("At most \(InputSelection.maximumDevices) input devices can be captured at once.")
@@ -225,8 +224,7 @@ struct AudioRoutingView: View {
         let name = device?.name ?? sourceNames.input(input.deviceUID)
         let id = "input:" + input.deviceUID
         let routeSummary = AudioRoutingSummary.routes(input, channelCount: device?.inputChannels)
-        let warning = device == nil ? "Selected input unavailable"
-            : (device?.mayLoopBack == true ? "Review loopback" : nil)
+        let warning: String? = device == nil ? "Selected input unavailable" : nil
         return disclosureCard(.input(input.deviceUID), title: name, symbol: "mic.fill",
                               subtitle: "\(device?.kindLabel ?? "Missing device") · \(routeSummary)",
                               value: gain(id), muted: levels.level(id).muted, warning: warning,
@@ -330,17 +328,6 @@ struct AudioRoutingView: View {
             if source.requiresScreenCapture && recorder.permissionStatus != .granted {
                 Label("Screen & System Audio Recording permission is required for playback capture. Review permissions in the recording panel.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
-            }
-            if !warnings.isEmpty {
-                DisclosureGroup {
-                    ForEach(warnings, id: \.self) { Text($0).foregroundStyle(.secondary) }
-                } label: {
-                    Label("Review possible loopback · \(warnings.count) \(warnings.count == 1 ? "route warning" : "route warnings")", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
-                }
-                Toggle("Include these possible duplicate / loopback routes", isOn: Binding(get: {
-                    source.allowDuplicateRoutes
-                }, set: { save(inputs, acknowledge: $0) })).disabled(!editable)
             }
             if let warning = monitor.warning {
                 Label(warning, systemImage: "headphones").foregroundStyle(.orange)

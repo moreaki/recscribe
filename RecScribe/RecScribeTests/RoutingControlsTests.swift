@@ -1,4 +1,5 @@
 import Foundation
+import CoreAudio
 import Testing
 @testable import RecScribe
 
@@ -71,4 +72,42 @@ import Testing
         #expect(recorder.selectedSource.inputSelections.count == 1)
         await recorder.stopRecording()
     }
+    @Test func firstAutomaticVirtualSelectionIsMutedButManualUnmuteIsNeverOverridden() throws {
+        let suite = "routing59-virtual-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let levels = AudioLevels(defaults: defaults)
+        let devices = [InputDeviceInfo(uid: "mic", name: "MacBook Air Microphone", inputChannels: 1),
+                       InputDeviceInfo(uid: "teams", name: "Microsoft Teams Audio", inputChannels: 1, transport: kAudioDeviceTransportTypeVirtual),
+                       InputDeviceInfo(uid: "squirrels", name: "Squirrels Audio", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)]
+        levels.set("system", .init(muted: true))
+        let policy = AutomaticRoutingSources(defaults: defaults)
+        let selected = policy.selection(from: .systemAll, devices: devices, levels: levels)
+        #expect(selected.inputs.count == 3)
+        #expect(!levels.level("input:mic").muted)
+        #expect(levels.level("input:teams").muted && levels.level("input:squirrels").muted)
+        levels.set("input:teams", .init(decibels: -9, muted: false))
+        _ = AutomaticRoutingSources(defaults: defaults).selection(from: selected, devices: devices, levels: AudioLevels(defaults: defaults))
+        #expect(AudioLevels(defaults: defaults).level("input:teams") == .init(decibels: -9, muted: false))
+        #expect(levels.level("system").muted)
+    }
+
+    @Test func mutedVirtualInputsAllowMonitoringAndUnmutePausesListeningOnly() async throws {
+        let suite = "routing59-monitor-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let levels = AudioLevels(defaults: defaults)
+        levels.set("input:virtual", .init(muted: true))
+        let monitor = CapturedAudioMonitor(defaults: defaults, captureLevels: levels,
+            isLoopbackCheck: { $0 == "virtual" }, startEngineAction: { _, _, _ in })
+        let source = AudioSource.multiple(appBundleID: nil, inputs: [.init(deviceUID: "virtual")])
+        monitor.setEnabled(true, source: source)
+        #expect(monitor.enabled && monitor.warning == nil)
+        levels.set("input:virtual", .init(muted: false))
+        await waitUntil("feedback-safe monitor pause") { !monitor.enabled }
+        #expect(monitor.warning?.contains("recording continues") == true)
+        #expect(!levels.level("input:virtual").muted) // Preserve the user's explicit choice.
+        await monitor.stopAndWait()
+    }
+
 }

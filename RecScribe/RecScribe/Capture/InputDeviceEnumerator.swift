@@ -28,7 +28,7 @@ nonisolated struct InputDeviceInfo: Identifiable, Sendable, Equatable {
     var mayLoopBack: Bool {
         isVirtual || ["loopback", "blackhole", "soundflower", "vb-cable"].contains { name.localizedCaseInsensitiveContains($0) }
     }
-    var kindLabel: String { isAggregate ? "Aggregate" : (isVirtual ? "Virtual / possible loopback" : "Hardware input") }
+    var kindLabel: String { isAggregate ? "Aggregate audio input" : (isVirtual ? "Virtual audio input" : "Hardware input") }
 }
 
 @MainActor

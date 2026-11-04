@@ -160,6 +160,7 @@ nonisolated final class LiveDraftLease: @unchecked Sendable {
     private let gate: CaptureSessionGate
     private let owner = UUID()
     private var scanTask: Task<LiveDraftInventory, Error>?
+    private var scanID = UUID()
 
     init(root: URL, gate: CaptureSessionGate = CaptureSessionGate(), isActive: @escaping @Sendable (URL) -> Bool = { _ in false }) {
         self.root = root; self.gate = gate; self.isActive = isActive
@@ -167,15 +168,20 @@ nonisolated final class LiveDraftLease: @unchecked Sendable {
 
     func isProtected(_ entry: LiveDraftInventory.Entry) -> Bool { entry.containsRecording || isActive(entry.url) }
 
-    private func scan(cancel: WorkCancellation) async throws -> LiveDraftInventory {
-        if let scanTask { return try await scanTask.value }
-        let root = root
-        let task = Task.detached(priority: .utility) { try LiveDraftStorage.scan(root, cancel: cancel) }
-        scanTask = task
-        defer { scanTask = nil }
+    private func scan(cancel: WorkCancellation, fresh: Bool = false) async throws -> LiveDraftInventory {
+        if let scanTask, !fresh { return try await scanTask.value }
+        let root = root, previous = scanTask, id = UUID()
+        let task = Task.detached(priority: .utility) {
+            // A quota check needs a snapshot taken after its lease was acquired,
+            // not a Settings refresh that may predate another process's writes.
+            _ = try? await previous?.value
+            return try LiveDraftStorage.scan(root, cancel: cancel)
+        }
+        scanID = id; scanTask = task
+        defer { if scanID == id { scanTask = nil } }
         let result = try await task.value
         try cancel.check()
-        inventory = result
+        if scanID == id { inventory = result }
         return result
     }
 
@@ -191,19 +197,22 @@ nonisolated final class LiveDraftLease: @unchecked Sendable {
     }
 
     func checkBudget(_ draft: URL, cancel: WorkCancellation) async throws {
-        let snapshot = try await scan(cancel: cancel)
+        let snapshot = try await scan(cancel: cancel, fresh: true)
         guard LiveDraftStorage.permits(snapshot, draft: draft) else {
             throw SessionError.invalid("Live draft storage reached its 1 GiB / 100 draft limit, or could not be fully inspected. Recording continues. Review live drafts in Settings → Storage and move unwanted drafts to Trash.")
         }
     }
 
     func admit(_ draft: URL, cancel: WorkCancellation) async throws -> LiveDraftLease {
-        try await checkBudget(draft, cancel: cancel)
         let root = root
-        return try await Task.detached(priority: .utility) {
+        let lease = try await Task.detached(priority: .utility) {
             try cancel.check()
             return try LiveDraftStorage.lease(draft, in: root)
         }.value
+        // Serialize admission before measuring the quota: another process must not
+        // create a draft between the budget snapshot and acquiring the worker lease.
+        try await checkBudget(draft, cancel: cancel)
+        return lease
     }
 
     @discardableResult

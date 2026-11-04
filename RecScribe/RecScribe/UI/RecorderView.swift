@@ -6,6 +6,7 @@ import SwiftUI
 struct RecorderView: View {
     @EnvironmentObject var viewModel: RecorderViewModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @Environment(\.studioNavigation) private var navigation
 
     private var mainButtonTitle: String {
@@ -81,7 +82,7 @@ struct RecorderView: View {
             viewModel.mainWindowDidAppear()
             OverflowMenu.openWindow = { window in
                 NSApp.activate(ignoringOtherApps: true)
-                AppWindow.open(window, using: openWindow, navigation: navigation)
+                AppWindow.open(window, using: openWindow, navigation: navigation, openSettings: { openSettings() })
             }
         }
         .onDisappear { viewModel.mainWindowDidDisappear() }

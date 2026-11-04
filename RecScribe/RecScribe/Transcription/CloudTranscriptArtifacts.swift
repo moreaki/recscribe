@@ -47,7 +47,7 @@ nonisolated enum CloudTranscriptArtifacts {
             parts.append(["path": .string(url.path), "start_sample": .integer(part.startSample),
                 "frames": .integer(part.frames), "size_bytes": .integer(part.sizeBytes), "sha256": .string(hash)])
         }
-        let audio: JSONValue = ["path": .string(source.path), "sha256": .string(hash(snapshot)),
+        let audio: JSONValue = ["path": .string(source.path), "session_id": .string(session.id.uuidString), "sha256": .string(hash(snapshot)),
             "sha256_scope": "source-session.snapshot.json; individual WAV hashes are in parts",
             "duration_ms": .integer(milliseconds(session.totalFrames, session.sampleRate)), "frames": .integer(session.totalFrames),
             "sample_rate": .integer(Int64(session.sampleRate)), "channels": .integer(Int64(session.channels)),

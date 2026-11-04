@@ -40,7 +40,7 @@ final class SessionLibrary: ObservableObject {
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
-    private let rememberJob: (URL, URL) -> Void
+    private let rememberJob: (URL?, URL?) -> Void
     private let jobsDirectory: URL
 
     init(exportSession: @escaping @Sendable (URL, URL, WorkCancellation) throws -> URL = { manifest, directory, token in
@@ -50,7 +50,7 @@ final class SessionLibrary: ObservableObject {
          readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
          readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil,
          initialJob: URL? = nil, initialSource: URL? = nil,
-         rememberJob: @escaping (URL, URL) -> Void = { _, _ in }, jobsDirectory: URL? = nil) {
+         rememberJob: @escaping (URL?, URL?) -> Void = { _, _ in }, jobsDirectory: URL? = nil) {
         let repository = ManifestRepository()
         let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
@@ -124,44 +124,71 @@ final class SessionLibrary: ObservableObject {
         !shuttingDown && !recordingActive && !liveWorkActive && task == nil
     }
 
-    func rename(_ entry: Entry, title: String) {
-        guard canDeleteRecording else {
-            errorMessage = "Wait for capture/background work to finish before renaming"
-            return
+    @discardableResult
+    func rename(_ entry: Entry, title: String) async -> Entry? {
+        defer { startNext() }
+        guard let session = await editSession(activity: "Renaming recording…", operation: { token in
+            try RecordingSession.rename(entry.id, title: title, cancel: token)
+        }) else { return nil }
+        if let index = entries.firstIndex(where: { $0.id == entry.id }) {
+            entries[index].session = session
         }
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "\r", with: " ")
-            .replacingOccurrences(of: "\n", with: " ")
-        let normalized: String? = trimmed.isEmpty ? nil : String(trimmed.prefix(RecordingSession.maximumTitleLength))
-        do {
-            var updated = try RecordingSession.read(entry.id)
-            updated.title = normalized
-            _ = try updated.validated(beside: entry.id)
-            try updated.save(entry.id)
-            if let index = entries.firstIndex(where: { $0.id == entry.id }) {
-                entries[index].session = updated
-            }
-            errorMessage = nil
-            activity = normalized == nil ? "Recording title reset" : "Recording renamed"
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        activity = session.title == nil ? "Recording title reset" : "Recording renamed"
+        return Entry(id: entry.id, session: session)
     }
 
-    func moveToTrash(_ entry: Entry) {
+    /// Metadata edits use the same cancellation and capture-priority gate as other jobs.
+    private func editSession<Value: Sendable>(activity: String,
+        operation: @escaping @Sendable (WorkCancellation) throws -> Value) async -> Value? {
         guard canDeleteRecording else {
-            errorMessage = "Wait for capture/background work to finish before deleting"
-            return
+            errorMessage = "Wait for capture/background work to finish before editing a recording"
+            return nil
         }
         cancelRefresh()
         errorMessage = nil
-        do {
-            try SessionDeletion.moveToTrash(entry.id)
-            pending.removeAll { $0.manifest == entry.id }
-            entries.removeAll { $0.id == entry.id }
-            activity = "Recording moved to Trash"
-        } catch { errorMessage = error.localizedDescription }
-        load(entry.id.deletingLastPathComponent())
+        self.activity = activity
+        busy = true
+        let token = WorkCancellation()
+        cancellation = token
+        let worker = Task.detached(priority: .utility) { try operation(token) }
+        var result: Value?
+        let edit = Task {
+            do {
+                let value = try await withTaskCancellationHandler {
+                    try await worker.value
+                } onCancel: { token.cancel(); worker.cancel() }
+                result = value
+            } catch is CancellationError {
+                self.activity = "Cancelled; originals retained"
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.activity = "Needs attention"
+            }
+        }
+        task = edit
+        await edit.value
+        task = nil
+        cancellation = nil
+        busy = false
+        return result
+    }
+
+    func moveToTrash(_ entry: Entry, includeDerivedJobs: Bool = false) async {
+        defer { load(entry.id.deletingLastPathComponent()); startNext() }
+        let jobs = includeDerivedJobs ? jobsDirectory : nil
+        guard let trashedJobs = await editSession(activity: "Moving recording to Trash…", operation: { token in
+            try SessionDeletion.moveToTrash(entry.id, jobsDirectory: jobs, cancel: token)
+        }) else { return }
+        pending.removeAll { $0.manifest == entry.id }
+        entries.removeAll { $0.id == entry.id }
+        if let latestJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == latestJob.standardizedFileURL.path }) {
+            self.latestJob = nil
+            latestSource = nil
+            progress = 0
+            rememberJob(nil, nil)
+        }
+        if let previousJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == previousJob.standardizedFileURL.path }) { self.previousJob = nil }
+        activity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
     }
     func setRecording(_ active: Bool) {
         recordingActive = active

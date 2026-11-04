@@ -2,6 +2,7 @@ import AVKit
 import SwiftUI
 
 struct TranscriptSourceView: View {
+    @EnvironmentObject private var library: SessionLibrary
     let source: URL
     let duration: Double?
     let detail: String
@@ -46,7 +47,14 @@ struct TranscriptSourceView: View {
             HStack {
                 Image(systemName: "waveform").foregroundStyle(WorkspaceStyle.mint)
                 VStack(alignment: .leading, spacing: GlassSpacing.xxs) {
-                    Text(name).font(.callout.weight(.semibold)).lineLimit(1).truncationMode(.middle).help(source.path)
+                    if let entry {
+                        SessionTitleView(entry: entry, library: library, allowsEditing: !recording) { updated in
+                            if self.entry?.id == updated.id { self.entry = updated }
+                        }
+                        Text(name).font(.caption).foregroundStyle(.secondary).help(source.path)
+                    } else {
+                        Text(name).font(.callout.weight(.semibold)).lineLimit(1).truncationMode(.middle).help(source.path)
+                    }
                     let seconds = duration ?? entry?.session.duration ?? wavDuration
                     Text([seconds.map { "\($0.formatted(.number.precision(.fractionLength(1)))) s" }, detail.isEmpty ? nil : detail].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary)

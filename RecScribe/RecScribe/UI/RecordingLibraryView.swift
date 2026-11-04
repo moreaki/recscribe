@@ -11,8 +11,6 @@ struct RecordingLibraryView: View {
     @StateObject private var playback = SessionPlayback()
     @State private var recordingToDelete: SessionEntry?
     @State private var showingDeleteConfirmation = false
-    @State private var renamingEntryID: URL?
-    @State private var draftTitle = ""
     var embeddedInStudio = false
     var onOpenStudio: (() -> Void)? = nil
 
@@ -40,7 +38,7 @@ struct RecordingLibraryView: View {
                         navigateToStudio()
                     }
                 }.disabled(library.recordingActive)
-                Button("Settings…") { openWindow(id: AppWindow.settings.rawValue) }
+                SettingsLink { Text("Settings…") }
                 Button("Studio", systemImage: "macwindow") { navigateToStudio() }
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
@@ -51,27 +49,9 @@ struct RecordingLibraryView: View {
                     HStack(alignment: .top) {
                         WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
                         VStack(alignment: .leading, spacing: 6) {
-                            if renamingEntryID == entry.id {
-                                HStack(spacing: GlassSpacing.s) {
-                                    TextField("Recording title", text: $draftTitle)
-                                        .textFieldStyle(.roundedBorder)
-                                        .onSubmit {
-                                            library.rename(entry, title: draftTitle)
-                                            renamingEntryID = nil
-                                        }
-                                    Button("Save") {
-                                        library.rename(entry, title: draftTitle)
-                                        renamingEntryID = nil
-                                    }.controlSize(.small)
-                                    Button("Cancel") {
-                                        renamingEntryID = nil
-                                    }.controlSize(.small)
-                                }
-                            } else {
-                                Text(entry.displayTitle).font(.headline)
-                                if entry.session.title != nil {
-                                    Text(entry.filenameStem).font(.caption).foregroundStyle(.secondary)
-                                }
+                            SessionTitleView(entry: entry, library: library)
+                            if entry.session.title != nil {
+                                Text(entry.filenameStem).font(.caption).foregroundStyle(.secondary)
                             }
                             RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
                         }
@@ -84,14 +64,9 @@ struct RecordingLibraryView: View {
                         Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
                         Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
                         Menu {
-                            Button("Rename…", systemImage: "pencil") {
-                                draftTitle = entry.session.title ?? entry.filenameStem
-                                renamingEntryID = entry.id
-                            }
                             if entry.session.title != nil {
                                 Button("Reset title", systemImage: "arrow.counterclockwise") {
-                                    library.rename(entry, title: "")
-                                    if renamingEntryID == entry.id { renamingEntryID = nil }
+                                    Task { await library.rename(entry, title: "") }
                                 }
                             }
                             Button("Transcribe & summarize", systemImage: "sparkles") {
@@ -163,12 +138,58 @@ struct RecordingLibraryView: View {
             .confirmationDialog("Move recording to Trash?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible, presenting: recordingToDelete) { entry in
                 Button("Move to Trash", role: .destructive) {
                     playback.stop()
-                    library.moveToTrash(entry)
+                    Task { await library.moveToTrash(entry) }
+                }
+                Button("Move recording and verified transcript jobs to Trash", role: .destructive) {
+                    playback.stop()
+                    Task { await library.moveToTrash(entry, includeDerivedJobs: true) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: { entry in
-                Text("\(entry.id.lastPathComponent.replacingOccurrences(of: ".recscribe.json", with: "")) and its audio parts and archives will be moved to Trash together. You can restore the folder from Trash. Existing transcripts and exports are kept.")
+                Text("\(entry.displayTitle) and its audio parts and archives move together. By default transcripts are kept. The second option also groups finished jobs with a verified source identity under Transcripts in the same Trash folder. Active or unverifiable jobs and raw Live drafts are kept. You can restore the folder from Trash.")
             }
     }
     private func reload() { library.load(URL(fileURLWithPath: recorder.saveLocationPath)) }
+}
+
+/// Shared inline editor for the library and the transcript's source header.
+struct SessionTitleView: View {
+    let entry: SessionEntry
+    @ObservedObject var library: SessionLibrary
+    var allowsEditing = true
+    var onRenamed: (SessionEntry) -> Void = { _ in }
+    @State private var editing = false
+    @State private var saving = false
+    @State private var title = ""
+
+    var body: some View {
+        HStack {
+            if editing {
+                TextField("Recording title", text: $title).textFieldStyle(.roundedBorder).onSubmit(save)
+                    .disabled(!allowsEditing)
+                Button("Save", action: save).disabled(!allowsEditing || !library.canDeleteRecording)
+                Button("Cancel") { editing = false }
+            } else {
+                Text(entry.displayTitle).font(.headline).lineLimit(1).truncationMode(.middle).help(entry.displayTitle)
+                Button {
+                    title = entry.session.title ?? entry.filenameStem
+                    editing = true
+                } label: { Image(systemName: "pencil") }
+                .buttonStyle(.plain).accessibilityLabel("Rename recording")
+                .disabled(!allowsEditing || !library.canDeleteRecording)
+            }
+        }.controlSize(.small).disabled(saving)
+    }
+
+    private func save() {
+        guard !saving else { return }
+        saving = true
+        Task {
+            defer { saving = false }
+            if let updated = await library.rename(entry, title: title) {
+                onRenamed(updated)
+                editing = false
+            }
+        }
+    }
 }

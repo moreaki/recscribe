@@ -16,7 +16,6 @@ struct RecScribeApp: App {
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
-            CommandGroup(replacing: .appSettings) { OpenSettingsCommand(navigation: services.navigation) }
             CommandGroup(after: .newItem) { OpenRecordingsCommand(navigation: services.navigation) }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
@@ -25,20 +24,15 @@ struct RecScribeApp: App {
                 }
             }
         }
-        Window("RecScribe Settings", id: AppWindow.settings.rawValue) {
+        Settings {
             ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
                 .environment(\.studioNavigation, services.navigation)
                 .onAppear { services.bind(to: appDelegate) }
-        }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
+        }.windowResizability(.contentMinSize)
     }
 }
 
-private struct OpenSettingsCommand: View {
-    let navigation: StudioNavigation
-    @Environment(\.openWindow) private var openWindow
-    var body: some View { Button("Settings…") { AppWindow.open(.settings, using: openWindow, navigation: navigation) }.keyboardShortcut(",") }
-}
 private struct OpenRecordingsCommand: View {
     let navigation: StudioNavigation
     @Environment(\.openWindow) private var openWindow
@@ -63,9 +57,11 @@ enum AppWindow: String {
     case studio, settings, recordings, routing
 
     @MainActor
-    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?) {
+    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?,
+                     openSettings: () -> Void = {}) {
+        if window == .settings { openSettings(); return }
         if let navigation { navigation.open(window) { openWindow(id: $0) } }
-        else { openWindow(id: (window == .settings ? AppWindow.settings : .studio).rawValue) }
+        else { openWindow(id: AppWindow.studio.rawValue) }
     }
     var title: String {
         switch self {

@@ -110,14 +110,15 @@ struct WorkspaceCard<Content: View>: View {
 }
 
 struct SettingsWindowButton: View {
-    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     var body: some View {
         GlassIconButton(
             systemImage: "slider.horizontal.3",
             accessibilityLabel: "Settings",
             accessibilityHint: "Storage, transcription, models and local AI"
         ) {
-            openWindow(id: AppWindow.settings.rawValue)
+            NSApp.activate(ignoringOtherApps: true)
+            openSettings()
         }
     }
 }

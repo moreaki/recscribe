@@ -40,6 +40,12 @@ struct SessionPlaybackAcceptanceTests {
         return playback
     }
 
+    private func waitForPause(_ player: AVPlayer) async {
+        await waitUntil("native player confirms pause") {
+            player.rate == 0 && player.timeControlStatus == .paused
+        }
+    }
+
     @Test func draggingHoldsPositionBetweenCompletedSeeksAndRestoresIntentOnlyAfterFinalSeek() async throws {
         let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         for initiallyPlaying in [false, true] {
@@ -49,6 +55,7 @@ struct SessionPlaybackAcceptanceTests {
             if initiallyPlaying { playback.togglePlayback(); #expect(playback.isPlaying) }
             playback.setScrubbing(true)
             #expect(playback.isScrubbing && playback.phase == .scrubbing)
+            await waitForPause(player)
             #expect(player.rate == 0 && playback.isPlaying == initiallyPlaying)
             playback.seek(to: 8)
             gate.completions[0](true)
@@ -65,7 +72,9 @@ struct SessionPlaybackAcceptanceTests {
             await waitUntil("last dragged target") { gate.targets.count == 3 }
             #expect(gate.targets == [8, 15, 25] && player.rate == 0)
             gate.completions[2](true)
-            await waitUntil("scrub intent restored") { playback.phase != .scrubbing }
+            await waitUntil("scrub intent restored") {
+                playback.phase != .scrubbing && playback.isPlaying == initiallyPlaying && (player.rate > 0) == initiallyPlaying
+            }
             #expect(playback.isPlaying == initiallyPlaying)
             #expect((player.rate > 0) == initiallyPlaying)
         }
@@ -78,7 +87,7 @@ struct SessionPlaybackAcceptanceTests {
         playback.togglePlayback(); playback.setScrubbing(true); playback.seek(to: 9)
         playback.togglePlayback() // The pause command during dragging changes intent.
         playback.setScrubbing(false); gate.completions[0](true)
-        await waitUntil("pause intent restored") { playback.phase != .scrubbing }
+        await waitUntil("pause intent restored") { playback.phase == .paused && playback.player?.rate == 0 }
         #expect(!playback.isPlaying && playback.player?.rate == 0)
 
         for capture in [false, true] {
@@ -88,7 +97,7 @@ struct SessionPlaybackAcceptanceTests {
             if capture { playback.setRecording(true) } else { playback.playFile(url) }
             staleCompletion(true)
             #expect(oldPlayer.currentItem == nil)
-            await waitUntil("old player acknowledges pause") { oldPlayer.rate == 0 }
+            await waitForPause(oldPlayer)
             #expect(!playback.isScrubbing && !playback.isPlaying && oldPlayer.rate == 0)
             if capture {
                 #expect(playback.player == nil && playback.phase == .idle)
@@ -111,7 +120,7 @@ struct SessionPlaybackAcceptanceTests {
         playback = nil
         await waitUntil("playback owner released") { released == nil }
         #expect(player.currentItem == nil)
-        await waitUntil("retained player stopped") { player.rate == 0 }
+        await waitForPause(player)
     }
 
     @Test func runtimeFailureIsVisibleStickyAndOldItemNotificationsAreDetached() async throws {
@@ -128,6 +137,8 @@ struct SessionPlaybackAcceptanceTests {
         NotificationCenter.default.post(name: .AVPlayerItemFailedToPlayToEndTime, object: item,
                                         userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: error])
         #expect(playback.phase == .failed && playback.errorMessage == error.localizedDescription)
+        #expect(player.currentItem == nil && !playback.hasAttachedPlayerObservers)
+        await waitForPause(player)
         #expect(!playback.isPlaying && !playback.canSeek && player.rate == 0)
         gate.completions[0](true)
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
@@ -157,6 +168,7 @@ struct SessionPlaybackAcceptanceTests {
         #expect(item.preferredForwardBufferDuration == PlaybackPolicy.preferredForwardBufferDuration)
         playback.togglePlayback()
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
+        await waitForPause(player)
         playback.receiveTimeObservation(.zero, from: player)
         #expect(playback.phase == .ended && playback.position == playback.duration && !playback.isPlaying)
         playback.skip(by: -PlaybackPolicy.skipSeconds)
@@ -177,6 +189,7 @@ struct SessionPlaybackAcceptanceTests {
         playback.setScrubbing(false)
         gate.completions[0](false)
         await waitUntil("failed final seek") { playback.phase == .failed }
+        await waitForPause(try #require(playback.player))
         #expect(!playback.isPlaying && playback.player?.rate == 0)
         #expect(playback.errorMessage?.contains("requested position") == true)
     }

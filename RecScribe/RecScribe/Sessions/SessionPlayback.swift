@@ -121,8 +121,8 @@ final class SessionPlaybackCoordinator {
             // Detach the media as well as pausing. A retained old AVPlayer can
             // acknowledge queued play/pause commands asynchronously, especially
             // during rapid source changes; it must have no source left to play.
-            player?.pause()
             player?.replaceCurrentItem(with: nil)
+            player?.pause()
             timeToken = nil
             player = nil
             for observer in notificationObservers { NotificationCenter.default.removeObserver(observer) }
@@ -282,6 +282,7 @@ final class SessionPlaybackCoordinator {
         pendingSeekTarget = nil; seekInFlight = false
         player?.pause()
         player?.currentItem?.cancelPendingSeeks()
+        detachPlayerObservers()
     }
 
     /// Latest-wins coalesced seek (#13). Rapid scrub updates immediately move `position`
@@ -577,8 +578,8 @@ final class SessionPlaybackCoordinator {
         task?.cancel()
         task = nil
         detachPlayerObservers()
-        player?.pause()
         player?.replaceCurrentItem(with: nil)
+        player?.pause()
         player = nil
         playing = nil
         loading = false; phase = .idle; sourceName = nil; errorMessage = nil

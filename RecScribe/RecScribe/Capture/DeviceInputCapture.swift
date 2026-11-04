@@ -2,10 +2,24 @@ import AVFoundation
 import CoreAudio
 import os
 
+@MainActor protocol InputCaptureSession: AnyObject {
+    var uid: String { get }
+    func start() throws
+    @discardableResult func stop() -> String?
+    func checkHardwareStatus()
+}
+
+@MainActor struct InputCaptureRequest {
+    let uid: String
+    let track: CaptureTrack
+    let callback: @Sendable (CapturedAudioSample) -> Void
+    let failure: @MainActor @Sendable (String) -> Void
+}
+
 /// One input-only engine per explicitly chosen UID. No output path and no global
 /// default/aggregate changes. A tap transfers a bounded copy with host-clock time.
 @MainActor
-final class DeviceInputCapture {
+final class DeviceInputCapture: InputCaptureSession {
     let uid: String
     let track: CaptureTrack
     private var engine: AVAudioEngine?
@@ -112,7 +126,8 @@ final class DeviceInputCapture {
 }
 
 /// Startup may deliver queued I/O reconfiguration notifications. Never switch
-/// devices or accept a changed format, and never silently resume a partial take.
+/// devices or accept a changed format in-place. The manager may explicitly reopen
+/// the same UID on the existing writer timeline with gap/review evidence.
 nonisolated struct DeviceInputConfigurationPolicy {
     enum Decision: String {
         case ignore, restart, disconnected, deviceChanged, formatChanged, aggregateChanged, interrupted

@@ -342,6 +342,12 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
         session?.gainScope = scope
         if let manifestURL { try session?.save(manifestURL) }
     }
+    func setCaptureTopology(_ tracks: [RecordingSession.SourceTrack], epoch: Double, automation: [GainEvent]) throws {
+        session?.gainTracks = tracks.map(\.role)
+        session?.gainAutomation = automation
+        session?.gainScope = "derived_mix"
+        try setSourceTracks(tracks, epoch: epoch)
+    }
     func setSourceTracks(_ tracks: [RecordingSession.SourceTrack], epoch: Double) throws {
         session?.schemaVersion = tracks.count == 2 && tracks.allSatisfy({ CaptureTrack.legacyPair.contains($0.role) }) ? 2 : RecordingSession.currentSchemaVersion
         session?.sourceTracks = tracks

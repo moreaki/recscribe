@@ -13,9 +13,11 @@ struct ConfigurationView: View {
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
     @State private var availabilityRefresh = 0
-    init(section: SettingsSection = .storage, liveDrafts: LiveDraftStore? = nil) {
-        self.liveDrafts = liveDrafts
+    private let embeddedInStudio: Bool
+    init(section: SettingsSection = .storage, liveDrafts: LiveDraftStore? = nil, embeddedInStudio: Bool = false) {
         _section = State(initialValue: section)
+        self.liveDrafts = liveDrafts
+        self.embeddedInStudio = embeddedInStudio
     }
     private enum Layout {
         static let numericFieldWidth: CGFloat = 100
@@ -63,9 +65,10 @@ struct ConfigurationView: View {
                 if runtime.busy { ProgressView(value: runtime.progress).frame(width: Layout.progressWidth); Button("Cancel") { runtime.cancel() } }
             }
         }
-        .padding(GlassSpacing.xxl).frame(minWidth: AppWindow.settings.minimumSize.width,
-            idealWidth: AppWindow.settings.defaultSize.width, minHeight: AppWindow.settings.minimumSize.height,
-            idealHeight: AppWindow.settings.defaultSize.height)
+        .padding(GlassSpacing.xxl).frame(minWidth: embeddedInStudio ? 0 : AppWindow.settings.minimumSize.width,
+            idealWidth: embeddedInStudio ? nil : AppWindow.settings.defaultSize.width,
+            minHeight: embeddedInStudio ? 0 : AppWindow.settings.minimumSize.height,
+            idealHeight: embeddedInStudio ? nil : AppWindow.settings.defaultSize.height)
         .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
         .onChange(of: library.recordingActive) { _, active in if active { runtime.cancel() } }
         .task(id: availabilityKey) {

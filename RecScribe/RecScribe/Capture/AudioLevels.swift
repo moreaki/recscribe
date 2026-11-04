@@ -15,8 +15,9 @@ final class AudioServices {
     init(defaults: UserDefaults = .standard, hardware: AudioHardwareObserver? = nil) {
         let hardware = hardware ?? AudioHardwareObserver()
         self.hardware = hardware
-        levels = AudioLevels(defaults: defaults)
-        monitor = CapturedAudioMonitor(defaults: defaults, hardwareObserver: hardware)
+        let levels = AudioLevels(defaults: defaults)
+        self.levels = levels
+        monitor = CapturedAudioMonitor(defaults: defaults, captureLevels: levels, hardwareObserver: hardware)
         playbackLevels = PlaybackLevels(defaults: defaults)
     }
 
@@ -84,6 +85,7 @@ nonisolated extension AudioSource {
         _ = revision
         return storage.withLock { $0[id] ?? .init() }
     }
+    func hasSetting(_ id: String) -> Bool { storage.withLock { $0[id] != nil } }
     func set(_ id: String, _ level: SourceLevel) {
         guard level.valid, id.count <= 1024 else { return }
         let values = storage.withLock { values -> [String: SourceLevel] in
@@ -93,11 +95,11 @@ nonisolated extension AudioSource {
         if let data = try? JSONEncoder().encode(values) { defaults.set(data, forKey: "audio.sourceLevels.v1") }
         revision += 1
     }
-    nonisolated func snapshot(for source: AudioSource) -> RecordingLevels {
+    nonisolated func snapshot(for source: AudioSource, includingDiscoveredInputs: Bool = false) -> RecordingLevels {
         storage.withLock { values in
             .init(playback: values[source.playbackLevelID] ?? .init(),
                   microphone: values[source.microphoneLevelID] ?? .init(), master: values["master"] ?? .init(),
-                  inputs: Dictionary(uniqueKeysWithValues: source.inputSelections.map { (.input($0.deviceUID), values["input:" + $0.deviceUID] ?? .init()) }))
+                  inputs: Dictionary(uniqueKeysWithValues: (includingDiscoveredInputs ? Set(source.inputSelections.map(\.deviceUID) + values.keys.filter { $0.hasPrefix("input:") }.map { String($0.dropFirst(6)) }).sorted() : source.inputSelections.map(\.deviceUID)).map { (.input($0), values["input:" + $0] ?? .init()) }))
         }
     }
 }
@@ -119,9 +121,10 @@ nonisolated struct GainEvent: Codable, Sendable {
 nonisolated final class GainAutomation {
     private(set) var events: [GainEvent]
     private var cursor = 0
-    let tracks: [CaptureTrack]
+    private(set) var tracks: [CaptureTrack]
     var masterIndex: Int { tracks.count * 32 }
     private var maximumEvents: Int { min(2048, 131_072 / (masterIndex + 1)) }
+    private var topologyChanged = false
     private var lastLevels: RecordingLevels
     init(_ levels: RecordingLevels = .init(), tracks: [CaptureTrack] = CaptureTrack.legacyPair) {
         self.tracks = tracks
@@ -129,8 +132,22 @@ nonisolated final class GainAutomation {
         let values = levels.amplitudes(for: tracks)
         events = [.init(frame: 0, from: values, to: values)]
     }
+    func addTrack(_ track: CaptureTrack) throws {
+        guard !tracks.contains(track), tracks.count < CaptureTrack.maximumSources,
+              events.count <= min(2048, 131_072 / ((tracks.count + 1) * 32 + 1)) else {
+            throw SessionError.invalid("Live source or gain-event limit reached")
+        }
+        let index = masterIndex
+        for offset in events.indices {
+            events[offset].from.insert(contentsOf: repeatElement(Float(0), count: 32), at: index)
+            events[offset].to.insert(contentsOf: repeatElement(Float(0), count: 32), at: index)
+        }
+        tracks.append(track)
+        topologyChanged = true
+    }
     @discardableResult func update(_ levels: RecordingLevels, at frame: Int64) throws -> Bool {
-        guard levels != lastLevels else { return false }
+        guard levels != lastLevels || topologyChanged else { return false }
+        topologyChanged = false
         let values = levels.amplitudes(for: tracks)
         guard values != events.last!.to else { lastLevels = levels; return false }
         guard events.count < maximumEvents else { throw SessionError.invalid("Recording level automation reached its bounded edit limit; the partial take is preserved") }

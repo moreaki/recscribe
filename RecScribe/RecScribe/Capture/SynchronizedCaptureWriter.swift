@@ -16,8 +16,8 @@ nonisolated final class SynchronizedCaptureWriter {
     }
     private final class Input {
         let writer: SessionWAVWriter?
-        let format: AVAudioFormat
-        let normalizer: AudioFormatNormalizer
+        var format: AVAudioFormat
+        var normalizer: AudioFormatNormalizer
         var pending: AVAudioPCMBuffer?
         var time: Double = 0
         var duration: Double = 0
@@ -42,6 +42,7 @@ nonisolated final class SynchronizedCaptureWriter {
     private var end: Int64 = 0
     private var clippedFrames: Int64 = 0
     private var sealed = false
+    private var resumingSources: Set<CaptureTrack> = []
     private var failedSources: Set<CaptureTrack> = []
     private var tracks: [CaptureTrack] { descriptors.map(\.role) }
     private let automation: GainAutomation
@@ -114,6 +115,10 @@ nonisolated final class SynchronizedCaptureWriter {
         _ = try frame(sample.presentationTime)
         let input: Input
         if let existing = inputs[sample.track] {
+            if resumingSources.remove(sample.track) != nil, existing.format.channelCount == format.channelCount {
+                existing.format = format
+                existing.normalizer = AudioFormatNormalizer(outputFormat: try Self.format(channels: format.channelCount))
+            }
             guard existing.format == format else {
                 throw SessionError.invalid("An input changed audio format; review the preserved source tracks")
             }
@@ -257,7 +262,13 @@ nonisolated final class SynchronizedCaptureWriter {
 
     private func flushAvailable() throws {
         let active = tracks.filter { !failedSources.contains($0) }
-        let earliestEnd = active.map { inputs[$0]?.end ?? 0 }.min() ?? end
+        let earliestEnd = try active.map { track -> Int64 in
+            guard let input = inputs[track] else { return 0 }
+            // A first packet waiting for lookahead is already present. Its
+            // leading timestamp is not evidence that the source has stalled.
+            if input.end == 0, input.pending != nil { return try frame(input.time) }
+            return input.end
+        }.min() ?? end
         if end - earliestEnd > Int64(policy.sourceStallSeconds * 48_000) {
             try mix?.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
         }
@@ -312,7 +323,21 @@ nonisolated final class SynchronizedCaptureWriter {
                 descriptors[index].gapFrames = input.gaps
             }
         }
-        try mix?.setSourceTracks(descriptors, epoch: timelineEpoch)
+        try mix?.setCaptureTopology(descriptors, epoch: timelineEpoch, automation: automation.events)
+    }
+
+    func prepareSource(_ descriptor: RecordingSession.SourceTrack) throws {
+        guard !sealed, descriptor.role.valid else { throw SessionError.invalid("Capture is sealed or source identity is invalid") }
+        if !descriptors.contains(where: { $0.role == descriptor.role }) {
+            try automation.addTrack(descriptor.role)
+            descriptors.append(descriptor)
+            try mix?.addIssue("A source joined during capture; leading silence preserves its position on the timeline.")
+            try journal()
+            try mix?.setGainAutomation(automation.events, scope: "derived_mix", tracks: tracks)
+        } else {
+            failedSources.remove(descriptor.role)
+            resumingSources.insert(descriptor.role)
+        }
     }
 
     func sourceFailed(_ track: CaptureTrack, message: String) throws {

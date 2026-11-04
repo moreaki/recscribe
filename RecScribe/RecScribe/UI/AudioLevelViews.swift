@@ -33,7 +33,7 @@ struct RecordingLevelsView: View {
                 SourceFader(id: "master", title: source.isMixed ? "Master recording mix" : "Master saved recording", levels: levels, channels: 0, preservesSources: source.isMixed)
                 Text(source.isMixed ? "Faders and mute affect the derived mix. Separate source tracks are still saved at unity gain. The mix averages source contributions for headroom; peaks above 0 dBFS are hard-clipped in the mix." : "Software gain and mute affect the saved recording. Single-source mode does not save a separate raw track. Peaks above 0 dBFS are hard-clipped.")
                     .font(.caption).foregroundStyle(.secondary)
-                if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true) }
+                if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true, hardwareObserver: recorder.audio.hardware) }
                 Divider()
                 ListeningControls(levels: playbackLevels, title: "Playback output", hardwareObserver: recorder.audio.hardware)
                 Toggle("Monitor recording through headphones", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
@@ -65,6 +65,7 @@ struct SourceFader: View {
     let channels: Int
     var preservesSources = false
     var context: String? = nil
+    var showsMuteToggle = true
     private var value: SourceLevel { levels.level(id) }
     private func change(_ body: (inout SourceLevel) -> Void) { var next = value; body(&next); levels.set(id, next) }
     var body: some View {
@@ -75,18 +76,19 @@ struct SourceFader: View {
                 Text(String(format: "%+.1f dB", value.decibels)).monospacedDigit()
                 Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(context.map { "\($0) \(title)" } ?? title)")
             }
-            if value.muted {
-                AudioMuteBadge(title: preservesSources
-                    ? (id == "master" ? "Recording mix muted" : "Muted in mix · source still saved")
-                    : "Saved recording muted")
-            }
+            AudioMuteBadge(title: preservesSources
+                ? (id == "master" ? "Recording mix muted" : "Muted in mix · source still saved")
+                : "Saved recording muted")
+                .opacity(value.muted ? 1 : 0).accessibilityHidden(!value.muted)
             GainSlider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }),
                        label: context.map { "\($0) \(title)" } ?? title).frame(height: 30)
                 .opacity(value.muted ? 0.5 : 1)
-            Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
-                .font(.caption).fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
-                .help(preservesSources ? "Only the derived mix is muted. Original source tracks are still saved at unity gain." : "Muted audio is saved in this single-source recording.")
+            if showsMuteToggle {
+                Toggle(preservesSources ? "Mute in mix" : "Mute saved recording", isOn: Binding(get: { value.muted }, set: { newValue in change { $0.muted = newValue } }))
+                    .font(.caption).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("\(context ?? title): \(preservesSources ? "mute in mix; source still saved" : "mute saved recording")")
+                    .help(preservesSources ? "Only the derived mix is muted. Original source tracks are still saved at unity gain." : "Muted audio is saved in this single-source recording.")
+            }
             if channels > 1 {
                 DisclosureGroup("Mix channel trims (dB)") {
                     ForEach(0..<min(32, channels), id: \.self) { ch in

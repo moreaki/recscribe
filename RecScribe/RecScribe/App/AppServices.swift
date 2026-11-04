@@ -14,6 +14,7 @@ final class AppServices {
     let navigation = StudioNavigation()
     let overflowMenu: OverflowMenu
     private(set) var menuBarController: MenuBarController?
+    private var routingObservation: ObservationSubscription?
     private var locationObservation: ObservationSubscription?
 
     init(defaults: UserDefaults = .standard, supportDirectory: URL = AppSettings.supportDirectory) {
@@ -79,6 +80,14 @@ final class AppServices {
     func start() {
         guard menuBarController == nil else { return }
         menuBarController = MenuBarController(viewModel: recorder, live: live, actions: overflowMenu)
+        let hardware = audio.hardware
+        routingObservation = ObservationSubscription(read: { [recorder] in
+            AutomaticRoutingRevision(revision: hardware.revision, source: recorder.selectedSource,
+                editable: recorder.allowsCaptureSourceChange && !recorder.isFinalizingAfterFailure)
+        }) { [weak self] _ in
+            self?.recorder.refreshAvailableRoutingSources(hardware.inputDevices)
+        }
+        recorder.enableAutomaticRouting(hardware.inputDevices)
     }
 
     func makeOverflowMenu() -> NSMenu {
@@ -86,6 +95,7 @@ final class AppServices {
     }
 
     func shutdown() async {
+        routingObservation?.cancel()
         locationObservation?.cancel()
         menuBarController?.close()
         menuBarController = nil
@@ -127,4 +137,10 @@ final class ObservationSubscription {
     private nonisolated func scheduleUpdate() {
         Task { @MainActor [weak self] in self?.observeValue?() }
     }
+}
+
+private nonisolated struct AutomaticRoutingRevision: Equatable, Sendable {
+    let revision: Int
+    let source: AudioSource
+    let editable: Bool
 }

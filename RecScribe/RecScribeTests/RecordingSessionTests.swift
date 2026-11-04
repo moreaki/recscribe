@@ -651,16 +651,20 @@ struct RecordingSessionTests {
         #expect(telemetryInvalidations.withLock { $0 } == 90)
         #expect(recorder.formattedDuration == "00:03")
 
-        // Verify StudioView renders with persistent capture controls in .studio, .routing, and .recordings workspace modes
-        let live = LiveTranscription()
+        // Verify every workspace, including Settings, retains the capture controls.
+        let liveRoot = FileManager.default.temporaryDirectory.appendingPathComponent("studio-modes-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: liveRoot) }
+        let live = LiveTranscription(liveRoot: liveRoot)
         let library = SessionLibrary()
-        let settings = AppSettings()
+        let settings = AppSettings(defaults: defaults)
+        let runtime = RuntimeManager(settings: settings)
         for mode in StudioWorkspaceMode.allCases {
             let studio = StudioView(workspaceMode: mode)
                 .environment(recorder)
                 .environment(live)
                 .environment(library)
                 .environment(settings)
+                .environment(runtime)
             let host = NSHostingView(rootView: studio)
             host.frame = NSRect(origin: .zero, size: AppWindow.studio.defaultSize)
             host.layoutSubtreeIfNeeded()

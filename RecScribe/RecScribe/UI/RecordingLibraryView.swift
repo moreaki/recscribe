@@ -45,8 +45,6 @@ struct RecordingLibraryView: View {
                         navigateToStudio()
                     }
                 }.disabled(library.recordingActive)
-                SettingsLink { Text("Settings…") }
-                Button("Studio", systemImage: "macwindow") { navigateToStudio() }
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
             if playback.loading { ProgressView("Loading session…") }
@@ -124,9 +122,7 @@ struct RecordingLibraryView: View {
                 Spacer()
                 if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
                 Button("Cancel work") { library.cancel() }
-                if embeddedInStudio {
-                    Button("Back to Studio") { navigateToStudio() }
-                } else {
+                if !embeddedInStudio {
                     Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
                         .help("Close the Recordings window; background processing continues.")
                 }

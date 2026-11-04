@@ -113,20 +113,6 @@ struct WorkspaceCard<Content: View>: View {
     }
 }
 
-struct SettingsWindowButton: View {
-    @Environment(\.openSettings) private var openSettings
-    var body: some View {
-        GlassIconButton(
-            systemImage: "slider.horizontal.3",
-            accessibilityLabel: "Settings",
-            accessibilityHint: "Storage, transcription, models and local AI"
-        ) {
-            NSApp.activate(ignoringOtherApps: true)
-            openSettings()
-        }
-    }
-}
-
 enum SettingsSection: String, WorkspaceTab, Identifiable {
     case storage = "Recording", transcription = "Transcription", models = "Models", ai = "Intelligence", diagnostics = "Diagnostics"
     var id: Self { self }

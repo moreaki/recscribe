@@ -5,12 +5,14 @@ enum StudioWorkspaceMode: String, WorkspaceTab, CaseIterable {
     case studio = "Studio"
     case routing = "Audio Routing"
     case recordings = "Recordings"
+    case settings = "Settings"
 
     var symbol: String {
         switch self {
         case .studio: "waveform.circle"
         case .routing: "slider.horizontal.below.rectangle"
         case .recordings: "rectangle.stack"
+        case .settings: "slider.horizontal.3"
         }
     }
 }
@@ -25,9 +27,9 @@ final class StudioNavigation {
         case .studio: mode = .studio
         case .routing: mode = .routing
         case .recordings: mode = .recordings
-        case .settings: break
+        case .settings: mode = .settings
         }
-        open((window == .settings ? AppWindow.settings : .studio).rawValue)
+        open(AppWindow.studio.rawValue)
     }
 }
 
@@ -39,7 +41,6 @@ struct StudioView: View {
     @Environment(RecorderViewModel.self) private var recorder
     @Environment(LiveTranscription.self) private var live
     @Environment(AppSettings.self) private var settings
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @State private var initialMode: StudioWorkspaceMode
 
@@ -59,17 +60,12 @@ struct StudioView: View {
         VStack(spacing: 0) {
             HStack(spacing: GlassSpacing.md) {
                 GlassBrandLockup(size: .compact)
-                Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 }))
-                    .frame(maxWidth: 420)
+                .frame(maxWidth: 560)
                 Spacer()
                 Label(live.cloudAudioActive ? "Cloud audio approved" : settings.values.processingLocation == .cloud ? "Cloud audio requires approval" : "Audio stays on your Mac",
                       systemImage: live.cloudAudioActive ? "cloud" : "lock.shield")
                     .font(.caption).foregroundStyle(live.cloudAudioActive ? .orange : WorkspaceStyle.mint)
-                Button("Recordings", systemImage: "rectangle.stack") {
-                    workspaceMode = .recordings
-                }
-                SettingsWindowButton()
             }.padding(WorkspaceStyle.contentPadding)
             Divider()
             HStack(alignment: .top, spacing: 0) {
@@ -91,13 +87,15 @@ struct StudioView: View {
                     case .routing:
                         AudioRoutingView(levels: recorder.audio.levels, monitor: recorder.audio.monitor,
                             playbackLevels: recorder.audio.playbackLevels, hardwareObserver: recorder.audio.hardware,
-                            embeddedInStudio: true, onClose: { workspaceMode = .studio })
+                            embeddedInStudio: true)
                     case .recordings:
                         RecordingLibraryView(makePlayback: { recorder.audio.makePlayback() },
                             embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
+                    case .settings:
+                        ConfigurationView(liveDrafts: live.drafts, embeddedInStudio: true)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .frame(minWidth: AppWindow.studio.minimumSize.width, minHeight: AppWindow.studio.minimumSize.height)

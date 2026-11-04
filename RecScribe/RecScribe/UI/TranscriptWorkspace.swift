@@ -104,6 +104,8 @@ struct LiveTranscriptionControl: View {
     @Bindable var live: LiveTranscription
     @State private var preview = false
     var showsPreview = true
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     var body: some View {
         HStack {
             Toggle("Live transcription", isOn: Binding(get: { live.enabled }, set: { live.setEnabled($0) }))
@@ -118,8 +120,10 @@ struct LiveTranscriptionControl: View {
                         .background(WorkspaceStyle.background).preferredColorScheme(.dark)
                 }
             }
-            SettingsLink { Image(systemName: "externaldrive") }
-                .help("Manage preserved live drafts in Settings → Storage")
+            Button {
+                AppWindow.open(.settings, using: openWindow, navigation: navigation)
+            } label: { Image(systemName: "externaldrive") }
+                .help("Manage preserved live drafts in Settings → Recording")
                 .accessibilityLabel("Live draft storage settings")
         }
         .confirmationDialog("Send new audio to OpenAI?", isPresented: Binding(
@@ -229,7 +233,9 @@ struct TranscriptWorkspace: View {
                             library.requestTextProcessing(job, summary: section == .summary, sourceName: source?.lastPathComponent)
                         }
                     }
-                    SettingsLink { Label("AI & transcription settings", systemImage: "slider.horizontal.3") }
+                    Button("AI & transcription settings", systemImage: "slider.horizontal.3") {
+                        AppWindow.open(.settings, using: openWindow, navigation: navigation)
+                    }
                 }.disabled(library.busy || library.recordingActive || library.liveWorkActive)
             }
             if section == .live {

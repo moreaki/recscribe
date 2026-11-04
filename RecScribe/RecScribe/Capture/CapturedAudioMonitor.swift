@@ -14,6 +14,9 @@ import os
     nonisolated private let state = OSAllocatedUnfairLock(initialState: (enabled: false, frames: 0, generation: 0))
     @ObservationIgnored nonisolated(unsafe) private var engine: AVAudioEngine?
     @ObservationIgnored nonisolated(unsafe) private var node: AVAudioPlayerNode?
+    private let captureLevels: AudioLevels?
+    private var monitoredSource: AudioSource?
+    @ObservationIgnored private var captureObservation: ObservationSubscription?
     private let hardwareObserver: AudioHardwareObserver
     private let isLoopbackCheck: (String) -> Bool
     private let startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)?
@@ -25,22 +28,37 @@ import os
 
     init(
         defaults: UserDefaults = .standard,
+        captureLevels: AudioLevels? = nil,
         hardwareObserver: AudioHardwareObserver = .shared,
         isLoopbackCheck: ((String) -> Bool)? = nil,
         startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)? = nil
     ) {
+        self.captureLevels = captureLevels
         self.hardwareObserver = hardwareObserver
         self.isLoopbackCheck = isLoopbackCheck ?? Self.isLoopback
         self.startEngineAction = startEngineAction
         levels = PlaybackLevels(defaults: defaults, key: "audio.monitorLevels.v1", initialVolume: 0.5)
         observation = ObservationSubscription(read: { [levels] in levels.value }) { [weak self] _ in self?.configureOutput() }
+        if let captureLevels {
+            captureObservation = ObservationSubscription(read: { captureLevels.revision }) { [weak self] _ in
+                guard let self, self.enabled, let source = self.monitoredSource, self.hasAudibleLoopback(source) else { return }
+                self.setEnabled(false, source: source)
+                self.warning = "Monitoring paused while a virtual input is audible. Mute that input to listen; recording continues."
+            }
+        }
         hardwareObservation = ObservationSubscription(read: { hardwareObserver.revision }) { [weak self] _ in self?.configureOutput() }
     }
 
+    private func hasAudibleLoopback(_ source: AudioSource) -> Bool {
+        source.inputSelections.contains { input in
+            !input.routes.isEmpty && isLoopbackCheck(input.deviceUID) && captureLevels?.level("input:" + input.deviceUID).muted != true
+        }
+    }
     func setEnabled(_ enabled: Bool, source: AudioSource) {
-        if enabled, source.inputSelections.contains(where: { isLoopbackCheck($0.deviceUID) }) {
+        monitoredSource = enabled ? source : nil
+        if enabled, hasAudibleLoopback(source) {
             setEnabled(false, source: .systemAll)
-            warning = "Monitoring is unavailable for virtual or aggregate inputs to avoid audio feedback. Recording is unaffected."
+            warning = "Mute the virtual input before enabling monitoring to avoid feedback. Recording is unaffected."
             return
         }
         self.enabled = enabled; warning = nil

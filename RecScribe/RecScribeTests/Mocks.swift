@@ -13,6 +13,7 @@ import AVFoundation
 @MainActor
 final class MockAudioCapturing: AudioCapturing {
     var capturing = false
+    var onInputAvailable: (@MainActor (InputDeviceInfo, InputSelection) async -> Bool)?
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     var onStreamError: (@MainActor (String) -> Void)?
     private(set) var setupCount = 0

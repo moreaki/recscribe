@@ -60,7 +60,6 @@ struct StudioView: View {
         VStack(spacing: 0) {
             HStack(spacing: GlassSpacing.md) {
                 GlassBrandLockup(size: .compact)
-                Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 }))
                 .frame(maxWidth: 560)
                 Spacer()

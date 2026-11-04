@@ -583,6 +583,7 @@ class RecorderViewModel: ObservableObject {
     }
 
     func openSystemSettings() {
+        guard !isOpeningSystemSettings else { return }
         guard !installLocation.blocksRecording else {
             showInstallLocationNotice()
             return

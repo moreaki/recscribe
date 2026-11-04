@@ -50,6 +50,7 @@ final class PermissionCoordinator {
 
     func markPermissionSought() {
         hasSoughtPermission = true
+        permissions.beginUserRequest(.screenCapture)
     }
 
     func checkPermission(onUpdate: (PermissionStatus) -> Void) async {

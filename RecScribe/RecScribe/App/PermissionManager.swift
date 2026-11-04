@@ -21,6 +21,24 @@ enum PermissionStatus {
 
 /// Manages the system permissions RecScribe depends on.
 class PermissionManager: PermissionProviding {
+    private let screenCaptureProbe: @MainActor () async -> PermissionStatus
+    private var screenCaptureResult: PermissionStatus?
+    private var screenCaptureTask: Task<PermissionStatus, Never>?
+
+    init(screenCaptureProbe: @escaping @MainActor () async -> PermissionStatus = {
+        do {
+            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            return .granted
+        } catch { return .denied }
+    }) {
+        self.screenCaptureProbe = screenCaptureProbe
+    }
+
+    /// Only a deliberate retry may issue another prompting ScreenCaptureKit call.
+    /// Automatic polling/activation reuses the result of this user request.
+    func beginUserRequest(_ kind: PermissionKind) {
+        if kind == .screenCapture, screenCaptureTask == nil { screenCaptureResult = nil }
+    }
 
     /// Silent, launch-only read. See `PermissionProviding.preflight` for the
     /// latching behaviour that makes this unusable for observing changes.
@@ -51,22 +69,20 @@ class PermissionManager: PermissionProviding {
         }
     }
 
-    /// Probe current permission state, authoritatively and live.
-    ///
-    /// For `.screenCapture` this doubles as registration: a `SCShareableContent`
-    /// call is what puts RecScribe into the System Settings list in the first
-    /// place, and on a fresh install it triggers the one-time system prompt.
-    /// Because of that side effect it must stay behind a deliberate user action
-    /// or the on-screen guide — never on launch or idle activation (BL-085).
+    /// One system probe per explicit request, shared by concurrent callers.
+    /// ScreenCaptureKit can prompt on every call on current macOS releases;
+    /// repeating it from the grant timer traps the user in a permission dialog.
     func checkPermission(_ kind: PermissionKind = .screenCapture) async -> PermissionStatus {
         switch kind {
         case .screenCapture:
-            do {
-                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                return .granted
-            } catch {
-                return .denied
-            }
+            if let screenCaptureTask { return await screenCaptureTask.value }
+            if let screenCaptureResult { return screenCaptureResult }
+            let probe = Task { await screenCaptureProbe() }
+            screenCaptureTask = probe
+            let result = await probe.value
+            screenCaptureResult = result
+            screenCaptureTask = nil
+            return result
         case .microphone:
             // No probing side effect to worry about here: reading the status is
             // free and silent. Unlike `SCShareableContent`, it neither prompts
@@ -75,11 +91,7 @@ class PermissionManager: PermissionProviding {
         }
     }
 
-    /// Probe, prompting if macOS still can.
-    ///
-    /// The system prompt only ever appears once; after a deny or a dismiss there is
-    /// no second chance at it, which is why the in-app guide (BL-081) is the real
-    /// recovery path rather than a nicety.
+    /// Explicit user request/retry. Automatic observations must not reset it.
     ///
     /// This deliberately does **not** open System Settings any more (BL-087). It
     /// used to, as a side effect, which meant the record-while-denied path opened
@@ -89,6 +101,7 @@ class PermissionManager: PermissionProviding {
     func requestPermission(_ kind: PermissionKind = .screenCapture) async -> Bool {
         switch kind {
         case .screenCapture:
+            beginUserRequest(kind)
             return await checkPermission(kind) == .granted
         case .microphone:
             // `checkPermission(.microphone)` is deliberately a silent read, so

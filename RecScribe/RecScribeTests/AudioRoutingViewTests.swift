@@ -4,7 +4,6 @@ import CoreAudio
 import SwiftUI
 import Testing
 import Vision
-import CoreML
 @testable import RecScribe
 
 /// Synthetic devices and isolated settings. Windows are never ordered on screen;
@@ -123,15 +122,12 @@ struct AudioRoutingViewTests {
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let image = try #require(bitmap.cgImage)
             let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
+            // The legacy fast recognizer works on CPU-only CI VMs without ANE.
+            request.revision = VNRecognizeTextRequestRevision1
+            request.recognitionLevel = .fast
+            request.usesCPUOnly = true
             request.recognitionLanguages = ["en-US"]
             request.usesLanguageCorrection = false
-            // Keep the synthetic visual assertion independent of runner GPU availability.
-            for (stage, devices) in try request.supportedComputeStageDevices {
-                if let cpu = devices.first(where: { if case .cpu = $0 { return true }; return false }) {
-                    request.setComputeDevice(cpu, for: stage)
-                }
-            }
             try VNImageRequestHandler(cgImage: image).perform([request])
             text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
             if text.lowercased().filter({ !$0.isWhitespace }).contains("recordmeetingloopback") { break }

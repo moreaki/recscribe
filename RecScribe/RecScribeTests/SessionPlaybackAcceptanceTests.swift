@@ -145,6 +145,9 @@ struct SessionPlaybackAcceptanceTests {
         playback.receiveTimeObservation(.zero, from: player)
         playback.togglePlayback()
         await settle()
+        // AVFoundation acknowledges queued rate commands asynchronously, even
+        // after the old media is detached. Check the settled transport state.
+        await waitForPause(player)
         #expect(playback.phase == .failed && player.rate == 0)
 
         playback.playFile(url)

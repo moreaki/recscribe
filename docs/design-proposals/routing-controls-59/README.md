@@ -35,11 +35,22 @@ query; **Reset demo** restores the initial configuration.
   share the same mute state. Escape dismisses a menu or closes details and returns
   keyboard focus to its trigger.
 
+## Named muted-source summary
+
+The **Named Studio mute summary** scenario lists each selected muted source by
+its actual display name: **System audio muted in mix** and **MacBook Air Microphone
+muted in mix**. Unmuting/removing a source updates the summary immediately. Master
+mix mute remains a separate message; output mute is not reported as a muted
+capture source. The summary wraps long names instead of substituting a count.
+
+![Concrete muted-source names in Studio](studio-summary.png)
+
 ## States for review
 
 | State | Preview | Decision illustrated |
 | --- | --- | --- |
 | Earlier interaction pattern | [Before](before.png) | A passive mute badge alone is insufficient |
+| Studio summary | [Named muted sources](studio-summary.png) | Concrete source names instead of “Playback” / “1 input” |
 | Muted, collapsed | [Mute / Unmute](muted.png) | One click restores sound without expanding |
 | Expanded input | [Shared mute state](expanded.png) | Header and expanded controls stay synchronized |
 | Source actions | [Remove source](remove-source.png) | Discoverable removal, preserving saved recordings |

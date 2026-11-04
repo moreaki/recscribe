@@ -74,12 +74,34 @@ struct RecordingReviewNotesView: View {
 
     var body: some View {
         if !notes.originalMessages.isEmpty {
-            DisclosureGroup(isExpanded: $expanded) {
-                VStack(alignment: .leading, spacing: GlassSpacing.m) {
+            VStack(alignment: .leading, spacing: GlassSpacing.m) {
+                Button {
+                    expanded.toggle()
+                    if !expanded { technicalExpanded = false }
+                } label: {
+                    Label(expanded ? "Hide review notes" : "Review notes",
+                          systemImage: expanded ? "chevron.down" : "chevron.right")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("recording-review-notes")
+                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+
+                if expanded {
                     ForEach(notes.messages, id: \.self) { message in
                         Text(message).foregroundStyle(theme.colors.statusWarning)
                     }
-                    DisclosureGroup("Technical details", isExpanded: $technicalExpanded) {
+                    Button {
+                        technicalExpanded.toggle()
+                    } label: {
+                        Label("Technical details",
+                              systemImage: technicalExpanded ? "chevron.down" : "chevron.right")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("recording-review-technical")
+                    .accessibilityValue(technicalExpanded ? "Expanded" : "Collapsed")
+                    if technicalExpanded {
                         VStack(alignment: .leading, spacing: GlassSpacing.s) {
                             ForEach(Array(notes.originalMessages.enumerated()), id: \.offset) { _, message in
                                 Text(message).textSelection(.enabled)
@@ -88,12 +110,8 @@ struct RecordingReviewNotesView: View {
                         .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.top, GlassSpacing.s)
-            } label: {
-                Text("Review notes").foregroundStyle(.secondary)
             }
             .font(.caption)
-            .accessibilityIdentifier("recording-review-notes")
         }
     }
 }

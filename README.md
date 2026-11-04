@@ -96,6 +96,10 @@ Primary CI uses the Xcode minor version pinned in `.xcode-version` (currently
 27.2) on GitHub's `xcode-27` runner. Debug tests and the independent Release build
 use the same pin. A separate Xcode 26.3 compatibility build still compiles both
 the app and unit tests, so upgrading CI does not hide older-compiler errors.
+It uses the standard `macos-15-intel` runner, independently of ARM capacity,
+and adds Intel compilation coverage; functional tests and Release stay on ARM.
+See GitHub's [standard runner labels](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+and [macOS 15 Intel Xcode inventory](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md).
 Image build numbers and host macOS versions can differ; each job reports Xcode,
 Swift, SDK and OS versions. See the [official runner software inventory](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 

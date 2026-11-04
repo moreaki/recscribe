@@ -87,7 +87,8 @@ struct SessionPlaybackAcceptanceTests {
             let oldPlayer = try #require(playback.player)
             if capture { playback.setRecording(true) } else { playback.playFile(url) }
             staleCompletion(true)
-            await settle()
+            #expect(oldPlayer.currentItem == nil)
+            await waitUntil("old player acknowledges pause") { oldPlayer.rate == 0 }
             #expect(!playback.isScrubbing && !playback.isPlaying && oldPlayer.rate == 0)
             if capture {
                 #expect(playback.player == nil && playback.phase == .idle)
@@ -98,6 +99,19 @@ struct SessionPlaybackAcceptanceTests {
                 #expect(playback.player !== oldPlayer && playback.phase == .paused)
             }
         }
+    }
+
+    @Test func releasingTheOwnerDetachesMediaEvenWhenThePlayerIsRetained() async throws {
+        let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let gate = SeekGate()
+        var playback: SessionPlayback? = try await load(url, gate: gate)
+        let player = try #require(playback?.player)
+        playback?.togglePlayback()
+        weak var released = playback
+        playback = nil
+        await waitUntil("playback owner released") { released == nil }
+        #expect(player.currentItem == nil)
+        await waitUntil("retained player stopped") { player.rate == 0 }
     }
 
     @Test func runtimeFailureIsVisibleStickyAndOldItemNotificationsAreDetached() async throws {
@@ -171,7 +185,7 @@ struct SessionPlaybackAcceptanceTests {
         let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let gate = SeekGate(), playback = try await load(url, gate: gate)
         defer { playback.stop() }
-        for width: CGFloat in [280, 360, 900] {
+        for width: CGFloat in Array(repeating: [280, 360, 900], count: 4).flatMap({ $0 }) {
             let host = NSHostingView(rootView: SessionPlaybackView(playback: playback, showListeningControls: false)
                 .padding().frame(width: width).environment(\.dynamicTypeSize, .accessibility3).preferredColorScheme(.dark))
             // The fixture supplies a fixed viewport. Do not let NSHostingView's
@@ -181,6 +195,8 @@ struct SessionPlaybackAcceptanceTests {
             let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: width, height: 260),
                                   styleMask: .titled, backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false; window.contentView = host
+            window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
+            window.makeKeyAndOrderFront(nil)
             defer { window.contentView = nil; window.close() }
             for _ in 0..<6 { host.layoutSubtreeIfNeeded(); try await Task.sleep(for: .milliseconds(20)) }
             #expect(host.fittingSize.width > 0 && host.fittingSize.width <= width + 1)
@@ -194,9 +210,10 @@ struct SessionPlaybackAcceptanceTests {
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
                 characters: String(UnicodeScalar(NSRightArrowFunctionKey)!),
                 charactersIgnoringModifiers: String(UnicodeScalar(NSRightArrowFunctionKey)!), isARepeat: false, keyCode: 124))
-            let before = playback.position
-            #expect(window.performKeyEquivalent(with: event))
-            #expect(playback.position == min(playback.duration, before + PlaybackPolicy.skipSeconds))
+            let before = playback.position, requestsBefore = gate.targets.count
+            NSApp.sendEvent(event)
+            #expect(gate.targets.count == requestsBefore + 1, "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")
+            #expect(playback.position == min(playback.duration, before + PlaybackPolicy.skipSeconds), "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")
             if let completion = gate.completions.last { completion(true); await settle() }
             // Native adjustable actions also use the bounded transport, not a second player.
             #expect(slider.accessibilityPerformDecrement())

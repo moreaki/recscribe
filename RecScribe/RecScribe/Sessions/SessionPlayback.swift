@@ -152,8 +152,8 @@ final class SessionPlaybackCoordinator {
     private var generation = UUID()
     private var ownedRequestToken: UInt64 = 0
     private var recordingActive = false
-    @ObservationIgnored private var levelObservation: ObservationSubscription<ListeningLevel>?
-    @ObservationIgnored private var hardwareObservation: ObservationSubscription<Int>?
+    @ObservationIgnored private var levelObservation: ObservationSubscription?
+    @ObservationIgnored private var hardwareObservation: ObservationSubscription?
     private var statusObservation: AnyCancellable?
     @ObservationIgnored private var observerCleanup: PlayerObserverCleanup?
     private var seekInFlight = false

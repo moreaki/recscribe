@@ -14,7 +14,7 @@ final class AppServices {
     let navigation = StudioNavigation()
     let overflowMenu: OverflowMenu
     private(set) var menuBarController: MenuBarController?
-    private var locationObservation: ObservationSubscription<AppSettings.Values>?
+    private var locationObservation: ObservationSubscription?
 
     init(defaults: UserDefaults = .standard, supportDirectory: URL = AppSettings.supportDirectory) {
         let settings = AppSettings(defaults: defaults)
@@ -95,27 +95,29 @@ final class AppServices {
 /// Coalesces a non-View side effect to the latest value and rearms before delivery.
 /// SwiftUI observes model properties directly; this is only for AppKit/audio effects.
 @MainActor
-final class ObservationSubscription<Value: Equatable & Sendable> {
-    private let read: () -> Value
-    private let onChange: (Value) -> Void
-    private var previous: Value?
-    private var active = true
+final class ObservationSubscription {
+    private var observeValue: (() -> Void)?
 
-    init(read: @escaping () -> Value, onChange: @escaping (Value) -> Void) {
-        self.read = read
-        self.onChange = onChange
-        observe()
+    // Erase the value type at the subscription boundary. Besides keeping owner
+    // declarations small, this avoids the Swift 6.2.4 optimizer crash in the
+    // synthesized deinitializer of a generic main-actor class (Xcode 26.3).
+    init<Value: Equatable & Sendable>(read: @escaping () -> Value, onChange: @escaping (Value) -> Void) {
+        var previous: Value?
+        observeValue = { [weak self] in
+            guard let self, self.observeValue != nil else { return }
+            let value = withObservationTracking { read() } onChange: { [weak self] in
+                self?.scheduleUpdate()
+            }
+            let changed = previous.map { $0 != value } ?? false
+            previous = value
+            if changed { onChange(value) }
+        }
+        observeValue?()
     }
 
-    func cancel() { active = false }
+    func cancel() { observeValue = nil }
 
-    private func observe() {
-        guard active else { return }
-        let value = withObservationTracking { read() } onChange: { [weak self] in
-            Task { @MainActor [weak self] in self?.observe() }
-        }
-        let changed = previous.map { $0 != value } ?? false
-        previous = value
-        if changed { onChange(value) }
+    private nonisolated func scheduleUpdate() {
+        Task { @MainActor [weak self] in self?.observeValue?() }
     }
 }

@@ -17,8 +17,8 @@ import os
     private let hardwareObserver: AudioHardwareObserver
     private let isLoopbackCheck: (String) -> Bool
     private let startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)?
-    @ObservationIgnored private var observation: ObservationSubscription<ListeningLevel>?
-    @ObservationIgnored private var hardwareObservation: ObservationSubscription<Int>?
+    @ObservationIgnored private var observation: ObservationSubscription?
+    @ObservationIgnored private var hardwareObservation: ObservationSubscription?
     private var outputWatchToken: UUID?
     private var appliedRoute: String?
     private var appliedRate: Double?

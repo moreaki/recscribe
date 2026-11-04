@@ -14,7 +14,7 @@ class MenuBarController: NSObject {
     private var statusItem: NSStatusItem
     private let popover = NSPopover()
     private let layout = PopoverLayout()
-    private var cancellable: ObservationSubscription<Bool>?
+    private var cancellable: ObservationSubscription?
     /// Held so the overflow menu can be rebuilt from live state on every open.
     private let viewModel: RecorderViewModel
     private let actions: OverflowMenu

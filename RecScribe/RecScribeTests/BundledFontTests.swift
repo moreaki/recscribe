@@ -80,10 +80,10 @@ struct BundledFontTests {
         #expect(viewModel.statusText == "Ready to record \(longAppName) + \(longMicName)")
 
         let onboardingLarge = fittingSize(
-            OnboardingView().environmentObject(viewModel).dynamicTypeSize(.large)
+            OnboardingView().environment(viewModel).dynamicTypeSize(.large)
         )
         let onboardingAccessibility = fittingSize(
-            OnboardingView().environmentObject(viewModel).dynamicTypeSize(.accessibility3)
+            OnboardingView().environment(viewModel).dynamicTypeSize(.accessibility3)
         )
         #expect(onboardingLarge.width == 420)
         #expect(onboardingAccessibility.width == 420)
@@ -107,10 +107,10 @@ struct BundledFontTests {
         #expect(viewModel.statusText == "Recording \(longAppName) + \(longMicName)")
 
         let popoverLarge = fittingSize(
-            MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.large)
+            MenuBarPopoverView().environment(viewModel).dynamicTypeSize(.large)
         )
         let popoverAccessibility = fittingSize(
-            MenuBarPopoverView().environmentObject(viewModel).dynamicTypeSize(.accessibility3)
+            MenuBarPopoverView().environment(viewModel).dynamicTypeSize(.accessibility3)
         )
         #expect(popoverLarge.width == WorkspaceStyle.popoverWidth)
         #expect(popoverAccessibility.width == WorkspaceStyle.popoverWidth)

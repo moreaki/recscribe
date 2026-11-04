@@ -1,12 +1,12 @@
+import Observation
 import AVFoundation
-import Combine
 import CoreMedia
 import Foundation
 
 /// Owns the explicit preflight workflow. It never enters the recording or ASR
 /// queues. Capture startup/teardown are single-flight, including cancellation.
 @MainActor
-final class AudioTestController: ObservableObject {
+@Observable final class AudioTestController {
     enum State: String { case idle, starting, testing, sampling, stopping, verifying, ready, keeping }
     struct Sample: Sendable {
         let entry: SessionEntry
@@ -14,15 +14,15 @@ final class AudioTestController: ObservableObject {
         let warnings: [String]
         let sources: [String]
     }
-    @Published private(set) var state: State = .idle
-    @Published private(set) var health: [SourceRecordingHealth] = []
-    @Published private(set) var meters: [CaptureTrack: CaptureSourceMeters] = [:]
-    @Published private(set) var mixMeter = CapturePeakMeter()
-    @Published private(set) var elapsed = 0.0
-    @Published private(set) var now = ProcessInfo.processInfo.systemUptime
-    @Published private(set) var errorMessage: String?
-    @Published private(set) var notice: String?
-    @Published private(set) var sample: Sample?
+    private(set) var state: State = .idle
+    private(set) var health: [SourceRecordingHealth] = []
+    private(set) var meters: [CaptureTrack: CaptureSourceMeters] = [:]
+    private(set) var mixMeter = CapturePeakMeter()
+    private(set) var elapsed = 0.0
+    private(set) var now = ProcessInfo.processInfo.systemUptime
+    private(set) var errorMessage: String?
+    private(set) var notice: String?
+    private(set) var sample: Sample?
     let playback: SessionPlayback
     var canStart: () -> Bool = { true }
     var onActivity: (Bool) -> Void = { _ in }

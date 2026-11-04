@@ -1,5 +1,5 @@
+import Observation
 import AVFoundation
-import Combine
 import Foundation
 import os
 
@@ -64,10 +64,10 @@ nonisolated extension AudioSource {
 }
 
 @MainActor
-final class AudioLevels: ObservableObject {
+@Observable final class AudioLevels {
     nonisolated private let storage = OSAllocatedUnfairLock(initialState: [String: SourceLevel]())
     private let defaults: UserDefaults
-    @Published private(set) var revision = 0
+    private(set) var revision = 0
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: "audio.sourceLevels.v1"),
@@ -76,7 +76,10 @@ final class AudioLevels: ObservableObject {
             storage.withLock { $0 = values }
         }
     }
-    nonisolated func level(_ id: String) -> SourceLevel { storage.withLock { $0[id] ?? .init() } }
+    func level(_ id: String) -> SourceLevel {
+        _ = revision
+        return storage.withLock { $0[id] ?? .init() }
+    }
     func set(_ id: String, _ level: SourceLevel) {
         guard level.valid, id.count <= 1024 else { return }
         let values = storage.withLock { values -> [String: SourceLevel] in

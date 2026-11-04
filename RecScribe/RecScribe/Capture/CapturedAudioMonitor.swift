@@ -1,24 +1,24 @@
+import Observation
 import AVFoundation
-import Combine
 import CoreAudio
 import os
 
 /// Optional output-only graph fed by the committed mix. Never opens a microphone.
 /// Its bounded 250-ms queue can fail independently without blocking the writer.
 @MainActor
-final class CapturedAudioMonitor: ObservableObject {
-    @Published private(set) var enabled = false
-    @Published private(set) var warning: String?
+@Observable final class CapturedAudioMonitor {
+    private(set) var enabled = false
+    private(set) var warning: String?
     let levels: PlaybackLevels
     nonisolated private let queue = DispatchQueue(label: "com.moreaki.recscribe.monitor", qos: .userInteractive)
     nonisolated private let state = OSAllocatedUnfairLock(initialState: (enabled: false, frames: 0, generation: 0))
-    nonisolated(unsafe) private var engine: AVAudioEngine?
-    nonisolated(unsafe) private var node: AVAudioPlayerNode?
+    @ObservationIgnored nonisolated(unsafe) private var engine: AVAudioEngine?
+    @ObservationIgnored nonisolated(unsafe) private var node: AVAudioPlayerNode?
     private let hardwareObserver: AudioHardwareObserver
     private let isLoopbackCheck: (String) -> Bool
     private let startEngineAction: ((String?, ListeningLevel, Bool) throws -> Void)?
-    private var observation: AnyCancellable?
-    private var hardwareObservation: AnyCancellable?
+    @ObservationIgnored private var observation: ObservationSubscription?
+    @ObservationIgnored private var hardwareObservation: ObservationSubscription?
     private var outputWatchToken: UUID?
     private var appliedRoute: String?
     private var appliedRate: Double?
@@ -33,12 +33,8 @@ final class CapturedAudioMonitor: ObservableObject {
         self.isLoopbackCheck = isLoopbackCheck ?? Self.isLoopback
         self.startEngineAction = startEngineAction
         levels = PlaybackLevels(defaults: defaults, key: "audio.monitorLevels.v1", initialVolume: 0.5)
-        observation = levels.$value.dropFirst().sink { [weak self] _ in
-            Task { @MainActor [weak self] in self?.configureOutput() }
-        }
-        hardwareObservation = hardwareObserver.$revision.dropFirst().sink { [weak self] _ in
-            Task { @MainActor [weak self] in self?.configureOutput() }
-        }
+        observation = ObservationSubscription(read: { [levels] in levels.value }) { [weak self] _ in self?.configureOutput() }
+        hardwareObservation = ObservationSubscription(read: { hardwareObserver.revision }) { [weak self] _ in self?.configureOutput() }
     }
 
     func setEnabled(_ enabled: Bool, source: AudioSource) {

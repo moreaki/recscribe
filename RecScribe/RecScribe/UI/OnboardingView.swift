@@ -11,7 +11,7 @@ import SwiftUI
 
 struct OnboardingView: View {
 
-    @EnvironmentObject var viewModel: RecorderViewModel
+    @Environment(RecorderViewModel.self) var viewModel
 
     var body: some View {
         VStack(spacing: 20) {
@@ -122,5 +122,5 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
-        .environmentObject(RecorderViewModel())
+        .environment(RecorderViewModel())
 }

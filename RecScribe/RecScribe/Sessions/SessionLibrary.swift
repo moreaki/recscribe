@@ -1,32 +1,32 @@
+import Observation
 import AVFoundation
-import Combine
 import Foundation
 import os
 import RecScribeCore
 
 @MainActor
-final class SessionLibrary: ObservableObject {
+@Observable final class SessionLibrary {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "Pipeline")
     typealias Entry = SessionEntry
-    @Published private(set) var readFailures: [ManifestFailure] = []
-    @Published private(set) var refreshing = false
+    private(set) var readFailures: [ManifestFailure] = []
+    private(set) var refreshing = false
     private var refreshTask: Task<Void, Never>?
     private var refreshID = UUID()
     private let readSessions: @Sendable (URL) async throws -> SessionSnapshot
     private let readJob: @Sendable (URL) async throws -> JobSnapshot
     private let settings: () -> AppSettings.Values
     private let progressMonitor: JobProgressMonitor
-    @Published private(set) var entries: [Entry] = []
-    @Published private(set) var activity = "Ready"
-    @Published private(set) var progress = 0.0
-    @Published private(set) var recordingActive = false
-    @Published private(set) var liveWorkActive = false
-    @Published private(set) var latestJob: URL?
-    @Published private(set) var latestSource: URL?
-    @Published private(set) var previousJob: URL?
-    @Published private(set) var busy = false
-    @Published var pendingTextRequest: TextProcessingRequest?
-    @Published var errorMessage: String?
+    private(set) var entries: [Entry] = []
+    private(set) var activity = "Ready"
+    private(set) var progress = 0.0
+    private(set) var recordingActive = false
+    private(set) var liveWorkActive = false
+    private(set) var latestJob: URL?
+    private(set) var latestSource: URL?
+    private(set) var previousJob: URL?
+    private(set) var busy = false
+    var pendingTextRequest: TextProcessingRequest?
+    var errorMessage: String?
     private struct PendingSession {
         let manifest: URL
         let recover: Bool
@@ -35,12 +35,15 @@ final class SessionLibrary: ObservableObject {
     private var pending: [PendingSession] = []
     private var pendingRecoveryDirectory: URL?
     private var activeManifest: URL?
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
     private var shuttingDown = false
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let cancelRuntime: () -> Void
     private let rememberJob: (URL?, URL?) -> Void
+    @ObservationIgnored private var restorationTask: Task<Void, Never>?
+    private(set) var restoringTranscript = false
+    private var rememberedJob: URL?
     private let jobsDirectory: URL
 
     init(exportSession: @escaping @Sendable (URL, URL, WorkCancellation) throws -> URL = { manifest, directory, token in
@@ -58,12 +61,42 @@ final class SessionLibrary: ObservableObject {
         self.settings = settings
         self.rememberJob = rememberJob
         self.jobsDirectory = jobsDirectory ?? AppSettings.supportDirectory.appendingPathComponent("Jobs", isDirectory: true)
-        self.latestJob = initialJob
-        self.latestSource = initialSource
-        if initialJob != nil { self.progress = 1 }
+        self.rememberedJob = initialJob
         self.readSessions = readSessions ?? { try await repository.sessions(in: $0) }
         self.readJob = jobReader
         self.progressMonitor = JobProgressMonitor(read: jobReader)
+        if let initialJob {
+            restoringTranscript = true
+            restorationTask = Task { [weak self] in
+                do {
+                    let preview = try await TranscriptPreview.read(initialJob)
+                    guard let source = preview.sourceURL ?? initialSource else {
+                        throw SessionError.invalid("Transcript has no recording source")
+                    }
+                    try await Task.detached(priority: .utility) {
+                        try TranscriptStorage.validateSource(source)
+                    }.value
+                    try Task.checkCancellation()
+                    guard let self else { return }
+                    self.latestSource = source
+                    self.progress = 1
+                    self.latestJob = initialJob
+                } catch is CancellationError {
+                    return
+                } catch {
+                    guard !Task.isCancelled, let self else { return }
+                    // A failed restore leaves the workspace ready for a new take.
+                    // Keep inaccessible-volume selections available for a later launch.
+                    let cocoaError = error as NSError
+                    if error is DecodingError || error is SessionError || cocoaError.domain != NSCocoaErrorDomain ||
+                        [NSFileNoSuchFileError, NSFileReadNoSuchFileError, NSFileReadCorruptFileError].contains(cocoaError.code) {
+                        self.persistJob(nil, nil)
+                    }
+                }
+                self?.restoringTranscript = false
+                self?.restorationTask = nil
+            }
+        }
     }
 
     func load(_ directory: URL) {
@@ -185,7 +218,7 @@ final class SessionLibrary: ObservableObject {
             self.latestJob = nil
             latestSource = nil
             progress = 0
-            rememberJob(nil, nil)
+            persistJob(nil, nil)
         }
         if let previousJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == previousJob.standardizedFileURL.path }) { self.previousJob = nil }
         activity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
@@ -193,6 +226,7 @@ final class SessionLibrary: ObservableObject {
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active {
+            cancelRestoration()
             pendingRecoveryDirectory = nil
             cancellation?.cancel()
             task?.cancel()
@@ -206,6 +240,7 @@ final class SessionLibrary: ObservableObject {
     func setLiveWork(_ active: Bool) {
         liveWorkActive = active
         if active {
+            cancelRestoration()
             pendingRecoveryDirectory = nil
             cancellation?.cancel()
             task?.cancel()
@@ -229,17 +264,63 @@ final class SessionLibrary: ObservableObject {
         progressMonitor.stop()
         activity = "Cancelling…"
     }
+    func cancelRestoration() {
+        restorationTask?.cancel()
+        restorationTask = nil
+        restoringTranscript = false
+    }
+
+    private func persistJob(_ job: URL?, _ source: URL?) {
+        rememberedJob = job
+        rememberJob(job, source)
+    }
+
     func rememberOpenedTranscript(_ job: URL, source: URL?) {
-        if let source { rememberJob(job, source) }
+        cancelRestoration()
+        persistJob(job, source)
+    }
+
+    func canDeleteTranscript(_ job: URL) -> Bool {
+        canDeleteRecording && TranscriptStorage.isManagedJob(job, in: jobsDirectory)
+    }
+
+    @discardableResult
+    func deleteTranscript(_ job: URL,
+        trash: @escaping @Sendable (URL) throws -> Void = {
+            try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
+        }) async -> Bool {
+        guard canDeleteTranscript(job) else {
+            errorMessage = "Wait for capture/background work to finish. Only transcripts in RecScribe’s Jobs folder can be moved to Trash."
+            return false
+        }
+        cancelRestoration()
+        let root = jobsDirectory
+        guard await editSession(activity: "Moving transcript to Trash…", operation: { token in
+            try TranscriptStorage.moveToTrash(job, in: root, cancel: token, trash: trash)
+            return true
+        }) == true else { startNext(); return false }
+        if latestJob == job {
+            latestJob = nil
+            latestSource = nil
+            progress = 0
+        }
+        if previousJob == job { previousJob = nil }
+        if rememberedJob == job { persistJob(nil, nil) }
+        if pendingTextRequest?.transcript.deletingLastPathComponent() == job { pendingTextRequest = nil }
+        activity = "Transcript moved to Trash; recording retained"
+        startNext()
+        return true
     }
     func acceptCloudTranscript(_ job: URL, source: URL) {
+        cancelRestoration()
         previousJob = latestJob; latestJob = job; latestSource = source
         progress = 1
         activity = "Cloud transcript ready · estimated timing, review required"
-        rememberJob(job, source)
+        persistJob(job, source)
     }
     func shutdown() async {
         shuttingDown = true
+        cancelRestoration()
         cancelRefresh()
         progressMonitor.stop()
         pending.removeAll()
@@ -304,6 +385,7 @@ final class SessionLibrary: ObservableObject {
     }
 
     private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation) async throws {
+        cancelRestoration()
         if let issue = settings.verificationIssue {
             Self.logger.error("Transcription preflight rejected model configuration operation=\(cancel.id)")
             throw SessionError.invalid(issue)
@@ -331,7 +413,7 @@ final class SessionLibrary: ObservableObject {
         guard [.completed, .completedWithReview].contains(info.state) else { throw SessionError.invalid("Pipeline exited without a completed transcript") }
         activity = info.state.label
         progress = info.progress
-        rememberJob(job, source)
+        persistJob(job, source)
         if settings.aiEnabled && settings.aiProvider == .ollama && (settings.mode != .verbatim || settings.summarize) {
             try cancel.check()
             try await deriveText(from: job.appendingPathComponent("transcript.json"), source: source,
@@ -384,6 +466,7 @@ final class SessionLibrary: ObservableObject {
     }
 
     private func deriveText(from transcript: URL, source: URL?, output: URL, options: TextDerivationOptions, key: Data?) async throws {
+        cancelRestoration()
         latestSource = source
         previousJob = latestJob
         latestJob = output
@@ -398,7 +481,7 @@ final class SessionLibrary: ObservableObject {
         guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
         progress = result.progress
         activity = result.state.label
-        if let source { rememberJob(output, source) }
+        if let source { persistJob(output, source) }
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {

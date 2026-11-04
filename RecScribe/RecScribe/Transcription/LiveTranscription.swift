@@ -1,4 +1,4 @@
-import Combine
+import Observation
 import Darwin
 import Foundation
 import RecScribeCore
@@ -79,7 +79,7 @@ nonisolated struct LiveChunkTiming: Sendable {
 /// back on catches up from the last committed cursor, including audio recorded
 /// before opt-in. The retained UI preview is bounded; raw chunks stay on disk.
 @MainActor
-final class LiveTranscription: ObservableObject {
+@Observable final class LiveTranscription {
     private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "LiveTranscription")
     private nonisolated static let activeDirectoryRegistry = OSAllocatedUnfairLock(initialState: [UUID: Set<String>]())
     struct CloudRequest: Identifiable {
@@ -87,22 +87,22 @@ final class LiveTranscription: ObservableObject {
         let source: URL
         let model: String
     }
-    @Published private(set) var pendingCloudRequest: CloudRequest?
-    @Published private(set) var isCloudDraft = false
-    @Published private(set) var cloudAudioActive = false
-    @Published private(set) var enabled = false
-    @Published private(set) var busy = false
-    @Published private(set) var status = "Live transcription is off"
-    @Published private(set) var segments: [LiveSegment] = []
-    @Published private(set) var errorMessage: String?
-    @Published private(set) var directory: URL?
-    @Published private(set) var lagSeconds = 0.0
-    @Published private(set) var lastChunk: LiveChunkTiming?
-    @Published private(set) var captureNeedsReview = false
-    @Published private(set) var sourceURL: URL?
-    @Published private(set) var modelName: String?
-    @Published private(set) var audioSeconds: Double = 0
-    @Published private(set) var lastCleanupReport = LiveCleanupReport()
+    private(set) var pendingCloudRequest: CloudRequest?
+    private(set) var isCloudDraft = false
+    private(set) var cloudAudioActive = false
+    private(set) var enabled = false
+    private(set) var busy = false
+    private(set) var status = "Live transcription is off"
+    private(set) var segments: [LiveSegment] = []
+    private(set) var errorMessage: String?
+    private(set) var directory: URL?
+    private(set) var lagSeconds = 0.0
+    private(set) var lastChunk: LiveChunkTiming?
+    private(set) var captureNeedsReview = false
+    private(set) var sourceURL: URL?
+    private(set) var modelName: String?
+    private(set) var audioSeconds: Double = 0
+    private(set) var lastCleanupReport = LiveCleanupReport()
     var lastCleanupFailures: [LiveCleanupFailure] { lastCleanupReport.failures }
     private(set) var cursor: Int64 = 0
     private let instanceID = UUID()
@@ -111,10 +111,10 @@ final class LiveTranscription: ObservableObject {
     private var manifest: URL?
     private var capturing = false
     private var generation = UUID()
-    private var task: Task<Void, Never>?
-    private var token: WorkCancellation?
-    private var cleanupTask: Task<LiveCleanupReport, Never>?
-    private var cleanupToken: WorkCancellation?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var token: WorkCancellation?
+    @ObservationIgnored private var cleanupTask: Task<LiveCleanupReport, Never>?
+    @ObservationIgnored private var cleanupToken: WorkCancellation?
     private let settings: () -> AppSettings.Values
     private let work: @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult?
     private let wait: @Sendable () async throws -> Void

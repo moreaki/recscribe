@@ -1,3 +1,5 @@
+import os
+import Observation
 import AppKit
 import AVFoundation
 import Combine
@@ -624,22 +626,28 @@ struct RecordingSessionTests {
             defaults: defaults
         )
 
-        var viewModelInvalidations = 0
-        var telemetryInvalidations = 0
-        let vmCancellable = recorder.objectWillChange.sink { _ in viewModelInvalidations += 1 }
-        let telemetryCancellable = recorder.telemetry.objectWillChange.sink { _ in telemetryInvalidations += 1 }
-        defer {
-            withExtendedLifetime((vmCancellable, telemetryCancellable)) {}
-        }
+        let viewModelInvalidations = OSAllocatedUnfairLock(initialState: 0)
+        let telemetryInvalidations = OSAllocatedUnfairLock(initialState: 0)
 
-        // High-frequency duration, waveform, and healthy source-health ticks only notify RecorderTelemetry, not RecorderViewModel
+        // Chrome and Settings read capture gates/preferences, not telemetry.
         for step in 1...30 {
+            withObservationTracking {
+                _ = recorder.statusText
+                _ = recorder.canRecord
+                _ = recorder.showsSettingsShelf
+                _ = recorder.saveLocationName
+                _ = recorder.selectedFormat
+                _ = recorder.permissionStatus
+            } onChange: { viewModelInvalidations.withLock { $0 += 1 } }
+            withObservationTracking { _ = recorder.telemetry.duration } onChange: { telemetryInvalidations.withLock { $0 += 1 } }
+            withObservationTracking { _ = recorder.telemetry.waveformSamples } onChange: { telemetryInvalidations.withLock { $0 += 1 } }
+            withObservationTracking { _ = recorder.telemetry.healthTime } onChange: { telemetryInvalidations.withLock { $0 += 1 } }
             recorder.duration = Double(step) * 0.1
             recorder.waveformSamples = Array(repeating: Float(step) / 30.0, count: 200)
             recorder.healthTime = Double(step)
         }
-        #expect(viewModelInvalidations == 0)
-        #expect(telemetryInvalidations == 90)
+        #expect(viewModelInvalidations.withLock { $0 } == 0)
+        #expect(telemetryInvalidations.withLock { $0 } == 90)
         #expect(recorder.formattedDuration == "00:03")
 
         // Verify StudioView renders with persistent capture controls in .studio, .routing, and .recordings workspace modes
@@ -648,10 +656,10 @@ struct RecordingSessionTests {
         let settings = AppSettings()
         for mode in StudioWorkspaceMode.allCases {
             let studio = StudioView(workspaceMode: mode)
-                .environmentObject(recorder)
-                .environmentObject(live)
-                .environmentObject(library)
-                .environmentObject(settings)
+                .environment(recorder)
+                .environment(live)
+                .environment(library)
+                .environment(settings)
             let host = NSHostingView(rootView: studio)
             host.frame = NSRect(origin: .zero, size: AppWindow.studio.defaultSize)
             host.layoutSubtreeIfNeeded()

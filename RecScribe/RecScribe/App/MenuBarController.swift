@@ -7,14 +7,14 @@
 
 import AppKit
 import SwiftUI
-import Combine
 
 @MainActor
 class MenuBarController: NSObject {
 
     private var statusItem: NSStatusItem
     private let popover = NSPopover()
-    private var cancellable: AnyCancellable?
+    private let layout = PopoverLayout()
+    private var cancellable: ObservationSubscription?
     /// Held so the overflow menu can be rebuilt from live state on every open.
     private let viewModel: RecorderViewModel
     private let actions: OverflowMenu
@@ -29,11 +29,12 @@ class MenuBarController: NSObject {
         super.init()
 
         // Configure popover
-        let popoverView = MenuBarPopoverView(live: live)
-            .environmentObject(viewModel)
+        let popoverView = MenuBarPopoverView(live: live, layout: layout)
+            .environment(viewModel)
             .environment(\.makeOverflowMenu, { [weak self] in self?.makeOverflowMenu() ?? actions.makeNSMenu() })
-        popover.contentViewController = NSHostingController(rootView: popoverView)
-        popover.contentSize = NSSize(width: WorkspaceStyle.popoverWidth, height: WorkspaceStyle.previewHeight)
+        let host = NSHostingController(rootView: popoverView)
+        host.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = host
         popover.behavior = .transient
         // The popover draws its own chrome and arrow, neither of which SwiftUI can
         // reach. Without this the arrow stays light while the content it points at
@@ -51,26 +52,19 @@ class MenuBarController: NSObject {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        // Observe recording state to swap icon
-        cancellable = viewModel.$state
-            .map { $0 == .recording }
-            .removeDuplicates()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] isRecording in
-                guard let button = self?.statusItem.button else { return }
-                if isRecording {
-                    let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "Recording")
-                    image?.isTemplate = false
-                    button.image = image
-                    // Tint the button with red using a content tint color
-                    button.contentTintColor = .red
-                } else {
-                    let image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "RecScribe")
-                    image?.isTemplate = true
-                    button.image = image
-                    button.contentTintColor = nil
-                }
-            }
+        updateRecordingIcon(viewModel.isRecording)
+        cancellable = ObservationSubscription(read: { viewModel.isRecording }) { [weak self] in
+            self?.updateRecordingIcon($0)
+        }
+    }
+
+    private func updateRecordingIcon(_ isRecording: Bool) {
+        guard let button = statusItem.button else { return }
+        let image = NSImage(systemSymbolName: isRecording ? "record.circle.fill" : "waveform",
+                            accessibilityDescription: isRecording ? "Recording" : "RecScribe")
+        image?.isTemplate = !isRecording
+        button.image = image
+        button.contentTintColor = isRecording ? .red : nil
     }
 
     /// Route a status-item click: the overflow menu on right/control-click, the
@@ -107,7 +101,7 @@ class MenuBarController: NSObject {
     /// cache, which only a deliberate Per-App submenu open ever fills. That is
     /// what keeps a plain right-click free of permission prompts.
     private func currentContext() -> OverflowContext {
-        let selected = viewModel.audioSource.selectedSource
+        let selected = viewModel.selectedSource
         var selectedAppName: String?
         if let bundleID = selected.appBundleID {
             selectedAppName = viewModel.audioSource.knownAppName(forBundleID: bundleID)
@@ -182,6 +176,8 @@ class MenuBarController: NSObject {
         if popover.isShown {
             popover.performClose(sender)
         } else if let button = statusItem.button {
+            layout.update(screen: button.window?.screen)
+            popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             // Make the popover window key so it can receive input
             popover.contentViewController?.view.window?.makeKey()

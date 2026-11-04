@@ -1,4 +1,4 @@
-import Combine
+import Observation
 import Foundation
 import RecScribeCore
 
@@ -26,7 +26,7 @@ nonisolated enum IntelligenceProvider: String, Codable, CaseIterable, Sendable {
 }
 
 @MainActor
-final class AppSettings: ObservableObject {
+@Observable final class AppSettings {
     nonisolated static var supportDirectory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RecScribe", isDirectory: true)
     }
@@ -99,10 +99,10 @@ final class AppSettings: ObservableObject {
             migrationWarnings += reader.warnings
         }
     }
-    @Published var values: Values {
+    var values: Values {
         didSet { if let data = try? JSONEncoder().encode(values) { defaults.set(data, forKey: Self.persistenceKey) } }
     }
-    @Published private(set) var validationMessage: String?
+    private(set) var validationMessage: String?
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {

@@ -71,13 +71,13 @@ struct ReskinSnapshots {
         settings.values.openaiModel = "your-selected-model"
         let runtime = RuntimeManager(settings: settings), recorder = makeViewModel()
         write("intelligence-openai-settings", size: AppWindow.settings.defaultSize, contrast: .standard) {
-            ConfigurationView(section: .ai).environmentObject(settings).environmentObject(runtime)
-                .environmentObject(SessionLibrary()).environmentObject(recorder)
+            ConfigurationView(section: .ai).environment(settings).environment(runtime)
+                .environment(SessionLibrary()).environment(recorder)
         }
         for section in [TranscriptWorkspace.Section.transcript, .summary] {
             write("workspace-empty-\(section.rawValue)", size: CGSize(width: 700, height: 680), contrast: .standard) {
-                TranscriptWorkspace(section: section).environmentObject(LiveTranscription())
-                    .environmentObject(SessionLibrary())
+                TranscriptWorkspace(section: section).environment(LiveTranscription())
+                    .environment(SessionLibrary())
             }
         }
     }
@@ -275,8 +275,8 @@ struct ReskinSnapshots {
         for location in ProcessingLocation.allCases {
             settings.values.processingLocation = location
             write("settings-\(location.rawValue)", size: AppWindow.settings.defaultSize, contrast: .standard) {
-                ConfigurationView(section: .transcription).environmentObject(settings).environmentObject(runtime)
-                    .environmentObject(SessionLibrary()).environmentObject(makeViewModel())
+                ConfigurationView(section: .transcription).environment(settings).environment(runtime)
+                    .environment(SessionLibrary()).environment(makeViewModel())
             }
         }
     }
@@ -309,7 +309,7 @@ struct ReskinSnapshots {
         for (name, size) in [("studio-interrupted", AppWindow.studio.defaultSize),
                              ("studio-interrupted-minimum", AppWindow.studio.minimumSize)] {
             write(name, size: size, contrast: .standard) {
-                StudioView().environmentObject(model).environmentObject(live).environmentObject(library).environmentObject(settings)
+                StudioView().environment(model).environment(live).environment(library).environment(settings)
             }
         }
         await live.shutdown()
@@ -323,45 +323,45 @@ struct ReskinSnapshots {
         // Ready — the resting face.
         let ready = makeViewModel()
         write("window-01-ready", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(ready)
+            RecorderView().environment(ready)
         }
 
         // Recording, quiet material. The regression case: at this level a
         // linear mapping drew a flat dotted line.
         let quiet = await recording(samples: quietSamples())
         write("window-02-recording-quiet", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(quiet)
+            RecorderView().environment(quiet)
         }
 
         // Recording, loud material — the top of the range still fits.
         let loud = await recording(samples: loudSamples())
         write("window-03-recording-loud", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(loud)
+            RecorderView().environment(loud)
         }
 
         // Recording true silence: every bar at the 2pt floor. Must stay
         // distinguishable from the quiet case above, or the floor is lying.
         let silent = await recording(samples: Array(repeating: 0, count: 200))
         write("window-04-recording-silent", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(silent)
+            RecorderView().environment(silent)
         }
 
         // Permission not granted — the button carries "Open System Settings"
         // and must not wear the record accent.
         let denied = makeViewModel(permission: .denied)
         write("window-05-permission-denied", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(denied)
+            RecorderView().environment(denied)
         }
 
         let undetermined = makeViewModel(permission: .notDetermined)
         write("window-06-permission-undetermined", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(undetermined)
+            RecorderView().environment(undetermined)
         }
 
         // Running from the mounted DMG: recording refused outright.
         let translocated = makeViewModel(install: .translocated)
         write("window-07-install-blocked", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(translocated)
+            RecorderView().environment(translocated)
         }
 
         // Outside /Applications — the dismissible note, not the hard block.
@@ -369,13 +369,13 @@ struct ReskinSnapshots {
             install: .elsewhere(URL(fileURLWithPath: "/Users/me/Downloads/RecScribe.app"))
         )
         write("window-08-install-notice", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(elsewhere)
+            RecorderView().environment(elsewhere)
         }
 
         // Error, with a recovery action offered.
         let failed = await errored("no capture device")
         write("window-09-error", size: Self.windowSize, contrast: contrast) {
-            RecorderView().environmentObject(failed)
+            RecorderView().environment(failed)
         }
     }
 
@@ -393,22 +393,22 @@ struct ReskinSnapshots {
 
         let ready = makeViewModel()
         write("popover-01-ready", size: Self.popoverSize, contrast: contrast) {
-            MenuBarPopoverView().environmentObject(ready)
+            MenuBarPopoverView().environment(ready)
         }
 
         let live = await recording(samples: quietSamples())
         write("popover-02-recording", size: Self.popoverSize, contrast: contrast) {
-            MenuBarPopoverView().environmentObject(live)
+            MenuBarPopoverView().environment(live)
         }
 
         let failed = await errored("the selected app is not running")
         write("popover-03-error", size: Self.popoverSize, contrast: contrast) {
-            MenuBarPopoverView().environmentObject(failed)
+            MenuBarPopoverView().environment(failed)
         }
 
         let blocked = makeViewModel(install: .translocated)
         write("popover-04-install-blocked", size: Self.popoverSize, contrast: contrast) {
-            MenuBarPopoverView().environmentObject(blocked)
+            MenuBarPopoverView().environment(blocked)
         }
 
         let longSource = MockAudioSourceProviding(
@@ -431,7 +431,7 @@ struct ReskinSnapshots {
         longRecording.duration = 754
         longRecording.waveformSamples = quietSamples()
         write("popover-05-long-source-accessibility", size: Self.popoverSize, contrast: contrast) {
-            MenuBarPopoverView().environmentObject(longRecording).dynamicTypeSize(.accessibility2)
+            MenuBarPopoverView().environment(longRecording).dynamicTypeSize(.accessibility2)
         }
     }
 
@@ -441,12 +441,12 @@ struct ReskinSnapshots {
 
         let granted = makeViewModel()
         write("sheet-01-onboarding-granted", size: CGSize(width: 420, height: 440), contrast: contrast) {
-            OnboardingView().environmentObject(granted)
+            OnboardingView().environment(granted)
         }
 
         let notGranted = makeViewModel(permission: .notDetermined)
         write("sheet-02-onboarding-ungranted", size: CGSize(width: 420, height: 440), contrast: contrast) {
-            OnboardingView().environmentObject(notGranted)
+            OnboardingView().environment(notGranted)
         }
 
 
@@ -459,7 +459,7 @@ struct ReskinSnapshots {
         }
 
         write("sheet-04-onboarding-accessibility", size: CGSize(width: 420, height: 620), contrast: contrast) {
-            OnboardingView().environmentObject(notGranted).dynamicTypeSize(.accessibility2)
+            OnboardingView().environment(notGranted).dynamicTypeSize(.accessibility2)
         }
 
         write("sheet-05-install-panel-accessibility", size: CGSize(width: 340, height: 280), contrast: contrast) {

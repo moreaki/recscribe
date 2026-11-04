@@ -1,4 +1,4 @@
-import Combine
+import Observation
 import Foundation
 import RecScribeCore
 import Security
@@ -45,12 +45,12 @@ import Security
     }
 }
 
-@MainActor final class IntelligenceCredentials: ObservableObject {
-    @Published private(set) var status = "Key status not checked"
-    @Published private(set) var models: [String] = []
-    @Published private(set) var busy = false
+@MainActor @Observable final class IntelligenceCredentials {
+    private(set) var status = "Key status not checked"
+    private(set) var models: [String] = []
+    private(set) var busy = false
     private let secrets: any IntelligenceSecretStore
-    private var task: Task<Void, Never>?
+    @ObservationIgnored private var task: Task<Void, Never>?
     private let client: IntelligenceClient
     init(secrets: any IntelligenceSecretStore = KeychainIntelligenceSecret(), client: IntelligenceClient = .init()) {
         self.secrets = secrets

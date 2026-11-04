@@ -2,13 +2,13 @@ import AVKit
 import SwiftUI
 
 struct RecordingLibraryView: View {
-    @EnvironmentObject private var recorder: RecorderViewModel
-    @EnvironmentObject private var library: SessionLibrary
+    @Environment(RecorderViewModel.self) private var recorder
+    @Environment(SessionLibrary.self) private var library
     @Environment(\.glassTheme) private var theme
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @Environment(\.dismissWindow) private var dismissWindow
-    @StateObject private var playback: SessionPlayback
+    @State private var playback: SessionPlayback
     @State private var recordingToDelete: SessionEntry?
     @State private var showingDeleteConfirmation = false
     var embeddedInStudio = false
@@ -16,7 +16,7 @@ struct RecordingLibraryView: View {
 
     init(makePlayback: @escaping () -> SessionPlayback = { SessionPlayback() },
          embeddedInStudio: Bool = false, onOpenStudio: (() -> Void)? = nil) {
-        _playback = StateObject(wrappedValue: makePlayback())
+        _playback = State(initialValue: makePlayback())
         self.embeddedInStudio = embeddedInStudio
         self.onOpenStudio = onOpenStudio
     }
@@ -162,7 +162,7 @@ struct RecordingLibraryView: View {
 /// Shared inline editor for the library and the transcript's source header.
 struct SessionTitleView: View {
     let entry: SessionEntry
-    @ObservedObject var library: SessionLibrary
+    @Bindable var library: SessionLibrary
     var allowsEditing = true
     var onRenamed: (SessionEntry) -> Void = { _ in }
     @State private var editing = false

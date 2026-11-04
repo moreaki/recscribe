@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AudioTestControls: View {
-    @ObservedObject var test: AudioTestController
+    @Bindable var test: AudioTestController
     var enabled: Bool
 
     var body: some View {
@@ -80,7 +80,7 @@ struct AudioTestControls: View {
 }
 
 private struct AudioTestPlaybackError: View {
-    @ObservedObject var playback: SessionPlayback
+    @Bindable var playback: SessionPlayback
     var body: some View {
         if playback.loading { Text("Loading verified sample…").font(.caption) }
         if let error = playback.errorMessage { Text(error).font(.caption).foregroundStyle(.orange) }
@@ -88,7 +88,7 @@ private struct AudioTestPlaybackError: View {
 }
 
 struct AudioTestSourceMeterView: View {
-    @ObservedObject var test: AudioTestController
+    @Bindable var test: AudioTestController
     let track: CaptureTrack
     var muted: Bool
     var channels = false
@@ -136,7 +136,7 @@ struct AudioTestSourceMeterView: View {
 }
 
 struct AudioTestMixMeterView: View {
-    @ObservedObject var test: AudioTestController
+    @Bindable var test: AudioTestController
     var body: some View {
         if !test.health.isEmpty {
             VStack(alignment: .leading, spacing: 5) {

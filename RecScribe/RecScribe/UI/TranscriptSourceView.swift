@@ -2,16 +2,18 @@ import AVKit
 import SwiftUI
 
 struct TranscriptSourceView: View {
-    @EnvironmentObject private var library: SessionLibrary
+    @Environment(SessionLibrary.self) private var library
     let source: URL
     let duration: Double?
     let detail: String
     let recording: Bool
-    @ObservedObject var playback: SessionPlayback
+    @Bindable var playback: SessionPlayback
     @Binding var pendingSeekSeconds: Double?
     @State private var entry: SessionEntry?
     @State private var error: String?
     @State private var wavDuration: Double?
+    @State private var sourceAvailable = false
+    private let sourceAvailabilityChanged: (Bool) -> Void
 
     init(
         source: URL,
@@ -19,7 +21,8 @@ struct TranscriptSourceView: View {
         detail: String,
         recording: Bool,
         playback: SessionPlayback,
-        pendingSeekSeconds: Binding<Double?> = .constant(nil)
+        pendingSeekSeconds: Binding<Double?> = .constant(nil),
+        sourceAvailabilityChanged: @escaping (Bool) -> Void = { _ in }
     ) {
         self.source = source
         self.duration = duration
@@ -27,6 +30,7 @@ struct TranscriptSourceView: View {
         self.recording = recording
         self.playback = playback
         self._pendingSeekSeconds = pendingSeekSeconds
+        self.sourceAvailabilityChanged = sourceAvailabilityChanged
     }
 
     private var name: String {
@@ -35,6 +39,7 @@ struct TranscriptSourceView: View {
     }
 
     private func startPlayback() {
+        guard sourceAvailable else { return }
         if let entry {
             playback.play(entry)
         } else if source.pathExtension.lowercased() == "wav" {
@@ -62,8 +67,8 @@ struct TranscriptSourceView: View {
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
                     startPlayback()
-                }.disabled(recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
-                Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }
+                }.disabled(!sourceAvailable || recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
+                Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }.disabled(!sourceAvailable)
             }
             if playback.loading { ProgressView("Loading audio…").controlSize(.small) }
             if playback.player != nil {
@@ -73,7 +78,11 @@ struct TranscriptSourceView: View {
         }
         .task(id: "\(source.path):\(recording)") {
             playback.stop(); entry = nil; error = nil; wavDuration = nil
+            sourceAvailable = false
+            sourceAvailabilityChanged(false)
             do {
+                try await Task.detached(priority: .utility) { try TranscriptStorage.validateSource(source) }.value
+                try Task.checkCancellation()
                 if source.lastPathComponent.hasSuffix(".recscribe.json") {
                     let session = try await Task.detached(priority: .utility) { try RecordingSession.read(source) }.value
                     try Task.checkCancellation()
@@ -86,6 +95,9 @@ struct TranscriptSourceView: View {
                     try Task.checkCancellation()
                     wavDuration = seconds
                 }
+                try Task.checkCancellation()
+                sourceAvailable = true
+                sourceAvailabilityChanged(true)
             } catch is CancellationError { }
             catch { self.error = error.localizedDescription }
         }

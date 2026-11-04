@@ -10,8 +10,8 @@ struct RecScribeApp: App {
 
     var body: some Scene {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
-            StudioView().environmentObject(services.recorder)
-                .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
+            StudioView().environment(services.recorder)
+                .environment(services.live).environment(services.library).environment(services.settings)
                 .environment(\.studioNavigation, services.navigation)
                 .environment(\.makeOverflowMenu, services.makeOverflowMenu)
         }
@@ -26,8 +26,8 @@ struct RecScribeApp: App {
             }
         }
         Settings {
-            ConfigurationView().environmentObject(services.recorder)
-                .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
+            ConfigurationView().environment(services.recorder)
+                .environment(services.settings).environment(services.runtime).environment(services.library)
                 .environment(\.studioNavigation, services.navigation)
         }.windowResizability(.contentMinSize)
     }

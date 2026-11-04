@@ -118,6 +118,9 @@ nonisolated class WAVWriter: AudioFileEncoder {
     }
 
     func writeFrames(_ buffer: AVAudioPCMBuffer, offset: Int, count: Int) throws {
+        // Channel pointers borrow AVFoundation-owned storage. Keep its owner
+        // alive through every pointer read, including after its last getter.
+        defer { withExtendedLifetime(buffer) {} }
         guard offset >= 0, count >= 0, offset <= Int(buffer.frameLength) - count else { throw WAVWriterError.invalidFormat }
         guard let fileHandle = fileHandle else {
             throw WAVWriterError.fileNotOpen

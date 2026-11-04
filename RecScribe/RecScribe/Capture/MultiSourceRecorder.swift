@@ -22,6 +22,7 @@ final class MultiSourceRecorder {
         var maxWriteMS = 0.0
         var maxQueueMS = 0.0
         var failure: Error?
+        var reviewMessage: String?
         var tracks: [CaptureTrack] = []
         var continueOnSourceFailure = false
         var health: [CaptureTrack: RecordingHealth] = [:]
@@ -209,6 +210,7 @@ final class MultiSourceRecorder {
         let health = state.withLock { $0.health }
         return descriptors.map { .init(id: $0.role.rawValue, name: $0.name, detail: $0.deviceUID ?? $0.bundleID ?? "All system playback (RecScribe excluded)", health: health[$0.role] ?? .init()) }
     }
+    var reviewMessage: String? { state.withLock { $0.reviewMessage } }
     var sourceMeters: [CaptureTrack: CaptureSourceMeters] { state.withLock { $0.meters } }
     var mixMeter: CapturePeakMeter { state.withLock { $0.mixMeter } }
 
@@ -236,7 +238,7 @@ final class MultiSourceRecorder {
                     let meters = writer?.sourceMeters ?? [:], mixMeter = writer?.mixMeter ?? .init()
                     state.withLock { $0.meters = meters; $0.mixMeter = mixMeter }
                     if reportReviewIssues, resultError == nil, writer?.mix?.hasIssues == true {
-                        resultError = SessionError.invalid("The recording has clipping, timing gaps or incomplete source coverage. Review the preserved source tracks and mix.")
+                        state.withLock { $0.reviewMessage = "Recording saved with review notes: clipping, timing gaps or incomplete source coverage. Review the preserved source tracks and mix." }
                     }
                     let finalizeMS = Self.milliseconds(finalizeStarted.duration(to: .now))
                     let timings = state.withLock { ($0.writeMS, $0.maxWriteMS, $0.maxQueueMS, $0.peakBytes) }
@@ -249,7 +251,11 @@ final class MultiSourceRecorder {
                         Log.recorder.notice("Source drained role=\(track.rawValue, privacy: .public) received_frames=\(h.receivedFrames) written_frames=\(h.writtenFrames) peak_queued_pcm_bytes=\(snapshot.1)")
                     }
                     if reportReviewIssues, resultError == nil, snapshot.0.values.contains(where: { $0.receivedFrames == 0 }) {
-                        resultError = SessionError.invalid("A selected source delivered no audio data; coverage is incomplete. Review saved source tracks.")
+                        state.withLock { $0.reviewMessage = "Recording saved with incomplete coverage: a selected source delivered no audio data. Review the preserved source tracks." }
+                    }
+                    if reportReviewIssues, resultError == nil,
+                       snapshot.0.values.allSatisfy({ $0.receivedFrames == 0 }) {
+                        resultError = SessionError.noAudio
                     }
                     continuation.resume(returning: resultError)
                 }

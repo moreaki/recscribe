@@ -74,6 +74,7 @@ import Observation
 @Observable final class RecorderAlerts {
     var errorMessage: String?
     var showError = false
+    var reviewMessage: String?
     var recoverySuggestion: RecoverySuggestion?
     var showLongRecordingWarning = false
 

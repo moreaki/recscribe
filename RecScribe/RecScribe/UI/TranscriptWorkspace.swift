@@ -36,7 +36,7 @@ struct LiveTranscriptView: View {
             }
             Text("Unverified · \(live.status)").font(.caption).foregroundStyle(.secondary)
             if live.captureNeedsReview {
-                Label("Recording was interrupted or could not be finalized. Review the saved audio and this partial draft.",
+                Label("Recording has review notes. Check the saved audio, source coverage and this partial draft.",
                       systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.orange)
             }

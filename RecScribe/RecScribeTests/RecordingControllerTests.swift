@@ -115,7 +115,12 @@ struct RecordingControllerTests {
         let controller = makeController(recorder: recorder, capture: capture)
         _ = try await controller.startRecording(format: .wav)
         capture.stopError = FinalizeFailure()
-        await #expect(throws: FinalizeFailure.self) { try await controller.stopRecording() }
+        do {
+            try await controller.stopRecording()
+            Issue.record("Expected a capture-shutdown failure")
+        } catch RecordingControllerError.captureShutdownFailed(let cause) {
+            #expect(cause is FinalizeFailure)
+        } catch { Issue.record("Unexpected stop error: \(error)") }
         #expect(recorder.stopCount == 1)
         #expect(capture.cleanupCount == 1)
         #expect(controller.recordingURL == nil)

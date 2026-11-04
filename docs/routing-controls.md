@@ -7,7 +7,13 @@ of mix mute. Output mute affects listening only.
 
 Routing cards expose Mute/Unmute independently of their disclosure button.
 The header and expanded fader share AudioLevels / PlaybackLevels settings. Muting
-does not collapse/expand a card, reset gain, or enable monitoring.
+does not collapse/expand a card, reset gain, or enable monitoring. Mute feedback
+uses the existing action row, and the mute button and expanded status keep the
+same footprint so toggling does not resize the card. During an audio test, every
+collapsed source card shows the raw input and its routed contribution, including
+muted sources. Waiting sources show empty meters and a waiting status immediately;
+the last levels and held peaks stay visible after Stop. Channel-by-channel detail
+remains optional.
 
 Between recordings/tests, the app reconciles eligible connected inputs with the
 existing shared hardware observer. Reconnected inputs retain channel choices and

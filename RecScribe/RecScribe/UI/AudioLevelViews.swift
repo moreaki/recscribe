@@ -75,11 +75,10 @@ struct SourceFader: View {
                 Text(String(format: "%+.1f dB", value.decibels)).monospacedDigit()
                 Button("Reset") { levels.set(id, .init()) }.controlSize(.mini).accessibilityLabel("Reset \(context.map { "\($0) \(title)" } ?? title)")
             }
-            if value.muted {
-                AudioMuteBadge(title: preservesSources
-                    ? (id == "master" ? "Recording mix muted" : "Muted in mix · source still saved")
-                    : "Saved recording muted")
-            }
+            AudioMuteBadge(title: preservesSources
+                ? (id == "master" ? "Recording mix muted" : "Muted in mix · source still saved")
+                : "Saved recording muted")
+                .opacity(value.muted ? 1 : 0).accessibilityHidden(!value.muted)
             GainSlider(value: Binding(get: { value.decibels }, set: { newValue in change { $0.decibels = newValue } }),
                        label: context.map { "\($0) \(title)" } ?? title).frame(height: 30)
                 .opacity(value.muted ? 0.5 : 1)

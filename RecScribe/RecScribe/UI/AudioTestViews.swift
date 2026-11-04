@@ -94,7 +94,8 @@ struct AudioTestSourceMeterView: View {
     var channels = false
 
     var body: some View {
-        if !test.health.isEmpty {
+        // Show the source even before its first packet. Missing data must not hide it.
+        if test.locksSources || !test.health.isEmpty {
             let meter = test.meters[track] ?? .init()
             VStack(alignment: .leading, spacing: 5) {
                 if channels {
@@ -114,6 +115,8 @@ struct AudioTestSourceMeterView: View {
                             .font(.caption2)
                             .foregroundStyle([.noData, .stalled, .failed, .writeStalled].contains(status) ? Color.orange : Color.secondary)
                         if let failure = item.health.failureMessage { Text(failure).font(.caption2).foregroundStyle(.orange) }
+                    } else {
+                        Text("Waiting for source data").font(.caption2).foregroundStyle(.secondary)
                     }
                     if meter.raw.hold.contains(where: { $0 >= 1 }) { Text("Input reached full scale · check hardware level").font(.caption2).foregroundStyle(.orange) }
                     if meter.processed.hold.contains(where: { $0 > 1 }) { Text("Gain exceeded 0 dBFS · reduce gain").font(.caption2).foregroundStyle(.orange) }

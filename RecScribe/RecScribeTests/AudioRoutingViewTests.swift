@@ -1,4 +1,5 @@
 import AppKit
+import CoreMedia
 import CoreAudio
 import SwiftUI
 import Testing
@@ -78,6 +79,100 @@ struct AudioRoutingViewTests {
         #expect(monitor.levels.value == savedMonitor)
         #expect(!monitor.enabled)
         #expect(controller.startCount == 0)
+    }
+
+    @Test(arguments: [250.0, 450.0, 720.0])
+    func muteKeepsCollapsedHeadersAndExpandedFadersTheSameSize(_ width: Double) async throws {
+        let suite = "routing-mute-layout-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let levels = AudioLevels(defaults: defaults)
+        for title in ["System audio", "MacBook Air Microphone", "Microsoft Teams Audio"] {
+            var sizes: [CGSize] = []
+            for muted in [false, true, false] {
+                levels.set("input:mic", .init(muted: muted))
+                let header = AudioRoutingCardHeader(title: title, symbol: "mic.fill",
+                    subtitle: "Hardware input · 1 channel → L + R", value: "+0.0 dB",
+                    expanded: false, muted: muted, warning: nil, muteTitle: "Muted in mix", toggle: {}) {
+                    AudioRoutingMuteButton(title: title, muted: muted, action: {})
+                    Image(systemName: "ellipsis")
+                }
+                sizes.append(try await measuredSize(header, width: width))
+            }
+            #expect(sizes[0] == sizes[1] && sizes[1] == sizes[2], "Mute must not move this or the following cards")
+        }
+        levels.set("input:mic", .init())
+        let fader = SourceFader(id: "input:mic", title: "Input gain", levels: levels, channels: 1, preservesSources: true)
+        let before = try await measuredSize(fader, width: width)
+        levels.set("input:mic", .init(muted: true))
+        let after = try await measuredSize(fader, width: width)
+        #expect(before == after, "Expanded controls must also retain their height")
+    }
+
+    @Test func collapsedSourcesShowTestMetersWhileStartingAndWhileMuted() async throws {
+        let suite = "routing-live-meters-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let levels = AudioLevels(defaults: defaults)
+        levels.set("input:mic", .init(muted: true))
+        let playback = PlaybackLevels(defaults: defaults)
+        let monitor = CapturedAudioMonitor(defaults: defaults)
+        let capture = MockAudioCapturing()
+        let devices = [InputDeviceInfo(uid: "mic", name: "MacBook Air Microphone", inputChannels: 1, sampleRate: 48_000)]
+        let provider = MockAudioSourceProviding(selectedSource: .multiple(appBundleID: nil, inputs: devices.map(InputSelection.init(device:))))
+        provider.availableInputDevicesResult = devices
+        let test = AudioTestController(capture: capture, source: provider, permissions: MockPermissionProviding(.granted),
+            levels: levels, monitor: monitor, saveDirectory: { FileManager.default.temporaryDirectory })
+        var continueSetup: CheckedContinuation<Void, Never>?
+        capture.beforeSetup = { await withCheckedContinuation { continueSetup = $0 } }
+        let starting = Task { await test.startPreview() }
+        await waitUntil("test setup suspended") { continueSetup != nil }
+        #expect(test.state == .starting && test.health.isEmpty)
+        let waitingSize = try await measuredSize(AudioTestSourceMeterView(test: test, track: .input("mic"), muted: true), width: 350)
+        #expect(waitingSize.height > 60, "Both meters and waiting status must be visible before any data arrives")
+        continueSetup?.resume(); await starting.value
+        let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        for index in 0..<20 {
+            for track in [CaptureTrack.playback, .input("mic")] {
+                let pcm = SampleBufferFixtures.makePCMBuffer(channels: track == .playback ? 2 : 1, frames: 480, interleaved: false) { _, _ in 0.4 }
+                capture.emit(.init(track: track, presentationTime: epoch + Double(index) / 100, buffer: pcm))
+            }
+        }
+        await waitUntil("raw muted-source signal displayed") { test.meters[.input("mic")]?.raw.hold.first == 0.4 }
+        #expect(test.meters[.input("mic")]?.processed.peaks.first == 0)
+        let recorder = RecorderViewModel(controller: MockRecordingControlling(), permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(), audioSource: provider, defaults: defaults, audioTest: test)
+        recorder.permissionStatus = .granted
+        let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback)
+            .environment(recorder).preferredColorScheme(.dark)
+        _ = try await measuredSize(root.frame(height: 760), width: 1120, snapshot: "collapsed-test-meters")
+        await test.stop()
+        #expect(test.state == .idle)
+        let stopped = try await measuredSize(AudioTestSourceMeterView(test: test, track: .input("mic"), muted: true), width: 350)
+        #expect(stopped.height > 60, "Last levels remain visible after stopping the test")
+        _ = try await measuredSize(root.frame(height: 760), width: 760, snapshot: "collapsed-test-stopped")
+        await test.close()
+    }
+
+    private func measuredSize<Content: View>(_ view: Content, width: Double, snapshot: String? = nil) async throws -> CGSize {
+        let hosting = NSHostingView(rootView: view.frame(width: width).fixedSize(horizontal: false, vertical: true))
+        hosting.frame = CGRect(x: 0, y: 0, width: width, height: 800)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.contentView = hosting
+        defer { window.contentView = nil; window.close() }
+        try await Task.sleep(for: .milliseconds(40))
+        hosting.layoutSubtreeIfNeeded()
+        let size = hosting.fittingSize
+        if let snapshot, let path = ProcessInfo.processInfo.environment["ROUTING_SNAPSHOTS"] {
+            let folder = URL(fileURLWithPath: path)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
+            hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+            try #require(bitmap.representation(using: .png, properties: [:])).write(to: folder.appendingPathComponent(snapshot + ".png"))
+        }
+        return size
     }
 
     @Test("Acknowledging duplicate/loopback routes resets when inputs or playback change and requires renewed confirmation")

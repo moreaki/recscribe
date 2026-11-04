@@ -349,30 +349,14 @@ struct AudioRoutingView: View {
                                                @ViewBuilder details: () -> Details) -> some View {
         let expanded = expandedPanel == panel
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-            Button {
+            AudioRoutingCardHeader(title: title, symbol: symbol, subtitle: subtitle, value: value,
+                                   expanded: expanded, muted: muted, warning: warning,
+                                   muteTitle: panel == .monitor || panel == .recordingPlayback ? "Muted" : source.isMixed ? "Muted in mix" : "Capture muted",
+                                   focus: $focusedPanel, panel: panel) {
                 expandedPanel = expanded ? nil : panel
                 focusedPanel = panel
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 18)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(title).font(.callout.weight(.medium)).foregroundStyle(.primary)
-                        Text(subtitle).font(.caption2).foregroundStyle(.secondary)
-                        if let warning { Text(warning).font(.caption2).foregroundStyle(.orange) }
-                        if muted { AudioMuteBadge(title: panel == .monitor || panel == .recordingPlayback ? "Output muted" : source.isMixed ? "Muted in mix" : "Saved recording muted") }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                    Text(value).font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption2).foregroundStyle(.secondary)
-                }.padding(12).contentShape(Rectangle())
-            }.buttonStyle(.plain).focused($focusedPanel, equals: panel)
-                .accessibilityLabel(title)
-                .accessibilityValue("\(expanded ? "Expanded" : "Collapsed"), \(subtitle), \(value)\(muted ? ", muted" : "")\(warning.map { ", \($0)" } ?? "")")
-                .accessibilityHint("\(expanded ? "Hide" : "Show") controls. Escape collapses the open controls.")
-            HStack(spacing: 8) {
-                Spacer(minLength: 0)
+            } actions: {
                 cardActions(panel, title: title, muted: muted)
-            }.padding(.horizontal, 12).padding(.bottom, 10)
             }
             if let track { sourceMeter(track).padding(.horizontal, 12) }
             if panel == .mix, let test = recorder.audioTest { AudioTestMixMeterView(test: test).padding(.horizontal, 12) }
@@ -443,10 +427,7 @@ struct AudioRoutingView: View {
         .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Actions for \(title)")
     }
     private func muteButton(title: String, muted: Bool, action: @escaping () -> Void) -> some View {
-        Button(muted ? "Unmute" : "Mute", action: action)
-            .font(.caption).controlSize(.small).tint(muted ? .orange : WorkspaceStyle.blue)
-            .accessibilityLabel("\(muted ? "Unmute" : "Mute") \(title)")
-            .accessibilityValue(muted ? "Muted" : "Not muted")
+        AudioRoutingMuteButton(title: title, muted: muted, action: action)
     }
 
     private func collapsePanel() {
@@ -473,7 +454,7 @@ struct AudioRoutingView: View {
             .background(WorkspaceStyle.mint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
     @ViewBuilder private func sourceMeter(_ track: CaptureTrack) -> some View {
-        if let test = recorder.audioTest, test.locksSources {
+        if let test = recorder.audioTest, !recorder.isRecording {
             AudioTestSourceMeterView(test: test, track: track,
                 muted: levels.level(track == .playback ? source.playbackLevelID : inputs.first(where: { CaptureTrack.input($0.deviceUID) == track }).map { "input:" + $0.deviceUID } ?? "").muted)
         } else if recorder.isRecording {
@@ -672,5 +653,70 @@ struct CaptureHealthView: View {
                 }
             }
         }.fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Keep mute feedback in the existing action row so toggling never moves cards.
+struct AudioRoutingCardHeader<Actions: View>: View {
+    let title: String
+    let symbol: String
+    let subtitle: String
+    let value: String
+    let expanded: Bool
+    let muted: Bool
+    let warning: String?
+    let muteTitle: String
+    var focus: FocusState<AudioRoutingPanel?>.Binding? = nil
+    var panel: AudioRoutingPanel? = nil
+    let toggle: () -> Void
+    @ViewBuilder var actions: () -> Actions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let focus {
+                disclosureButton.focused(focus, equals: panel)
+            } else {
+                disclosureButton
+            }
+            HStack(spacing: 8) {
+                // Reserve the same footprint, including wrapped text at narrow widths.
+                AudioMuteBadge(title: muteTitle).opacity(muted ? 1 : 0).accessibilityHidden(!muted)
+                Spacer(minLength: 0)
+                actions()
+            }.padding(.horizontal, 12).padding(.bottom, 10)
+        }
+    }
+
+    private var disclosureButton: some View {
+        Button(action: toggle) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 18)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.callout.weight(.medium)).foregroundStyle(.primary)
+                    Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+                    if let warning { Text(warning).font(.caption2).foregroundStyle(.orange) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                Text(value).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption2).foregroundStyle(.secondary)
+            }.padding(12).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityLabel(title)
+            .accessibilityValue("\(expanded ? "Expanded" : "Collapsed"), \(subtitle), \(value)\(muted ? ", muted" : "")\(warning.map { ", \($0)" } ?? "")")
+            .accessibilityHint("\(expanded ? "Hide" : "Show") controls. Escape collapses the open controls.")
+    }
+}
+
+struct AudioRoutingMuteButton: View {
+    let title: String
+    let muted: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(muted ? "Unmute" : "Mute").frame(minWidth: 44)
+        }
+        .font(.caption).controlSize(.small).tint(muted ? .orange : WorkspaceStyle.blue)
+        .accessibilityLabel("\(muted ? "Unmute" : "Mute") \(title)")
+        .accessibilityValue(muted ? "Muted" : "Not muted")
     }
 }

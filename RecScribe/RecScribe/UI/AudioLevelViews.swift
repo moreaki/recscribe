@@ -33,13 +33,13 @@ struct RecordingLevelsView: View {
                 SourceFader(id: "master", title: source.isMixed ? "Master recording mix" : "Master saved recording", levels: levels, channels: 0, preservesSources: source.isMixed)
                 Text(source.isMixed ? "Faders and mute affect the derived mix. Separate source tracks are still saved at unity gain. The mix averages source contributions for headroom; peaks above 0 dBFS are hard-clipped in the mix." : "Software gain and mute affect the saved recording. Single-source mode does not save a separate raw track. Peaks above 0 dBFS are hard-clipped.")
                     .font(.caption).foregroundStyle(.secondary)
-                if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true) }
+                if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true, hardwareObserver: recorder.audio.hardware) }
                 Divider()
-                ListeningControls(levels: playbackLevels, title: "Playback output")
+                ListeningControls(levels: playbackLevels, title: "Playback output", hardwareObserver: recorder.audio.hardware)
                 Toggle("Monitor recording through headphones", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
                 Text("Monitor plays the recording mix only while audio is captured. Use headphones to avoid acoustic feedback. Monitoring starts off and turns off after each take.")
                     .font(.caption).foregroundStyle(.secondary)
-                if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output") }
+                if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output", hardwareObserver: recorder.audio.hardware) }
                 if let warning = monitor.warning { Text(warning).font(.caption).foregroundStyle(.orange) }
             }.padding(.top, 8)
         }.font(.callout).fixedSize(horizontal: false, vertical: true)
@@ -224,12 +224,18 @@ struct SessionPlaybackView: View {
                     Button { playback.togglePlayback() } label: {
                         Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
                     }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
+                        .keyboardShortcut("p", modifiers: [.command, .option])
+                        .help("Pause or resume playback (⌘⌥P)")
                     Button { playback.skip(by: -15) } label: {
                         Image(systemName: "gobackward.15")
                     }.disabled(playback.duration <= 0).accessibilityLabel("Skip back 15 seconds")
+                        .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+                        .help("Skip back 15 seconds (⌘⌥←)")
                     Button { playback.skip(by: 15) } label: {
                         Image(systemName: "goforward.15")
                     }.disabled(playback.duration <= 0).accessibilityLabel("Skip forward 15 seconds")
+                        .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+                        .help("Skip forward 15 seconds (⌘⌥→)")
                     Slider(value: Binding(get: { min(playback.position, max(0.001, playback.duration)) }, set: { playback.seek(to: $0) }), in: 0...max(0.001, playback.duration))
                         .disabled(playback.duration <= 0).accessibilityLabel("Playback position")
                     Text("\(playback.formattedPosition) / \(playback.formattedDuration)").font(.caption).monospacedDigit()
@@ -237,7 +243,7 @@ struct SessionPlaybackView: View {
                 }
                 if showListeningControls {
                     DisclosureGroup("Playback output", isExpanded: $showOutput) {
-                        ListeningControls(levels: playback.levels, title: "Playback output")
+                        ListeningControls(levels: playback.levels, title: "Playback output", hardwareObserver: playback.hardwareObserver)
                             .padding(.top, 4)
                     }.font(.caption)
                 }

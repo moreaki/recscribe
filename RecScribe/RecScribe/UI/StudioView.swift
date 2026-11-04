@@ -73,7 +73,7 @@ struct StudioView: View {
                     VStack(spacing: GlassSpacing.xl) {
                         RecorderView()
                         Divider()
-                        LiveTranscriptionControl(live: live)
+                        LiveTranscriptionControl(live: live, showsPreview: false)
                         Text("Recording always comes first. Transcription is optional. \(settings.values.processingLocation.detail)")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
@@ -86,13 +86,13 @@ struct StudioView: View {
                         TranscriptWorkspace(playback: recorder.audio.makePlayback())
                     case .routing:
                         AudioRoutingView(levels: recorder.audio.levels, monitor: recorder.audio.monitor,
-                            playbackLevels: recorder.audio.playbackLevels,
+                            playbackLevels: recorder.audio.playbackLevels, hardwareObserver: recorder.audio.hardware,
                             embeddedInStudio: true)
                     case .recordings:
                         RecordingLibraryView(makePlayback: { recorder.audio.makePlayback() },
                             embeddedInStudio: true, onOpenStudio: { workspaceMode = .studio })
                     case .settings:
-                        ConfigurationView(embeddedInStudio: true)
+                        ConfigurationView(liveDrafts: live.drafts, embeddedInStudio: true)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

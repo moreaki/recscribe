@@ -203,8 +203,14 @@ across player recreation and app restarts. It never changes recording levels or
 files. **Follow system output** passes nil to `AVPlayer.audioOutputDeviceUniqueID`;
 explicit routing uses the selected Core Audio UID. This is app-local routing, not
 a change to macOS's default device. Device availability and the effective route
-are refreshed every two seconds. An unplugged explicit output temporarily follows
+follow shared hardware events (with a centralized refresh fallback only when
+listener registration fails). An unplugged explicit output temporarily follows
 the system output, with a visible message; the UID remains selected for reconnection.
+
+While a file player is visible, **⌘⌥P** pauses/resumes playback and **⌘⌥← / ⌘⌥→**
+skip backward/forward by 15 seconds, clamped to the recording's bounds. These
+modified shortcuts leave ordinary text typing and arrow-key editing alone. Starting
+capture stops the player and removes its transport shortcuts along with the controls.
 
 Hardware input/output level controls are under separate **system-wide** disclosures.
 They appear only for available writable scalar properties, using a device's master
@@ -248,3 +254,28 @@ routing…** (⌘2). Variable groups use version-3 manifests; each device has it
 gain, source recording and health. See [multiple-input recording](multiple-inputs.md)
 for the new path, version-3 gain mapping, resource bounds and remaining hardware
 checks. The two-role version-2 path described above remains supported.
+
+### Preserved live drafts and storage limits
+
+Settings → Storage lists preserved live drafts by date and size. RecScribe keeps
+raw recognizer results and checkpoints; it does not automatically delete them.
+New optional live processing pauses at 1 GiB of managed draft data or 100 draft
+folders. Existing work checks storage between completed audio windows, so the
+last window can exceed the byte limit slightly. Audio recording remains
+independent and continues locally. After reviewing old drafts, explicitly move
+unwanted drafts to Trash and re-enable live transcription.
+
+Active drafts, recording/test capture and folders containing recording manifests
+are protected. Trash moves are recoverable and keep original recordings in their
+recording folder. Folder inspection uses bounded background metadata reads;
+unreadable or excessively large trees pause optional processing until reviewed.
+A link or unexpected owner is never followed for cleanup. Disposable working WAVs
+continue to be cleaned separately; canonical text, raw ASR and checkpoints are
+not scratch files.
+
+Hardware discovery normally uses shared Core Audio events. A central bounded
+refresh fallback is used only if listener registration fails; there are no
+routine per-view polling loops. Preview recovery waits for the same selected
+input UID, never substitutes a similarly named device, and is limited to three
+rebuilds per preview. A failed source during recording remains a preserved partial
+track; surviving sources keep recording. Stop and start a new take to rejoin it.

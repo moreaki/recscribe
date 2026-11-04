@@ -71,6 +71,11 @@ superseded by the confirmed automatic-source/mute-only model.
 
 ## Live input continuity
 
+Routing, capture, monitoring and playback use the same app-owned hardware observer.
+The embedded Settings workspace includes preserved live-draft management. Native
+input continuity stays independent of the bounded whole-preview fallback used by
+other capture backends.
+
 The native multi-source backend observes available Core Audio inputs, including
 virtual/aggregate devices. A failed input is stopped individually. When the same
 UID returns, the writer resumes its existing source track on the original host

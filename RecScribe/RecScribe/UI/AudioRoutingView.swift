@@ -8,7 +8,7 @@ struct AudioRoutingView: View {
     @Bindable private var monitor: CapturedAudioMonitor
     @Bindable private var monitorLevels: PlaybackLevels
     @Bindable private var playbackLevels: PlaybackLevels
-    @Bindable private var hardwareObserver = AudioHardwareObserver.shared
+    @Bindable private var hardwareObserver: AudioHardwareObserver
     private let sourceNames = RoutingSourceNames.shared
     @State private var devices: [InputDeviceInfo] = []
     @State private var outputs: [AudioOutputDevice] = []

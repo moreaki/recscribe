@@ -3,7 +3,7 @@ import Foundation
 import os
 
 nonisolated struct LiveCleanupFailure: Sendable, Equatable {
-    enum Operation: String, Sendable { case stat, enumerate, unlink }
+    enum Operation: String, Sendable { case stat, enumerate, unlink, lease }
     let url: URL
     let operation: Operation
     let posixErrorCode: Int32?
@@ -17,6 +17,7 @@ nonisolated struct LiveCleanupReport: Sendable, Equatable {
     var inspectedEntries = 0
     var stoppedByLimit = false
     var cancelled = false
+    var deferredForActivity = false
     var ranOnMainThread = false
 }
 

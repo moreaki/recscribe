@@ -6,26 +6,30 @@ import os
 /// One app-owned graph for capture gain, monitoring and every playback surface.
 @MainActor
 final class AudioServices {
+    let hardware: AudioHardwareObserver
     let levels: AudioLevels
     let monitor: CapturedAudioMonitor
     let playbackLevels: PlaybackLevels
     private let playbackCoordinator = SessionPlaybackCoordinator()
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, hardware: AudioHardwareObserver? = nil) {
+        let hardware = hardware ?? AudioHardwareObserver()
+        self.hardware = hardware
         let levels = AudioLevels(defaults: defaults)
         self.levels = levels
-        monitor = CapturedAudioMonitor(defaults: defaults, captureLevels: levels)
+        monitor = CapturedAudioMonitor(defaults: defaults, captureLevels: levels, hardwareObserver: hardware)
         playbackLevels = PlaybackLevels(defaults: defaults)
     }
 
     func makePlayback(build: ((SessionEntry) async throws -> AVPlayerItem)? = nil,
                       activate: ((AVPlayer) -> Void)? = nil) -> SessionPlayback {
-        SessionPlayback(build: build, activate: activate, levels: playbackLevels, coordinator: playbackCoordinator)
+        SessionPlayback(build: build, activate: activate, levels: playbackLevels, hardwareObserver: hardware, coordinator: playbackCoordinator)
     }
 
     func shutdown() async {
         playbackCoordinator.stop()
         await monitor.stopAndWait()
+        hardware.stopObserving()
     }
 }
 

@@ -23,6 +23,10 @@ struct MarkdownReadingText: View {
 struct LiveTranscriptView: View {
     @Bindable var live: LiveTranscription
     var compact = false
+    var playback: SessionPlayback?
+    var recording = false
+    var sourceAvailable = false
+    var onSeek: ((Double) -> Void)?
     @State private var followsLatest = true
     var body: some View {
         VStack(alignment: .leading, spacing: GlassSpacing.l) {
@@ -51,13 +55,23 @@ struct LiveTranscriptView: View {
                         ForEach(live.segments) { segment in
                             VStack(alignment: .leading, spacing: GlassSpacing.sm) {
                                 MarkdownReadingText(text: segment.text)
-                                Text("\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")")
-                                    .font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                                let timing = "\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")"
+                                if let onSeek {
+                                    Button(timing) {
+                                        if let seconds = segment.seekTarget(recording: recording, sourceAvailable: sourceAvailable) { onSeek(seconds) }
+                                    }
+                                    .disabled(segment.seekTarget(recording: recording, sourceAvailable: sourceAvailable) == nil)
+                                    .buttonStyle(.borderless).font(.caption2.monospacedDigit())
+                                    .accessibilityLabel("Seek audio to \(timing)")
+                                } else { Text(timing).font(.caption2.monospacedDigit()).foregroundStyle(.secondary) }
                                 if let issue = segment.timingIssue {
                                     Label(issue.label, systemImage: "exclamationmark.triangle")
                                         .font(.caption).foregroundStyle(.orange)
                                 }
                             }
+                            .padding(GlassSpacing.xs)
+                            .background((playback?.isPlaying == true && segment.containsPlayback(playback?.position ?? -1)) ? WorkspaceStyle.blue.opacity(0.12) : .clear,
+                                        in: RoundedRectangle(cornerRadius: GlassRadius.control))
                             .id(segment.id)
                         }
                     }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
@@ -89,11 +103,15 @@ struct LiveTranscriptView: View {
 struct LiveTranscriptionControl: View {
     @Bindable var live: LiveTranscription
     @State private var preview = false
+    var showsPreview = true
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.studioNavigation) private var navigation
     var body: some View {
         HStack {
             Toggle("Live transcription", isOn: Binding(get: { live.enabled }, set: { live.setEnabled($0) }))
                 .toggleStyle(.switch).controlSize(.small).tint(WorkspaceStyle.blue)
             Spacer()
+            if showsPreview {
             Button { preview.toggle() } label: { Image(systemName: "text.bubble") }
                 .buttonStyle(.plain).accessibilityLabel("Preview live transcript").help("Preview the live draft")
                 .popover(isPresented: $preview, arrowEdge: .bottom) {
@@ -101,6 +119,12 @@ struct LiveTranscriptionControl: View {
                         .frame(width: WorkspaceStyle.previewWidth, height: WorkspaceStyle.previewHeight)
                         .background(WorkspaceStyle.background).preferredColorScheme(.dark)
                 }
+            }
+            Button {
+                AppWindow.open(.settings, using: openWindow, navigation: navigation)
+            } label: { Image(systemName: "externaldrive") }
+                .help("Manage preserved live drafts in Settings → Recording")
+                .accessibilityLabel("Live draft storage settings")
         }
         .confirmationDialog("Send new audio to OpenAI?", isPresented: Binding(
             get: { live.pendingCloudRequest != nil }, set: { if !$0 { live.dismissCloudAudio() } }), titleVisibility: .visible) {
@@ -127,6 +151,8 @@ struct TranscriptWorkspace: View {
     @State private var selectedJob: URL?
     @State private var transcriptToDelete: URL?
     @State private var sourceAvailable = false
+    @State private var copyNotice: String?
+    @State private var copyVersion = 0
     @State private var followLiveSource = false
     private var displayedJob: URL? {
         selectedJob ?? (followLiveSource && library.latestSource != live.sourceURL ? nil : library.latestJob)
@@ -151,10 +177,9 @@ struct TranscriptWorkspace: View {
         _playback = State(initialValue: playback)
     }
 
-    private func copyToPasteboard(_ text: String) {
-        let board = NSPasteboard.general
-        board.clearContents()
-        board.setString(text, forType: .string)
+    private func copyToPasteboard(_ text: String, format: String) {
+        copyNotice = TranscriptClipboard.copy(text, format: format, to: .general)
+        copyVersion &+= 1
     }
 
     var body: some View {
@@ -170,10 +195,10 @@ struct TranscriptWorkspace: View {
                     let markdownExport = document.exportText(for: section, markdown: true)
                     let plainExport = document.exportText(for: section, markdown: false)
                     Button("Copy Markdown", systemImage: "doc.on.doc") {
-                        copyToPasteboard(markdownExport)
+                        copyToPasteboard(markdownExport, format: "Markdown")
                     }.disabled(markdownExport.isEmpty)
-                    Button("Copy Text", systemImage: "doc.plaintext") {
-                        copyToPasteboard(plainExport)
+                    Button("Copy Plain Text", systemImage: "doc.plaintext") {
+                        copyToPasteboard(plainExport, format: "plain text")
                     }.disabled(plainExport.isEmpty)
                     if !markdownExport.isEmpty {
                         ShareLink(item: markdownExport) {
@@ -181,6 +206,10 @@ struct TranscriptWorkspace: View {
                         }
                     }
                 }
+            }
+            if let copyNotice {
+                Label(copyNotice, systemImage: "checkmark.circle").font(.caption).foregroundStyle(WorkspaceStyle.mint)
+                    .accessibilityIdentifier("transcript-copy-status")
             }
             WorkspaceTabs(title: "Text view", selection: $section)
             if let source {
@@ -209,7 +238,10 @@ struct TranscriptWorkspace: View {
                     }
                 }.disabled(library.busy || library.recordingActive || library.liveWorkActive)
             }
-            if section == .live { LiveTranscriptView(live: live) }
+            if section == .live {
+                LiveTranscriptView(live: live, playback: playback, recording: library.recordingActive,
+                    sourceAvailable: sourceAvailable, onSeek: { pendingSeekSeconds = $0 })
+            }
             else if let document {
                 let content = section == .summary ? document.summaryText : section == .review ? document.reviewPlainText : ""
                 if section == .transcript && !document.segments.isEmpty {
@@ -293,6 +325,12 @@ struct TranscriptWorkspace: View {
             } message: {
                 Text("The transcript, summary and all artifacts in this job folder move to Trash. The original recording is kept. You can restore the folder from Trash.")
             }
+        .task(id: copyVersion) {
+            guard copyNotice != nil else { return }
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            copyNotice = nil
+        }
+        .onChange(of: section) { _, _ in copyNotice = nil }
         .onChange(of: library.latestJob) { _, job in
             selectedJob = nil; followLiveSource = false
             if job == nil {
@@ -316,5 +354,14 @@ struct TranscriptWorkspace: View {
             } catch is CancellationError { }
             catch { if !Task.isCancelled { self.error = error.localizedDescription } }
         }
+    }
+}
+
+@MainActor
+enum TranscriptClipboard {
+    static func copy(_ text: String, format: String, to board: NSPasteboard) -> String? {
+        guard !text.isEmpty else { return nil }
+        board.clearContents()
+        return board.setString(text, forType: .string) ? "Copied \(format)" : "Copy failed · try again"
     }
 }

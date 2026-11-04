@@ -20,7 +20,7 @@ struct AudioMuteBadge: View {
 struct AudioMuteSummary: View {
     private let appName: (String) -> String?
     private let names = RoutingSourceNames.shared
-    private let hardware = AudioHardwareObserver.shared
+    private let hardware: AudioHardwareObserver
     let source: AudioSource
     @Bindable private var levels: AudioLevels
     @Bindable private var playback: PlaybackLevels
@@ -29,6 +29,7 @@ struct AudioMuteSummary: View {
 
     init(source: AudioSource, audio: AudioServices, appName: @escaping (String) -> String? = { _ in nil }) {
         self.appName = appName
+        hardware = audio.hardware
         self.source = source
         levels = audio.levels
         playback = audio.playbackLevels

@@ -50,6 +50,9 @@ import Foundation
     private var closed = false
     private var recordingRequested = false
     private var sampleRun = false
+    private var previewNeedsRebuild = false
+    private var previewRebuildTask: Task<Void, Never>?
+    @ObservationIgnored private var hardwareObservation: ObservationSubscription?
     private(set) var previewRebuildCount = 0
     private static let maxPreviewRebuilds = 3
     private let previewLimit: TimeInterval
@@ -59,17 +62,21 @@ import Foundation
          permissions: PermissionProviding = PermissionManager(), levels: AudioLevels = AudioLevels(),
          monitor: CapturedAudioMonitor = CapturedAudioMonitor(), gate: CaptureSessionGate = CaptureSessionGate(),
          playback: SessionPlayback? = nil, temporaryRoot: URL? = nil,
-         saveDirectory: @escaping () -> URL, sampleSeconds: TimeInterval = 10, previewLimit: TimeInterval = 600) {
+         saveDirectory: @escaping () -> URL, sampleSeconds: TimeInterval = 10, previewLimit: TimeInterval = 600, hardwareObserver: AudioHardwareObserver = .shared) {
         precondition(sampleSeconds > 0 && sampleSeconds <= 10 && previewLimit > 0 && previewLimit <= 600)
         self.capture = capture; self.source = source; self.permissions = permissions
         self.levels = levels; self.monitor = monitor; self.gate = gate
         self.playback = playback ?? SessionPlayback()
         self.temporaryRoot = temporaryRoot ?? FileManager.default.temporaryDirectory.appendingPathComponent("com.moreaki.recscribe-audio-tests", isDirectory: true)
         self.saveDirectory = saveDirectory; self.sampleSeconds = sampleSeconds; self.previewLimit = previewLimit
+        hardwareObservation = ObservationSubscription(read: { hardwareObserver.revision }) { [weak self] _ in
+            self?.attemptPreviewRebuildIfEligible(reason: "Selected input reconnected")
+        }
     }
 
-    func opened() { closed = false; previewRebuildCount = 0 }
+    func opened() { closed = false; previewRebuildCount = 0; previewNeedsRebuild = false }
     func startPreview() async {
+        previewNeedsRebuild = false
         previewRebuildCount = 0
         await start(sample: false)
     }
@@ -85,6 +92,7 @@ import Foundation
     private func start(sample: Bool, preservingNotice: String? = nil) async {
         guard !closed, !recordingRequested, canStart(), !locksSources, self.sample == nil,
               startTask == nil, stopTask == nil else { return }
+        previewNeedsRebuild = false
         state = .starting; errorMessage = nil; notice = preservingNotice
         health = []; meters = [:]; mixMeter = .init(); elapsed = 0
         let id = UUID(); runID = id
@@ -135,7 +143,10 @@ import Foundation
             capture.onSourceFailure = { [weak self, weak recorder] track, message in
                 recorder?.sourceFailed(track, message: message)
                 guard let self, self.runID == id, !sample, self.state == .testing else { return }
-                if !(capture is ScreenCaptureAudioManager) { self.attemptPreviewRebuildIfEligible(reason: message) }
+                if !(capture is ScreenCaptureAudioManager) {
+                    self.previewNeedsRebuild = true
+                    self.attemptPreviewRebuildIfEligible(reason: message)
+                }
             }
             capture.onInputAvailable = { [weak self, weak recorder] device, selection in
                 guard let self, self.runID == id, let recorder else { return false }
@@ -228,17 +239,26 @@ import Foundation
     /// undergoes a Bluetooth A2DP ↔ HFP duplex switch / format change or reconnects with
     /// the same verified UID while no recording files are open.
     func attemptPreviewRebuildIfEligible(reason: String) {
-        guard state == .testing, !sampleRun, !closed, !recordingRequested,
-              previewRebuildCount < Self.maxPreviewRebuilds else { return }
+        guard previewNeedsRebuild, previewRebuildTask == nil, state == .testing, !sampleRun, !closed, !recordingRequested else { return }
+        guard previewRebuildCount < Self.maxPreviewRebuilds else {
+            notice = "Preview restart limit reached. Stop the test and review the selected input before trying again."
+            return
+        }
         let selected = source.selectedSource
         let availableUIDs = Set(source.availableInputDevices().map(\.uid))
         guard selected.inputSelections.allSatisfy({ availableUIDs.contains($0.deviceUID) }) else { return }
+        previewNeedsRebuild = false
         previewRebuildCount += 1
         let rebuildNotice = reason.localizedCaseInsensitiveContains("format")
             ? "Input audio format changed (such as a Bluetooth headset mic switch); audio test preview was automatically restarted."
             : "Selected input reconnected; audio test preview was automatically restarted."
-        Task { @MainActor [weak self] in
-            guard let self, self.state == .testing, !self.sampleRun else { return }
+        previewRebuildTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.previewRebuildTask = nil
+                if self.previewNeedsRebuild { self.attemptPreviewRebuildIfEligible(reason: "Input audio format changed") }
+            }
+            guard self.state == .testing, !self.sampleRun else { return }
             await self.stop()
             await self.start(sample: false, preservingNotice: rebuildNotice)
         }

@@ -8,13 +8,15 @@ struct ConfigurationView: View {
     @Environment(\.glassTheme) private var theme
     @Environment(RuntimeManager.self) private var runtime
     @Environment(SessionLibrary.self) private var library
+    private let liveDrafts: LiveDraftStore?
     @State private var section: SettingsSection
     @State private var installation: LocalSoftware?
     @State private var download: WhisperModel?
     @State private var availabilityRefresh = 0
     private let embeddedInStudio: Bool
-    init(section: SettingsSection = .storage, embeddedInStudio: Bool = false) {
+    init(section: SettingsSection = .storage, liveDrafts: LiveDraftStore? = nil, embeddedInStudio: Bool = false) {
         _section = State(initialValue: section)
+        self.liveDrafts = liveDrafts
         self.embeddedInStudio = embeddedInStudio
     }
     private enum Layout {
@@ -144,6 +146,7 @@ struct ConfigurationView: View {
         }
     }
     private var storage: some View {
+        VStack(alignment: .leading, spacing: GlassSpacing.xl) {
         Group {
             card("Capture sources", detail: recorder.captureSourceHint) {
                 Text(recorder.captureSourceName ?? "All system audio").font(.headline)
@@ -180,6 +183,8 @@ struct ConfigurationView: View {
                 file("FFmpeg executable", value: settingsBinding.values.ffmpegPath)
                 dependencyStatus(.ffmpeg, name: "FFmpeg")
             }
+        }
+            if let liveDrafts { WorkspaceCard { LiveDraftManagementView(store: liveDrafts) } }
         }
     }
     private var transcription: some View {

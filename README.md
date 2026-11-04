@@ -92,13 +92,24 @@ its default; the test targets retain their nonisolated XCTest-compatible default
 You can still open `RecScribe/RecScribe.xcodeproj`, select the **RecScribe** scheme,
 and build with Command-B when working in Xcode.
 
-Run the unit tests from the command line:
+Primary CI uses the Xcode minor version pinned in `.xcode-version` (currently
+27.2) on GitHub's `xcode-27` runner. Debug tests and the independent Release build
+use the same pin. A separate Xcode 26.3 compatibility build still compiles both
+the app and unit tests, so upgrading CI does not hide older-compiler errors.
+Image build numbers and host macOS versions can differ; each job reports Xcode,
+Swift, SDK and OS versions. See the [official runner software inventory](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
+
+Before comparing local results with CI, verify the selected toolchain. Use
+`DEVELOPER_DIR=/path/to/the/matching/Xcode.app/Contents/Developer` if needed;
+the check does not change the system's selected Xcode. Then run the unit tests:
 
 ```bash
-swift test --package-path core
+./scripts/check-toolchain.sh
+xcrun swift test --package-path core
 xcodebuild test \
   -project RecScribe/RecScribe.xcodeproj \
   -scheme RecScribe \
+  -configuration Debug \
   -destination 'platform=macOS' \
   -only-testing:RecScribeTests
 ```

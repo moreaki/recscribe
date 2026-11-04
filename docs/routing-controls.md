@@ -54,6 +54,9 @@ the available size; capture controls remain visible. The Settings menu, Command-
 menu-bar overflow and in-app Settings links all select this same workspace, even
 when reopening a closed Studio window. There is no separate Settings scene.
 The duplicate Recordings toolbar button and isolated Settings icon are removed.
+The embedded Recordings header contains Import and Refresh; its redundant Settings,
+Studio and footer Back to Studio shortcuts are omitted in favor of the persistent
+top navigation.
 
 Capture summaries omit the redundant “Audio routing…” shortcut, including in
 the embedded Settings capture card; the Audio Routing tab provides navigation. These summaries list selected muted sources by the same names as

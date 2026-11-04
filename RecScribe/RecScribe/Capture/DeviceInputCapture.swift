@@ -16,112 +16,243 @@ import os
     let failure: @MainActor @Sendable (String) -> Void
 }
 
-/// One input-only engine per explicitly chosen UID. No output path and no global
-/// default/aggregate changes. A tap transfers a bounded copy with host-clock time.
-@MainActor
-final class DeviceInputCapture: InputCaptureSession {
-    let uid: String
-    let track: CaptureTrack
-    private var engine: AVAudioEngine?
-    private var observer: NSObjectProtocol?
-    private var generation = UUID()
-    private var configuration = DeviceInputConfigurationPolicy()
-    private var selectedDevice: AudioDeviceID?
-    private var expectedFormat: AVAudioFormat?
-    private var expectedAggregateMembers: [String] = []
-    private var configurationFailed = false
-    private let tap: DeviceInputTap
-    private let onFailure: @MainActor @Sendable (String) -> Void
-    init(uid: String, track: CaptureTrack? = nil, callback: @escaping @Sendable (CapturedAudioSample) -> Void,
-         onFailure: @escaping @MainActor @Sendable (String) -> Void) {
-        let resolvedTrack = track ?? .input(uid)
-        self.uid = uid; self.track = resolvedTrack; self.onFailure = onFailure
-        tap = DeviceInputTap(track: resolvedTrack, callback: callback, onFailure: onFailure)
+/// The engine boundary is injectable so startup ordering and late configuration
+/// notifications can be exercised without opening a real device or asking for TCC.
+@MainActor protocol DeviceInputEngine: AnyObject {
+    var snapshot: DeviceInputEngineSnapshot { get }
+    func bind() throws
+    func observe(_ changed: @escaping @MainActor @Sendable () -> Void)
+    func installAndStart(format: AVAudioFormat, block: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws
+    func stop()
+}
+
+struct DeviceInputEngineSnapshot: Equatable {
+    let connected: Bool
+    let selected: Bool
+    let format: AVAudioFormat
+    let aggregateMembers: [String]
+    let running: Bool
+    var hardwareFormatMatches = true
+    var usable: Bool {
+        connected && selected && hardwareFormatMatches && (1...32).contains(Int(format.channelCount)) &&
+            format.sampleRate.isFinite && (1...384_000).contains(format.sampleRate) &&
+            format.commonFormat == .pcmFormatFloat32
     }
-    func start() throws {
-        guard engine == nil else { throw AudioRecorderError.alreadyRecording }
+    func sameConfiguration(as other: Self) -> Bool {
+        connected == other.connected && selected == other.selected && format == other.format && hardwareFormatMatches == other.hardwareFormatMatches && aggregateMembers == other.aggregateMembers
+    }
+}
+
+@MainActor private final class NativeDeviceInputEngine: DeviceInputEngine {
+    private let uid: String
+    private let device: AudioDeviceID
+    private let engine = AVAudioEngine()
+    private var observer: NSObjectProtocol?
+    private var installed = false
+    init(uid: String) throws {
+        self.uid = uid
         guard let device = AudioDeviceControls.device(uid: uid) else { throw AudioSourceError.micNotAvailable(uid) }
-        let next = AVAudioEngine()
-        guard let unit = next.inputNode.audioUnit else { throw SessionError.invalid("Input audio unit is unavailable") }
+        self.device = device
+    }
+    func observe(_ changed: @escaping @MainActor @Sendable () -> Void) {
+        observer = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { _ in
+            Task { @MainActor in changed() }
+        }
+    }
+    func bind() throws {
+        guard let unit = engine.inputNode.audioUnit else { throw SessionError.invalid("Input audio unit is unavailable") }
         var selected = device
         guard AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &selected, UInt32(MemoryLayout<AudioDeviceID>.size)) == noErr else {
             throw SessionError.invalid("The selected input cannot be opened independently")
         }
-        let format = next.inputNode.outputFormat(forBus: 0)
-        guard (1...32).contains(Int(format.channelCount)), format.sampleRate.isFinite,
-              (1...384_000).contains(format.sampleRate), format.commonFormat == .pcmFormatFloat32 else {
-            throw SessionError.invalid("Input must provide Float32 audio with 1–32 channels")
+    }
+    var snapshot: DeviceInputEngineSnapshot {
+        var actual: AudioDeviceID = 0, size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        if let unit = engine.inputNode.audioUnit {
+            _ = AudioUnitGetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &actual, &size)
         }
-        tap.begin(format: format)
-        next.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format, block: tap.block)
-        engine = next
-        selectedDevice = device; expectedFormat = format
-        expectedAggregateMembers = AudioDeviceControls.aggregateSubDeviceUIDs(device: device)
+        var address = AudioDeviceControls.address(kAudioDevicePropertyDeviceIsAlive)
+        var alive: UInt32 = 0, bytes = UInt32(MemoryLayout<UInt32>.size)
+        let connected = AudioDeviceControls.device(uid: uid) == device &&
+            AudioObjectGetPropertyData(device, &address, 0, nil, &bytes, &alive) == noErr && alive != 0
+        let format = engine.inputNode.outputFormat(forBus: 0)
+        return .init(connected: connected, selected: actual == device, format: format,
+            aggregateMembers: AudioDeviceControls.aggregateSubDeviceUIDs(device: device), running: engine.isRunning,
+            hardwareFormatMatches: matchesHardware(format))
+    }
+    private func matchesHardware(_ format: AVAudioFormat) -> Bool {
+        var property = AudioDeviceControls.address(kAudioDevicePropertyNominalSampleRate)
+        var rate: Double = 0, bytes = UInt32(MemoryLayout<Double>.size)
+        guard AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, &rate) == noErr,
+              abs(rate - format.sampleRate) < 0.01 else { return false }
+        property = AudioDeviceControls.address(kAudioDevicePropertyStreamConfiguration, input: true)
+        bytes = 0
+        guard AudioObjectGetPropertyDataSize(device, &property, 0, nil, &bytes) == noErr,
+              bytes >= MemoryLayout<AudioBufferList>.size, bytes <= 65_536 else { return false }
+        let memory = UnsafeMutableRawPointer.allocate(byteCount: Int(bytes), alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { memory.deallocate() }
+        guard AudioObjectGetPropertyData(device, &property, 0, nil, &bytes, memory) == noErr else { return false }
+        let channels = UnsafeMutableAudioBufferListPointer(memory.assumingMemoryBound(to: AudioBufferList.self)).reduce(0) { $0 + Int($1.mNumberChannels) }
+        return channels == Int(format.channelCount)
+    }
+    func installAndStart(format: AVAudioFormat, block: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
+        engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format, block: block)
+        installed = true
+        engine.prepare()
+        try engine.start()
+    }
+    func stop() {
+        if let observer { NotificationCenter.default.removeObserver(observer); self.observer = nil }
+        engine.stop()
+        if installed { engine.inputNode.removeTap(onBus: 0); installed = false }
+    }
+}
+
+/// One input-only engine per selected UID. Startup settles on the main run loop,
+/// then waits for PCM, with at most three fresh engines. No timer remains once
+/// audio arrives, and a failed startup waits for a new hardware event to rejoin.
+@MainActor final class DeviceInputCapture: InputCaptureSession {
+    let uid: String
+    let track: CaptureTrack
+    private var engine: (any DeviceInputEngine)?
+    private var generation = UUID()
+    private var engineID = UUID()
+    private var configurationRevision = 0
+    private var expected: DeviceInputEngineSnapshot?
+    private var starting = false
+    private var failed = false
+    private var startupTask: Task<Void, Never>?
+    private var tap: DeviceInputTap?
+    private let factory: @MainActor () throws -> any DeviceInputEngine
+    private let sleep: @MainActor (Duration) async throws -> Void
+    private let callback: @Sendable (CapturedAudioSample) -> Void
+    private let onFailure: @MainActor @Sendable (String) -> Void
+
+    init(uid: String, track: CaptureTrack? = nil, callback: @escaping @Sendable (CapturedAudioSample) -> Void,
+         onFailure: @escaping @MainActor @Sendable (String) -> Void,
+         engineFactory: (@MainActor () throws -> any DeviceInputEngine)? = nil,
+         sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+        self.uid = uid; self.track = track ?? .input(uid)
+        self.callback = callback; self.onFailure = onFailure
+        self.factory = engineFactory ?? { try NativeDeviceInputEngine(uid: uid) }
+        self.sleep = sleep
+    }
+
+    func start() throws {
+        guard engine == nil, startupTask == nil else { throw AudioRecorderError.alreadyRecording }
+        let first = try factory()
         generation = UUID(); let id = generation
-        configuration = .init(startedAt: ProcessInfo.processInfo.systemUptime)
-        configurationFailed = false
-        observer = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: next, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self, self.generation == id else { return }
-                self.configurationChanged()
-            }
-        }
-        do { next.prepare(); try next.start() }
+        failed = false; starting = true
+        do { try open(first, generation: id) }
         catch { stop(); throw error }
-        Log.capture.notice("Input engine started selected_device=\(device) actual_device=\(self.currentDevice(next) ?? 0) channels=\(format.channelCount) rate=\(format.sampleRate) running=\(next.isRunning)")
-        if !next.isRunning { configurationChanged() }
+        startupTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if self.generation == id { self.startupTask = nil; self.starting = false } }
+            do {
+                for attempt in 0..<3 {
+                    try Task.checkCancellation()
+                    guard self.generation == id else { return }
+                    if attempt > 0 { try self.open(self.factory(), generation: id) }
+                    guard let engine = self.engine else { return }
+                    // Device binding reconfigures asynchronously. Require a quiet,
+                    // stable selected-device snapshot before installing the tap.
+                    var previous: DeviceInputEngineSnapshot?
+                    var revision = self.configurationRevision
+                    var settled: DeviceInputEngineSnapshot?
+                    for _ in 0..<10 {
+                        try await self.sleep(.milliseconds(100))
+                        try Task.checkCancellation()
+                        guard self.generation == id else { return }
+                        let next = engine.snapshot
+                        if next.usable, let previous, next.sameConfiguration(as: previous), revision == self.configurationRevision {
+                            settled = next; break
+                        }
+                        previous = next; revision = self.configurationRevision
+                    }
+                    if let settled {
+                        self.expected = settled
+                        // Each engine gets a new sealed tap. Late callbacks from a
+                        // removed engine can never enter the replacement's state.
+                        let engineID = self.engineID
+                        let tap = DeviceInputTap(track: self.track, callback: self.callback, onFailure: { [weak self] message in
+                            guard let self, self.generation == id, self.engineID == engineID else { return }
+                            self.fail(message)
+                        })
+                        self.tap = tap; tap.begin(format: settled.format)
+                        Log.capture.notice("Input tap startup attempt=\(attempt + 1) channels=\(settled.format.channelCount) rate=\(settled.format.sampleRate)")
+                        do { try engine.installAndStart(format: settled.format, block: tap.block) }
+                        catch {
+                            Log.recordFailure(error, operation: "input_startup")
+                            if !tap.sealIfNoFrames() {
+                                self.fail("The input engine failed after delivering audio; its track is incomplete. Other sources continue.")
+                                return
+                            }
+                            self.closeEngine()
+                            continue
+                        }
+                        for _ in 0..<3 {
+                            try await self.sleep(.milliseconds(500))
+                            try Task.checkCancellation()
+                            guard self.generation == id, !self.failed else { return }
+                            if tap.receivedFrames > 0 {
+                                self.starting = false
+                                self.checkHardwareStatus()
+                                return
+                            }
+                        }
+                        // The final PCM check and sealing share the callback's
+                        // lock: never rebuild if a first packet won the deadline race.
+                        if !tap.sealIfNoFrames() {
+                            self.starting = false
+                            self.checkHardwareStatus()
+                            return
+                        }
+                    }
+                    self.closeEngine()
+                }
+                self.fail("The selected input delivered no audio after bounded startup recovery. Check that the device is producing audio; other sources continue.")
+            } catch is CancellationError { return }
+            catch { self.fail("The selected input could not start; other sources continue. \(error.localizedDescription)") }
+        }
+    }
+
+    private func open(_ engine: any DeviceInputEngine, generation id: UUID) throws {
+        self.engine = engine; expected = nil
+        engineID = UUID(); let engineID = self.engineID
+        engine.observe { [weak self] in
+            guard let self, self.generation == id, self.engineID == engineID else { return }
+            self.configurationRevision &+= 1
+            self.checkHardwareStatus()
+        }
+        try engine.bind()
     }
 
     func checkHardwareStatus() {
-        configurationChanged()
+        guard !starting, !failed, let engine, let expected else { return }
+        let snapshot = engine.snapshot
+        let policy = DeviceInputConfigurationPolicy()
+        let decision = policy.evaluate(connected: snapshot.connected, sameDevice: snapshot.selected,
+            sameFormat: snapshot.hardwareFormatMatches && snapshot.format == expected.format,
+            sameAggregateMembers: snapshot.aggregateMembers == expected.aggregateMembers,
+            running: snapshot.running, receivedFrames: tap?.receivedFrames ?? 0)
+        if decision != .ignore { fail(decision.message) }
     }
 
-    private func currentDevice(_ engine: AVAudioEngine) -> AudioDeviceID? {
-        guard let unit = engine.inputNode.audioUnit else { return nil }
-        var value = AudioDeviceID(0), size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        return AudioUnitGetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global,
-            0, &value, &size) == noErr ? value : nil
+    private func fail(_ message: String) {
+        guard !failed else { return }
+        failed = true
+        closeEngine()
+        onFailure(message)
     }
-
-    private func configurationChanged() {
-        guard let engine, let selectedDevice, let expectedFormat, !configurationFailed else { return }
-        let actual = currentDevice(engine)
-        let current = engine.inputNode.outputFormat(forBus: 0)
-        var address = AudioDeviceControls.address(kAudioDevicePropertyDeviceIsAlive)
-        var alive: UInt32 = 0, bytes = UInt32(MemoryLayout<UInt32>.size)
-        let connected = AudioDeviceControls.device(uid: uid) == selectedDevice &&
-            AudioObjectGetPropertyData(selectedDevice, &address, 0, nil, &bytes, &alive) == noErr && alive != 0
-        let sameAggregate = expectedAggregateMembers.isEmpty ||
-            AudioDeviceControls.aggregateSubDeviceUIDs(device: selectedDevice) == expectedAggregateMembers
-        let received = tap.receivedFrames
-        let decision = configuration.evaluate(connected: connected, sameDevice: actual == selectedDevice,
-            sameFormat: current == expectedFormat, sameAggregateMembers: sameAggregate,
-            running: engine.isRunning, receivedFrames: received,
-            now: ProcessInfo.processInfo.systemUptime)
-        Log.capture.notice("Input configuration selected_device=\(selectedDevice) actual_device=\(actual ?? 0) connected=\(connected) channels=\(current.channelCount) rate=\(current.sampleRate) running=\(engine.isRunning) received_frames=\(received) action=\(decision.rawValue, privacy: .public)")
-        switch decision {
-        case .ignore: return
-        case .restart:
-            do { try engine.start() }
-            catch {
-                configurationFailed = true
-                Log.recordFailure(error, operation: "input_startup_recovery")
-                onFailure("The selected input could not start after a configuration change; other sources continue.")
-            }
-        case .disconnected, .deviceChanged, .formatChanged, .aggregateChanged, .interrupted:
-            configurationFailed = true
-            onFailure(decision.message)
-        }
+    private func closeEngine() {
+        engineID = UUID()
+        tap?.finish(); engine?.stop(); engine = nil; tap = nil; expected = nil
     }
     @discardableResult func stop() -> String? {
-        generation = UUID()
-        if let observer { NotificationCenter.default.removeObserver(observer); self.observer = nil }
-        // Finish holds the tap lock until every already-entered callback has
-        // submitted its copy, so no late buffer can overtake recorder sealing.
-        let failed = tap.finish()
-        engine?.stop(); engine?.inputNode.removeTap(onBus: 0); engine = nil
-        selectedDevice = nil; expectedFormat = nil; expectedAggregateMembers = []
-        return failed ? "Input timestamps, format or packet budget changed; its track is incomplete. Other sources continued." : nil
+        generation = UUID(); startupTask?.cancel(); startupTask = nil; starting = false
+        let invalid = tap?.finish() ?? false
+        closeEngine()
+        return invalid ? "Input timestamps, format or packet budget changed; its track is incomplete. Other sources continued." : nil
     }
 }
 
@@ -130,9 +261,10 @@ final class DeviceInputCapture: InputCaptureSession {
 /// the same UID on the existing writer timeline with gap/review evidence.
 nonisolated struct DeviceInputConfigurationPolicy {
     enum Decision: String {
-        case ignore, restart, disconnected, deviceChanged, formatChanged, aggregateChanged, interrupted
+        case ignore, disconnected, deviceChanged, formatChanged, aggregateChanged, interrupted, noAudio
         var message: String {
             switch self {
+            case .noAudio: "The selected input delivered no audio during startup; other sources continue."
             case .disconnected: "The selected input disconnected; its track is incomplete. Other sources continue."
             case .deviceChanged: "The input engine changed away from the selected device; its track is incomplete. Other sources continue."
             case .formatChanged: "The selected input changed audio format; its track is incomplete. Other sources continue."
@@ -141,19 +273,15 @@ nonisolated struct DeviceInputConfigurationPolicy {
             }
         }
     }
-    var startedAt: TimeInterval = 0
-    private(set) var restarts = 0
-    mutating func evaluate(connected: Bool, sameDevice: Bool, sameFormat: Bool,
-                           sameAggregateMembers: Bool = true, running: Bool,
-                           receivedFrames: Int64, now: TimeInterval) -> Decision {
+    func evaluate(connected: Bool, sameDevice: Bool, sameFormat: Bool,
+                  sameAggregateMembers: Bool = true, running: Bool,
+                  receivedFrames: Int64) -> Decision {
         guard connected else { return .disconnected }
         guard sameDevice else { return .deviceChanged }
         guard sameFormat else { return .formatChanged }
         guard sameAggregateMembers else { return .aggregateChanged }
-        if running { return .ignore }
-        guard receivedFrames == 0, (0...3).contains(now - startedAt), restarts < 2 else { return .interrupted }
-        restarts += 1
-        return .restart
+        guard running else { return .interrupted }
+        return receivedFrames > 0 ? .ignore : .noAudio
     }
 }
 
@@ -174,6 +302,15 @@ nonisolated final class DeviceInputTap: Sendable {
     }
     func begin(format: AVAudioFormat) { state.withLock { $0 = .init(accepting: true, format: format) } }
     @discardableResult func finish() -> Bool { state.withLock { $0.accepting = false; return $0.failed } }
+    /// Atomically close an empty startup attempt. A callback already transferring
+    /// its first copy wins and leaves the established tap open.
+    func sealIfNoFrames() -> Bool {
+        state.withLock { s in
+            guard s.receivedFrames == 0 else { return false }
+            s.accepting = false
+            return true
+        }
+    }
     var receivedFrames: Int64 { state.withLock { $0.receivedFrames } }
     func receive(_ buffer: AVAudioPCMBuffer, time: AVAudioTime) {
         let borrowed = BorrowedTapPCM(buffer: buffer)

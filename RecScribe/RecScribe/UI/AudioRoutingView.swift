@@ -136,7 +136,7 @@ struct AudioRoutingView: View {
                 columnTitle("Sources", symbol: "waveform")
                 Spacer()
             }.padding(.bottom, 3)
-            Text("Available sources are added automatically. Mute settings are kept.\nNew virtual inputs start muted in the mix; original tracks are kept. Up to eight input identities per take.")
+            Text("Microphones and audio interfaces are added automatically. Virtual inputs are recorded only when enabled below. Mute controls the mix; enabled inputs also save original tracks. Up to eight inputs per take.")
                 .font(.caption).foregroundStyle(.secondary)
             if eligible.count > InputSelection.maximumDevices {
                 Text("At most \(InputSelection.maximumDevices) input devices can be captured at once.")
@@ -162,11 +162,28 @@ struct AudioRoutingView: View {
             ForEach(inputs) { input in
                 inputCard(input, device: devices.first { $0.uid == input.deviceUID })
             }
+            let unusedVirtual = eligible.filter { device in
+                device.mayLoopBack && !inputs.contains { $0.deviceUID == device.uid }
+            }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            if !unusedVirtual.isEmpty {
+                Divider().padding(.top, 8)
+                Text("Available virtual inputs").font(.caption).foregroundStyle(.secondary)
+                ForEach(unusedVirtual) { device in virtualCaptureToggle(device) }
+            }
             if inputs.isEmpty {
                 Text("Playback only. Connect an input to include your microphone or audio interface.")
                     .font(.caption).foregroundStyle(.secondary).padding(.top, 4)
             }
         }
+    }
+
+    private func virtualCaptureToggle(_ device: InputDeviceInfo) -> some View {
+        Toggle("Record \(device.name)", isOn: Binding(
+            get: { inputs.contains { $0.deviceUID == device.uid } },
+            set: { recorder.setVirtualInputCapture(device, enabled: $0) }
+        ))
+        .disabled(!editable || (!inputs.contains { $0.deviceUID == device.uid } && inputs.count >= InputSelection.maximumDevices))
+        .help("Include this virtual device in capture and preserve its original source track.")
     }
 
     private var playbackName: String {
@@ -236,6 +253,7 @@ struct AudioRoutingView: View {
                 }.font(.caption)
             }
             if let device {
+                if device.mayLoopBack { virtualCaptureToggle(device) }
                 channelConnections(input, device: device).disabled(!editable)
                 DeviceVolumeView(uid: input.deviceUID, input: true, hardwareObserver: hardwareObserver)
             }

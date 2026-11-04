@@ -266,6 +266,7 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
         let inputScope: Bool
         let includeVolumes: Bool
         let onChange: @MainActor () -> Void
+        let onPropertiesChange: (@MainActor () -> Void)?
         var deviceID: AudioDeviceID?
         var token: AnyObject?
     }
@@ -368,6 +369,7 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
         uid: String,
         inputScope: Bool = true,
         includeVolumes: Bool = false,
+        onPropertiesChange: (@MainActor () -> Void)? = nil,
         onChange: @escaping @MainActor () -> Void
     ) -> UUID {
         let id = UUID()
@@ -376,6 +378,7 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
             inputScope: inputScope,
             includeVolumes: includeVolumes,
             onChange: onChange,
+            onPropertiesChange: onPropertiesChange,
             deviceID: nil,
             token: nil
         )
@@ -431,6 +434,9 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
 
         guard doSystem || !watchIDs.isEmpty else { return }
         refreshSystemSnapshot()
+        // Preserve the distinction even when system and device events coalesce.
+        // An unrelated helper-device inventory event must not retry failed input I/O.
+        for id in watchIDs { watches[id]?.onPropertiesChange?() }
 
         if doSystem {
             rebindDeviceWatchesAndNotifyAll()
@@ -467,6 +473,7 @@ final class SystemAudioHardwareBackend: AudioHardwareBackend {
                 watch.deviceID = nil
                 bindWatch(&watch, id: id)
                 watches[id] = watch
+                watch.onPropertiesChange?()
             }
             watch.onChange()
         }

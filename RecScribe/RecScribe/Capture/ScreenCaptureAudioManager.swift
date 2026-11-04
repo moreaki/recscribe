@@ -65,6 +65,9 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var output: AudioCaptureOutput?
     private var deviceInputs: [CaptureTrack: any InputCaptureSession] = [:]
     private var pendingInputs: [InputSelection] = []
+    // Engine teardown can itself refresh the global inventory (default-I/O
+    // helpers). Retry only after this UID's properties/presence actually change.
+    private var failedInputDevices: [CaptureTrack: InputDeviceInfo] = [:]
     private var useLegacyMicrophoneTrack = false
     private(set) var singleInputNormalizer: SingleInputAudioNormalizer?
     private(set) var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
@@ -76,6 +79,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var watchedInputTracks: Set<CaptureTrack> = []
     private var deviceWatchTokens: [UUID] = []
     private let inputFactory: (InputCaptureRequest) -> any InputCaptureSession
+    private let allowsAutomaticInput: (InputDeviceInfo) -> Bool
     private let canOpenInput: () -> Bool
     private let hardwareObserver: AudioHardwareObserver
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
@@ -87,7 +91,9 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     init(hardwareObserver: AudioHardwareObserver = .shared,
          inputFactory: @escaping (InputCaptureRequest) -> any InputCaptureSession = {
              DeviceInputCapture(uid: $0.uid, track: $0.track, callback: $0.callback, onFailure: $0.failure)
-         }, canOpenInput: @escaping () -> Bool = { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) {
+         }, allowsAutomaticInput: @escaping (InputDeviceInfo) -> Bool = { AutomaticRoutingSources(defaults: .standard).allowsCapture($0) },
+         canOpenInput: @escaping () -> Bool = { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) {
+        self.allowsAutomaticInput = allowsAutomaticInput
         self.inputFactory = inputFactory
         self.canOpenInput = canOpenInput
         self.hardwareObserver = hardwareObserver
@@ -252,7 +258,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                             self.isCapturing = false
                             self.onStreamError?(message)
                         } else {
-                            self.inputFailed(track, message: message, generation: generation)
+                            self.inputFailed(track, message: message, generation: generation, attemptRecovery: false)
                         }
                     }))
                     deviceInputs[track] = input
@@ -271,7 +277,9 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                 for selection in pendingInputs {
                     let track: CaptureTrack = useLegacyMicrophoneTrack ? .microphone : .input(selection.deviceUID)
                     let uid = selection.deviceUID
-                    let token = hardwareObserver.watchDevice(uid: uid, inputScope: true, includeVolumes: false) { [weak self] in
+                    let token = hardwareObserver.watchDevice(uid: uid, inputScope: true, includeVolumes: false, onPropertiesChange: { [weak self] in
+                        self?.inputPropertiesChanged(track, generation: generation)
+                    }) { [weak self] in
                         guard let self, self.isCapturing, self.inputGeneration == generation else { return }
                         self.deviceInputs[track]?.checkHardwareStatus()
                         if self.deviceInputs[track] == nil, !isSingleInputOnly { self.reconcileAvailableInputs() }
@@ -304,6 +312,12 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         }
     }
 
+    private func inputPropertiesChanged(_ track: CaptureTrack, generation: UUID) {
+        guard isCapturing, inputGeneration == generation else { return }
+        failedInputDevices.removeValue(forKey: track)
+        reconcileAvailableInputs()
+    }
+
     private func reconcileAvailableInputs() {
         guard isCapturing, canOpenInput(), !useLegacyMicrophoneTrack, let callback = inputCallback else { return }
         if recoveryTask != nil { reconcileRequested = true; return }
@@ -314,18 +328,23 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                 self.recoveryTask = nil
                 if self.reconcileRequested { self.reconcileRequested = false; self.reconcileAvailableInputs() }
             }
-            for device in self.hardwareObserver.inputDevices where (1...32).contains(device.inputChannels ?? 0) {
+            let availableDevices = self.hardwareObserver.inputDevices
+            self.failedInputDevices = self.failedInputDevices.filter { _, failed in availableDevices.contains(failed) }
+            for device in availableDevices where (1...32).contains(device.inputChannels ?? 0) {
                 guard !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { return }
                 let track = CaptureTrack.input(device.uid)
-                guard self.deviceInputs[track] == nil else { continue }
+                guard self.pendingInputs.contains(where: { $0.deviceUID == device.uid }) || self.allowsAutomaticInput(device) else { continue }
+                guard self.deviceInputs[track] == nil, self.failedInputDevices[track] == nil else { continue }
                 let selection = self.pendingInputs.first { $0.deviceUID == device.uid } ?? InputSelection(device: device)
                 guard let available = self.onInputAvailable, await available(device, selection),
                       !Task.isCancelled, self.isCapturing, self.inputGeneration == generation else { continue }
                 let input = self.inputFactory(.init(uid: device.uid, track: track, callback: callback, failure: { [weak self] message in
-                    self?.inputFailed(track, message: message, generation: generation, attemptRecovery: self?.recoveryTask == nil)
+                    self?.inputFailed(track, message: message, generation: generation, attemptRecovery: false)
                 }))
                     if !self.watchedInputTracks.contains(track) {
-                    let token = self.hardwareObserver.watchDevice(uid: device.uid, inputScope: true, includeVolumes: false) { [weak self] in
+                    let token = self.hardwareObserver.watchDevice(uid: device.uid, inputScope: true, includeVolumes: false, onPropertiesChange: { [weak self] in
+                        self?.inputPropertiesChanged(track, generation: generation)
+                    }) { [weak self] in
                         guard let self, self.isCapturing, self.inputGeneration == generation else { return }
                         self.deviceInputs[track]?.checkHardwareStatus()
                         if self.deviceInputs[track] == nil { self.reconcileAvailableInputs() }
@@ -343,6 +362,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     }
 
     private func clearDeviceWatches() {
+        failedInputDevices.removeAll()
         availabilityObservation?.cancel(); availabilityObservation = nil
         recoveryTask?.cancel()
         for token in deviceWatchTokens {
@@ -354,6 +374,9 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
     private func inputFailed(_ track: CaptureTrack, message: String, generation: UUID, attemptRecovery: Bool = true) {
         guard inputGeneration == generation, let input = deviceInputs.removeValue(forKey: track) else { return }
+        if !attemptRecovery, let device = hardwareObserver.inputDevices.first(where: { $0.uid == input.uid }) {
+            failedInputDevices[track] = device
+        }
         input.stop()
         onSourceFailure?(track, message)
         if attemptRecovery { reconcileAvailableInputs() }

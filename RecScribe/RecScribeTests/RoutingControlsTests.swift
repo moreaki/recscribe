@@ -124,7 +124,7 @@ import Testing
         #expect(recorder.selectedSource.inputSelections.count == 1)
         await recorder.stopRecording()
     }
-    @Test func firstAutomaticVirtualSelectionIsMutedButManualUnmuteIsNeverOverridden() throws {
+    @Test func explicitVirtualOptInStartsMutedButManualUnmuteIsNeverOverridden() throws {
         let suite = "routing59-virtual-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -134,7 +134,11 @@ import Testing
                        InputDeviceInfo(uid: "squirrels", name: "Squirrels Audio", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)]
         levels.set("system", .init(muted: true))
         let policy = AutomaticRoutingSources(defaults: defaults)
-        let selected = policy.selection(from: .systemAll, devices: devices, levels: levels)
+        let legacy = AudioSource.multiple(appBundleID: nil, inputs: devices.map { InputSelection(device: $0) })
+        let disabled = policy.selection(from: legacy, devices: devices, levels: levels)
+        #expect(disabled.inputs.map(\.deviceUID) == ["mic"])
+        for device in devices where device.mayLoopBack { policy.setVirtualCapture(device, enabled: true) }
+        let selected = policy.selection(from: disabled, devices: devices, levels: levels)
         #expect(selected.inputs.count == 3)
         #expect(!levels.level("input:mic").muted)
         #expect(levels.level("input:teams").muted && levels.level("input:squirrels").muted)
@@ -142,6 +146,47 @@ import Testing
         _ = AutomaticRoutingSources(defaults: defaults).selection(from: selected, devices: devices, levels: AudioLevels(defaults: defaults))
         #expect(AudioLevels(defaults: defaults).level("input:teams") == .init(decibels: -9, muted: false))
         #expect(levels.level("system").muted)
+        let departed = policy.selection(from: selected, devices: [])
+        let restored = AutomaticRoutingSources(defaults: defaults)
+        #expect(restored.selection(from: departed, devices: devices).inputs.count == 3)
+        restored.setVirtualCapture(devices[1], enabled: false)
+        let withoutTeams = AutomaticRoutingSources(defaults: defaults).selection(from: selected, devices: devices)
+        #expect(Set(withoutTeams.inputs.map(\.deviceUID)) == ["mic", "squirrels"])
+        #expect(AudioLevels(defaults: defaults).level("input:teams") == .init(decibels: -9, muted: false))
+    }
+
+    @Test func captureTogglePersistsOptInWithoutChangingMuteOrChannelRoutes() async throws {
+        let suite = "virtual-toggle-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let device = InputDeviceInfo(uid: "virtual", name: "Virtual", inputChannels: 2, transport: kAudioDeviceTransportTypeVirtual)
+        let provider = MockAudioSourceProviding(selectedSource: .systemAll)
+        provider.availableInputDevicesResult = [device]
+        let recorder = RecorderViewModel(controller: MockRecordingControlling(), permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(), audioSource: provider, defaults: defaults)
+        recorder.enableAutomaticRouting([device])
+        #expect(recorder.selectedSource.inputs.isEmpty)
+        recorder.setVirtualInputCapture(device, enabled: true)
+        #expect(recorder.selectedSource.inputs.map(\.deviceUID) == [device.uid])
+        var custom = recorder.selectedSource
+        custom.inputs[0].routes = [.init(channel: 1, placement: .left)]
+        recorder.setCaptureSource(custom)
+        recorder.audio.levels.set("input:virtual", .init(decibels: -3, muted: false))
+        recorder.setVirtualInputCapture(device, enabled: false)
+        recorder.refreshAvailableRoutingSources([device])
+        #expect(recorder.selectedSource.inputs.isEmpty)
+        recorder.setVirtualInputCapture(device, enabled: true)
+        #expect(recorder.selectedSource.inputs == custom.inputs)
+        #expect(recorder.audio.levels.level("input:virtual") == .init(decibels: -3, muted: false))
+        await recorder.startRecording()
+        recorder.setVirtualInputCapture(device, enabled: false)
+        #expect(recorder.selectedSource.inputs == custom.inputs)
+        #expect(AutomaticRoutingSources(defaults: defaults).allowsCapture(device))
+        await recorder.stopRecording()
+        recorder.refreshAvailableRoutingSources([])
+        #expect(AutomaticRoutingSources(defaults: defaults).allowsCapture(device), "Disconnect is not a manual disable")
+        recorder.refreshAvailableRoutingSources([device])
+        #expect(recorder.selectedSource.inputs == custom.inputs)
     }
 
     @Test func mutedVirtualInputsAllowMonitoringAndUnmutePausesListeningOnly() async throws {

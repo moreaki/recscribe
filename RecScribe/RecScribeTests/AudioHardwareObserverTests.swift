@@ -295,15 +295,14 @@ struct AudioHardwareObserverTests {
             try await manager.validate(source)
         }
 
-        var policy = DeviceInputConfigurationPolicy(startedAt: 10)
+        let policy = DeviceInputConfigurationPolicy()
         let decision = policy.evaluate(
             connected: true,
             sameDevice: true,
             sameFormat: true,
             sameAggregateMembers: false,
             running: true,
-            receivedFrames: 4800,
-            now: 12
+            receivedFrames: 4800
         )
         #expect(decision == .aggregateChanged)
         #expect(decision.message.localizedCaseInsensitiveContains("aggregate"))

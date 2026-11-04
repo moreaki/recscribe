@@ -1,7 +1,7 @@
 import Foundation
 
 /// Reconciles available devices, retaining channel choices independently of presence.
-/// Only unseen virtual inputs receive a safe initial mute; manual settings win.
+/// Virtual capture requires explicit opt-in; mute and channel routes are independent.
 @MainActor
 final class AutomaticRoutingSources {
     private let defaults: UserDefaults
@@ -11,9 +11,21 @@ final class AutomaticRoutingSources {
         remembered = defaults.data(forKey: "routing.channelSelections.v1")
             .flatMap { try? JSONDecoder().decode([String: InputSelection].self, from: $0) } ?? [:]
     }
+    func allowsCapture(_ device: InputDeviceInfo) -> Bool {
+        !device.isCoreAudioDefaultHelper && (!device.mayLoopBack ||
+            (defaults.stringArray(forKey: "routing.virtualCaptureOptIns.v1") ?? []).contains(device.uid))
+    }
+
+    func setVirtualCapture(_ device: InputDeviceInfo, enabled: Bool) {
+        guard device.mayLoopBack else { return }
+        var enabledUIDs = Set(defaults.stringArray(forKey: "routing.virtualCaptureOptIns.v1") ?? [])
+        if enabled { enabledUIDs.insert(device.uid) } else { enabledUIDs.remove(device.uid) }
+        defaults.set(enabledUIDs.sorted(), forKey: "routing.virtualCaptureOptIns.v1")
+    }
+
     func selection(from current: AudioSource, devices: [InputDeviceInfo], levels: AudioLevels? = nil) -> AudioSource {
         for input in current.inputSelections { remembered[input.deviceUID] = input }
-        let available = devices.filter { (1...32).contains($0.inputChannels ?? 0) }
+        let available = devices.filter { (1...32).contains($0.inputChannels ?? 0) && allowsCapture($0) }
         for device in available where device.mayLoopBack {
             let id = "input:" + device.uid
             if let levels, !levels.hasSetting(id) { levels.set(id, .init(muted: true)) }

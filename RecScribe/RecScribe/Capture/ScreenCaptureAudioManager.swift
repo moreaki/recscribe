@@ -66,8 +66,8 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     private var deviceInputs: [CaptureTrack: DeviceInputCapture] = [:]
     private var pendingInputs: [InputSelection] = []
     private var useLegacyMicrophoneTrack = false
-    private var singleInputNormalizer: SingleInputAudioNormalizer?
-    private var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
+    private(set) var singleInputNormalizer: SingleInputAudioNormalizer?
+    private(set) var inputCallback: (@Sendable (CapturedAudioSample) -> Void)?
     private var inputGeneration = UUID()
     private var deviceWatchTokens: [UUID] = []
     private let hardwareObserver: AudioHardwareObserver
@@ -97,8 +97,11 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             output = nil
             pendingInputs = [selection]
             useLegacyMicrophoneTrack = false
-            let normalizer = SingleInputAudioNormalizer(callback: audioCallback) { [weak self] message in
-                self?.onStreamError?(message)
+            let normalizerID = UUID()
+            let normalizer = SingleInputAudioNormalizer(id: normalizerID, callback: audioCallback) { [weak self] message in
+                guard let self, self.singleInputNormalizer?.id == normalizerID, self.isCapturing else { return }
+                self.isCapturing = false
+                self.onStreamError?(message)
             }
             singleInputNormalizer = normalizer
             inputCallback = { sample in normalizer.accept(sample.buffer) }
@@ -334,6 +337,10 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     var capturing: Bool {
         return isCapturing
     }
+
+    func setCapturingForTesting(_ active: Bool) {
+        isCapturing = active
+    }
 }
 
 // MARK: - SCStreamDelegate
@@ -490,44 +497,107 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
 
 /// Queue-confined normalizer bridging `DeviceInputCapture` native PCM buffers
 /// into the single-source canonical 48 kHz stereo `audioCallback` path (#40).
+/// Admission is bounded by `maxBuffers` and `maxBytes` (including in-flight work),
+/// surfaces overflow once via `onError`, and drains accepted work before `finish()` completes.
 nonisolated final class SingleInputAudioNormalizer: @unchecked Sendable {
+    private struct State: Sendable {
+        var accepting = true
+        var failed = false
+        var buffers = 0
+        var bytes = 0
+        var peakBuffers = 0
+        var peakBytes = 0
+        var rejected = 0
+    }
+
+    let id: UUID
     private let queue = DispatchQueue(label: "com.moreaki.recscribe.audio.single-input-normalizer", qos: .userInitiated)
+    private let state = OSAllocatedUnfairLock(initialState: State())
     private let normalizer = AudioFormatNormalizer()
+    private let maxBuffers: Int
+    private let maxBytes: Int
     private let callback: @Sendable (AVAudioPCMBuffer) -> Void
     private let onError: @MainActor @Sendable (String) -> Void
-    private var accepting = true
-    private var hasLoggedFailure = false
 
     init(
+        id: UUID = UUID(),
+        maxBuffers: Int = 256,
+        maxBytes: Int = 4 * 1_024 * 1_024,
         callback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
         onError: @escaping @MainActor @Sendable (String) -> Void
     ) {
+        precondition(maxBuffers > 0 && maxBytes > 0)
+        self.id = id
+        self.maxBuffers = maxBuffers
+        self.maxBytes = maxBytes
         self.callback = callback
         self.onError = onError
     }
 
+    var metrics: (peakBuffers: Int, peakBytes: Int, rejected: Int) {
+        state.withLock { ($0.peakBuffers, $0.peakBytes, $0.rejected) }
+    }
+
     func accept(_ buffer: AVAudioPCMBuffer) {
-        queue.async {
-            guard self.accepting else { return }
-            guard let normalized = self.normalizer.normalize(buffer) else {
-                if !self.hasLoggedFailure {
-                    self.hasLoggedFailure = true
-                    let onError = self.onError
-                    Task { @MainActor in
-                        onError("Capture audio could not be normalized; the partial recording is preserved")
-                    }
+        guard buffer.frameLength > 0 else { return }
+        let bytes = Int(buffer.frameCapacity) * Int(buffer.format.channelCount) * MemoryLayout<Float>.size
+        let transferred = TransferredPCMBuffer(value: buffer)
+        let onError = self.onError
+        state.withLock { s in
+            guard s.accepting, !s.failed else { return }
+            guard s.buffers < maxBuffers, bytes <= maxBytes - s.bytes else {
+                s.rejected += 1
+                s.failed = true
+                s.accepting = false
+                let message = AudioRecorderError.bufferLimit.localizedDescription
+                Task { @MainActor in
+                    onError(message)
                 }
                 return
             }
-            self.callback(normalized)
+            s.buffers += 1
+            s.bytes += bytes
+            s.peakBuffers = max(s.peakBuffers, s.buffers)
+            s.peakBytes = max(s.peakBytes, s.bytes)
+            queue.async {
+                self.process(transferred.value, bytes: bytes)
+            }
         }
+    }
+
+    private func process(_ buffer: AVAudioPCMBuffer, bytes: Int) {
+        defer {
+            state.withLock {
+                $0.buffers -= 1
+                $0.bytes -= bytes
+            }
+        }
+        guard state.withLock({ !$0.failed }) else { return }
+        guard let normalized = normalizer.normalize(buffer) else {
+            let shouldReport = state.withLock { s -> Bool in
+                guard !s.failed else { return false }
+                s.failed = true
+                s.accepting = false
+                return true
+            }
+            if shouldReport {
+                let onError = self.onError
+                Task { @MainActor in
+                    onError("Capture audio could not be normalized; the partial recording is preserved")
+                }
+            }
+            return
+        }
+        callback(normalized)
     }
 
     func finish() async {
         await withCheckedContinuation { continuation in
-            queue.async {
-                self.accepting = false
-                continuation.resume()
+            state.withLock { s in
+                s.accepting = false
+                queue.async {
+                    continuation.resume()
+                }
             }
         }
     }

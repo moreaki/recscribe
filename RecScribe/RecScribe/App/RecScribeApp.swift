@@ -11,19 +11,7 @@ struct RecScribeApp: App {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environmentObject(services.recorder)
                 .environmentObject(services.live).environmentObject(services.library).environmentObject(services.settings)
-                .onAppear {
-                    appDelegate.prepareForTermination = {
-                        await services.recorder.audioTest?.close()
-                        if services.recorder.isRecording { await services.recorder.stopRecording() }
-                        await services.recorder.waitForFailureFinalization()
-                        await services.live.shutdown()
-                        await services.library.shutdown()
-                        await services.runtime.shutdown()
-                    }
-                    if appDelegate.menuBarController == nil {
-                        appDelegate.menuBarController = MenuBarController(viewModel: services.recorder, live: services.live)
-                    }
-                }
+                .onAppear { services.bind(to: appDelegate) }
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
@@ -39,12 +27,15 @@ struct RecScribeApp: App {
         Window("RecScribe Settings", id: AppWindow.settings.rawValue) {
             ConfigurationView().environmentObject(services.recorder)
                 .environmentObject(services.settings).environmentObject(services.runtime).environmentObject(services.library)
+                .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.settings.defaultSize).windowResizability(.contentMinSize)
         Window("Recordings", id: AppWindow.recordings.rawValue) {
             RecordingLibraryView().environmentObject(services.recorder).environmentObject(services.library)
+                .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.recordings.defaultSize).windowResizability(.contentMinSize)
         Window("Audio Routing", id: AppWindow.routing.rawValue) {
             AudioRoutingView().environmentObject(services.recorder)
+                .onAppear { services.bind(to: appDelegate) }
         }.defaultSize(AppWindow.routing.defaultSize).windowResizability(.contentMinSize)
     }
 }

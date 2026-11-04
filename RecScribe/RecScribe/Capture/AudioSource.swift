@@ -39,8 +39,9 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         self.playback = playback
         self.inputs = inputs
         self.allowDuplicateRoutes = allowDuplicateRoutes
-        self.usesMultiInputRouting = usesMultiInputRouting
-            ?? (inputs.count > 1 || allowDuplicateRoutes || (playback == .none && inputs.count != 1))
+        let hasCustomInputRoutes = inputs.contains(where: \.hasCustomRoutes)
+        self.usesMultiInputRouting = hasCustomInputRoutes
+            || (usesMultiInputRouting ?? (inputs.count > 1 || allowDuplicateRoutes || (playback == .none && inputs.count != 1)))
     }
 
     // MARK: - Canonical Presets & Factories
@@ -107,7 +108,7 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
             playback: .none,
             inputs: inputs,
             allowDuplicateRoutes: allowDuplicateRoutes,
-            usesMultiInputRouting: inputs.count != 1 || allowDuplicateRoutes
+            usesMultiInputRouting: inputs.count != 1 || allowDuplicateRoutes || inputs.contains(where: \.hasCustomRoutes)
         )
     }
 }
@@ -130,7 +131,7 @@ nonisolated enum AudioSourceKind: Hashable, Sendable, CaseIterable {
 
 nonisolated extension AudioSource {
     var kind: AudioSourceKind {
-        if usesMultiInputRouting || inputs.count > 1 || (playback == .none && inputs.isEmpty) {
+        if usesMultiInputRouting || inputs.count > 1 || inputs.contains(where: \.hasCustomRoutes) || (playback == .none && inputs.isEmpty) {
             return .multiple
         }
         switch (playback, inputs.count) {
@@ -154,7 +155,7 @@ nonisolated extension AudioSource {
     }
 
     var microphoneUID: String? {
-        guard !usesMultiInputRouting, inputs.count == 1 else { return nil }
+        guard !usesMultiInputRouting, inputs.count == 1, !inputs[0].hasCustomRoutes else { return nil }
         return inputs[0].deviceUID
     }
 
@@ -180,15 +181,18 @@ nonisolated extension AudioSource {
     var valid: Bool {
         guard playback != .none || !inputs.isEmpty else { return false }
         if case .app(let bundle) = playback, bundle.isEmpty { return false }
+        guard inputs.count <= InputSelection.maximumDevices,
+              inputs.allSatisfy(\.valid),
+              Set(inputs.map(\.deviceUID)).count == inputs.count else {
+            return false
+        }
         if case .microphone = kind {
-            return inputs.count == 1 && !inputs[0].deviceUID.isEmpty
+            return inputs.count == 1
         }
         if case .mixed = kind {
-            return inputs.count == 1 && !inputs[0].deviceUID.isEmpty
+            return inputs.count == 1
         }
-        return inputs.count <= InputSelection.maximumDevices
-            && inputs.allSatisfy(\.valid)
-            && Set(inputs.map(\.deviceUID)).count == inputs.count
+        return true
     }
 }
 
@@ -324,6 +328,7 @@ nonisolated struct InputChannelRoute: Codable, Equatable, Sendable, Hashable {
 }
 
 nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Identifiable {
+    static let defaultRoutes: [InputChannelRoute] = [.init(channel: 0, placement: .center)]
     var id: String { deviceUID }
     var deviceUID: String
     /// Mix routing only. All native channels are retained in the source session.
@@ -333,7 +338,7 @@ nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Ident
     static let maximumDevices = 8
     init(
         deviceUID: String,
-        routes: [InputChannelRoute] = [.init(channel: 0, placement: .center)],
+        routes: [InputChannelRoute] = Self.defaultRoutes,
         aggregateMembers: [String]? = nil
     ) {
         self.deviceUID = deviceUID
@@ -346,6 +351,11 @@ nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Ident
             .init(channel: $0, placement: device.inputChannels == 1 ? .center : ($0 == 0 ? .left : .right))
         }
         aggregateMembers = device.isAggregate && !device.aggregateMembers.isEmpty ? device.aggregateMembers : nil
+    }
+    /// True when the channel routing differs from the canonical single-input mono-center default,
+    /// requiring `MultiSourceRecorder` to preserve custom channel placement and multi-channel source tracks.
+    var hasCustomRoutes: Bool {
+        routes != Self.defaultRoutes
     }
     var valid: Bool {
         !deviceUID.isEmpty && deviceUID.count <= 1024 && routes.count <= 32 &&

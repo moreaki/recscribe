@@ -5,13 +5,20 @@ import Testing
 
 @MainActor
 private final class MockAudioHardwareBackend: AudioHardwareBackend {
-    private final class Token {}
+    private nonisolated final class Token: HardwareListenerToken {
+        let hasRegistrationFailure: Bool
+        init(hasRegistrationFailure: Bool) {
+            self.hasRegistrationFailure = hasRegistrationFailure
+        }
+    }
 
     var currentInputs: [InputDeviceInfo] = []
     var currentOutputs: [AudioOutputDevice] = []
     var currentDefaultInputUID: String?
     var currentDefaultOutputUID: String?
     var deviceIDsByUID: [String: AudioDeviceID] = [:]
+    var simulateSystemRegistrationFailure = false
+    var simulateDeviceRegistrationFailure = false
 
     private(set) var systemListeners: [ObjectIdentifier: @Sendable () -> Void] = [:]
     private(set) var deviceListeners: [ObjectIdentifier: (deviceID: AudioDeviceID, inputScope: Bool, includeVolumes: Bool, handler: @Sendable () -> Void)] = [:]
@@ -27,7 +34,7 @@ private final class MockAudioHardwareBackend: AudioHardwareBackend {
     func deviceID(forUID uid: String) -> AudioDeviceID? { deviceIDsByUID[uid] }
 
     func addSystemListener(_ handler: @escaping @Sendable () -> Void) -> AnyObject {
-        let token = Token()
+        let token = Token(hasRegistrationFailure: simulateSystemRegistrationFailure)
         systemListeners[ObjectIdentifier(token)] = handler
         totalSystemRegistrations += 1
         return token
@@ -45,7 +52,7 @@ private final class MockAudioHardwareBackend: AudioHardwareBackend {
         includeVolumes: Bool,
         handler: @escaping @Sendable () -> Void
     ) -> AnyObject {
-        let token = Token()
+        let token = Token(hasRegistrationFailure: simulateDeviceRegistrationFailure)
         deviceListeners[ObjectIdentifier(token)] = (
             deviceID: deviceID,
             inputScope: inputScope,
@@ -278,5 +285,178 @@ struct AudioHardwareObserverTests {
         #expect(controller.stopCount == 1)
         #expect(controller.startCount == 2)
         #expect(vm.isRecording)
+    }
+
+    @Test("Volume listener elements derive from supported controls up to channel 32 and clean up on teardown (#42)")
+    func highNumberedChannelVolumeElementsAndTeardown() {
+        // Master element 0 collapses to [0]; per-channel controls up to 32 (e.g. 1, 2, 16, 32) are all included.
+        let masterOnly = AudioDeviceControls.supportedVolumeElements(device: 77, input: true) { _, addr in
+            [0, 1, 2, 16].contains(addr.mElement)
+        }
+        #expect(masterOnly == [0])
+
+        let highChannels = SystemAudioHardwareBackend.volumeAddresses(deviceID: 77, inputScope: true) { _, addr in
+            [1, 2, 16, 32].contains(addr.mElement)
+        }
+        #expect(highChannels.map(\.mElement) == [1, 2, 16, 32])
+        #expect(highChannels.allSatisfy { $0.mSelector == kAudioDevicePropertyVolumeScalar && $0.mScope == kAudioDevicePropertyScopeInput })
+
+        let backend = MockAudioHardwareBackend()
+        backend.deviceIDsByUID = ["multi-ch": 77]
+        let observer = AudioHardwareObserver(backend: backend)
+        var changes = 0
+        let token = observer.watchDevice(uid: "multi-ch", inputScope: true, includeVolumes: true) {
+            changes += 1
+        }
+        #expect(backend.deviceListeners.count == 1)
+        backend.fireDeviceEvent(deviceID: 77)
+        observer.flushPendingNotifications()
+        #expect(changes == 1)
+
+        observer.unwatchDevice(token)
+        #expect(backend.deviceListeners.isEmpty)
+        #expect(backend.totalDeviceRemovals == 1)
+        observer.stopObserving()
+    }
+
+    @Test("Observer guards stale callbacks across stop/restart and activates fallback refresh on listener registration failure (#42)")
+    func observerGuardsStaleCallbacksAndHandlesFailedListenerRegistration() async throws {
+        let backend = MockAudioHardwareBackend()
+        backend.currentInputs = [InputDeviceInfo(uid: "mic-1", name: "Mic 1", inputChannels: 1, sampleRate: 48_000)]
+        backend.deviceIDsByUID = ["mic-1": 11]
+
+        let observer = AudioHardwareObserver(backend: backend, fallbackPollInterval: .milliseconds(20))
+        #expect(!observer.hasListenerRegistrationFailure)
+        #expect(!observer.isFallbackPollingActive)
+
+        var watchCount = 0
+        _ = observer.watchDevice(uid: "mic-1", inputScope: true, includeVolumes: false) {
+            watchCount += 1
+        }
+
+        // Capture the raw listener closures before stopping observation, simulating a callback queued right before stopObserving().
+        let staleSystemCallback = try #require(backend.systemListeners.values.first)
+        let staleDeviceCallback = try #require(backend.deviceListeners.values.first?.handler)
+
+        observer.stopObserving()
+        #expect(!observer.isObserving)
+        let revisionAtStop = observer.revision
+
+        // Firing the stale callbacks after stopObserving() must not schedule or flush refreshes.
+        backend.currentInputs = [InputDeviceInfo(uid: "mic-2", name: "Mic 2", inputChannels: 1, sampleRate: 48_000)]
+        staleSystemCallback()
+        staleDeviceCallback()
+        await Task.yield()
+        observer.flushPendingNotifications()
+        #expect(observer.revision == revisionAtStop)
+        #expect(observer.inputDevices.map(\.uid) == ["mic-1"])
+        #expect(watchCount == 0)
+
+        // Restarting observation with a registration failure surfaces hasListenerRegistrationFailure and runs fallback refresh.
+        backend.simulateSystemRegistrationFailure = true
+        observer.startObserving()
+        #expect(observer.isObserving)
+        #expect(observer.hasListenerRegistrationFailure)
+        #expect(observer.isFallbackPollingActive)
+
+        // Stale callback from the first generation is still ignored after restart.
+        let revisionAfterRestart = observer.revision
+        staleSystemCallback()
+        observer.flushPendingNotifications()
+        #expect(observer.revision == revisionAfterRestart)
+
+        // Mutate backend state without firing any listener event; fallback polling updates the snapshot automatically.
+        backend.currentInputs = [InputDeviceInfo(uid: "mic-3", name: "Mic 3", inputChannels: 2, sampleRate: 48_000)]
+        for _ in 0..<20 where observer.inputDevices.map(\.uid) != ["mic-3"] {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(observer.inputDevices.map(\.uid) == ["mic-3"])
+
+        observer.stopObserving()
+        #expect(!observer.hasListenerRegistrationFailure)
+        #expect(!observer.isFallbackPollingActive)
+    }
+
+    @Test("Per-device events refresh cached inputDevices, outputDevices, and revision before notifying watchers (#42)")
+    func perDeviceEventsRefreshSnapshotForRateChannelAndAggregateChanges() throws {
+        let suite = "recscribe-per-device-snapshot-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let backend = MockAudioHardwareBackend()
+        backend.currentInputs = [
+            InputDeviceInfo(
+                uid: "agg-in",
+                name: "Aggregate Interface",
+                inputChannels: 2,
+                sampleRate: 44_100,
+                transport: kAudioDeviceTransportTypeAggregate,
+                aggregateMembers: ["sub-a"]
+            )
+        ]
+        backend.currentOutputs = [
+            AudioOutputDevice(uid: "dac-out", name: "Studio DAC", sampleRate: 48_000)
+        ]
+        backend.currentDefaultOutputUID = "dac-out"
+        backend.deviceIDsByUID = ["agg-in": 101, "dac-out": 202]
+
+        let observer = AudioHardwareObserver(backend: backend)
+        var configuredRates: [Double] = []
+        let monitor = CapturedAudioMonitor(
+            defaults: defaults,
+            hardwareObserver: observer,
+            isLoopbackCheck: { _ in false },
+            startEngineAction: { _, _, changed in
+                if changed, let rate = observer.outputDevices.first?.sampleRate {
+                    configuredRates.append(rate)
+                }
+            }
+        )
+        monitor.levels.set(.init(volume: 0.5, muted: false, outputUID: "dac-out"))
+        monitor.setEnabled(true, source: .systemAll)
+        #expect(configuredRates == [48_000])
+
+        var observedInputChannels: Int?
+        var observedInputRate: Double?
+        var observedAggregateMembers: [String]?
+        _ = observer.watchDevice(uid: "agg-in", inputScope: true, includeVolumes: false) {
+            let device = observer.inputDevices.first { $0.uid == "agg-in" }
+            observedInputChannels = device?.inputChannels
+            observedInputRate = device?.sampleRate
+            observedAggregateMembers = device?.aggregateMembers
+        }
+
+        let initialRevision = observer.revision
+
+        // Update input device rate/channels/aggregate members AND output device nominal sample rate,
+        // then fire ONLY per-device events (no system device-list or default-route event).
+        backend.currentInputs = [
+            InputDeviceInfo(
+                uid: "agg-in",
+                name: "Aggregate Interface",
+                inputChannels: 8,
+                sampleRate: 96_000,
+                transport: kAudioDeviceTransportTypeAggregate,
+                aggregateMembers: ["sub-a", "sub-b"]
+            )
+        ]
+        backend.currentOutputs = [
+            AudioOutputDevice(uid: "dac-out", name: "Studio DAC", sampleRate: 96_000)
+        ]
+
+        backend.fireDeviceEvent(deviceID: 101)
+        backend.fireDeviceEvent(deviceID: 202)
+        observer.flushPendingNotifications()
+
+        #expect(observer.revision > initialRevision)
+        #expect(observedInputChannels == 8)
+        #expect(observedInputRate == 96_000)
+        #expect(observedAggregateMembers == ["sub-a", "sub-b"])
+        #expect(observer.outputDevices.first?.sampleRate == 96_000)
+        // CapturedAudioMonitor read the refreshed sampleRate (96_000) and restarted its engine.
+        #expect(configuredRates == [48_000, 96_000])
+
+        monitor.setEnabled(false, source: .systemAll)
+        observer.stopObserving()
     }
 }

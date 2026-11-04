@@ -9,7 +9,6 @@ struct RecordingLevelsView: View {
     private var source: AudioSource { recorder.audioSource.selectedSource }
     var body: some View {
         DisclosureGroup("Audio levels", isExpanded: $expanded) {
-            ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 if source.isMixed || source.microphoneUID == nil {
                     SourceFader(id: source.playbackLevelID, title: "Playback capture gain", levels: levels,
@@ -37,7 +36,6 @@ struct RecordingLevelsView: View {
                 if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output") }
                 if let warning = monitor.warning { Text(warning).font(.caption).foregroundStyle(.orange) }
             }.padding(.top, 8)
-            }.frame(height: 340)
         }.font(.callout).fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -198,19 +196,31 @@ struct DeviceVolumeView: View {
 struct SessionPlaybackView: View {
     @ObservedObject var playback: SessionPlayback
     var showListeningControls = true
+    @State private var showOutput = false
     var body: some View {
         if playback.player != nil {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                HStack(spacing: 8) {
                     Button { playback.togglePlayback() } label: {
                         Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
                     }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
+                    Button { playback.skip(by: -15) } label: {
+                        Image(systemName: "gobackward.15")
+                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip back 15 seconds")
+                    Button { playback.skip(by: 15) } label: {
+                        Image(systemName: "goforward.15")
+                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip forward 15 seconds")
                     Slider(value: Binding(get: { min(playback.position, max(0.001, playback.duration)) }, set: { playback.seek(to: $0) }), in: 0...max(0.001, playback.duration))
                         .disabled(playback.duration <= 0).accessibilityLabel("Playback position")
-                    Text(String(format: "%.0f / %.0f s", playback.position, playback.duration)).font(.caption).monospacedDigit()
+                    Text("\(playback.formattedPosition) / \(playback.formattedDuration)").font(.caption).monospacedDigit()
                     Button("Stop") { playback.stop() }
                 }
-                if showListeningControls { ListeningControls(levels: playback.levels, title: "Playback output") }
+                if showListeningControls {
+                    DisclosureGroup("Playback output", isExpanded: $showOutput) {
+                        ListeningControls(levels: playback.levels, title: "Playback output")
+                            .padding(.top, 4)
+                    }.font(.caption)
+                }
             }
         }
     }

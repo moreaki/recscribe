@@ -207,7 +207,7 @@ struct AudioRoutingView: View {
                     Button("All system audio") { save(inputs, playbackState: .systemAll) }.disabled(!editable)
                 }
                 if source.requiresScreenCapture && !inputs.isEmpty {
-                    Button("Exclude playback") { save(inputs, playbackState: .none) }.disabled(!editable)
+                    Button("Exclude playback") { save(inputs, playbackState: AudioSource.Playback.none) }.disabled(!editable)
                 }
             }.controlSize(.small)
             if let appError { Text(appError).font(.caption).foregroundStyle(.orange) }
@@ -430,15 +430,29 @@ struct AudioRoutingView: View {
             }.font(.caption2).padding(.bottom, 10)
         }
     }
-    private func save(_ inputs: [InputSelection], acknowledge: Bool? = nil, playbackState: AudioSource.Playback? = nil) {
-        guard editable else { return }
-        let nextPlayback = playbackState ?? source.playback
-        let nextAck = acknowledge ?? source.allowDuplicateRoutes
-        recorder.setCaptureSource(AudioSource(
+    static func makeUpdatedSource(
+        from current: AudioSource,
+        inputs: [InputSelection],
+        acknowledge: Bool? = nil,
+        playbackState: AudioSource.Playback? = nil
+    ) -> AudioSource {
+        let nextPlayback = playbackState ?? current.playback
+        let routeGraphChanged = nextPlayback != current.playback || inputs != current.inputs
+        let nextAck = acknowledge ?? (routeGraphChanged ? false : current.allowDuplicateRoutes)
+        return AudioSource(
             playback: nextPlayback,
             inputs: inputs,
             allowDuplicateRoutes: nextAck,
-            usesMultiInputRouting: nextPlayback != .none || inputs.count != 1 || nextAck
+            usesMultiInputRouting: nextPlayback != .none || inputs.count != 1 || nextAck || inputs.contains(where: \.hasCustomRoutes)
+        )
+    }
+    private func save(_ inputs: [InputSelection], acknowledge: Bool? = nil, playbackState: AudioSource.Playback? = nil) {
+        guard editable else { return }
+        recorder.setCaptureSource(Self.makeUpdatedSource(
+            from: source,
+            inputs: inputs,
+            acknowledge: acknowledge,
+            playbackState: playbackState
         ))
     }
     private func loadApps() {

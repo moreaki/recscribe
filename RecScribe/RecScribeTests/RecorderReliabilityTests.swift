@@ -155,4 +155,95 @@ struct RecorderReliabilityTests {
         await output.finish()
         #expect(count.withLock { $0 } == 50)
     }
+
+    @Test("SingleInputAudioNormalizer enforces bounded byte/buffer admission including in-flight work and drains before finish", arguments: [true, false])
+    func singleInputNormalizerBoundedAdmissionAndStopRace(byCount: Bool) async {
+        let entered = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let delivered = OSAllocatedUnfairLock(initialState: 0)
+        let errors = OSAllocatedUnfairLock(initialState: [String]())
+
+        let normalizer = SingleInputAudioNormalizer(
+            maxBuffers: byCount ? 2 : 100,
+            maxBytes: byCount ? 1_024 : 128,
+            callback: { _ in
+                let index = delivered.withLock { count -> Int in
+                    count += 1
+                    return count
+                }
+                if index == 1 {
+                    entered.signal()
+                    _ = release.wait(timeout: .now() + 90)
+                }
+            },
+            onError: { message in
+                errors.withLock { $0.append(message) }
+            }
+        )
+
+        // First buffer enters the callback and stays in-flight; second fills the bound; remaining overflow once.
+        normalizer.accept(buffer())
+        #expect(await Task.detached { Self.wait(entered) }.value)
+        for _ in 0..<200 {
+            normalizer.accept(buffer())
+        }
+        release.signal()
+        await normalizer.finish()
+        await Task.yield()
+
+        let m = normalizer.metrics
+        #expect(m.peakBuffers == 2)
+        #expect(m.peakBytes == 128)
+        #expect(m.rejected == 1)
+        #expect(errors.withLock { $0.count } == 1)
+        #expect(errors.withLock { $0.first } == AudioRecorderError.bufferLimit.localizedDescription)
+
+        // Stop-race / drain-before-finalize ordering on a clean instance.
+        let cleanCount = OSAllocatedUnfairLock(initialState: 0)
+        let cleanNormalizer = SingleInputAudioNormalizer(
+            callback: { _ in cleanCount.withLock { $0 += 1 } },
+            onError: { _ in Issue.record("Unexpected normalizer error") }
+        )
+        for _ in 0..<40 {
+            cleanNormalizer.accept(buffer())
+        }
+        await cleanNormalizer.finish()
+        #expect(cleanCount.withLock { $0 } == 40)
+        cleanNormalizer.accept(buffer())
+        await cleanNormalizer.finish()
+        #expect(cleanCount.withLock { $0 } == 40)
+    }
+
+    @Test("ScreenCaptureAudioManager ignores stale SingleInputAudioNormalizer errors across stop and new setup")
+    func singleInputNormalizerGenerationGuardAcrossStopAndRestart() async throws {
+        let manager = ScreenCaptureAudioManager()
+        var recordedErrors: [String] = []
+        manager.onStreamError = { message in
+            recordedErrors.append(message)
+        }
+
+        try await manager.setupCapture(source: .mic(deviceUID: "mic-1")) { _ in }
+        manager.setCapturingForTesting(true)
+        let firstCallback = try #require(manager.inputCallback)
+
+        // Create a buffer with non-finite float samples so normalization fails asynchronously on the normalizer queue.
+        let invalidBuffer = buffer()
+        invalidBuffer.floatChannelData![0][0] = .nan
+        firstCallback(.init(track: .input("mic-1"), presentationTime: 1.0, buffer: invalidBuffer))
+
+        // Immediately stop/cleanup and set up a new capture before the MainActor error task runs.
+        try await manager.stopCapture()
+        await manager.cleanup()
+        try await manager.setupCapture(source: .mic(deviceUID: "mic-2")) { _ in }
+        manager.setCapturingForTesting(true)
+
+        // Yield so any pending MainActor error task from the first normalizer executes.
+        for _ in 0..<10 {
+            await Task.yield()
+        }
+        #expect(recordedErrors.isEmpty)
+        #expect(manager.capturing)
+        await manager.cleanup()
+    }
 }

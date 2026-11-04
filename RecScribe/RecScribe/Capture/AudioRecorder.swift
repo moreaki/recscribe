@@ -287,7 +287,7 @@ final class AudioRecorder: AudioFileWriting {
 }
 
 /// Producer relinquishes this buffer; the encoding queue is its sole reader.
-private nonisolated struct TransferredPCMBuffer: @unchecked Sendable {
+nonisolated struct TransferredPCMBuffer: @unchecked Sendable {
     let value: AVAudioPCMBuffer
 }
 

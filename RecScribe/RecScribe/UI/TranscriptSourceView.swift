@@ -35,7 +35,6 @@ struct TranscriptSourceView: View {
             if playback.loading { ProgressView("Loading audio…").controlSize(.small) }
             if playback.player != nil {
                 SessionPlaybackView(playback: playback)
-                Button("Stop playback") { playback.stop() }
             }
             if let message = error ?? playback.errorMessage { Text(message).font(.caption).foregroundStyle(.orange) }
         }

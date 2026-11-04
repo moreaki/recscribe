@@ -147,6 +147,7 @@ final class AudioTestController: ObservableObject {
             // delivered later by a different device.
             try await capture.setupMultiCapture(source: selected) { recorder.accept($0) }
             try Task.checkCancellation()
+            let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
             sampleStartedAt = nil
             if sample {
                 try prepareTemporaryRoot()
@@ -154,11 +155,11 @@ final class AudioTestController: ObservableObject {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
                 folder = directory
                 let url = directory.appendingPathComponent("audio_test_" + UUID().uuidString + ".wav")
-                try recorder.start(at: url, descriptors: tracks, options: .init(),
+                try recorder.start(at: url, descriptors: tracks, options: .init(), epoch: epoch,
                     levels: { [levels] in levels.snapshot(for: selected) }, continueOnSourceFailure: true,
                     maximumFrames: Int64(sampleSeconds * 48_000))
             } else {
-                try recorder.startPreview(descriptors: tracks, levels: { [levels] in levels.snapshot(for: selected) })
+                try recorder.startPreview(descriptors: tracks, epoch: epoch, levels: { [levels] in levels.snapshot(for: selected) })
             }
             if monitor.enabled { monitor.setEnabled(true, source: selected) }
             try await capture.startCapture()

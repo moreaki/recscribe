@@ -687,4 +687,86 @@ struct AudioCapableFilterTests {
             )
         }
     }
+
+    @Test("AudioSource validates every input route and routes custom channel selections through the lossless multi-source path (#40)")
+    @MainActor
+    func audioSourceValidatesAllInputsAndRoutesCustomChannelsThroughMultiSource() async throws {
+        // 1. One-device default inputsOnly is .microphone and valid.
+        let oneDefault = AudioSource.inputsOnly([InputSelection(deviceUID: "mic-1")])
+        #expect(oneDefault.kind == .microphone)
+        #expect(!oneDefault.usesMultiInputRouting)
+        #expect(!oneDefault.isMixed)
+        #expect(oneDefault.valid)
+
+        // 2. Multi-device inputsOnly is .multiple and valid.
+        let manyInputs = AudioSource.inputsOnly([
+            InputSelection(deviceUID: "mic-1"),
+            InputSelection(deviceUID: "mic-2")
+        ])
+        #expect(manyInputs.kind == .multiple)
+        #expect(manyInputs.usesMultiInputRouting)
+        #expect(manyInputs.isMixed)
+        #expect(manyInputs.valid)
+
+        // 3. Single-device inputsOnly with custom channel routes uses the lossless multi-source path (.multiple).
+        let customRouteInput = InputSelection(
+            deviceUID: "interface-1",
+            routes: [.init(channel: 1, placement: .right)]
+        )
+        let customInputsOnly = AudioSource.inputsOnly([customRouteInput])
+        #expect(customRouteInput.hasCustomRoutes)
+        #expect(customInputsOnly.kind == .multiple)
+        #expect(customInputsOnly.usesMultiInputRouting)
+        #expect(customInputsOnly.isMixed)
+        #expect(!customInputsOnly.requiresScreenCapture)
+        #expect(customInputsOnly.microphoneUID == nil)
+        #expect(customInputsOnly.valid)
+
+        // Verify RecordingController routes customInputsOnly through setupMultiCapture (lossless MultiSourceRecorder).
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("custom-route-\(UUID())")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let capture = MockAudioCapturing()
+        let provider = MockAudioSourceProviding(selectedSource: customInputsOnly)
+        provider.availableInputDevicesResult = [
+            InputDeviceInfo(uid: "interface-1", name: "Audio Interface", inputChannels: 2, sampleRate: 48_000)
+        ]
+        let controller = RecordingController(
+            captureManager: capture,
+            saveLocation: MockSaveLocationProviding(directory: dir),
+            audioSource: provider
+        )
+        _ = try await controller.startRecording(format: .wav)
+        #expect(capture.setupCount == 1)
+        #expect(capture.lastSource == customInputsOnly)
+        let stereoFrame = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 480, interleaved: false) { ch, _ in ch == 1 ? 0.5 : 0.1 }
+        capture.emit(.init(track: .input("interface-1"), presentationTime: 100.0, buffer: stereoFrame))
+        capture.emit(.init(track: .input("interface-1"), presentationTime: 100.01, buffer: stereoFrame))
+        _ = try await controller.stopRecording()
+        let manifests = try FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)
+            .filter { $0.lastPathComponent.hasSuffix(".recscribe.json") && !$0.lastPathComponent.contains(".input:") }
+        let parentSession = try RecordingSession.read(#require(manifests.first))
+        #expect(parentSession.sourceTracks?.count == 1)
+        #expect(parentSession.sourceTracks?.first?.role == .input("interface-1"))
+        #expect(parentSession.sourceTracks?.first?.channelRoutes == [.init(channel: 1, placement: .right)])
+
+        // 4. Invalid routes (negative, duplicate, oversized channel, >32 routes) fail validation even for 1-input mic/mixed/inputsOnly.
+        let negativeRoute = InputSelection(deviceUID: "mic-1", routes: [.init(channel: -1, placement: .center)])
+        let duplicateRoute = InputSelection(deviceUID: "mic-1", routes: [
+            .init(channel: 0, placement: .left),
+            .init(channel: 0, placement: .right)
+        ])
+        let oversizedChannel = InputSelection(deviceUID: "mic-1", routes: [.init(channel: 32, placement: .center)])
+        let tooManyRoutes = InputSelection(
+            deviceUID: "mic-1",
+            routes: (0..<33).map { .init(channel: $0, placement: .center) }
+        )
+
+        for invalidInput in [negativeRoute, duplicateRoute, oversizedChannel, tooManyRoutes] {
+            #expect(!invalidInput.valid)
+            #expect(!AudioSource.inputsOnly([invalidInput]).valid)
+            #expect(!AudioSource(playback: .none, inputs: [invalidInput], usesMultiInputRouting: false).valid)
+            #expect(!AudioSource(playback: .systemAll, inputs: [invalidInput], usesMultiInputRouting: false).valid)
+        }
+    }
 }

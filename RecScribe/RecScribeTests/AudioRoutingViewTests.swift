@@ -79,4 +79,66 @@ struct AudioRoutingViewTests {
         #expect(!monitor.enabled)
         #expect(controller.startCount == 0)
     }
+
+    @Test("Acknowledging duplicate/loopback routes resets when inputs or playback change and requires renewed confirmation")
+    func duplicateRouteAcknowledgmentResetsWhenRouteGraphChanges() {
+        let safeMic = InputSelection(deviceUID: "mic-1")
+        let loopbackA = InputSelection(deviceUID: "virtual-loopback-a")
+        let loopbackB = InputSelection(deviceUID: "virtual-loopback-b")
+
+        // 1. Start with a graph containing one loopback device, unacknowledged.
+        let initial = AudioSource.multiple(
+            appBundleID: nil,
+            inputs: [safeMic, loopbackA],
+            allowDuplicateRoutes: false
+        )
+        #expect(!initial.allowDuplicateRoutes)
+
+        // 2. User acknowledges duplicate/loopback routes for the reviewed graph.
+        let acknowledged = AudioRoutingView.makeUpdatedSource(
+            from: initial,
+            inputs: [safeMic, loopbackA],
+            acknowledge: true
+        )
+        #expect(acknowledged.allowDuplicateRoutes)
+
+        // 3. Unchanged route graph (e.g. no-op save) preserves acknowledgment.
+        let unchanged = AudioRoutingView.makeUpdatedSource(
+            from: acknowledged,
+            inputs: [safeMic, loopbackA]
+        )
+        #expect(unchanged.allowDuplicateRoutes)
+
+        // 4. Adding a new risky loopback device resets allowDuplicateRoutes and requires renewed confirmation.
+        let addedRisky = AudioRoutingView.makeUpdatedSource(
+            from: acknowledged,
+            inputs: [safeMic, loopbackA, loopbackB]
+        )
+        #expect(!addedRisky.allowDuplicateRoutes)
+
+        // 5. Replacing a risky device with another risky device resets allowDuplicateRoutes.
+        let replacedRisky = AudioRoutingView.makeUpdatedSource(
+            from: acknowledged,
+            inputs: [safeMic, loopbackB]
+        )
+        #expect(!replacedRisky.allowDuplicateRoutes)
+
+        // 6. Changing channel routing on an input resets allowDuplicateRoutes.
+        var editedLoopback = loopbackA
+        editedLoopback.routes = [.init(channel: 1, placement: .right)]
+        let editedChannelGraph = AudioRoutingView.makeUpdatedSource(
+            from: acknowledged,
+            inputs: [safeMic, editedLoopback]
+        )
+        #expect(!editedChannelGraph.allowDuplicateRoutes)
+
+        // 7. Changing playback mode (e.g. inputs-only -> systemAll) resets allowDuplicateRoutes.
+        let inputsOnlyAck = AudioSource.inputsOnly([safeMic, loopbackA], allowDuplicateRoutes: true)
+        let playbackAdded = AudioRoutingView.makeUpdatedSource(
+            from: inputsOnlyAck,
+            inputs: [safeMic, loopbackA],
+            playbackState: .systemAll
+        )
+        #expect(!playbackAdded.allowDuplicateRoutes)
+    }
 }

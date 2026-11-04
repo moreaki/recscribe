@@ -4,6 +4,7 @@ import Foundation
 /// The only composition root. Features receive dependencies, not global peers.
 @MainActor
 final class AppServices: ObservableObject {
+    private(set) static weak var shared: AppServices?
     let settings: AppSettings
     let runtime: RuntimeManager
     let library: SessionLibrary
@@ -50,5 +51,21 @@ final class AppServices: ObservableObject {
         locationObservation = settings.$values.removeDuplicates {
             $0.processingLocation == $1.processingLocation && $0.cloudTranscriptionModel == $1.cloudTranscriptionModel
         }.dropFirst().sink { [weak live] _ in live?.configurationChanged() }
+        Self.shared = self
+    }
+
+    func bind(to appDelegate: AppDelegate) {
+        appDelegate.prepareForTermination = { [weak self] in
+            guard let self else { return }
+            await self.recorder.audioTest?.close()
+            if self.recorder.isRecording { await self.recorder.stopRecording() }
+            await self.recorder.waitForFailureFinalization()
+            await self.live.shutdown()
+            await self.library.shutdown()
+            await self.runtime.shutdown()
+        }
+        if appDelegate.menuBarController == nil {
+            appDelegate.menuBarController = MenuBarController(viewModel: recorder, live: live)
+        }
     }
 }

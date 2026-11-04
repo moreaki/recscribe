@@ -20,7 +20,7 @@ struct SessionPlaybackTransportTests {
 
     private func entry() -> SessionEntry {
         var session = RecordingSession(sampleRate: 48_000, channels: 2, channelMap: ["left", "right"], options: .init())
-        session.parts = [.init(path: "synthetic.wav", startSample: 0, frames: 120 * 48_000, startedAt: Date())]
+        session.parts = [.init(path: "synthetic.wav", startSample: 0, frames: Int64(120) * 48_000, startedAt: Date())]
         return .init(id: URL(fileURLWithPath: "/synthetic/transport.recscribe.json"), session: session)
     }
 

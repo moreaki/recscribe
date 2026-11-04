@@ -228,7 +228,7 @@ struct LiveTranscriptionTests {
 
     @Test func timingReviewDoesNotStopControllerOrLoseSpeech() async throws {
         let segments = try parseEntries(#"[{"offsets":{"from":5000,"to":5000},"text":"retained"},{"offsets":{"from":9000,"to":10000},"text":"following"}]"#)
-        let live = LiveTranscription(work: { _, directory, cursor, _, _, _ in
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, directory, cursor, _, _, _ in
             guard cursor == 0 else { return nil }
             return .init(startFrame: 0, endFrame: 10_000, availableFrames: 10_000, sampleRate: 1000,
                          durationSeconds: 0.01, segments: segments, directory: directory)
@@ -285,28 +285,36 @@ struct LiveTranscriptionTests {
             requests.append((cursor, final))
             return try await withCheckedThrowingContinuation { pending.append($0) }
         }
-        func finish(_ result: LiveChunkResult?) { pending.removeFirst().resume(returning: result) }
-        func fail(_ error: any Error) { pending.removeFirst().resume(throwing: error) }
+        func finish(_ result: LiveChunkResult?) async {
+            await waitUntil("pending live worker completion") { !self.pending.isEmpty }
+            guard !pending.isEmpty else { Issue.record("Cannot finish a worker before a request is pending"); return }
+            pending.removeFirst().resume(returning: result)
+        }
+        func fail(_ error: any Error) async {
+            await waitUntil("pending live worker failure") { !self.pending.isEmpty }
+            guard !pending.isEmpty else { Issue.record("Cannot fail a worker before a request is pending"); return }
+            pending.removeFirst().resume(throwing: error)
+        }
         func recordLanguage(_ language: String) { requestedLanguages.append(language) }
     }
 
     @Test func corruptChunksRetryOnceAtLastSuccessfulCursorAndCanResume() async {
         let worker = Worker()
         let source = URL(fileURLWithPath: "/synthetic.wav")
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         live.setEnabled(true)
         live.recordingStarted(source)
         await waitUntil("first chunk") { worker.pending.count == 1 }
         let speech = LiveSegment(id: UUID(), startSeconds: 0, endSeconds: 10, channel: 0, language: "de", text: "speech")
-        worker.finish(.init(startFrame: 0, endFrame: 10, availableFrames: 20, sampleRate: 1,
+        await worker.finish(.init(startFrame: 0, endFrame: 10, availableFrames: 20, sampleRate: 1,
                             durationSeconds: 0.01, segments: [speech], directory: source))
         await waitUntil("next chunk") { worker.pending.count == 1 }
-        worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
+        await worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
         await waitUntil("bounded retry") { worker.pending.count == 1 && worker.requests.count == 3 }
         #expect(worker.requests.map(\.0) == [0, 10, 10])
         #expect(live.cursor == 10 && live.enabled)
         #expect(live.status.contains("Retrying"))
-        worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
+        await worker.fail(LiveWhisperOutputError.invalidSpeechTimestamps)
         await waitUntil("retry budget exhausted") { !live.busy }
         #expect(worker.requests.count == 1 + LiveTranscriptionPolicy.maximumLocalChunkAttempts)
         #expect(live.cursor == 10 && !live.enabled)
@@ -317,25 +325,25 @@ struct LiveTranscriptionTests {
         await waitUntil("manual retry") { worker.pending.count == 1 }
         #expect(worker.requests.last?.0 == 10)
         live.setEnabled(false)
-        worker.finish(nil)
+        await worker.finish(nil)
         await live.shutdown()
     }
 
     @Test func recoveredMarkerOnlyChunkAdvancesCursorWithoutDisablingLiveWork() async {
         let worker = Worker()
         let source = URL(fileURLWithPath: "/synthetic.wav")
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         live.setEnabled(true)
         live.recordingStarted(source)
         await waitUntil("first attempt") { worker.pending.count == 1 }
-        worker.fail(LiveWhisperOutputError.malformedJSON)
+        await worker.fail(LiveWhisperOutputError.malformedJSON)
         await waitUntil("retry") { worker.pending.count == 1 && worker.requests.count == 2 }
         live.recordingStopped()
-        worker.finish(.init(asrRuns: 1, startFrame: 0, endFrame: 10, availableFrames: 10, sampleRate: 1,
+        await worker.finish(.init(asrRuns: 1, startFrame: 0, endFrame: 10, availableFrames: 10, sampleRate: 1,
                             durationSeconds: 0.01, segments: [], directory: source))
         await waitUntil("tail") { worker.pending.count == 1 }
         #expect(live.cursor == 10 && live.enabled)
-        worker.finish(nil)
+        await worker.finish(nil)
         await waitUntil("drained") { !live.busy }
         #expect(worker.requests.map(\.0) == [0, 0, 10])
         #expect(live.segments.isEmpty && live.errorMessage == nil)
@@ -345,11 +353,11 @@ struct LiveTranscriptionTests {
 
     @Test func sourceFailuresAreNotRetried() async {
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         live.setEnabled(true)
         live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
         await waitUntil("source read") { worker.pending.count == 1 }
-        worker.fail(SessionError.diskFull)
+        await worker.fail(SessionError.diskFull)
         await waitUntil("source failure") { !live.busy }
         #expect(worker.requests.count == 1)
         #expect(live.cursor == 0 && !live.enabled)
@@ -358,14 +366,14 @@ struct LiveTranscriptionTests {
 
     @Test func cancellationDuringRetryCannotCommitOrStartAnotherAttempt() async {
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         live.setEnabled(true)
         live.recordingStarted(URL(fileURLWithPath: "/synthetic.wav"))
         await waitUntil("first attempt") { worker.pending.count == 1 }
-        worker.fail(LiveWhisperOutputError.invalidTimestamps)
+        await worker.fail(LiveWhisperOutputError.invalidTimestamps)
         await waitUntil("retry") { worker.pending.count == 1 && worker.requests.count == 2 }
         live.setEnabled(false)
-        worker.fail(LiveWhisperOutputError.invalidTimestamps)
+        await worker.fail(LiveWhisperOutputError.invalidTimestamps)
         await live.shutdown()
         #expect(worker.requests.count == 2)
         #expect(live.cursor == 0 && live.errorMessage == nil)
@@ -373,7 +381,7 @@ struct LiveTranscriptionTests {
 
     @Test func automaticLanguageRemainsAutomaticAcrossSpeechChunks() async {
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, _, settings, _ in
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, _, settings, _ in
             await worker.recordLanguage(settings.sourceLanguage)
             guard cursor < 4 else { return nil }
             let segment = LiveSegment(id: UUID(), startSeconds: Double(cursor), endSeconds: Double(cursor + 1),
@@ -392,7 +400,7 @@ struct LiveTranscriptionTests {
 
     @Test func optInIsSerialAndCancelledResultsCannotAdvanceCursor() async {
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         let source = URL(fileURLWithPath: "/synthetic.wav")
         live.recordingStarted(source)
         #expect(worker.requests.isEmpty)
@@ -402,16 +410,16 @@ struct LiveTranscriptionTests {
         live.setEnabled(true)
         #expect(worker.requests.count == 1)
         let stale = LiveChunkResult(startFrame: 0, endFrame: 20, availableFrames: 20, sampleRate: 1, durationSeconds: 1, segments: [], directory: source)
-        worker.finish(stale)
+        await worker.finish(stale)
         await waitUntil("replacement request") { worker.requests.count == 2 }
         #expect(live.cursor == 0)
         #expect(worker.requests.last?.0 == 0)
         live.recordingStopped()
-        worker.finish(stale)
+        await worker.finish(stale)
         await waitUntil("tail request") { worker.requests.count == 3 }
         #expect(worker.requests.last?.0 == 20)
         #expect(worker.requests.last?.1 == true)
-        worker.finish(nil)
+        await worker.finish(nil)
         await waitUntil("live drain complete") { !live.busy }
         #expect(live.cursor == 20)
         #expect(live.errorMessage == nil)
@@ -434,16 +442,16 @@ struct LiveTranscriptionTests {
 
     @Test func interruptedDraftCannotBecomeReadyAndANewRecordingResetsIt() async {
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         let source = URL(fileURLWithPath: "/synthetic.wav")
         live.setEnabled(true)
         live.recordingStarted(source)
         await waitUntil("live chunk") { worker.pending.count == 1 }
         live.recordingStopped(needsReview: true)
-        worker.finish(.init(asrRuns: 0, startFrame: 0, endFrame: 20, availableFrames: 20, sampleRate: 1,
+        await worker.finish(.init(asrRuns: 0, startFrame: 0, endFrame: 20, availableFrames: 20, sampleRate: 1,
                             durationSeconds: 0.013, segments: [], directory: source))
         await waitUntil("final chunk") { worker.pending.count == 1 }
-        worker.finish(nil)
+        await worker.finish(nil)
         await waitUntil("draft drained") { !live.busy }
         #expect(live.captureNeedsReview)
         #expect(live.status == "Partial live draft · recording needs review")
@@ -470,7 +478,7 @@ struct LiveTranscriptionTests {
     }
 
     @Test func disabledLiveStatusTracksStopAndNewRecordingAfterASRError() async {
-        let live = LiveTranscription(work: { _, _, _, _, _, _ in throw SessionError.invalid("Synthetic ASR failure") })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, _, _, _, _ in throw SessionError.invalid("Synthetic ASR failure") })
         let source = URL(fileURLWithPath: "/synthetic.wav")
         live.setEnabled(true)
         live.recordingStarted(source)
@@ -501,7 +509,7 @@ struct LiveTranscriptionTests {
     }
 
     @Test func failuresDisableOnlyLiveWorkAndNewRecordingRejectsOldResults() async {
-        let broken = LiveTranscription(work: { _, _, _, _, _, _ in throw SessionError.invalid("Synthetic ASR failure") })
+        let broken = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, _, _, _, _ in throw SessionError.invalid("Synthetic ASR failure") })
         broken.setEnabled(true)
         broken.recordingStarted(URL(fileURLWithPath: "/first.wav"))
         await waitUntil("ASR failure surfaced") { !broken.busy }
@@ -510,17 +518,17 @@ struct LiveTranscriptionTests {
         #expect(broken.status.contains("recording is unaffected"))
         await broken.shutdown()
         let worker = Worker()
-        let live = LiveTranscription(work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
+        let live = LiveTranscription(liveRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), work: { _, _, cursor, final, _, _ in try await worker.run(cursor: cursor, final: final) })
         live.setEnabled(true)
         live.recordingStarted(URL(fileURLWithPath: "/first.wav"))
         await waitUntil("old request") { worker.pending.count == 1 }
         live.recordingStarted(URL(fileURLWithPath: "/second.wav"))
-        worker.finish(.init(startFrame: 0, endFrame: 99, availableFrames: 99, sampleRate: 1, durationSeconds: 1,
+        await worker.finish(.init(startFrame: 0, endFrame: 99, availableFrames: 99, sampleRate: 1, durationSeconds: 1,
                             segments: [], directory: URL(fileURLWithPath: "/old")))
         await waitUntil("new session request") { worker.requests.count == 2 }
         #expect(live.cursor == 0)
         live.setEnabled(false)
-        worker.finish(nil)
+        await worker.finish(nil)
         await live.shutdown()
     }
 }

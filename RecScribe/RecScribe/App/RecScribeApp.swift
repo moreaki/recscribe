@@ -26,7 +26,7 @@ struct RecScribeApp: App {
             }
         }
         Settings {
-            ConfigurationView().environment(services.recorder)
+            ConfigurationView(liveDrafts: services.live.drafts).environment(services.recorder)
                 .environment(services.settings).environment(services.runtime).environment(services.library)
                 .environment(\.studioNavigation, services.navigation)
         }.windowResizability(.contentMinSize)

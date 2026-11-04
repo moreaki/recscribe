@@ -56,6 +56,7 @@ import Observation
         self.controller =
             controller
             ?? RecordingController(
+                captureManager: ScreenCaptureAudioManager(hardwareObserver: self.audio.hardware),
                 saveLocation: storage,
                 audioSource: source, levels: self.audio.levels, monitor: self.audio.monitor)
         self.clock = clock ?? SystemDurationClock()

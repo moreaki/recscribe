@@ -248,3 +248,28 @@ routing…** (⌘2). Variable groups use version-3 manifests; each device has it
 gain, source recording and health. See [multiple-input recording](multiple-inputs.md)
 for the new path, version-3 gain mapping, resource bounds and remaining hardware
 checks. The two-role version-2 path described above remains supported.
+
+### Preserved live drafts and storage limits
+
+Settings → Storage lists preserved live drafts by date and size. RecScribe keeps
+raw recognizer results and checkpoints; it does not automatically delete them.
+New optional live processing pauses at 1 GiB of managed draft data or 100 draft
+folders. Existing work checks storage between completed audio windows, so the
+last window can exceed the byte limit slightly. Audio recording remains
+independent and continues locally. After reviewing old drafts, explicitly move
+unwanted drafts to Trash and re-enable live transcription.
+
+Active drafts, recording/test capture and folders containing recording manifests
+are protected. Trash moves are recoverable and keep original recordings in their
+recording folder. Folder inspection uses bounded background metadata reads;
+unreadable or excessively large trees pause optional processing until reviewed.
+A link or unexpected owner is never followed for cleanup. Disposable working WAVs
+continue to be cleaned separately; canonical text, raw ASR and checkpoints are
+not scratch files.
+
+Hardware discovery normally uses shared Core Audio events. A central bounded
+refresh fallback is used only if listener registration fails; there are no
+routine per-view polling loops. Preview recovery waits for the same selected
+input UID, never substitutes a similarly named device, and is limited to three
+rebuilds per preview. A failed source during recording remains a preserved partial
+track; surviving sources keep recording. Stop and start a new take to rejoin it.

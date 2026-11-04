@@ -28,18 +28,25 @@ final class AppServices {
             rememberJob: { job, source in
                 defaults.set(job, forKey: "workspace.lastJob"); defaults.set(source, forKey: "workspace.lastSource")
             }, jobsDirectory: supportDirectory.appendingPathComponent("Jobs", isDirectory: true))
+        let gate = CaptureSessionGate()
         let live = LiveTranscription(liveRoot: supportDirectory.appendingPathComponent("Live", isDirectory: true),
-                                     settings: { settings.values })
+                                     settings: { settings.values }, draftGate: gate)
+        live.drafts.canManage = { [weak library, weak live] in
+            library?.recordingActive != true && library?.liveWorkActive != true && live?.busy != true
+        }
+        live.drafts.onRemoved = { [weak library, weak live] draft in
+            live?.forgetDraft(draft)
+            library?.forgetTranscript(draft)
+        }
         live.onBusyChange = { [weak library] in library?.setLiveWork($0) }
         live.onCloudTranscript = { [weak library] job, source in library?.acceptCloudTranscript(job, source: source) }
         runtime.isRecording = { [weak library] in (library?.recordingActive ?? false) || (library?.liveWorkActive ?? false) }
         let source = AudioSourceManager(defaults: defaults), location = SaveLocationManager(defaults: defaults)
-        let gate = CaptureSessionGate()
-        let test = AudioTestController(source: source, levels: audio.levels, monitor: audio.monitor,
-            gate: gate, playback: audio.makePlayback(), saveDirectory: { location.resolvedDirectory })
+        let test = AudioTestController(capture: ScreenCaptureAudioManager(hardwareObserver: audio.hardware), source: source, levels: audio.levels, monitor: audio.monitor,
+            gate: gate, playback: audio.makePlayback(), saveDirectory: { location.resolvedDirectory }, hardwareObserver: audio.hardware)
         test.onActivity = { [weak library] in library?.setRecording($0) }
         test.onRetained = { [weak library] in library?.load($0.deletingLastPathComponent()) }
-        let controller = RecordingController(saveLocation: location, audioSource: source, sessionLibrary: library, liveTranscription: live,
+        let controller = RecordingController(captureManager: ScreenCaptureAudioManager(hardwareObserver: audio.hardware), saveLocation: location, audioSource: source, sessionLibrary: library, liveTranscription: live,
                                              levels: audio.levels,
                                              monitor: audio.monitor,
                                              captureGate: gate,

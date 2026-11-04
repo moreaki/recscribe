@@ -35,11 +35,11 @@ struct RecordingLevelsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 if let uid = source.microphoneUID { DeviceVolumeView(uid: uid, input: true) }
                 Divider()
-                ListeningControls(levels: playbackLevels, title: "Playback output")
+                ListeningControls(levels: playbackLevels, title: "Playback output", hardwareObserver: recorder.audio.hardware)
                 Toggle("Monitor recording through headphones", isOn: Binding(get: { monitor.enabled }, set: { monitor.setEnabled($0, source: source) }))
                 Text("Monitor plays the recording mix only while audio is captured. Use headphones to avoid acoustic feedback. Monitoring starts off and turns off after each take.")
                     .font(.caption).foregroundStyle(.secondary)
-                if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output") }
+                if monitor.enabled { ListeningControls(levels: monitor.levels, title: "Live monitor output", hardwareObserver: recorder.audio.hardware) }
                 if let warning = monitor.warning { Text(warning).font(.caption).foregroundStyle(.orange) }
             }.padding(.top, 8)
         }.font(.callout).fixedSize(horizontal: false, vertical: true)
@@ -235,7 +235,7 @@ struct SessionPlaybackView: View {
                 }
                 if showListeningControls {
                     DisclosureGroup("Playback output", isExpanded: $showOutput) {
-                        ListeningControls(levels: playback.levels, title: "Playback output")
+                        ListeningControls(levels: playback.levels, title: "Playback output", hardwareObserver: playback.hardwareObserver)
                             .padding(.top, 4)
                     }.font(.caption)
                 }

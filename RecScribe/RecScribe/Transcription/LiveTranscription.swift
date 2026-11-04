@@ -43,6 +43,19 @@ nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
     var timingIssue: TimingIssue? = nil
 }
 
+nonisolated extension LiveSegment {
+    func seekTarget(recording: Bool, sourceAvailable: Bool) -> Double? {
+        guard !recording, sourceAvailable, startSeconds.isFinite, endSeconds.isFinite,
+              startSeconds >= 0, endSeconds >= startSeconds else { return nil }
+        return startSeconds
+    }
+    func containsPlayback(_ position: Double) -> Bool {
+        // A point with unknown duration is seekable; never invent a highlight interval.
+        timingIssue == nil && seekTarget(recording: false, sourceAvailable: true) != nil &&
+            endSeconds > startSeconds && position >= startSeconds && position < endSeconds
+    }
+}
+
 nonisolated struct LiveChunkResult: Codable, Sendable {
     var schemaVersion = 1
     var needsReview = true
@@ -115,6 +128,7 @@ nonisolated struct LiveChunkTiming: Sendable {
     @ObservationIgnored private var token: WorkCancellation?
     @ObservationIgnored private var cleanupTask: Task<LiveCleanupReport, Never>?
     @ObservationIgnored private var cleanupToken: WorkCancellation?
+    let drafts: LiveDraftStore
     private let settings: () -> AppSettings.Values
     private let work: @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult?
     private let wait: @Sendable () async throws -> Void
@@ -126,6 +140,7 @@ nonisolated struct LiveChunkTiming: Sendable {
 
     init(liveRoot: URL = AppSettings.supportDirectory.appendingPathComponent("Live", isDirectory: true),
          settings: @escaping () -> AppSettings.Values = { .init() },
+         draftGate: CaptureSessionGate = CaptureSessionGate(),
          work: @escaping @Sendable (URL, URL, Int64, Bool, AppSettings.Values, WorkCancellation) async throws -> LiveChunkResult? = { source, output, cursor, final, settings, token in
              try await Task.detached(priority: .utility) {
                  try LiveWhisperTranscriber.step(manifest: source, directory: output, cursor: cursor,
@@ -135,11 +150,13 @@ nonisolated struct LiveChunkTiming: Sendable {
          cloudKey: @escaping () throws -> Data = { try IntelligenceCredentials().key() },
          cloudClient: RealtimeTranscriber = .init()) {
         self.liveRoot = liveRoot
+        self.drafts = LiveDraftStore(root: liveRoot, gate: draftGate, isActive: Self.isActiveDraft)
         self.settings = settings
         self.work = work
         self.wait = wait
         self.cloudKey = cloudKey
         self.cloudClient = cloudClient
+        drafts.onRemoved = { [weak self] draft in self?.forgetDraft(draft) }
     }
 
     deinit {
@@ -153,6 +170,21 @@ nonisolated struct LiveChunkTiming: Sendable {
             await worker?.value
             Self.activeDirectoryRegistry.withLock { _ = $0.removeValue(forKey: id) }
         }
+    }
+
+    nonisolated static func isActiveDraft(_ directory: URL) -> Bool {
+        let path = directory.standardizedFileURL.path
+        return activeDirectoryRegistry.withLock { registry in registry.values.contains { $0.contains(path) } }
+    }
+
+    func forgetDraft(_ draft: URL) {
+        guard directory?.standardizedFileURL.path == draft.standardizedFileURL.path, !capturing, !busy else { return }
+        setEnabled(false)
+        invalidate()
+        directory = liveRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        cursor = 0; segments = []; lastChunk = nil
+        status = "Live draft moved to Trash · original recording retained"
+        syncActiveDirectoryRegistration()
     }
 
     var activeDirectories: Set<URL> {
@@ -334,6 +366,18 @@ nonisolated struct LiveChunkTiming: Sendable {
         cancel: WorkCancellation? = nil,
         shouldCancel: () -> Bool = { Task.isCancelled }
     ) -> LiveCleanupReport {
+        // The same cross-process lease protects active recognition and manual Trash.
+        // A busy worker postpones scratch cleanup; it never loses its working WAV.
+        var rootInfo = stat()
+        if lstat(root.path, &rootInfo) != 0, errno == ENOENT { return .init() }
+        let lease: LiveDraftLease
+        do { lease = try LiveDraftStorage.lockExistingRoot(root) }
+        catch let error as POSIXError where error.code.rawValue == EWOULDBLOCK {
+            return .init(deferredForActivity: true)
+        } catch {
+            return .init(failures: [.init(url: root, operation: .lease, posixErrorCode: nil, message: error.localizedDescription)])
+        }
+        defer { withExtendedLifetime(lease) {} }
         let retained = normalizedPaths(for: activeDirectories)
         return LiveWorkingAudioCleanup.run(
             in: root, ownerUID: expectedOwnerUID, maxDrafts: maxDraftDirectories,
@@ -381,6 +425,10 @@ nonisolated struct LiveChunkTiming: Sendable {
             var cloudJobCreated = false
             var attempt = 0
             do {
+                guard let drafts = self?.drafts else { throw CancellationError() }
+                let lease = try await drafts.admit(directory, cancel: token)
+                defer { withExtendedLifetime(lease) {} }
+                try token.check()
                 if let cloud {
                     try await CloudTranscriptArtifacts.begin(directory, source: manifest, consent: cloud.consent)
                     cloudJobCreated = true
@@ -432,6 +480,8 @@ nonisolated struct LiveChunkTiming: Sendable {
                             asrRuns: result.asrRuns)
                         lagSeconds = Double(max(0, result.availableFrames - cursor)) / Double(result.sampleRate)
                         status = capturing ? "Live draft · \(Int(lagSeconds)) s queued at last snapshot" : "Finishing live draft…"
+                        // Check between completed windows, not on the capture queue or idle poll.
+                        try await drafts.checkBudget(directory, cancel: token)
                     } else if final {
                         if let cloud {
                             try await CloudTranscriptArtifacts.finish(directory, source: manifest, consent: cloud.consent, cancel: token)

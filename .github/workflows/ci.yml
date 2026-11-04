@@ -147,7 +147,10 @@ jobs:
 
   compatibility-build:
     name: Compatibility build (Xcode 26.3)
-    runs-on: macos-15
+    # Keep the older compiler gate available independently of ARM runner
+    # capacity. Native ARM functional/TSan tests and Release remain above;
+    # this standard Intel runner also checks the other supported architecture.
+    runs-on: macos-15-intel
     timeout-minutes: 20
     env:
       RECSCRIBE_COMPAT_XCODE: '26.3'

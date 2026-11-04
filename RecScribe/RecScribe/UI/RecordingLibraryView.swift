@@ -47,7 +47,6 @@ struct RecordingLibraryView: View {
                 }.disabled(library.recordingActive)
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }
-            if playback.loading { ProgressView("Loading session…") }
             SessionPlaybackView(playback: playback)
             List(library.entries) { entry in
                 VStack(alignment: .leading, spacing: GlassSpacing.m) {
@@ -66,6 +65,14 @@ struct RecordingLibraryView: View {
                     Text("\(entry.session.parts.count) parts · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
+                        if entry.needsRecovery, !library.recordingActive, !library.liveWorkActive {
+                            Button("Recover session", systemImage: "arrow.clockwise.circle") {
+                                library.enqueue(entry.id, recover: true)
+                            }
+                            .disabled(!library.canDeleteRecording)
+                            .help("Verify and recover this interrupted session, preserving its original audio")
+                            .accessibilityIdentifier("recover-session")
+                        }
                         Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
                         Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
                         Menu {
@@ -115,7 +122,6 @@ struct RecordingLibraryView: View {
                 Text("\(failure.id.lastPathComponent): \(failure.message)")
                     .font(.caption).foregroundStyle(theme.colors.statusWarning).textSelection(.enabled)
             }
-            if let error = playback.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning) }
             HStack {
                 ProgressView(value: library.progress).frame(width: theme.metrics.controlHeightMedium * 3)
                 Text(library.activity).font(.caption)

@@ -27,7 +27,6 @@ struct AudioTestControls: View {
                     }.font(.caption).foregroundStyle(.orange)
                 }
                 SessionPlaybackView(playback: test.playback, showListeningControls: false)
-                AudioTestPlaybackError(playback: test.playback)
             }
             if let error = test.errorMessage {
                 Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
@@ -76,14 +75,6 @@ struct AudioTestControls: View {
                 Button("Discard", role: .destructive) { test.discard() }.disabled(!enabled)
             }
         }.controlSize(.small)
-    }
-}
-
-private struct AudioTestPlaybackError: View {
-    @Bindable var playback: SessionPlayback
-    var body: some View {
-        if playback.loading { Text("Loading verified sample…").font(.caption) }
-        if let error = playback.errorMessage { Text(error).font(.caption).foregroundStyle(.orange) }
     }
 }
 

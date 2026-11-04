@@ -212,42 +212,108 @@ struct DeviceVolumeView: View {
     }
 }
 
-/// Shared audio transport and app-owned listening controls.
+/// Shared file-backed transport, with a compact layout for narrow workspace panes.
 struct SessionPlaybackView: View {
     @Bindable var playback: SessionPlayback
     var showListeningControls = true
+    var showsSourceIdentity = true
     @State private var showOutput = false
+
     var body: some View {
-        if playback.player != nil {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Button { playback.togglePlayback() } label: {
-                        Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
-                    }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
-                        .keyboardShortcut("p", modifiers: [.command, .option])
-                        .help("Pause or resume playback (⌘⌥P)")
-                    Button { playback.skip(by: -15) } label: {
-                        Image(systemName: "gobackward.15")
-                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip back 15 seconds")
-                        .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
-                        .help("Skip back 15 seconds (⌘⌥←)")
-                    Button { playback.skip(by: 15) } label: {
-                        Image(systemName: "goforward.15")
-                    }.disabled(playback.duration <= 0).accessibilityLabel("Skip forward 15 seconds")
-                        .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
-                        .help("Skip forward 15 seconds (⌘⌥→)")
-                    Slider(value: Binding(get: { min(playback.position, max(0.001, playback.duration)) }, set: { playback.seek(to: $0) }), in: 0...max(0.001, playback.duration))
-                        .disabled(playback.duration <= 0).accessibilityLabel("Playback position")
-                    Text("\(playback.formattedPosition) / \(playback.formattedDuration)").font(.caption).monospacedDigit()
-                    Button("Stop") { playback.stop() }
+        if playback.hasPresentation {
+            VStack(alignment: .leading, spacing: GlassSpacing.s) {
+                if showsSourceIdentity, let name = playback.sourceName {
+                    Text(name).workspaceFont(.detail).lineLimit(2).fixedSize(horizontal: false, vertical: true).help(name)
+                        .accessibilityIdentifier("playback-source")
                 }
-                if showListeningControls {
-                    DisclosureGroup("Playback output", isExpanded: $showOutput) {
-                        ListeningControls(levels: playback.levels, title: "Playback output", hardwareObserver: playback.hardwareObserver)
-                            .padding(.top, 4)
-                    }.font(.caption)
+                PlaybackStatusView(phase: playback.phase, errorMessage: playback.errorMessage)
+                if playback.player != nil {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: GlassSpacing.s) {
+                            transportButtons
+                            timeline.frame(minWidth: WorkspaceStyle.playbackSliderMinimumWidth)
+                            timecode.fixedSize(horizontal: true, vertical: false)
+                            stopButton
+                        }
+                        VStack(alignment: .leading, spacing: GlassSpacing.s) {
+                            HStack(spacing: GlassSpacing.s) { transportButtons; Spacer(); stopButton }
+                            timeline
+                            timecode.frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    }
+                    if showListeningControls {
+                        DisclosureGroup("Playback output", isExpanded: $showOutput) {
+                            ListeningControls(levels: playback.levels, title: "Playback output", hardwareObserver: playback.hardwareObserver)
+                                .padding(.top, GlassSpacing.xs)
+                        }.workspaceFont(.detail)
+                    }
+                } else {
+                    Button(playback.loading ? "Cancel" : "Dismiss") { playback.stop() }
+                        .accessibilityLabel(playback.loading ? "Cancel loading audio" : "Dismiss playback error")
                 }
-            }
+            }.controlSize(.small)
         }
+    }
+
+    private var transportButtons: some View {
+        HStack(spacing: GlassSpacing.s) {
+            Button { playback.togglePlayback() } label: {
+                Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+            }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
+                .accessibilityIdentifier("playback-toggle")
+                .keyboardShortcut("p", modifiers: [.command, .option])
+                .help("Pause or resume playback (⌘⌥P)")
+                .disabled(playback.phase == .failed)
+            Button { playback.skip(by: -PlaybackPolicy.skipSeconds) } label: {
+                Image(systemName: PlaybackPolicy.backwardSymbol)
+            }.disabled(!playback.canSeek)
+                .accessibilityLabel("Skip back \(PlaybackPolicy.skipSeconds.formatted()) seconds")
+                .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+                .help("Skip back \(PlaybackPolicy.skipSeconds.formatted()) seconds (⌘⌥←)")
+            Button { playback.skip(by: PlaybackPolicy.skipSeconds) } label: {
+                Image(systemName: PlaybackPolicy.forwardSymbol)
+            }.disabled(!playback.canSeek)
+                .accessibilityLabel("Skip forward \(PlaybackPolicy.skipSeconds.formatted()) seconds")
+                .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+                .help("Skip forward \(PlaybackPolicy.skipSeconds.formatted()) seconds (⌘⌥→)")
+        }.fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var timeline: some View {
+        PlaybackPositionSlider(playback: playback)
+    }
+
+    private var timecode: some View {
+        Text("\(playback.formattedPosition) / \(playback.formattedDuration)")
+            .workspaceFont(.detail).monospacedDigit().multilineTextAlignment(.trailing)
+            .accessibilityLabel(playback.positionAccessibilityValue)
+    }
+    private var stopButton: some View {
+        Button("Stop") { playback.stop() }.accessibilityLabel("Stop playback")
+    }
+}
+
+struct PlaybackStatusView: View {
+    let phase: PlaybackPhase
+    var errorMessage: String?
+    @Environment(\.glassTheme) private var theme
+    var body: some View {
+        Group {
+            if phase == .preparing || phase == .buffering {
+                HStack(spacing: GlassSpacing.sm) {
+                    ProgressView().controlSize(.small)
+                    Text(phase.label)
+                }
+            } else if phase == .failed {
+                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                    Label(phase.label, systemImage: "exclamationmark.triangle")
+                    if let errorMessage { Text(errorMessage).textSelection(.enabled) }
+                    Text("Reopen or verify the recording before trying playback again.")
+                }.foregroundStyle(theme.colors.statusWarning)
+            } else { Text(phase.label).foregroundStyle(.secondary) }
+        }
+        .workspaceFont(.detail).fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("playback-status")
     }
 }

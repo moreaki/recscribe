@@ -24,6 +24,7 @@ enum WorkspaceStyle {
     static let readingWidth: CGFloat = 720
     static let lineSpacing: CGFloat = 6
     static let waveformHeight: CGFloat = 64
+    static let playbackSliderMinimumWidth: CGFloat = 120
 
     /// Semantic typography roles shared across workspace chrome, popover,
     /// onboarding, and notice panels. Scales with `DynamicTypeSize` on macOS.

@@ -224,6 +224,10 @@ struct SessionPlaybackAcceptanceTests {
                 characters: String(UnicodeScalar(NSRightArrowFunctionKey)!),
                 charactersIgnoringModifiers: String(UnicodeScalar(NSRightArrowFunctionKey)!), isARepeat: false, keyCode: 124))
             let before = playback.position, requestsBefore = gate.targets.count
+            // Layout awaits allow other test windows to become key. Rebind the
+            // event destination synchronously, then send exactly one shortcut.
+            window.makeKey()
+            try #require(NSApp.keyWindow === window, "Keyboard fixture must own the key window")
             NSApp.sendEvent(event)
             #expect(gate.targets.count == requestsBefore + 1, "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")
             #expect(playback.position == min(playback.duration, before + PlaybackPolicy.skipSeconds), "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")

@@ -577,22 +577,13 @@ nonisolated enum AudioRoutingSummary {
     }
 }
 
-/// Compact routing summary, with an optional shortcut for the separate Settings window.
+/// Source and mute status shared by capture surfaces and the Settings workspace.
 struct MultipleInputsView: View {
     @Bindable var recorder: RecorderViewModel
-    var showsRoutingLink = true
-    @Environment(\.openWindow) private var openWindow
-    @Environment(\.studioNavigation) private var navigation
     private var source: AudioSource { recorder.selectedSource }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if showsRoutingLink {
-                Button("Audio routing…", systemImage: "point.3.connected.trianglepath.dotted") {
-                    NSApp.activate(ignoringOtherApps: true)
-                    AppWindow.open(.routing, using: openWindow, navigation: navigation)
-                }
-            }
             if source.kind == .multiple {
                 let count = source.inputSelections.count
                 Text("\(source.requiresScreenCapture ? "Playback + " : "")\(count) \(count == 1 ? "input" : "inputs") → stereo recording mix")

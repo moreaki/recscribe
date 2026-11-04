@@ -12,12 +12,14 @@ struct RecScribeApp: App {
         Window("RecScribe", id: AppWindow.studio.rawValue) {
             StudioView().environment(services.recorder)
                 .environment(services.live).environment(services.library).environment(services.settings)
+                .environment(services.runtime)
                 .environment(\.studioNavigation, services.navigation)
                 .environment(\.makeOverflowMenu, services.makeOverflowMenu)
         }
         .defaultSize(AppWindow.studio.defaultSize).windowResizability(.contentMinSize)
         .commands {
             CommandGroup(after: .newItem) { OpenRecordingsCommand(navigation: services.navigation) }
+            CommandGroup(replacing: .appSettings) { OpenSettingsCommand(navigation: services.navigation) }
             CommandGroup(replacing: .help) {
                 Button("Welcome to RecScribe") {
                     NSApp.activate(ignoringOtherApps: true)
@@ -25,11 +27,17 @@ struct RecScribeApp: App {
                 }
             }
         }
-        Settings {
-            ConfigurationView().environment(services.recorder)
-                .environment(services.settings).environment(services.runtime).environment(services.library)
-                .environment(\.studioNavigation, services.navigation)
-        }.windowResizability(.contentMinSize)
+    }
+}
+
+private struct OpenSettingsCommand: View {
+    let navigation: StudioNavigation
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Settings…") {
+            AppWindow.open(.settings, using: openWindow, navigation: navigation)
+        }.keyboardShortcut(",")
     }
 }
 
@@ -61,7 +69,7 @@ enum AppWindow: String {
         case .studio: "1"
         case .routing: "2"
         case .recordings: "3"
-        case .settings: "," // SwiftUI's native Settings command.
+        case .settings: "," // The Settings workspace command.
         }
     }
 
@@ -93,9 +101,7 @@ enum AppWindow: String {
     }
 
     @MainActor
-    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?,
-                     openSettings: () -> Void = {}) {
-        if window == .settings { openSettings(); return }
+    static func open(_ window: AppWindow, using openWindow: OpenWindowAction, navigation: StudioNavigation?) {
         if let navigation { navigation.open(window) { openWindow(id: $0) } }
         else { openWindow(id: AppWindow.studio.rawValue) }
     }

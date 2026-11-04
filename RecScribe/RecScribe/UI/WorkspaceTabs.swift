@@ -5,16 +5,9 @@ protocol WorkspaceTab: Hashable, CaseIterable, RawRepresentable where RawValue =
 }
 
 /// One lightweight tab style for workspace and settings; feature state stays outside.
-struct WorkspaceTabs<Section: WorkspaceTab, Trailing: View>: View {
+struct WorkspaceTabs<Section: WorkspaceTab>: View {
     let title: LocalizedStringKey
     @Binding var selection: Section
-    private let trailing: Trailing
-
-    init(title: LocalizedStringKey, selection: Binding<Section>, @ViewBuilder trailing: () -> Trailing) {
-        self.title = title
-        _selection = selection
-        self.trailing = trailing()
-    }
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -40,18 +33,11 @@ struct WorkspaceTabs<Section: WorkspaceTab, Trailing: View>: View {
                 .accessibilityAddTraits(selection == section ? .isSelected : [])
                 .help(section.rawValue)
             }
-            trailing
         }
     }
 }
 
-extension WorkspaceTabs where Trailing == EmptyView {
-    init(title: LocalizedStringKey, selection: Binding<Section>) {
-        self.init(title: title, selection: selection) { EmptyView() }
-    }
-}
-
-struct WorkspaceTabStyle: ButtonStyle {
+private struct WorkspaceTabStyle: ButtonStyle {
     let selected: Bool
     @State private var hovering = false
 

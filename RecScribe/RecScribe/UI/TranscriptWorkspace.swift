@@ -204,7 +204,9 @@ struct TranscriptWorkspace: View {
                             library.requestTextProcessing(job, summary: section == .summary, sourceName: source?.lastPathComponent)
                         }
                     }
-                    SettingsLink { Label("AI & transcription settings", systemImage: "slider.horizontal.3") }
+                    Button("AI & transcription settings", systemImage: "slider.horizontal.3") {
+                        AppWindow.open(.settings, using: openWindow, navigation: navigation)
+                    }
                 }.disabled(library.busy || library.recordingActive || library.liveWorkActive)
             }
             if section == .live { LiveTranscriptView(live: live) }

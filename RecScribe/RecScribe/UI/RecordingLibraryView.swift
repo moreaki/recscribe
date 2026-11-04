@@ -45,7 +45,9 @@ struct RecordingLibraryView: View {
                         navigateToStudio()
                     }
                 }.disabled(library.recordingActive)
-                SettingsLink { Text("Settings…") }
+                Button("Settings…") {
+                    AppWindow.open(.settings, using: openWindow, navigation: navigation)
+                }
                 Button("Studio", systemImage: "macwindow") { navigateToStudio() }
                 Button("Refresh") { reload() }.disabled(library.refreshing)
             }

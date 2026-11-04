@@ -107,6 +107,7 @@ struct WorkspaceRegressionTests {
         for destination in [AppWindow.routing, .recordings, .settings, .studio, .routing] {
             #expect(AppWindow.performOpenCommand(destination, in: menu))
             #expect(target.opened.last == destination)
+            if destination == .settings { #expect(target.navigation.mode == .settings) }
         }
         #expect(target.navigation.mode == .routing)
         let studioCommand = localizedFile.items[0]
@@ -125,7 +126,7 @@ struct WorkspaceRegressionTests {
     @Test func destinationIsSelectedBeforeOpeningAndSurvivesWindowRecreation() {
         let navigation = StudioNavigation()
         for (destination, mode) in [(AppWindow.routing, StudioWorkspaceMode.routing),
-                                    (.recordings, .recordings), (.studio, .studio)] {
+                                    (.recordings, .recordings), (.settings, .settings), (.studio, .studio)] {
             // No Studio view/subscriber exists when a command or menu action opens it.
             navigation.open(destination) { sceneID in
                 #expect(sceneID == AppWindow.studio.rawValue)
@@ -135,9 +136,6 @@ struct WorkspaceRegressionTests {
             let root = StudioView().environment(\.studioNavigation, navigation)
             withExtendedLifetime(root) { #expect(navigation.mode == mode) }
         }
-        navigation.mode = .recordings
-        navigation.open(.settings) { #expect($0 == AppWindow.settings.rawValue) }
-        #expect(navigation.mode == .recordings)
     }
 
     @Test func routingMeterRepaintsOnTelemetryWithoutInvalidatingRecorder() async throws {
@@ -193,6 +191,6 @@ private final class WindowCommandTarget: NSObject {
     @objc func open(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? String, let destination = AppWindow(rawValue: value) else { return }
         opened.append(destination)
-        if destination != .settings { navigation.open(destination) { _ in } }
+        navigation.open(destination) { _ in }
     }
 }

@@ -183,7 +183,7 @@ struct DeviceInputEngineSnapshot: Equatable {
                         do { try engine.installAndStart(format: settled.format, block: tap.block) }
                         catch {
                             Log.recordFailure(error, operation: "input_startup")
-                            if tap.receivedFrames > 0 {
+                            if !tap.sealIfNoFrames() {
                                 self.fail("The input engine failed after delivering audio; its track is incomplete. Other sources continue.")
                                 return
                             }
@@ -199,6 +199,13 @@ struct DeviceInputEngineSnapshot: Equatable {
                                 self.checkHardwareStatus()
                                 return
                             }
+                        }
+                        // The final PCM check and sealing share the callback's
+                        // lock: never rebuild if a first packet won the deadline race.
+                        if !tap.sealIfNoFrames() {
+                            self.starting = false
+                            self.checkHardwareStatus()
+                            return
                         }
                     }
                     self.closeEngine()
@@ -295,6 +302,15 @@ nonisolated final class DeviceInputTap: Sendable {
     }
     func begin(format: AVAudioFormat) { state.withLock { $0 = .init(accepting: true, format: format) } }
     @discardableResult func finish() -> Bool { state.withLock { $0.accepting = false; return $0.failed } }
+    /// Atomically close an empty startup attempt. A callback already transferring
+    /// its first copy wins and leaves the established tap open.
+    func sealIfNoFrames() -> Bool {
+        state.withLock { s in
+            guard s.receivedFrames == 0 else { return false }
+            s.accepting = false
+            return true
+        }
+    }
     var receivedFrames: Int64 { state.withLock { $0.receivedFrames } }
     func receive(_ buffer: AVAudioPCMBuffer, time: AVAudioTime) {
         let borrowed = BorrowedTapPCM(buffer: buffer)

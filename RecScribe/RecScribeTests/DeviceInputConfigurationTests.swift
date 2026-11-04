@@ -193,6 +193,43 @@ struct DeviceInputConfigurationTests {
         await settle()
         #expect(engine.starts == 1 && engine.stops == 1 && failures.isEmpty)
     }
+    @Test func timeoutSealAndFirstPCMAdmissionCannotBothWin() {
+        let received = OSAllocatedUnfairLock(initialState: 0)
+        let format = AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 1)!
+        let buffer = SampleBufferFixtures.makePCMBuffer(channels: 1, frames: 32, interleaved: false) { _, _ in 0.2 }
+        let time = AVAudioTime(hostTime: mach_absolute_time())
+        let empty = DeviceInputTap(track: .input("empty"), callback: { _ in received.withLock { $0 += 1 } }, onFailure: { _ in })
+        empty.begin(format: format)
+        #expect(empty.sealIfNoFrames())
+        empty.receive(buffer, time: time)
+        #expect(received.withLock { $0 } == 0)
+        let admitted = DeviceInputTap(track: .input("admitted"), callback: { _ in received.withLock { $0 += 1 } }, onFailure: { _ in })
+        admitted.begin(format: format)
+        admitted.receive(buffer, time: time)
+        #expect(!admitted.sealIfNoFrames())
+        admitted.receive(buffer, time: time)
+        #expect(received.withLock { $0 } == 2, "A packet winning the timeout race keeps its tap accepting")
+        admitted.finish()
+    }
+    @Test func simultaneousFirstPCMAndTimeoutHaveOneLinearizedWinner() {
+        for _ in 0..<32 {
+            let received = OSAllocatedUnfairLock(initialState: 0)
+            let sealed = OSAllocatedUnfairLock(initialState: false)
+            let packet = CapturedAudioSample(track: .input("race"), presentationTime: 0,
+                buffer: SampleBufferFixtures.makePCMBuffer(channels: 1, frames: 32, interleaved: false) { _, _ in 0.2 })
+            let tap = DeviceInputTap(track: .input("race"), callback: { _ in received.withLock { $0 += 1 } }, onFailure: { _ in })
+            tap.begin(format: packet.buffer.format)
+            DispatchQueue.concurrentPerform(iterations: 2) { index in
+                if index == 0 { tap.receive(packet.buffer, time: AVAudioTime(hostTime: mach_absolute_time())) }
+                else { let result = tap.sealIfNoFrames(); sealed.withLock { $0 = result } }
+            }
+            let timeoutWon = sealed.withLock { $0 }
+            #expect(received.withLock { $0 } == (timeoutWon ? 0 : 1))
+            tap.receive(packet.buffer, time: AVAudioTime(hostTime: mach_absolute_time()))
+            #expect(received.withLock { $0 } == (timeoutWon ? 0 : 2))
+            tap.finish()
+        }
+    }
     @Test func establishedStreamFailureDoesNotRestartOrSubstituteDevice() async throws {
         let engine = Engine(); engine.sendAudio = true
         var failures: [String] = []

@@ -116,14 +116,18 @@ struct WorkspaceCard<Content: View>: View {
 struct SettingsWindowButton: View {
     @Environment(\.openSettings) private var openSettings
     var body: some View {
-        GlassIconButton(
-            systemImage: "slider.horizontal.3",
-            accessibilityLabel: "Settings",
-            accessibilityHint: "Storage, transcription, models and local AI"
-        ) {
+        Button {
             NSApp.activate(ignoringOtherApps: true)
             openSettings()
+        } label: {
+            Label("Settings", systemImage: "slider.horizontal.3")
+                .font(.callout.weight(.medium))
         }
+        .buttonStyle(WorkspaceTabStyle(selected: false))
+        .accessibilityLabel("Settings")
+        .accessibilityHint("Storage, transcription, models and local AI")
+        .accessibilityIdentifier("workspace-action-settings")
+        .help("Settings")
     }
 }
 

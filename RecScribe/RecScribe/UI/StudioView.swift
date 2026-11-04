@@ -60,16 +60,14 @@ struct StudioView: View {
             HStack(spacing: GlassSpacing.md) {
                 GlassBrandLockup(size: .compact)
                 Text("STUDIO").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
-                WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 }))
-                    .frame(maxWidth: 420)
+                WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 })) {
+                    SettingsWindowButton()
+                }
+                .frame(maxWidth: 560)
                 Spacer()
                 Label(live.cloudAudioActive ? "Cloud audio approved" : settings.values.processingLocation == .cloud ? "Cloud audio requires approval" : "Audio stays on your Mac",
                       systemImage: live.cloudAudioActive ? "cloud" : "lock.shield")
                     .font(.caption).foregroundStyle(live.cloudAudioActive ? .orange : WorkspaceStyle.mint)
-                Button("Recordings", systemImage: "rectangle.stack") {
-                    workspaceMode = .recordings
-                }
-                SettingsWindowButton()
             }.padding(WorkspaceStyle.contentPadding)
             Divider()
             HStack(alignment: .top, spacing: 0) {

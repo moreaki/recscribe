@@ -4,7 +4,7 @@ import Foundation
 /// changes source text, and absent derived text falls back to the raw words.
 nonisolated struct TranscriptPreview: Decodable, Sendable {
     static let currentSchemaVersion = "1.0"
-    struct Segment: Decodable, Sendable, Identifiable {
+    struct Segment: Decodable, Sendable, Identifiable, Equatable {
         let id: String
         let sourceText: String
         let normalizedText: String?
@@ -36,6 +36,17 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         let processor: String?
     }
     struct Language: Decodable, Sendable { let processor: String? }
+
+    private struct Payload: Decodable {
+        let schemaVersion: String
+        let processing: Processing
+        let source: Source?
+        let segments: [Segment]
+        let summary: Summary?
+        let languageProcessing: Language?
+        let reviewReasons: [String]
+    }
+
     let schemaVersion: String
     let processing: Processing
     let source: Source?
@@ -43,15 +54,93 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     let summary: Summary?
     let languageProcessing: Language?
     let reviewReasons: [String]
+    let readingGroups: [TranscriptReading.Group]
+    let channelGroups: [TranscriptReading.Group]
+    let text: String
+    let summaryText: String
+    let markdownText: String
+    let summaryMarkdownText: String
+    let reviewPlainText: String
+    let reviewMarkdownText: String
+    let includesCloudAudio: Bool
+    let includesCloudText: Bool
+    let recognitionLabel: String
+
     var sourceURL: URL? { source.map { URL(fileURLWithPath: $0.path) } }
-    var includesCloudText: Bool {
-        processing.openaiModel != nil || (processing.localOnly == false && !includesCloudAudio) || languageProcessing?.processor?.hasPrefix("openai:") == true || summary?.processor?.hasPrefix("openai:") == true
-    }
-    var includesCloudAudio: Bool { processing.allowCloudAudio == true }
-    var recognitionLabel: String {
-        let models = Array(Set(processing.enginePasses?.map(\.model) ?? [])).sorted().joined(separator: ", ")
-        let languages = Array(Set(processing.enginePasses?.compactMap(\.detectedLanguage) ?? [])).sorted().joined(separator: ", ")
-        return [models, languages.isEmpty ? processing.sourceLanguage ?? "" : languages].filter { !$0.isEmpty }.joined(separator: " · ")
+
+    init(from decoder: Decoder) throws {
+        let payload = try Payload(from: decoder)
+        self.schemaVersion = payload.schemaVersion
+        self.processing = payload.processing
+        self.source = payload.source
+        self.segments = payload.segments
+        self.summary = payload.summary
+        self.languageProcessing = payload.languageProcessing
+        self.reviewReasons = payload.reviewReasons
+
+        let cloudAudio = payload.processing.allowCloudAudio == true
+        self.includesCloudAudio = cloudAudio
+        self.includesCloudText = payload.processing.openaiModel != nil
+            || (payload.processing.localOnly == false && !cloudAudio)
+            || payload.languageProcessing?.processor?.hasPrefix("openai:") == true
+            || payload.summary?.processor?.hasPrefix("openai:") == true
+
+        let models = Array(Set(payload.processing.enginePasses?.map(\.model) ?? [])).sorted().joined(separator: ", ")
+        let languages = Array(Set(payload.processing.enginePasses?.compactMap(\.detectedLanguage) ?? [])).sorted().joined(separator: ", ")
+        self.recognitionLabel = [models, languages.isEmpty ? payload.processing.sourceLanguage ?? "" : languages]
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+
+        let mode = payload.processing.mode
+        let computedReadingGroups = TranscriptReading.groups(payload.segments)
+        let computedChannelGroups = payload.segments.map { TranscriptReading.Group(segments: [$0]) }
+        self.readingGroups = computedReadingGroups
+        self.channelGroups = computedChannelGroups
+
+        self.text = payload.segments.map { segment in
+            let rendered = Self.displayedText(segment, mode: mode)
+            return (segment.needsReview ? "[Review] " : "") + rendered.trimmingCharacters(in: .whitespacesAndNewlines)
+        }.joined(separator: "\n\n")
+
+        let computedSummaryText = payload.summary?.notes.map {
+            "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))"
+        }.joined(separator: "\n\n") ?? ""
+        self.summaryText = computedSummaryText
+        self.summaryMarkdownText = computedSummaryText.isEmpty ? "" : "# Summary\n\n\(computedSummaryText)"
+
+        let computedReviewPlain = payload.reviewReasons.joined(separator: "\n\n")
+        self.reviewPlainText = computedReviewPlain
+        let reviewBullets = payload.reviewReasons.map { "- \($0)" }.joined(separator: "\n")
+        self.reviewMarkdownText = payload.reviewReasons.isEmpty ? "" : "# Review Notes\n\n\(reviewBullets)"
+
+        var blocks: [String] = ["# Transcript"]
+        for group in computedReadingGroups {
+            let reviewTag = group.segments.contains(where: \.needsReview) ? " · [Review]" : ""
+            blocks.append("## \(group.timing) (\(group.channels)\(reviewTag))")
+            let first = group.segments[0]
+            let isShared = group.segments.count <= 1 || group.segments.allSatisfy {
+                $0.startMs == first.startMs
+                    && $0.endMs == first.endMs
+                    && $0.sourceText == first.sourceText
+                    && Self.displayedText($0, mode: mode) == Self.displayedText(first, mode: mode)
+            }
+            if isShared {
+                blocks.append(Self.displayedText(first, mode: mode).trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                let variants = group.segments.map { segment in
+                    let single = TranscriptReading.Group(segments: [segment])
+                    return "- **\(single.channels)** (\(single.timing)): \(Self.displayedText(segment, mode: mode).trimmingCharacters(in: .whitespacesAndNewlines))"
+                }.joined(separator: "\n")
+                blocks.append(variants)
+            }
+        }
+        if !computedSummaryText.isEmpty {
+            blocks.append("## Summary\n\n" + computedSummaryText)
+        }
+        if !payload.reviewReasons.isEmpty {
+            blocks.append("## Review Notes\n\n" + reviewBullets)
+        }
+        self.markdownText = blocks.joined(separator: "\n\n")
     }
 
     static func read(_ directory: URL) async throws -> Self {
@@ -71,57 +160,28 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
     }
 
-    var text: String {
-        segments.map { segment in
-            let text = displayedText(segment)
-            return (segment.needsReview ? "[Review] " : "") + text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.joined(separator: "\n\n")
-    }
-    func displayedText(_ segment: Segment) -> String {
-        switch processing.mode {
+    private static func displayedText(_ segment: Segment, mode: TranscriptionMode) -> String {
+        switch mode {
         case .normalize: segment.normalizedText ?? segment.sourceText
         case .translate: segment.translatedText ?? segment.sourceText
         case .verbatim: segment.sourceText
         }
     }
-    var summaryText: String {
-        summary?.notes.map { "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))" }.joined(separator: "\n\n") ?? ""
+
+    func displayedText(_ segment: Segment) -> String {
+        Self.displayedText(segment, mode: processing.mode)
     }
-    var markdownText: String {
-        var blocks: [String] = ["# Transcript"]
-        for group in TranscriptReading.groups(segments) {
-            let reviewTag = group.segments.contains(where: \.needsReview) ? " · [Review]" : ""
-            blocks.append("## \(group.timing) (\(group.channels)\(reviewTag))")
-            if group.isShared(in: self) {
-                blocks.append(displayedText(group.segments[0]).trimmingCharacters(in: .whitespacesAndNewlines))
-            } else {
-                let variants = group.segments.map { segment in
-                    let single = TranscriptReading.Group(segments: [segment])
-                    return "- **\(single.channels)** (\(single.timing)): \(displayedText(segment).trimmingCharacters(in: .whitespacesAndNewlines))"
-                }.joined(separator: "\n")
-                blocks.append(variants)
-            }
-        }
-        if !summaryText.isEmpty {
-            blocks.append("## Summary\n\n" + summaryText)
-        }
-        if !reviewReasons.isEmpty {
-            blocks.append("## Review Notes\n\n" + reviewReasons.map { "- \($0)" }.joined(separator: "\n"))
-        }
-        return blocks.joined(separator: "\n\n")
+
+    func groups(for mode: TranscriptReadingView.Mode) -> [TranscriptReading.Group] {
+        mode == .reading ? readingGroups : channelGroups
     }
+
     func exportText(for section: TranscriptWorkspace.Section, markdown: Bool) -> String {
         switch section {
         case .summary:
-            if markdown {
-                return summaryText.isEmpty ? "" : "# Summary\n\n\(summaryText)"
-            }
-            return summaryText
+            return markdown ? summaryMarkdownText : summaryText
         case .review:
-            if markdown {
-                return reviewReasons.isEmpty ? "" : "# Review Notes\n\n" + reviewReasons.map { "- \($0)" }.joined(separator: "\n")
-            }
-            return reviewReasons.joined(separator: "\n\n")
+            return markdown ? reviewMarkdownText : reviewPlainText
         case .transcript, .live:
             return markdown ? markdownText : text
         }

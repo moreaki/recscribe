@@ -118,7 +118,7 @@ struct TranscriptWorkspace: View {
     @EnvironmentObject private var live: LiveTranscription
     @EnvironmentObject private var library: SessionLibrary
     @Environment(\.openWindow) private var openWindow
-    @StateObject private var playback = SessionPlayback()
+    @State private var playback = SessionPlayback()
     @State private var pendingSeekSeconds: Double?
     @State private var section: Section
     @State private var document: TranscriptPreview?
@@ -202,7 +202,7 @@ struct TranscriptWorkspace: View {
             }
             if section == .live { LiveTranscriptView(live: live) }
             else if let document {
-                let content = section == .summary ? document.summaryText : section == .review ? document.reviewReasons.joined(separator: "\n\n") : ""
+                let content = section == .summary ? document.summaryText : section == .review ? document.reviewPlainText : ""
                 if section == .transcript && !document.segments.isEmpty {
                     TranscriptReadingView(
                         document: document,

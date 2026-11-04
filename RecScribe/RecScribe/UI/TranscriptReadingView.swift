@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct TranscriptReadingView: View {
+    private static let inertPlayback = SessionPlayback(coordinator: SessionPlaybackCoordinator())
+
     let document: TranscriptPreview
-    var playback: SessionPlayback? = nil
+    private let hasPlayback: Bool
+    private let playbackPosition: Double?
+    @ObservedObject private var playback: SessionPlayback
     var onSeek: ((Double) -> Void)? = nil
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
@@ -16,29 +20,47 @@ struct TranscriptReadingView: View {
         mode: Mode = .reading,
         expandedGroups: Set<String> = [],
         playback: SessionPlayback? = nil,
+        playbackPosition: Double? = nil,
         onSeek: ((Double) -> Void)? = nil
     ) {
         self.document = document
-        self.playback = playback
+        self.hasPlayback = playback != nil
+        self.playbackPosition = playbackPosition
+        self._playback = ObservedObject(wrappedValue: playback ?? Self.inertPlayback)
         self.onSeek = onSeek
         _mode = State(initialValue: mode)
         _expandedGroups = State(initialValue: expandedGroups)
     }
 
-    private var displayedGroups: [TranscriptReading.Group] {
-        mode == .reading ? TranscriptReading.groups(document.segments) : document.segments.map { .init(segments: [$0]) }
+    var effectivePositionSeconds: Double? {
+        if let playbackPosition {
+            return playbackPosition
+        }
+        guard hasPlayback, (playback.player != nil || playback.isPlaying || playback.position > 0) else {
+            return nil
+        }
+        return playback.position
     }
 
-    private var activeGroupID: String? {
-        guard let playback, playback.player != nil else { return nil }
-        return displayedGroups.first(where: { $0.contains(positionSeconds: playback.position) })?.id
+    var displayedGroups: [TranscriptReading.Group] {
+        document.groups(for: mode)
+    }
+
+    var activeGroupID: String? {
+        TranscriptReading.activeGroupID(in: displayedGroups, positionSeconds: effectivePositionSeconds)
     }
 
     var body: some View {
+        let groups = displayedGroups
+        let currentActiveGroupID = TranscriptReading.activeGroupID(
+            in: groups,
+            positionSeconds: effectivePositionSeconds
+        )
+        let showFollowControl = playbackPosition != nil || (hasPlayback && (playback.player != nil || playback.isPlaying || playback.position > 0))
         VStack(alignment: .leading, spacing: GlassSpacing.md) {
             HStack {
                 WorkspaceTabs(title: "Transcript presentation", selection: $mode)
-                if playback?.player != nil {
+                if showFollowControl {
                     Spacer()
                     Button(followPlayback ? "Following audio" : "Follow audio", systemImage: "arrow.down.to.line") {
                         followPlayback.toggle()
@@ -51,13 +73,16 @@ struct TranscriptReadingView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: GlassSpacing.xl) {
-                        ForEach(displayedGroups) { group in
-                            let isActive = activeGroupID == group.id
+                        ForEach(groups) { group in
+                            let isActive = currentActiveGroupID == group.id
                             VStack(alignment: .leading, spacing: GlassSpacing.sm) {
                                 HStack {
-                                    if let startSeconds = group.startSeconds, let onSeek {
+                                    if let startSeconds = group.startSeconds, (onSeek != nil || hasPlayback) {
                                         Button {
-                                            onSeek(startSeconds)
+                                            if hasPlayback {
+                                                playback.seek(to: startSeconds)
+                                            }
+                                            onSeek?(startSeconds)
                                         } label: {
                                             Text(group.timing).monospacedDigit().underline()
                                         }
@@ -94,9 +119,14 @@ struct TranscriptReadingView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, GlassSpacing.s)
                 }
-                .onChange(of: activeGroupID) { _, nextID in
+                .onChange(of: currentActiveGroupID) { _, nextID in
                     if followPlayback, let nextID {
                         proxy.scrollTo(nextID, anchor: .center)
+                    }
+                }
+                .onChange(of: followPlayback) { _, follow in
+                    if follow, let currentActiveGroupID {
+                        proxy.scrollTo(currentActiveGroupID, anchor: .center)
                     }
                 }
             }

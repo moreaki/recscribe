@@ -113,7 +113,7 @@ struct RecordingLibraryView: View {
                         }
                             .disabled(!library.canDeleteRecording)
                     }.buttonStyle(.borderless).disabled(library.recordingActive || library.liveWorkActive)
-                    ForEach(entry.session.issues, id: \.self) { Text($0).font(.caption).foregroundStyle(theme.colors.statusWarning) }
+                    RecordingReviewNotesView(notes: RecordingReviewNotes(session: entry.session))
                 }.padding(.vertical, GlassSpacing.s)
             }.listStyle(.inset).scrollContentBackground(.hidden).overlay {
                 if library.entries.isEmpty { ContentUnavailableView("No sessions yet", systemImage: "waveform", description: Text("New recordings appear here. Existing WAV files can be imported for optional transcription.")) }

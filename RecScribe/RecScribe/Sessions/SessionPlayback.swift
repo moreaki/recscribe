@@ -146,6 +146,7 @@ final class SessionPlaybackCoordinator {
     private let coordinator: SessionPlaybackCoordinator
     private let build: (SessionEntry) async throws -> AVPlayerItem
     private let activate: (AVPlayer) -> Void
+    private let seekPlayer: (AVPlayer, CMTime, @escaping @Sendable (Bool) -> Void) -> Void
     private let sourceReader: @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry
     private let asyncSourceReader: ((RecordingSession.SourceTrack, RecordingSession, URL) async throws -> SessionEntry)?
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -185,11 +186,15 @@ final class SessionPlaybackCoordinator {
         levels: PlaybackLevels? = nil,
         hardwareObserver: AudioHardwareObserver = .shared,
         coordinator: SessionPlaybackCoordinator? = nil,
+        seekPlayer: ((AVPlayer, CMTime, @escaping @Sendable (Bool) -> Void) -> Void)? = nil,
         sourceReader: @escaping @Sendable (RecordingSession.SourceTrack, RecordingSession, URL) throws -> SessionEntry = LinkedSourceSessions.read,
         asyncSourceReader: ((RecordingSession.SourceTrack, RecordingSession, URL) async throws -> SessionEntry)? = nil
     ) {
         self.build = build ?? SessionPlaybackBuilder.item
         self.activate = activate ?? { $0.play() }
+        self.seekPlayer = seekPlayer ?? { player, target, completion in
+            player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: completion)
+        }
         self.levels = levels ?? PlaybackLevels()
         self.hardwareObserver = hardwareObserver
         self.coordinator = coordinator ?? SessionPlaybackCoordinator()
@@ -239,7 +244,7 @@ final class SessionPlaybackCoordinator {
         seekInFlight = true
         let id = generation
         let cmTarget = CMTime(seconds: target, preferredTimescale: 48_000)
-        player.seek(to: cmTarget, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+        seekPlayer(player, cmTarget) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == id else { return }
                 self.seekInFlight = false
@@ -384,7 +389,10 @@ final class SessionPlaybackCoordinator {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, self.generation == id else { return }
+                // An EOF queued by the previous play-through can arrive after
+                // the user has already sought/restarted. Keep the latest intent.
+                guard let self, self.generation == id,
+                      !self.seekInFlight, self.pendingSeekTarget == nil else { return }
                 self.isPlaying = false
                 if self.duration > 0 {
                     self.position = self.duration

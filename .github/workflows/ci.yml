@@ -12,10 +12,9 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests
-    # NOTE: the runner's Xcode must provide the macOS SDK this project targets.
-    # If the image's Xcode is too old, pin a newer one with `xcode-select` below
-    # or bump the runner image. See the "Select Xcode" step.
-    runs-on: macos-15
+    # Match local development's Xcode/SDK generation. Pin the minor version in
+    # .xcode-version; the runner's default can differ (including RC builds).
+    runs-on: xcode-27
     # Without this, GitHub's default is SIX HOURS. A single hung test then
     # quietly consumes the runner budget and leaves no log to diagnose from.
     # The suite completes in 2-3 minutes; 20 is generous headroom that still
@@ -27,14 +26,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        # The shared core requires Swift 6.2; the image default is Xcode 16.4.
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
-          xcodebuild -version
-          swift --version
+          ci_xcode_version="$(cat .xcode-version)"
+          sudo xcode-select -s "/Applications/Xcode_${ci_xcode_version}.app/Contents/Developer"
+          ./scripts/check-toolchain.sh
 
       - name: Run native audio/text, frozen reference and CLI tests
-        run: swift test --package-path core
+        run: xcrun swift test --package-path core
 
       - name: Run unit tests (functional)
         # BLOCKING gate: full unit-test suite WITHOUT Thread Sanitizer. Covers all
@@ -109,8 +107,8 @@ jobs:
     name: Release build
     # BLOCKING gate, and deliberately a SEPARATE JOB rather than a step after
     # the tests (BL-156). Everything in `unit-tests` is a Debug build, and
-    # Release is not the same compilation: whole-module, x86_64 as well as
-    # arm64, and `#if DEBUG` code is gone from it.
+    # Release is not the same compilation: whole-module optimization and
+    # `#if DEBUG` code is gone from it.
     #
     # That last difference shipped a defect. A `#Preview` in a vendored file
     # referenced fixtures guarded by `#if DEBUG`; every Debug build and the
@@ -124,7 +122,7 @@ jobs:
     # the tree was in doubt, nobody learned whether it still built. That
     # happened on `main` at 66d0702. A separate job has no `needs:`, so the two
     # gates fail independently and both always report.
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 20
 
     steps:
@@ -133,8 +131,9 @@ jobs:
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
-          xcodebuild -version
+          ci_xcode_version="$(cat .xcode-version)"
+          sudo xcode-select -s "/Applications/Xcode_${ci_xcode_version}.app/Contents/Developer"
+          ./scripts/check-toolchain.sh
 
       - name: Release build
         run: |
@@ -144,6 +143,33 @@ jobs:
             -scheme RecScribe \
             -configuration Release \
             -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO
+
+  compatibility-build:
+    name: Compatibility build (Xcode 26.3)
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      RECSCRIBE_COMPAT_XCODE: '26.3'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select compatibility Xcode
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${RECSCRIBE_COMPAT_XCODE}.app/Contents/Developer"
+          ./scripts/check-toolchain.sh "$RECSCRIBE_COMPAT_XCODE"
+
+      # Keep the older Swift compiler checking app AND test source. Newer local
+      # compilers can accept inference that older compilers correctly reject.
+      - name: Build app and unit tests with the older compiler
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project RecScribe/RecScribe.xcodeproj \
+            -scheme RecScribe \
+            -destination 'platform=macOS' \
+            -only-testing:RecScribeTests \
             CODE_SIGNING_ALLOWED=NO
 
 # NOT ADDED, deliberately: a job running `scripts/check-docs.sh`.

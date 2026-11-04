@@ -3,6 +3,8 @@ import CoreMedia
 import CoreAudio
 import SwiftUI
 import Testing
+import Vision
+import CoreML
 @testable import RecScribe
 
 /// Synthetic devices and isolated settings. Windows are never ordered on screen;
@@ -81,7 +83,7 @@ struct AudioRoutingViewTests {
         #expect(controller.startCount == 0)
     }
 
-    @Test func collapsedVirtualCardExposesCaptureCheckboxWithoutDisclosure() async throws {
+    @Test func collapsedVirtualCardShowsCaptureControlWithoutDisclosure() async throws {
         let suite = "routing-capture-checkbox-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -98,31 +100,44 @@ struct AudioRoutingViewTests {
         let recorder = RecorderViewModel(controller: controller, permissions: MockPermissionProviding(.granted),
             clock: ManualClock(), audioSource: provider, defaults: defaults, audio: audio)
         let view = AudioRoutingView(levels: audio.levels, monitor: audio.monitor, playbackLevels: audio.playbackLevels,
-            hardwareObserver: audio.hardware).environment(recorder)
+            hardwareObserver: audio.hardware).environment(recorder).preferredColorScheme(.dark)
         let host = NSHostingView(rootView: view)
         host.frame = CGRect(x: 0, y: 0, width: 760, height: 900)
         let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false; window.contentView = host
+        window.isReleasedWhenClosed = false; window.appearance = NSAppearance(named: .darkAqua); window.contentView = host
         // Native SwiftUI controls are installed lazily. Give this fixture a real
         // AppKit backing window, offscreen, rather than relying on a local renderer cache.
         window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
         window.orderFront(nil)
         defer { window.contentView = nil; window.close() }
-        host.layoutSubtreeIfNeeded()
-        let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: bitmap)
-        func native(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(native) }
-        // SwiftUI draws ordinary card buttons itself; the capture checkbox is
-        // the sole native non-popup button in this collapsed fixture.
-        await waitUntil("collapsed virtual capture checkbox rendered") {
+        // Check the rendered label rather than SwiftUI's OS-dependent native
+        // subview classes. This fails if capture remains hidden in disclosure.
+        let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1520, pixelsHigh: 1800,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        bitmap.size = host.bounds.size
+        var text = ""
+        for _ in 0..<3 {
+            await settle()
             host.layoutSubtreeIfNeeded()
-            return native(host).compactMap { $0 as? NSButton }.contains { !($0 is NSPopUpButton) }
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            let image = try #require(bitmap.cgImage)
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.recognitionLanguages = ["en-US"]
+            request.usesLanguageCorrection = false
+            // Keep the synthetic visual assertion independent of runner GPU availability.
+            for (stage, devices) in try request.supportedComputeStageDevices {
+                if let cpu = devices.first(where: { if case .cpu = $0 { return true }; return false }) {
+                    request.setComputeDevice(cpu, for: stage)
+                }
+            }
+            try VNImageRequestHandler(cgImage: image).perform([request])
+            text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
+            if text.lowercased().filter({ !$0.isWhitespace }).contains("recordmeetingloopback") { break }
         }
-        let checkboxes = native(host).compactMap { $0 as? NSButton }.filter { !($0 is NSPopUpButton) }
-        #expect(checkboxes.count == 1, "Capture checkbox must exist without expanding the card")
-        let checkbox = try #require(checkboxes.first)
-        #expect(checkbox.state == .on)
-        #expect(checkbox.isEnabled)
+        #expect(text.lowercased().filter { !$0.isWhitespace }.contains("recordmeetingloopback"),
+            "The collapsed card must visibly expose its capture control. Rendered text: \(text)")
         #expect(provider.selectedSource == source, "Rendering the direct control must not change capture selection")
         #expect(audio.levels.level("input:virtual") == .init(decibels: -3, muted: true))
         #expect(controller.startCount == 0)

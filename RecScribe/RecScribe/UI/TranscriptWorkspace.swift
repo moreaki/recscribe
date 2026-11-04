@@ -125,6 +125,8 @@ struct TranscriptWorkspace: View {
     @State private var document: TranscriptPreview?
     @State private var error: String?
     @State private var selectedJob: URL?
+    @State private var transcriptToDelete: URL?
+    @State private var sourceAvailable = false
     @State private var followLiveSource = false
     private var displayedJob: URL? {
         selectedJob ?? (followLiveSource && library.latestSource != live.sourceURL ? nil : library.latestJob)
@@ -187,14 +189,15 @@ struct TranscriptWorkspace: View {
                     detail: section == .live ? live.modelName ?? "Local live draft" : document?.recognitionLabel ?? "Full recording · final recognition",
                     recording: library.recordingActive,
                     playback: playback,
-                    pendingSeekSeconds: $pendingSeekSeconds)
+                    pendingSeekSeconds: $pendingSeekSeconds,
+                    sourceAvailabilityChanged: { sourceAvailable = $0 })
             }
             if section != .live {
                 HStack {
                     if let source {
                         Button(document == nil ? "Create final transcript" : "Transcribe again", systemImage: "text.bubble") {
                             selectedJob = nil; library.transcribe(source)
-                        }
+                        }.disabled(!sourceAvailable)
                     }
                     if document != nil, let job = displayedJob {
                         Button(section == .summary ? "Generate summary" : "Improve text", systemImage: "sparkles") {
@@ -235,7 +238,7 @@ struct TranscriptWorkspace: View {
                 HStack { ProgressView(value: library.progress); Button("Cancel") { library.cancel() } }
             }
             if let previous = library.previousJob, library.errorMessage != nil {
-                Button("Open previous transcript") { selectedJob = previous }
+                Button("Open previous transcript") { library.cancelRestoration(); selectedJob = previous }
             }
             HStack {
                 Text("Pipeline: \(library.activity)").font(.caption).foregroundStyle(.secondary)
@@ -246,10 +249,15 @@ struct TranscriptWorkspace: View {
                     panel.canChooseFiles = false
                     panel.directoryURL = AppSettings.supportDirectory.appendingPathComponent("Jobs")
                     panel.message = "Choose a job folder containing transcript.json"
-                    if panel.runModal() == .OK, let url = panel.url { selectedJob = url }
+                    if panel.runModal() == .OK, let url = panel.url { library.cancelRestoration(); selectedJob = url }
                 }
                 if let job = displayedJob {
                     Button("Artifacts", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([job]) }
+                    Button("Delete transcript…", systemImage: "trash", role: .destructive) {
+                        transcriptToDelete = job
+                    }
+                    .disabled(!library.canDeleteTranscript(job))
+                    .help("Move this transcript and its job artifacts to Trash. Keep the recording.")
                 }
             }
         }
@@ -261,7 +269,35 @@ struct TranscriptWorkspace: View {
             } message: {
                 Text("Source: \(library.pendingTextRequest?.sourceName ?? "")\nModel: \(library.pendingTextRequest?.model ?? "")\nOnly transcript text, segment IDs and uncertainty flags are sent to api.openai.com. No audio or local file paths. API charges and OpenAI retention policies apply. Originals remain on this Mac.")
             }
-        .onChange(of: library.latestJob) { _, _ in selectedJob = nil; followLiveSource = false }
+        .confirmationDialog("Move transcript to Trash?", isPresented: Binding(
+            get: { transcriptToDelete != nil }, set: { if !$0 { transcriptToDelete = nil } })) {
+                if let job = transcriptToDelete {
+                    Button("Move transcript to Trash", role: .destructive) {
+                        transcriptToDelete = nil
+                        Task {
+                            if await library.deleteTranscript(job) {
+                                playback.stop()
+                                pendingSeekSeconds = nil
+                                selectedJob = nil
+                                document = nil
+                                error = nil
+                                followLiveSource = true
+                                section = .live
+                            }
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) { transcriptToDelete = nil }
+            } message: {
+                Text("The transcript, summary and all artifacts in this job folder move to Trash. The original recording is kept. You can restore the folder from Trash.")
+            }
+        .onChange(of: library.latestJob) { _, job in
+            selectedJob = nil; followLiveSource = false
+            if job == nil {
+                document = nil; error = nil; pendingSeekSeconds = nil
+                playback.stop(); section = .live
+            }
+        }
         .onChange(of: live.sourceURL) { _, _ in
             selectedJob = nil; document = nil; followLiveSource = true; section = .live
         }

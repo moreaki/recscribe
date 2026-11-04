@@ -45,7 +45,8 @@ import Testing
         settings.verificationModelPath = settings.modelPath
         let previous = URL(fileURLWithPath: "/synthetic/previous-job")
         let source = URL(fileURLWithPath: "/synthetic/previous.wav")
-        let library = SessionLibrary(settings: { settings }, initialJob: previous, initialSource: source)
+        let library = SessionLibrary(settings: { settings })
+        library.acceptCloudTranscript(previous, source: source)
         library.transcribe(URL(fileURLWithPath: "/synthetic/new.wav"))
         await library.shutdown()
         #expect(library.errorMessage?.contains("are the same") == true)

@@ -6,6 +6,9 @@ All notable RecScribe changes will be documented in this file.
 
 ### Added
 
+- Studio can move a saved transcript and its job artifacts to Trash while keeping
+  the original recording. Active jobs and arbitrary external folders are protected.
+
 - A standalone local WAV transcription CLI with streamed PCM inspection,
   per-channel working copies, cancellable jobs and the whisper.cpp adapter.
 - Versioned canonical JSON, immutable raw-ASR evidence and deterministic Markdown,
@@ -15,6 +18,10 @@ All notable RecScribe changes will be documented in this file.
   boundaries. Capture code and signing configuration remain unchanged.
 
 ### Changed
+
+- Startup validates the saved transcript and recording before restoring Studio.
+  Missing recordings or audio parts leave a clean workspace; retained transcripts
+  can still be opened explicitly, with unavailable audio actions disabled.
 
 - Final WAV/session recognition now runs in shared native Swift code in the app
   and `recscribe-text transcribe`, with configured whisper.cpp threads, verified

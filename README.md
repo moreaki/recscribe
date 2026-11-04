@@ -34,6 +34,18 @@ contact the Home Rec update service.
 - Fast Apple Silicon execution with quality profiles for draft and verified output.
 - Clear separation between verbatim transcription, normalization, and translation.
 
+## Saved transcripts
+
+Studio restores the last transcript only when its recording and audio parts are
+still readable. A missing recording leaves the app ready for a new take; its
+retained transcript can still be opened with **Open transcript…**.
+
+To delete a saved transcript, open it in Studio and choose **Delete transcript…**,
+then **Move transcript to Trash**. This moves the entire RecScribe job folder,
+including its summary and exports, to Trash and keeps the original recording.
+Deletion is unavailable during capture/background work and for folders outside
+RecScribe’s managed Jobs directory.
+
 ## Requirements
 
 - macOS 15 or later

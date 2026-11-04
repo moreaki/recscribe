@@ -91,6 +91,64 @@ private final class StubInputDeviceEnumerator: InputDeviceEnumerating {
 
 @MainActor
 struct AudioHardwareObserverTests {
+    @Test func previewRebuildWaitsForSameUIDAndHardwareEventsNeverRestartHealthyOrRecordingCapture() async throws {
+        let backend = MockAudioHardwareBackend()
+        let device = InputDeviceInfo(uid: "preview-mic", name: "Preview input", inputChannels: 2)
+        backend.currentInputs = [device]
+        let hardware = AudioHardwareObserver(backend: backend)
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let capture = MockAudioCapturing()
+        let source = MockAudioSourceProviding(selectedSource: .inputsOnly([.init(device: device)]))
+        source.availableInputDevicesResult = [device]
+        let test = AudioTestController(capture: capture, source: source, permissions: MockPermissionProviding(.granted),
+            levels: AudioLevels(defaults: defaults), monitor: CapturedAudioMonitor(defaults: defaults, hardwareObserver: hardware),
+            saveDirectory: { FileManager.default.temporaryDirectory }, hardwareObserver: hardware)
+        await test.startPreview()
+        #expect(capture.startCount == 1 && test.state == .testing)
+        backend.fireSystemEvent()
+        await settle()
+        #expect(capture.startCount == 1) // A healthy graph ignores unrelated hardware events.
+        source.availableInputDevicesResult = []
+        backend.currentInputs = []
+        capture.onSourceFailure?(.input(device.uid), "Selected input disconnected")
+        backend.fireSystemEvent()
+        await settle()
+        #expect(capture.startCount == 1 && test.previewRebuildCount == 0)
+        // A different UID with the same display name must never substitute for it.
+        source.availableInputDevicesResult = [.init(uid: "different", name: device.name, inputChannels: 2)]
+        backend.fireSystemEvent(); await settle()
+        #expect(capture.startCount == 1)
+        source.availableInputDevicesResult = [device]; backend.currentInputs = [device]
+        backend.fireSystemEvent()
+        await waitUntil("same-UID preview restart") { capture.startCount == 2 && test.state == .testing }
+        #expect(test.previewRebuildCount == 1 && test.notice?.contains("reconnected") == true)
+        for expected in 2...3 {
+            capture.onSourceFailure?(.input(device.uid), "Input audio format changed")
+            await waitUntil("bounded format restart") { test.previewRebuildCount == expected && capture.startCount == expected + 1 && test.state == .testing }
+        }
+        capture.onSourceFailure?(.input(device.uid), "Input audio format changed")
+        backend.fireSystemEvent(); await settle()
+        #expect(capture.startCount == 4 && test.previewRebuildCount == 3)
+        #expect(test.notice?.contains("limit") == true)
+        await test.prepareForRecording()
+        backend.fireSystemEvent(); await settle()
+        #expect(capture.startCount == 4 && !capture.capturing)
+        await test.close()
+        hardware.stopObserving()
+    }
+
+    @Test func appOwnedAudioGraphSharesHardwareAndUnregistersOnShutdown() async {
+        let backend = MockAudioHardwareBackend()
+        let hardware = AudioHardwareObserver(backend: backend)
+        let audio = AudioServices(defaults: UserDefaults(suiteName: UUID().uuidString)!, hardware: hardware)
+        let first = audio.makePlayback(), second = audio.makePlayback()
+        #expect(first.hardwareObserver === hardware && second.hardwareObserver === hardware)
+        #expect(backend.totalSystemRegistrations == 1)
+        await audio.shutdown()
+        #expect(!hardware.isObserving)
+        #expect(backend.totalSystemRemovals == 1)
+    }
+
 
     @Test("System and per-device Core Audio listener registration, coalescing, volume scoping, and teardown (#42)")
     func observerCoalescesEventsAndScopesDeviceListeners() async {

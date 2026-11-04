@@ -299,17 +299,23 @@ import RecScribeCore
             try TranscriptStorage.moveToTrash(job, in: root, cancel: token, trash: trash)
             return true
         }) == true else { startNext(); return false }
-        if latestJob == job {
+        forgetTranscript(job)
+        activity = "Transcript moved to Trash; recording retained"
+        startNext()
+        return true
+    }
+    func forgetTranscript(_ job: URL) {
+        // Enumeration and persisted URLs can carry different directory hints.
+        func matches(_ candidate: URL?) -> Bool { candidate?.standardizedFileURL.path == job.standardizedFileURL.path }
+        if matches(rememberedJob) { cancelRestoration() }
+        if matches(latestJob) {
             latestJob = nil
             latestSource = nil
             progress = 0
         }
-        if previousJob == job { previousJob = nil }
-        if rememberedJob == job { persistJob(nil, nil) }
-        if pendingTextRequest?.transcript.deletingLastPathComponent() == job { pendingTextRequest = nil }
-        activity = "Transcript moved to Trash; recording retained"
-        startNext()
-        return true
+        if matches(previousJob) { previousJob = nil }
+        if matches(rememberedJob) { persistJob(nil, nil) }
+        if matches(pendingTextRequest?.transcript.deletingLastPathComponent()) { pendingTextRequest = nil }
     }
     func acceptCloudTranscript(_ job: URL, source: URL) {
         cancelRestoration()

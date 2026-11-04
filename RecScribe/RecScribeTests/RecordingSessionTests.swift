@@ -489,17 +489,18 @@ struct RecordingSessionTests {
             }
         }
         let gate = WorkerGate()
+        // Keep the active-worker fixture separate from deliberately unsafe symlinks above.
+        let workerRoot = directory.appendingPathComponent("ActiveLive", isDirectory: true)
         let live = LiveTranscription(
-            liveRoot: liveRoot,
+            liveRoot: workerRoot,
             work: { _, _, cursor, _, _, _ in
                 try await gate.wait(cursor: cursor)
             }
         )
         live.setEnabled(true)
         live.recordingStarted(manifest.deletingPathExtension().deletingPathExtension().appendingPathExtension("wav"))
-        for _ in 0..<50 where gate.continuation == nil {
-            try await Task.sleep(nanoseconds: 10_000_000)
-        }
+        await waitUntil("live worker admitted") { gate.continuation != nil }
+        _ = try #require(gate.continuation)
         let activeLiveDir = try #require(live.directory)
         let activeLiveAttempt = activeLiveDir.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: activeLiveAttempt, withIntermediateDirectories: true)
@@ -509,7 +510,7 @@ struct RecordingSessionTests {
 
         // Even after recordingStopped() while the final worker pass is still in-flight, automatic registry ownership protects activeLiveDir.
         live.recordingStopped()
-        LiveTranscription.pruneDisposableWorkingFiles(in: liveRoot)
+        LiveTranscription.pruneDisposableWorkingFiles(in: workerRoot)
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("working.wav").path))
         #expect(fm.fileExists(atPath: activeLiveAttempt.appendingPathComponent("channel-0.wav").path))
 

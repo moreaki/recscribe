@@ -142,7 +142,7 @@ final class SessionPlaybackCoordinator {
     private(set) var effectiveOutput = "System output"
 
     let levels: PlaybackLevels
-    private let hardwareObserver: AudioHardwareObserver
+    let hardwareObserver: AudioHardwareObserver
     private let coordinator: SessionPlaybackCoordinator
     private let build: (SessionEntry) async throws -> AVPlayerItem
     private let activate: (AVPlayer) -> Void

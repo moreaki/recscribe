@@ -316,6 +316,15 @@ struct RecordingSessionTests {
         session.title = "Line 1\nLine 2"
         #expect(throws: SessionError.self) { _ = try session.validated(beside: manifest) }
 
+        var document = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifest)) as? [String: Any])
+        document["futureExtension"] = ["preserve": true]
+        var parts = try #require(document["parts"] as? [[String: Any]])
+        parts[0]["futurePartField"] = "original evidence"
+        document["parts"] = parts
+        try JSONSerialization.data(withJSONObject: document).write(to: manifest, options: .atomic)
+        document.removeValue(forKey: "title")
+        let originalMetadata = document as NSDictionary
+
         var settings = AppSettings.Values()
         settings.autoTranscribe = false
         let library = SessionLibrary(settings: { settings })
@@ -324,21 +333,34 @@ struct RecordingSessionTests {
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         let loaded = try #require(library.entries.first)
-        library.rename(loaded, title: "  Weekly Architecture Sync  ")
+        let originalAudio = try RecordingSession.hash(directory.appendingPathComponent(loaded.session.parts[0].path))
+        let partEncoder = JSONEncoder()
+        partEncoder.outputFormatting = .sortedKeys
+        let originalParts = try partEncoder.encode(loaded.session.parts)
+        await library.rename(loaded, title: "  Weekly Architecture Sync  ")
         #expect(library.entries.first?.displayTitle == "Weekly Architecture Sync")
         #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
+        #expect(try RecordingSession.hash(directory.appendingPathComponent(loaded.session.parts[0].path)) == originalAudio)
+        #expect(try partEncoder.encode(RecordingSession.read(manifest).parts) == originalParts)
+        do {
+            let lease = try SessionLease(manifest)
+            #expect(await library.rename(loaded, title: "Locked") == nil)
+            withExtendedLifetime(lease) {}
+        }
 
         // Recording active blocks rename
         library.setRecording(true)
-        library.rename(library.entries[0], title: "Blocked Rename")
+        await library.rename(library.entries[0], title: "Blocked Rename")
         #expect(try RecordingSession.read(manifest).title == "Weekly Architecture Sync")
         library.setRecording(false)
 
         // Empty title resets back to filename stem
-        library.rename(library.entries[0], title: "   ")
+        await library.rename(library.entries[0], title: "   ")
         #expect(library.entries.first?.session.title == nil)
         #expect(library.entries.first?.displayTitle == "OutputName")
         #expect(try RecordingSession.read(manifest).title == nil)
+        let renamedMetadata = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifest)) as? [String: Any])
+        #expect(renamedMetadata as NSDictionary == originalMetadata)
         await library.shutdown()
 
         // 1. Completed local draft (>48h old, NO transcript.json): raw ASR JSON, checkpoints, and silence notes must be preserved; only disposable working WAVs are removed.

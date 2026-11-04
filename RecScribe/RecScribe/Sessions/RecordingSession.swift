@@ -143,10 +143,18 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     }
 
     static func read(_ url: URL) throws -> Self {
+        try decode(readBytes(url), beside: url)
+    }
+
+    private static func readBytes(_ url: URL) throws -> Data {
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
         let bytes = try input.read(upToCount: maximumManifestBytes + 1) ?? Data()
         guard bytes.count <= maximumManifestBytes else { throw SessionError.invalid("Session manifest is too large") }
+        return bytes
+    }
+
+    private static func decode(_ bytes: Data, beside url: URL) throws -> Self {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(Self.self, from: bytes).validated(beside: url)
@@ -239,6 +247,27 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
             throw SessionError.invalid("Session path escapes its directory")
         }
         return url
+    }
+
+    static func rename(_ manifest: URL, title: String, cancel: WorkCancellation) throws -> Self {
+        try cancel.check()
+        let lease = try SessionLease(manifest)
+        defer { withExtendedLifetime(lease) {} }
+        let bytes = try readBytes(manifest)
+        var session = try decode(bytes, beside: manifest)
+        let cleaned = title.replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        session.title = cleaned.isEmpty ? nil : String(cleaned.prefix(maximumTitleLength))
+        _ = try session.validated(beside: manifest)
+        // Change only the title, retaining nested extension fields and original metadata.
+        guard var document = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+            throw SessionError.invalid("Session manifest must be an object")
+        }
+        document["title"] = session.title
+        let updated = try JSONSerialization.data(withJSONObject: document, options: [.prettyPrinted, .sortedKeys])
+        try cancel.check()
+        try updated.write(to: manifest, options: .atomic)
+        return session
     }
 
     func save(_ url: URL) throws {

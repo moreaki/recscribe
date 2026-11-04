@@ -103,12 +103,21 @@ struct AudioRoutingViewTests {
         host.frame = CGRect(x: 0, y: 0, width: 760, height: 900)
         let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.contentView = host
+        // Native SwiftUI controls are installed lazily. Give this fixture a real
+        // AppKit backing window, offscreen, rather than relying on a local renderer cache.
+        window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
+        window.orderFront(nil)
         defer { window.contentView = nil; window.close() }
-        try await Task.sleep(for: .milliseconds(100))
         host.layoutSubtreeIfNeeded()
+        let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+        host.cacheDisplay(in: host.bounds, to: bitmap)
         func native(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(native) }
         // SwiftUI draws ordinary card buttons itself; the capture checkbox is
         // the sole native non-popup button in this collapsed fixture.
+        await waitUntil("collapsed virtual capture checkbox rendered") {
+            host.layoutSubtreeIfNeeded()
+            return native(host).compactMap { $0 as? NSButton }.contains { !($0 is NSPopUpButton) }
+        }
         let checkboxes = native(host).compactMap { $0 as? NSButton }.filter { !($0 is NSPopUpButton) }
         #expect(checkboxes.count == 1, "Capture checkbox must exist without expanding the card")
         let checkbox = try #require(checkboxes.first)

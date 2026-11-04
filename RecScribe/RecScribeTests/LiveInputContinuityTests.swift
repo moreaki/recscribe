@@ -84,7 +84,11 @@ import Testing
         inputs[1].request.failure("Synthetic startup exhausted")
         await settle()
         #expect(inputs.count == 2, "A startup failure must wait for a hardware event, not retry forever")
-        backend.changed?()
+        for _ in 0..<5 {
+            backend.changed?() // Unchanged inventory / transient default-I/O helper event.
+            await settle()
+            #expect(inputs.count == 2, "Unrelated system refresh must not defeat the startup retry budget")
+        }
         for changed in backend.deviceChanges { changed() }
         await waitUntil("opted virtual rejoin") { inputs.count == 3 }
         #expect(inputs[0].starts == 1 && inputs[0].stops == 0)

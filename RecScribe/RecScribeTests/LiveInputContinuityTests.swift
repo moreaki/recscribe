@@ -96,7 +96,7 @@ import Testing
         let capture = MockAudioCapturing()
         let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: root),
             audioSource: provider, levels: levels)
-        _ = try await controller.startRecording(format: .wav)
+        _ = try await controller.startRecording()
         let join = try #require(capture.onInputAvailable)
         #expect(await join(.init(uid: "new", name: "New input", inputChannels: 1, sampleRate: 48000), .init(deviceUID: "new")))
         #expect(levels.level("input:new").muted)

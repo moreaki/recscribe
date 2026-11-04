@@ -118,7 +118,7 @@ import Observation
                     self?.waveformSamples = samples
                 }
             }
-            let fileURL = try await controller.startRecording(format: selectedFormat)
+            let fileURL = try await controller.startRecording()
             lastRecordingURL = fileURL
             recordingStartTime = clock.now
             duration = 0

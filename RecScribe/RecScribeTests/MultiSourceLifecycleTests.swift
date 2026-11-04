@@ -79,7 +79,7 @@ struct MultiSourceLifecycleTests {
         let controller = RecordingController(captureManager: capture, saveLocation: MockSaveLocationProviding(directory: directory),
             audioSource: MockAudioSourceProviding(selectedSource: source),
             levels: AudioLevels(defaults: UserDefaults(suiteName: "combined-controller-" + UUID().uuidString)!))
-        let audio = try await controller.startRecording(format: .wav)
+        let audio = try await controller.startRecording()
         let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         for index in 0..<10 {
             capture.emit(packet(.playback, at: now + Double(index) / 100))

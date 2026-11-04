@@ -2,8 +2,7 @@
 //  RecordingControllerTests.swift
 //  RecScribeTests
 //
-//  BL-015: the controller threads the chosen AudioFormat into both the file
-//  path (extension) and the recorder (encoder). Uses the injectable mock seams.
+//  WAV capture, source configuration, and teardown through injected capture/encoder seams.
 //
 
 import Testing
@@ -22,7 +21,7 @@ struct RecordingControllerTests {
                 saveLocation: MockSaveLocationProviding(directory: FileManager.default.temporaryDirectory),
                 audioSource: MockAudioSourceProviding(), sessionLibrary: library)
             do {
-                _ = try await controller.startRecording(format: .wav)
+                _ = try await controller.startRecording()
                 #expect(library.recordingActive)
                 try await controller.stopRecording()
             } catch { #expect(shouldFail) }
@@ -45,22 +44,65 @@ struct RecordingControllerTests {
         )
     }
 
-    @Test("generateFilePath uses the format's extension", arguments: [AudioFormat.wav, .m4a])
-    func filePathExtensionFollowsFormat(_ format: AudioFormat) {
-        let url = makeController().generateFilePath(format: format)
-        #expect(url.pathExtension == format.fileExtension)
+    @Test("Live capture paths always use the canonical WAV extension")
+    func filePathAlwaysUsesWAV() {
+        #expect(makeController().generateFilePath().pathExtension == "wav")
     }
 
     @Test("Capture always uses lossless WAV, independently of archive preference")
-    func startThreadsFormat() async throws {
+    func startAlwaysUsesWAV() async throws {
         let recorder = MockAudioFileWriting()
         let controller = makeController(recorder: recorder)
 
-        let url = try await controller.startRecording(format: .m4a)
+        let url = try await controller.startRecording()
 
         #expect(recorder.lastStartFormat == .wav)
         #expect(url.pathExtension == "wav")
         #expect(controller.recordingURL?.pathExtension == "wav")
+    }
+
+    @Test("Legacy format defaults cannot change WAV capture or its independent archive policy",
+          arguments: ["wav", "m4a", "flac", "garbage"])
+    func obsoleteFormatPreferenceDoesNotAffectTheRealCaptureWriter(_ legacyFormat: String) async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let suite = "wav-capture-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(legacyFormat, forKey: "selectedFormat")
+        let capture = MockAudioCapturing()
+        let source = MockAudioSourceProviding(selectedSource: .systemAll)
+        let location = MockSaveLocationProviding(directory: directory)
+        let audio = AudioServices(defaults: defaults)
+        let controller = RecordingController(captureManager: capture, saveLocation: location,
+            audioSource: source, levels: audio.levels, monitor: audio.monitor,
+            storageOptions: { .init(archiveFormat: .flac) })
+        let viewModel = RecorderViewModel(controller: controller, permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(), saveLocation: location, audioSource: source,
+            installLocation: MockInstallLocationProviding(.applications), defaults: defaults, audio: audio)
+        do {
+            await viewModel.startRecording()
+            let output = try #require(controller.recordingURL)
+            #expect(output.pathExtension == "wav")
+            #expect(viewModel.isRecording && capture.capturing)
+            capture.emitPCM(SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 480, interleaved: false) { _, _ in 0.125 })
+            await viewModel.stopRecording()
+            let manifest = RecordingSession.manifestURL(for: output)
+            let session = try RecordingSession.read(manifest)
+            let part = try #require(session.parts.first)
+            let wav = try PCM16WAV.read(RecordingSession.safeURL(part.path, beside: manifest))
+            #expect(wav.frames == 480 && wav.sampleRate == 48_000 && wav.channels == 2)
+            #expect(session.options.archiveFormat == .flac)
+            #expect(session.artifacts.isEmpty) // Conversion does not run during capture.
+            #expect(defaults.string(forKey: "selectedFormat") == legacyFormat)
+            #expect(!capture.capturing && !viewModel.isRecording)
+            await audio.shutdown()
+        } catch {
+            await viewModel.stopRecording()
+            await audio.shutdown()
+            throw error
+        }
     }
 
     @Test("startRecording threads the selected AudioSource into capture setup (BL-100)")
@@ -69,7 +111,7 @@ struct RecordingControllerTests {
         let audioSource = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.apple.logic10"))
         let controller = makeController(capture: capture, audioSource: audioSource)
 
-        _ = try await controller.startRecording(format: .wav)
+        _ = try await controller.startRecording()
 
         #expect(capture.lastSource == .app(bundleID: "com.apple.logic10"))
         #expect(audioSource.validateCount == 1)
@@ -84,7 +126,7 @@ struct RecordingControllerTests {
         let controller = makeController(recorder: recorder, capture: capture, audioSource: audioSource)
 
         await #expect(throws: AudioSourceError.self) {
-            try await controller.startRecording(format: .wav)
+            try await controller.startRecording()
         }
 
         #expect(recorder.startCount == 0)
@@ -102,7 +144,7 @@ struct RecordingControllerTests {
         let capture = MockAudioCapturing()
         capture.setupError = FinalizeFailure()
         let controller = makeController(recorder: recorder, capture: capture)
-        await #expect(throws: FinalizeFailure.self) { try await controller.startRecording(format: .wav) }
+        await #expect(throws: FinalizeFailure.self) { try await controller.startRecording() }
         #expect(recorder.stopCount == 1)
         #expect(capture.cleanupCount == 1)
         #expect(!recorder.recording)
@@ -113,7 +155,7 @@ struct RecordingControllerTests {
         let recorder = MockAudioFileWriting()
         let capture = MockAudioCapturing()
         let controller = makeController(recorder: recorder, capture: capture)
-        _ = try await controller.startRecording(format: .wav)
+        _ = try await controller.startRecording()
         capture.stopError = FinalizeFailure()
         do {
             try await controller.stopRecording()
@@ -135,7 +177,7 @@ struct RecordingControllerTests {
         let capture = MockAudioCapturing()
         let controller = makeController(recorder: recorder, capture: capture)
 
-        _ = try await controller.startRecording(format: .wav)
+        _ = try await controller.startRecording()
         recorder.stopError = FinalizeFailure()
 
         await #expect(throws: FinalizeFailure.self) {
@@ -154,7 +196,7 @@ struct RecordingControllerTests {
         let capture = MockAudioCapturing()
         let controller = makeController(recorder: recorder, capture: capture)
 
-        _ = try await controller.startRecording(format: .wav)
+        _ = try await controller.startRecording()
         try await controller.stopRecording()
 
         #expect(recorder.stopCount == 1)

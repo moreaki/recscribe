@@ -249,10 +249,10 @@ struct AudioTestTests {
         recording.onStart = { #expect(!preview.capturing) }
         for _ in 0..<2 {
             await test.startPreview()
-            await #expect(throws: (any Error).self) { try await controller.startRecording(format: .wav) }
+            await #expect(throws: (any Error).self) { try await controller.startRecording() }
             #expect(recording.startCount == recording.stopCount)
             await test.prepareForRecording()
-            _ = try await controller.startRecording(format: .wav)
+            _ = try await controller.startRecording()
             let epoch = CMClockGetTime(CMClockGetHostTimeClock()).seconds
             for index in 0..<3 { recording.emit(.init(track: .playback, presentationTime: epoch + Double(index) / 100, buffer: pcm(0.4))) }
             await test.startPreview()

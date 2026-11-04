@@ -162,15 +162,22 @@ struct RecorderReliabilityTests {
         let release = DispatchSemaphore(value: 0)
         defer { release.signal() }
         let delivered = OSAllocatedUnfairLock(initialState: 0)
+        let deliveredFrames = OSAllocatedUnfairLock(initialState: 0)
+        let deliveredFirstSamples = OSAllocatedUnfairLock(initialState: [Float]())
         let errors = OSAllocatedUnfairLock(initialState: [String]())
 
         let normalizer = SingleInputAudioNormalizer(
             maxBuffers: byCount ? 2 : 100,
             maxBytes: byCount ? 1_024 : 128,
-            callback: { _ in
+            callback: { normalized in
                 let index = delivered.withLock { count -> Int in
                     count += 1
                     return count
+                }
+                let frames = Int(normalized.frameLength)
+                deliveredFrames.withLock { $0 += frames }
+                if let sample = normalized.floatChannelData?[0][0] {
+                    deliveredFirstSamples.withLock { $0.append(sample) }
                 }
                 if index == 1 {
                     entered.signal()
@@ -182,15 +189,24 @@ struct RecorderReliabilityTests {
             }
         )
 
-        // First buffer enters the callback and stays in-flight; second fills the bound; remaining overflow once.
-        normalizer.accept(buffer())
+        let firstAdmitted = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 8, sampleRate: 48_000, interleaved: false) { _, _ in 0.25 }
+        let secondAdmitted = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 8, sampleRate: 48_000, interleaved: false) { _, _ in 0.5 }
+        let overflowCandidate = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 8, sampleRate: 48_000, interleaved: false) { _, _ in 0.75 }
+
+        // First buffer enters the callback and stays in-flight; second is admitted and queued; remaining overflow once.
+        normalizer.accept(firstAdmitted)
         #expect(await Task.detached { Self.wait(entered) }.value)
+        normalizer.accept(secondAdmitted)
         for _ in 0..<200 {
-            normalizer.accept(buffer())
+            normalizer.accept(overflowCandidate)
         }
         release.signal()
         await normalizer.finish()
-        await Task.yield()
+        // Both admitted buffers (in-flight #1 and queued #2) must reach callback in order BEFORE finish() returns.
+        #expect(delivered.withLock { $0 } == 2)
+        #expect(deliveredFrames.withLock { $0 } == 16)
+        #expect(deliveredFirstSamples.withLock { $0 } == [0.25, 0.5])
+        await settle()
 
         let m = normalizer.metrics
         #expect(m.peakBuffers == 2)

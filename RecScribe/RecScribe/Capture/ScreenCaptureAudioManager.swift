@@ -502,7 +502,8 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
 nonisolated final class SingleInputAudioNormalizer: @unchecked Sendable {
     private struct State: Sendable {
         var accepting = true
-        var failed = false
+        var conversionFailed = false
+        var reportedError = false
         var buffers = 0
         var bytes = 0
         var peakBuffers = 0
@@ -544,14 +545,16 @@ nonisolated final class SingleInputAudioNormalizer: @unchecked Sendable {
         let transferred = TransferredPCMBuffer(value: buffer)
         let onError = self.onError
         state.withLock { s in
-            guard s.accepting, !s.failed else { return }
+            guard s.accepting, !s.conversionFailed else { return }
             guard s.buffers < maxBuffers, bytes <= maxBytes - s.bytes else {
                 s.rejected += 1
-                s.failed = true
                 s.accepting = false
-                let message = AudioRecorderError.bufferLimit.localizedDescription
-                Task { @MainActor in
-                    onError(message)
+                if !s.reportedError {
+                    s.reportedError = true
+                    let message = AudioRecorderError.bufferLimit.localizedDescription
+                    Task { @MainActor in
+                        onError(message)
+                    }
                 }
                 return
             }
@@ -572,12 +575,13 @@ nonisolated final class SingleInputAudioNormalizer: @unchecked Sendable {
                 $0.bytes -= bytes
             }
         }
-        guard state.withLock({ !$0.failed }) else { return }
+        guard state.withLock({ !$0.conversionFailed }) else { return }
         guard let normalized = normalizer.normalize(buffer) else {
             let shouldReport = state.withLock { s -> Bool in
-                guard !s.failed else { return false }
-                s.failed = true
+                s.conversionFailed = true
                 s.accepting = false
+                guard !s.reportedError else { return false }
+                s.reportedError = true
                 return true
             }
             if shouldReport {

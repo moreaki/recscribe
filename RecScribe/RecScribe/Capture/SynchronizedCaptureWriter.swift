@@ -422,10 +422,15 @@ nonisolated final class SynchronizedCaptureWriter {
         return (input.writer?.frameCount ?? input.end, input.pending.map { AudioRecorder.peak($0) } ?? 0, postPeaks[track] ?? 0, mixPeak, (fileMix?.clippedFrames ?? clippedFrames) > 0)
     }
 
-    func finish(failure: Error? = nil, check: () throws -> Void = {}) throws {
+    func finish(failure: Error? = nil, expectedEndTime: Double? = nil, check: () throws -> Void = {}) throws {
         guard !sealed else { return }
         sealed = true
         var failureToReport = failure
+        var requestedEnd: Int64?
+        do {
+            requestedEnd = try expectedEndTime.map { try frame($0) }
+            if let requestedEnd { try mix?.setCaptureStopFrame(requestedEnd) }
+        } catch { if failureToReport == nil { failureToReport = error } }
         for track in tracks {
             do {
                 guard let input = inputs[track] else {
@@ -439,7 +444,7 @@ nonisolated final class SynchronizedCaptureWriter {
             } catch { if failureToReport == nil { failureToReport = error } }
         }
         for input in inputs.values {
-            if end - input.end > Int64(policy.maximumEndSkewSeconds * 48_000) {
+            if (requestedEnd ?? end) - input.end > Int64(policy.maximumEndSkewSeconds * 48_000) {
                 try? mix?.addIssue("A selected source stopped delivering data; review source coverage and silence in the mix.")
             }
             do { try silence(to: input.writer, frames: end - input.end, channels: input.format.channelCount) }
@@ -453,6 +458,7 @@ nonisolated final class SynchronizedCaptureWriter {
             Log.recorder.notice("Source timing role=\(role.rawValue, privacy: .public) received_native_frames=\(input.receivedFrames) saved_timeline_frames=\(input.writer?.frameCount ?? input.end) timestamp_gap_frames=\(input.gaps) mix_clipped_frames=\(self.clippedFrames)")
             Log.recorder.notice("Source delivery session=\(self.mix?.sessionID?.uuidString ?? "preview", privacy: .public) role=\(role.rawValue, privacy: .public) max_processing_lag_s=\(input.maximumLag) late_monitor_frames=\(input.lateMonitorFrames) first_late_frame=\(input.firstLateFrame ?? -1) last_late_frame=\(input.lastLateFrame ?? -1)")
         }
+        Log.recorder.notice("Capture stop boundary requested_frame=\(requestedEnd ?? -1) final_source_end_frame=\(self.end)")
         // Seal source files first. Even cancelled/failed mix completion must
         // leave the independently captured originals finalized and recoverable.
         for input in inputs.values {

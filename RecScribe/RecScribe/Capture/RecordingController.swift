@@ -1,4 +1,5 @@
 import Foundation
+import CoreMedia
 import os
 
 enum RecordingControllerError: Error {
@@ -165,10 +166,13 @@ enum RecordingControllerError: Error {
     func stopRecording() async throws {
         var needsReview = false
         defer { releaseRecordingResources(needsReview: needsReview) }
+        // Backends finish at different times. Coverage is required through the
+        // user's stop request, while every callback admitted during drain stays.
+        let requestedEndTime = CMClockGetTime(CMClockGetHostTimeClock()).seconds
         let captureFailure = await haltCapture()
         if let sink = multiRecorder {
             var writeFailure: Error?
-            do { try await sink.stop(failure: captureFailure) }
+            do { try await sink.stop(failure: captureFailure, expectedEndTime: requestedEndTime) }
             catch { writeFailure = error }
             await captureManager.cleanup()
             multiRecorder = nil

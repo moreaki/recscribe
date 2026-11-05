@@ -257,7 +257,7 @@ final class MultiSourceRecorder {
         Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1e15
     }
 
-    func stop(failure: Error? = nil, reportReviewIssues: Bool = true) async throws {
+    func stop(failure: Error? = nil, reportReviewIssues: Bool = true, expectedEndTime: Double? = nil) async throws {
         guard !stopping, state.withLock({ $0.active }) else { throw AudioRecorderError.notRecording }
         let stopStarted = ContinuousClock.now
         stopping = true
@@ -269,7 +269,7 @@ final class MultiSourceRecorder {
                     let finalizeStarted = ContinuousClock.now
                     let drainMS = Self.milliseconds(stopStarted.duration(to: finalizeStarted))
                     var resultError = failure ?? state.withLock { $0.failure }
-                    do { try writer?.finish(failure: resultError) } catch { if resultError == nil { resultError = error } }
+                    do { try writer?.finish(failure: resultError, expectedEndTime: expectedEndTime) } catch { if resultError == nil { resultError = error } }
                     for track in state.withLock({ $0.tracks }) {
                         let frames = writer?.health(for: track).written ?? 0
                         state.withLock { $0.health[track]?.writtenFrames = frames }

@@ -17,6 +17,7 @@ private struct CallLedger {
     var setupError: Error?
     var stopError: Error?
     var onStart: (() -> Void)?
+    var onStop: (() -> Void)?
     var beforeSetup: (() async -> Void)?
     private(set) var lastSource: AudioSource?
     private var pcm: (@Sendable (AVAudioPCMBuffer) -> Void)?
@@ -48,6 +49,7 @@ private struct CallLedger {
     }
     func stopCapture() async throws {
         calls.record("stop")
+        onStop?()
         if let failure = stopError { throw failure }
         capturing = false
     }

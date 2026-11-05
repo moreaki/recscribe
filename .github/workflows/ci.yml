@@ -18,6 +18,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Classify complete change set
+        id: scope
+        env:
+          CI_EVENT: ${{ github.event_name }}
+          CI_PR_BASE: ${{ github.event.pull_request.base.sha }}
+          CI_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          CI_PUSH_BASE: ${{ github.event.before }}
+        run: python3 scripts/ci-scope.py
       - name: Select pinned compiler
         run: |
           sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"
@@ -27,6 +35,7 @@ jobs:
           python3 scripts/check-source-boundary.py --self-test
           python3 -m unittest discover -s scripts/tests -p 'test_source_boundary.py'
           python3 -m unittest discover -s scripts/tests -p 'test_work_artifacts.py'
+          python3 -m unittest discover -s scripts/tests -p 'test_ci_scope.py'
           python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
@@ -34,7 +43,22 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'
           python3 scripts/check-pcm-storage.py
+      - name: Focused presentation contracts
+        if: steps.scope.outputs.mode == 'focused'
+        run: |
+          xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
+            -destination 'platform=macOS' \
+            -only-testing:RecScribeTests/RecordingReviewNotesTests \
+            -only-testing:RecScribeTests/OverflowMenuTests \
+            -only-testing:RecScribeTests/AudioRoutingSummaryTests \
+            -only-testing:RecScribeTests/RoutingControlsTests \
+            -only-testing:RecScribeTests/RecordingBulkDeletionTests \
+            -only-testing:RecScribeTests/RecordingSessionTests \
+            -parallel-testing-enabled NO -parallel-testing-worker-count 1 \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -resultBundlePath TestResults-functional.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Functional app contracts
+        if: steps.scope.outputs.mode != 'focused'
         run: |
           xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
             -destination 'platform=macOS' -only-testing:RecScribeTests \
@@ -44,6 +68,7 @@ jobs:
       # #83 requires complete, warning-free instrumentation evidence.
       - name: Thread Sanitizer
         id: sanitizer
+        if: steps.scope.outputs.mode != 'focused'
         run: |
           set -o pipefail
           xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
@@ -63,8 +88,18 @@ jobs:
                 || echo "::warning::Diagnostic export unavailable for $result"
             fi
           done
+      - name: Verify focused test completion
+        if: ${{ always() && steps.scope.outputs.mode == 'focused' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('TestResults-functional.json').read_text())
+          assert result.get('result') == 'Passed' and result.get('failedTests') == 0, result
+          assert result.get('passedTests', 0) > 0, 'Focused tests did not execute'
+          PY
       - name: Reject sanitizer diagnostics and incomplete runs
-        if: ${{ always() && steps.sanitizer.outcome != 'skipped' }}
+        if: ${{ always() && steps.scope.outputs.mode != 'focused' }}
         run: python3 scripts/check-sanitizer-results.py TestResults.json TestResults-functional.json TestResults-tsan.log
       - uses: actions/upload-artifact@v4
         if: always()

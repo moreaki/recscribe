@@ -122,12 +122,12 @@ struct AudioRoutingViewTests {
             host.cacheDisplay(in: host.bounds, to: bitmap)
             let image = try #require(bitmap.cgImage)
             let request = VNRecognizeTextRequest()
-            // The legacy fast recognizer works on CPU-only CI VMs without ANE.
+            // Pin the legacy recognizer for CPU-only CI VMs without ANE.
             request.revision = VNRecognizeTextRequestRevision1
-            request.recognitionLevel = .fast
+            request.recognitionLevel = .accurate
             request.usesCPUOnly = true
             request.recognitionLanguages = ["en-US"]
-            request.usesLanguageCorrection = false
+            request.usesLanguageCorrection = true
             try VNImageRequestHandler(cgImage: image).perform([request])
             text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
             if text.lowercased().filter({ !$0.isWhitespace }).contains("recordmeetingloopback") { break }

@@ -30,8 +30,10 @@ struct SourceMixdownTests {
             let file = try AVAudioFile(forReading: RecordingSession.safeURL(part.path, beside: manifest))
             let buffer = try #require(AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)))
             try file.read(into: buffer)
-            for channel in 0..<session.channels {
-                result[channel] += Array(UnsafeBufferPointer(start: buffer.floatChannelData![channel], count: Int(buffer.frameLength)))
+            withExtendedLifetime(buffer) {
+                for channel in 0..<session.channels {
+                    result[channel] += Array(UnsafeBufferPointer(start: buffer.floatChannelData![channel], count: Int(buffer.frameLength)))
+                }
             }
         }
         return result
@@ -459,5 +461,58 @@ struct SourceMixdownTests {
         let session = try RecordingSession.read(#require(mix.manifestURL))
         #expect(session.status == .needsReview && session.totalFrames == 4096)
         #expect(session.issues.contains(SourceMixdown.clippingIssue))
+    }
+
+    @Test func variablePacketsPreserveSampleIdentityAcrossBacklogAndPartBoundaries() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let options = RecordingStorageOptions(maximumPartBytes: 48044)
+        let mix = SessionWAVWriter(options: options)
+        try mix.createFile(at: root.appendingPathComponent("identity.wav"), sampleRate: 48000, channels: 2)
+        let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: tracks, epoch: 100, options: options)
+        func signal(_ role: CaptureTrack, _ channel: Int, _ frame: Int) -> Float {
+            var bits = UInt32(frame) &+ (role == .microphone ? 0x9e3779b9 : UInt32(channel + 1) &* 0x85ebca6b)
+            bits = (bits ^ (bits >> 16)) &* 0x7feb352d
+            bits = (bits ^ (bits >> 15)) &* 0x846ca68b
+            bits ^= bits >> 16
+            return Float(Int(bits & 16383) - 8192) / Float(Int16.max)
+        }
+        var scheduled: [(arrival: Double, sample: CapturedAudioSample)] = []
+        let sizes = [1, 239, 480, 1024, 4096, 8192]
+        for role in CaptureTrack.legacyPair {
+            var start = 0, index = 0
+            while start < 192000 {
+                let first = start
+                let count = min(sizes[index % sizes.count], 192000 - start)
+                let pcm = SampleBufferFixtures.makePCMBuffer(channels: role == .playback ? 2 : 1,
+                    frames: count, interleaved: false) { channel, offset in signal(role, channel, first + offset) }
+                let position = Double(start) / 48000
+                scheduled.append((position + (role == .playback ? 3 : 0),
+                    .init(track: role, presentationTime: 100 + position, buffer: pcm)))
+                start += count; index += 1
+            }
+        }
+        for event in scheduled.sorted(by: { $0.arrival < $1.arrival }) { try writer.accept(event.sample) }
+        try writer.finish()
+        let manifest = try #require(mix.manifestURL)
+        let session = try RecordingSession.read(manifest)
+        #expect(session.totalFrames == 192000 && session.issues.isEmpty)
+        var originals: [CaptureTrack: [[Float]]] = [:]
+        for track in try #require(session.sourceTracks) {
+            let child = try LinkedSourceSessions.read(track, parent: session, at: manifest)
+            let pcm = try decode(child.session, manifest: child.id)
+            originals[track.role] = pcm
+            for channel in pcm.indices {
+                #expect(pcm[channel].enumerated().allSatisfy { frame, value in
+                    abs(value - signal(track.role, channel, frame)) < 2 / 32768.0
+                })
+            }
+        }
+        let playback = try #require(originals[.playback]), input = try #require(originals[.microphone])
+        let saved = try decode(session, manifest: manifest)
+        for channel in 0..<2 {
+            #expect(saved[channel].enumerated().allSatisfy { frame, value in
+                abs(value - (playback[channel][frame] + input[0][frame]) / 2) < 2 / 32768.0
+            })
+        }
     }
 }

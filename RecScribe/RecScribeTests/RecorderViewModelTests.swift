@@ -42,6 +42,36 @@ struct RecorderViewModelTests {
         )
     }
 
+    @Test("Meter publication preserves raw channels, muted contributions and source settings")
+    func publishesCaptureMetersWithoutEditingAudio() throws {
+        let suite = "compact-source-telemetry-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = MockRecordingControlling()
+        let provider = MockAudioSourceProviding(selectedSource: .multiple(appBundleID: nil,
+            inputs: [.init(deviceUID: "interface", routes: [.init(channel: 31, placement: .right)])]))
+        let recorder = RecorderViewModel(controller: controller, permissions: MockPermissionProviding(.granted),
+            clock: ManualClock(), audioSource: provider, defaults: defaults)
+        let track = CaptureTrack.input("interface")
+        var meters = CaptureSourceMeters()
+        meters.raw.update(Array(repeating: 0.4, count: 32))
+        meters.processed.update(Array(repeating: 0, count: 32))
+        controller.sourceMeters = [track: meters]
+        let source = provider.selectedSource
+        recorder.audio.levels.set("input:interface", .init(decibels: -6, muted: true, channelTrims: [31: -3]))
+        let settings = recorder.audio.levels.snapshot(for: source)
+        recorder.refreshCaptureHealth()
+        #expect(recorder.telemetry.sourceMeters[track] == meters)
+        #expect(recorder.telemetry.sourceMeters[track]?.raw.peaks.count == 32)
+        #expect(recorder.telemetry.sourceMeters[track]?.processed.peaks.last == 0)
+        controller.sourceMeters = [:]
+        recorder.refreshCaptureHealth()
+        #expect(recorder.telemetry.sourceMeters.isEmpty)
+        #expect(provider.selectedSource == source)
+        #expect(recorder.audio.levels.snapshot(for: source) == settings)
+        #expect(controller.startCount == 0)
+    }
+
     @Test("Initial state is idle")
     func initialStateIsIdle() {
         let viewModel = makeViewModel()

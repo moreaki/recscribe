@@ -318,6 +318,7 @@ final class MockRecordingControlling: RecordingControlling {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
     var onStreamError: (@MainActor (String) -> Void)?
     var sourceHealth: [SourceRecordingHealth] = []
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
     private(set) var isRecording = false
     private(set) var recordingURL: URL?
 

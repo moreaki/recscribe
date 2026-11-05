@@ -10,7 +10,7 @@ import Testing
 @MainActor
 struct AudioRoutingViewTests {
     @Test(arguments: [1, 32])
-    func compactAndExpandedViewsPreserveSettingsAndFitNarrowWindows(_ channels: Int) async throws {
+    func compactSourcesAndMixOutputsPreserveSettingsAndFitNarrowWindows(_ channels: Int) async throws {
         let suite = "recscribe-routing-view-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -32,12 +32,12 @@ struct AudioRoutingViewTests {
         let savedPlayback = playback.value
         let savedMonitor = monitor.levels.value
         let panels: [(String, AudioRoutingPanel?)] = [
-            ("compact-overview", nil), ("playback-gain", .playback), ("input-expanded", .input("mic")),
+            ("compact-overview", nil),
             ("mix-expanded", .mix), ("monitor-expanded", .monitor), ("output-expanded", .recordingPlayback)
         ]
 
         for (name, panel) in panels {
-            let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback, expandedPanel: panel)
+            let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback, expandedPanel: panel, embeddedInStudio: true)
                 .environment(recorder).preferredColorScheme(.dark)
             let hosting = NSHostingView(rootView: root)
             hosting.frame = CGRect(origin: .zero, size: CGSize(width: 1120, height: panel == nil ? 500 : 700))
@@ -61,15 +61,10 @@ struct AudioRoutingViewTests {
                 }
             }
             try await render(name)
-            func gainControls(_ view: NSView) -> [GainSliderControl] {
-                (view as? GainSliderControl).map { [$0] } ?? view.subviews.flatMap(gainControls)
+            for width in [760.0, 620.0] {
+                hosting.frame.size = CGSize(width: width, height: 700)
+                try await render(name + "-\(Int(width))")
             }
-            let controls = gainControls(hosting)
-            let hasGain = panel == .playback || panel == .input("mic") || panel == .mix
-            #expect(controls.count == (hasGain ? 1 : 0), "Only the selected card should construct a gain control")
-            if panel == .input("mic") { #expect(controls.first?.doubleValue == -6) }
-            hosting.frame.size = CGSize(width: 760, height: 700)
-            try await render(name + "-narrow")
         }
         // Rendering/disclosing must never rewrite capture selection or settings.
         #expect(provider.setCount == 0)

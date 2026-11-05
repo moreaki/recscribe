@@ -11,8 +11,10 @@ import json
 from pathlib import Path
 import subprocess
 
+from source_baseline import BASELINE, identities
+
 ROOT = Path(__file__).resolve().parent.parent
-UPSTREAM = "2f9c42dd92dad72cb7e1d29ce555c2ee48967e53"
+UPSTREAM = BASELINE
 REVIEW = ROOT / "docs/provenance/reviewed-components.json"
 
 
@@ -25,6 +27,7 @@ def audit():
     reviewed = {item["path"]: item for item in json.loads(REVIEW.read_text())["files"]} if REVIEW.exists() else {}
     upstream = git("rev-parse", UPSTREAM).decode().strip()
     ancestors = set(git("rev-list", upstream).decode().splitlines())
+    historical_contributors = identities().contributors
     contributor_commits = []
     for record in git("log", "--format=%H%x00%an%x00%B%x00%x1e").decode().split("\x1e"):
         fields = record.strip().split("\x00")
@@ -32,7 +35,7 @@ def audit():
             continue
         sha, author, message = fields[:3]
         haystack = (author + " " + message).lower()
-        if any(term in haystack for term in ("melissa", "pereira", "mdebritto", "claude", "anthropic")):
+        if any(identity.casefold() in haystack for identity in historical_contributors):
             contributor_commits.append({"commit": sha, "in_original_snapshot": sha in ancestors})
     original = collections.defaultdict(list)
     for entry in git("ls-tree", "-rz", "--full-tree", upstream).split(b"\0"):

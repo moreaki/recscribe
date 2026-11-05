@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Select pinned compiler
         run: |
           sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"
@@ -21,6 +23,7 @@ jobs:
       - name: Retired-reference boundary
         run: |
           python3 scripts/check-source-boundary.py --self-test
+          python3 -m unittest discover -s scripts/tests -p 'test_source_boundary.py'
           python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
@@ -77,6 +80,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Select pinned compiler
         run: |
           sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"

@@ -34,7 +34,7 @@ the user's requested checkpoint; remaining acceptance work is listed below.
 - #9: release defaults no longer embed developer checkout/model paths. Explicit
   paths are retained; tool discovery and applying discovered paths are separate
   actions. WAV cap input rejects non-finite/out-of-range numbers. Storage bounds
-  are shared with processing, and settings cards use the existing Glass tokens.
+  are shared with processing, and settings cards use the shared UI tokens, now provided by native Studio controls after #51.
 - Menubar overflow now exposes Settings and Recordings, Transcription & Summary.
   The recorder and recording library also provide direct navigation.
 

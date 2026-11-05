@@ -13,13 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-===============================================================================
-
-RecScribe includes software derived from Home Rec.
-Home Rec Copyright 2026 Melissa de Britto.
-Home Rec is licensed under the Apache License, Version 2.0.
-Source: https://github.com/melissa-pereira-deel/home-rec
-
 This application uses Apple's ScreenCaptureKit framework for system audio
 capture. ScreenCaptureKit is proprietary software provided by Apple Inc.
 and is subject to Apple's software license agreements.

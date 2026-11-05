@@ -1,19 +1,20 @@
 # Interface components
 
-RecScribe uses `WorkspaceStyle` for workspace chrome and retained `Glass*` controls
-for transport buttons, brand lockups, waveform bars and shared metrics. The latter
-remain part of the source replacement inventory in #51; their current presence is
-not a claim that the migration is complete.
+RecScribe composes workspace screens with `WorkspaceStyle` and native Studio
+controls in `RecScribe/RecScribe/UI/Controls/`. The control library implements
+transport actions, status indicators, brand rendering, typography, theme adaptation
+and a Canvas waveform. Text uses the macOS system families, including monospaced
+timers; no external font files are bundled.
 
-The components live under `RecScribe/RecScribe/DesignSystem/`, and application
-composition lives under `UI/`. Text uses native San Francisco and SF Mono. No
-external font files are bundled.
+Buttons use native focus and keyboard behavior. Layout supports accessible labels,
+enlarged text, adequate hit regions and reduced motion. Theme colors resolve from
+macOS semantic colors, with the recording accent following the current app icon.
+The live waveform observes its telemetry independently of transcript and workspace
+chrome so frequent sample updates remain local to the capture display.
 
-Replacement components must preserve keyboard navigation, accessible labels,
-contrast adaptation, minimum hit regions and reduced-motion behavior. The app's
-recording indicator, source controls and permission actions must remain clear at
-compact window sizes and with enlarged text. Validate presentation directly in the
-running app and use behavioral tests for capture, cancellation and state changes.
+Check presentation directly in the running app. Behavioral tests protect recording,
+cancellation, state transitions and storage; optional visual artifacts support
+human review without comparing screenshots or relying on private view hierarchies.
 
-See the [replacement inventory](provenance/recording-foundation.md) for remaining
-components and source-notice decisions.
+The [component assessment](provenance/recording-foundation.md) records the completed
+control replacement, compatibility measurements and notice disposition.

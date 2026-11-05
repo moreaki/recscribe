@@ -29,30 +29,51 @@ and line ancestry; modifications after review are reported as requiring review.
 A hash or lack of matching lines cannot prove that an implementation was never
 adapted. Review the actual replacement commits as well as the inventory.
 
-## Scope and notice decision
+## Final component and notice disposition
 
-The current implementation tree no longer integrates the original control library,
-upstream workflow or assistant-specific developer configuration. The local upstream
-remote was removed; an older clone can remove its own obsolete remote with
-`git remote remove upstream`. Builds use this repository and its pinned local core.
+The current implementation tree no longer integrates the retired control library,
+upstream workflow or contributor-specific developer configuration. The obsolete
+local upstream remote was removed. Builds use this repository and its pinned core.
 
-The original repository was Home Rec, with historical contributions associated
-with Melissa de Britto (`melissa-pereira-deel`) and Claude/Anthropic. All 94 history
-entries mentioning Claude/Anthropic are ancestors of the baseline. Historical Git
-commits, releases and discussions are intentionally preserved and outside #51.
+Each matched component is classified in `reviewed-components.json`. Inspection
+of the replacement commits and residual matching lines found no retained authored
+operational implementation, inherited test implementation or original media/font
+asset. Remaining matches are standard SDK declarations/calls, generated project
+and catalog schemas, file-format constants, language syntax, saved-data keys and
+public compatibility contracts. Those matches do not identify a remaining authored
+baseline component for which the former product attribution would apply.
 
-**Literal zero references is not claimed.** LICENSE and NOTICE retain the original
-copyright/source attribution conservatively for this repository's source history
-and distribution. This implementation review is not a clean-room or legal
-certification and does not establish that every historical notice is inapplicable.
-The Apache license and unrelated dependency notices are unchanged. Deleting a
-copyright notice is not treated as evidence of replacement.
+The Apache-2.0 license terms remain unchanged, as do the current project notice,
+Apple framework notice and unrelated dependency notices. The superseded product
+attribution and old application-owner statement are retired from current LICENSE
+and NOTICE under the exclusions for notices no longer pertaining to a remaining
+part in [sections 4(c) and 4(d)](https://www.apache.org/licenses/LICENSE-2.0).
+This is the recorded disposition for the reviewed current tree, not a claim of
+clean-room development or a deduction from test results alone.
 
-The reference guard's only reviewed exceptions are LICENSE, NOTICE, this assessment,
-the history-audit script and the guard's own identifier definitions. No application,
-test, asset, CI configuration or built-bundle exception is allowed. The built-app
-scan passed with no exceptions. The guard is a regression check, not a provenance
-or license determination.
+Historical commit `2f9c42d` and its original notices remain accessible in Git.
+Previously published releases and discussions are unchanged. The history boundary
+in #51 is preserved; this disposition concerns current sources and future artifacts.
+
+All five former file exceptions are removed:
+
+| File | Final disposition |
+| --- | --- |
+| LICENSE | Standard license terms retained; current project copyright statement. No retired attribution exception. |
+| NOTICE | Current project and Apple framework notices retained; superseded product attribution removed. No exception. |
+| This assessment | Component evidence and notice rationale retained without retired product/contributor identifiers. No exception. |
+| History audit script | Discover historical contributor identities from the pinned Git snapshot rather than storing old names in current source. No exception. |
+| Boundary guard | Discover historical project, repository, bundle, contributor and environment identities from the same snapshot. Check every tracked file and the built bundle. No exception. |
+
+The baseline-discovery code stores no alternate encoded registry. Required Git
+history is explicit: CI checks out complete repository history, and the guard fails
+if it cannot load the baseline. Positive/negative cases include license, notice,
+assessment and tool paths to prevent reintroducing a file-level bypass.
+
+The current-tree boundary has zero file exceptions and no literal retired product,
+contributor or namespace markers. A generated audit report can still identify
+historical original paths from Git; it is not tracked or shipped in the app.
+Historical ancestry and matching lines are not hidden or rewritten.
 
 ## Validation and manual review
 
@@ -81,7 +102,14 @@ unchanged multi-source review calculation; a causal relationship to replacement
 was not established. The finding remains documented and the preservation warning
 was not suppressed.
 
-Keep #51 open and PR #86 in draft until final review and required CI are complete.
+PR #86 was merged as `9fd85c9`, with the tree identical to its validated head
+`d4e6153`. Integrated CI passed 51 core tests, 393 functional app tests and 393 app
+tests under Thread Sanitizer, the strict raw-log/result gate, PCM probe and Release
+bundle boundary. Three environment-dependent integrations were skipped per app
+run (signed-host entitlement, opt-in Keychain and tool/model smoke); those are not
+claimed as executed passes. The remaining change is limited to notice disposition,
+audit/guard tooling and documentation, with focused boundary checks and required
+CI recorded in the follow-up PR before #51 closes.
 
 ## Integration review: main sanitizer correction (#87)
 

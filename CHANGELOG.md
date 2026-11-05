@@ -21,7 +21,10 @@ All notable RecScribe changes will be documented in this file.
 
 - Replaced the native PCM decoder, streaming normalizer, WAV sink and permission
   request/watcher implementations. Existing recording contracts and quantization
-  remain covered by the established suite; source replacement is still in progress.
+  remain covered by the established suite. Native controls and independent test/
+  tool contracts complete the source replacement. Superseded attribution is retired;
+  the Apache license and applicable notices remain, and the source guard has no
+  file exceptions.
 
 - Stopping a finalized multi-source recording reports clipping/timing/coverage
   notes inline instead of misreporting them as a failed save. Genuine capture

@@ -60,7 +60,7 @@ jobs:
       - name: Run unit tests (Thread Sanitizer)
         id: sanitizer
         # Blocking after #83: fixture sample storage has an explicit, observable
-        # lifetime. A green xcodebuild exit alone can hide a diagnostic/restart;
+        # lifetime. A green job/partial pass text can hide a diagnostic/restart;
         # verify both the result bundle and complete captured log below.
         run: |
           set -o pipefail

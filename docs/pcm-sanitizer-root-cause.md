@@ -91,8 +91,10 @@ framework warning does not invalidate the positive fixture regression.
 ## Preventing misleading green CI
 
 PR78's full sanitizer host emitted the warning, restarted, and printed a later
-partial-suite pass. `xcodebuild` nevertheless returned zero. CI now captures the
-complete sanitizer log, makes the sanitizer run blocking, and checks its exported
+partial-suite pass. The complete original log records `** TEST FAILED **` and
+exit code **65** at 00:24:57 UTC in run 41939665560. `continue-on-error` made the
+enclosing job green; its reported success was not a successful process exit.
+CI now captures the complete sanitizer log, makes the sanitizer run blocking, and checks its exported
 summary against the functional run. Warnings, host restarts, failed/missing
 results, missing completion markers, and differing test counts all fail the job.
 The raw log and diagnostics are retained as artifacts. The gate's regression

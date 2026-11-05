@@ -16,7 +16,7 @@ class SanitizerEvidenceTests(unittest.TestCase):
     def test_complete_clean_run(self):
         self.assertFalse(checker.problems(self.clean, self.clean, "** TEST SUCCEEDED **"))
 
-    def test_green_exit_does_not_hide_original_race_or_host_restart(self):
+    def test_success_marker_does_not_hide_original_race_or_host_restart(self):
         for diagnostic in ["WARNING: ThreadSanitizer: data race (pid=47472)",
                            "SUMMARY: ThreadSanitizer: data race in WAVWriter.writeFrames",
                            "Restarting after unexpected exit, crash, or test timeout"]:

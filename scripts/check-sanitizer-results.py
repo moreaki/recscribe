@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject sanitizer diagnostics even when xcodebuild exits zero after a restart."""
+"""Verify complete sanitizer evidence, not just process status or pass text."""
 import argparse
 import json
 from pathlib import Path

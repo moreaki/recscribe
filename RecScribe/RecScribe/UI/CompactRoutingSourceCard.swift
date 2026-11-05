@@ -87,18 +87,20 @@ struct CompactRoutingSourceCard<Accessory: View, CaptureAction: View>: View {
 
     private var gain: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(preservesSources ? "Mix gain" : "Saved gain").font(.caption2).foregroundStyle(.secondary).frame(height: 14)
             HStack(spacing: 3) {
+                Text(preservesSources ? "Mix gain" : "Saved gain")
+                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Spacer(minLength: 0)
                 TextField("dB", value: Binding(get: { value.decibels }, set: { proposed in
                     if proposed.isFinite { change { $0.decibels = min(24, max(-60, proposed)) } }
                 }), format: .number.precision(.fractionLength(1)))
-                    .textFieldStyle(.roundedBorder).frame(width: 52)
+                    .textFieldStyle(.roundedBorder).frame(width: 46)
                     .accessibilityLabel("\(title) mix gain in decibels")
                 Text("dB").foregroundStyle(.secondary)
             }.font(.caption).frame(height: 20)
             GainSlider(value: Binding(get: { value.decibels }, set: { proposed in
                 change { $0.decibels = proposed }
-            }), label: "\(title) mix gain").frame(height: 18)
+            }), label: "\(title) mix gain").frame(height: 32)
         }.disabled(!captured)
     }
 

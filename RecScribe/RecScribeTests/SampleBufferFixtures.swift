@@ -34,10 +34,12 @@ enum SampleBufferFixtures {
                 mData: UnsafeMutableRawPointer(samples.advanced(by: interleaved ? 0 : index * capacity)))
         }
         let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list.unsafePointer) { _ in
+            // Publish retirement before an allocator can hand this address to
+            // the next producer. A post-free observer can lag address reuse.
+            onDeallocate?()
             samples.deinitialize(count: capacity * channels)
             samples.deallocate()
             list.unsafeMutablePointer.deallocate()
-            onDeallocate?()
         }!
         buffer.frameLength = AVAudioFrameCount(frames)
 

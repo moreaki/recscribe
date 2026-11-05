@@ -144,11 +144,17 @@ struct SessionPlaybackAcceptanceTests {
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
         playback.receiveTimeObservation(.zero, from: player)
         playback.togglePlayback()
+        try #require(player.currentItem == nil)
+        // Emulate a late native play acknowledgement on the retained transport.
+        // AVPlayer.rate is desired rate: an empty player can report 1 while
+        // waiting for media. Detached media and controller intent are the
+        // safety contract, not a permanent rate value on a retired AVPlayer.
+        player.play()
         await settle()
-        // AVFoundation acknowledges queued rate commands asynchronously, even
-        // after the old media is detached. Check the settled transport state.
-        await waitForPause(player)
-        #expect(playback.phase == .failed && player.rate == 0)
+        #expect(player.currentItem == nil && !playback.hasAttachedPlayerObservers)
+        #expect(playback.phase == .failed && !playback.isPlaying && !playback.canSeek)
+        #expect(playback.errorMessage == error.localizedDescription && playback.position == 10)
+        #expect(gate.targets == [10])
 
         playback.playFile(url)
         await waitUntil("player replacing failed item") { !playback.loading }

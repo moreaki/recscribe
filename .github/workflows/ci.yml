@@ -24,6 +24,10 @@ jobs:
           python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
+      - name: Verify PCM storage ownership and sanitizer evidence checks
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'
+          python3 scripts/check-pcm-storage.py
       - name: Functional app contracts
         run: |
           xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
@@ -31,16 +35,17 @@ jobs:
             -parallel-testing-enabled NO -parallel-testing-worker-count 1 \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
             -resultBundlePath TestResults-functional.xcresult CODE_SIGNING_ALLOWED=NO
-      # Advisory instrumentation is retained separately from the blocking suite.
+      # #83 requires complete, warning-free instrumentation evidence.
       - name: Thread Sanitizer
-        continue-on-error: true
+        id: sanitizer
         run: |
+          set -o pipefail
           xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
             -destination 'platform=macOS' -only-testing:RecScribeTests \
             -parallel-testing-enabled NO -parallel-testing-worker-count 1 \
             -enableThreadSanitizer YES -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 300 \
-            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
+            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee TestResults-tsan.log
       - name: Export result summaries
         if: always()
         run: |
@@ -52,6 +57,9 @@ jobs:
                 || echo "::warning::Diagnostic export unavailable for $result"
             fi
           done
+      - name: Reject sanitizer diagnostics and incomplete runs
+        if: ${{ always() && steps.sanitizer.outcome != 'skipped' }}
+        run: python3 scripts/check-sanitizer-results.py TestResults.json TestResults-functional.json TestResults-tsan.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,6 +67,7 @@ jobs:
           path: |
             TestResults*.xcresult
             TestResults*.json
+            TestResults-tsan.log
             TestResults*-diagnostics/
           if-no-files-found: ignore
 

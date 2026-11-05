@@ -104,6 +104,85 @@ struct ObservationLayoutTests {
         #expect(levels.snapshot(for: .systemAll).master.decibels == -6)
     }
 
+    @Test func recordingClockAndDetailTicksRepaintWithoutRelayingOutTheCapturePanel() async throws {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        await h.model.startRecording()
+        defer { h.clock.stopTicking() }
+        let telemetry = h.model.telemetry
+        func publish(_ step: Int) {
+            let time = Double(step)
+            telemetry.healthTime = time
+            telemetry.duration = time
+            telemetry.sourceHealth = (0..<2).map { source in
+                .init(id: "source-\(source)", name: source == 0 ? "System playback" : "Microphone",
+                    health: .init(startedAt: 0, lastReceivedAt: time, lastWrittenAt: time,
+                        receivedFrames: 999000 + Int64(step) * 400000,
+                        writtenFrames: 999000 + Int64(step) * 400000,
+                        sampleRate: 48000, channels: source == 0 ? 2 : 1,
+                        postPeak: 0.2, mixPeak: 0.3, peak: 0.1 + Float(step % 8) / 10))
+            }
+            telemetry.refreshDetails()
+            telemetry.waveformSamples = Array(repeating: 0.1 + Float(step % 8) / 10, count: 200)
+        }
+        publish(0)
+        let host = WaveformLayoutHost(rootView: VStack(alignment: .leading) {
+            RecorderStatusBar(state: .recording, statusText: "Recording", telemetry: telemetry)
+            CaptureHealthView(recorder: h.model, telemetry: telemetry)
+            RecorderWaveformSection(telemetry: telemetry)
+        }.frame(width: 276))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 276, height: 650),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        defer { window.contentView = nil }
+        func pixels() throws -> Data {
+            let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            return try #require(bitmap.representation(using: .png, properties: [:]))
+        }
+        for _ in 0..<5 {
+            try await Task.sleep(for: .milliseconds(20)); host.layoutSubtreeIfNeeded()
+        }
+        // Like the waveform test, settle the first observed content update.
+        // Bootstrap sizing is separate from repeated steady-state tick layout.
+        publish(1)
+        for _ in 0..<5 {
+            try await Task.sleep(for: .milliseconds(20)); host.layoutSubtreeIfNeeded()
+        }
+        let initialPixels = try pixels(), layouts = host.layoutCount
+        for step in 2...25 {
+            publish(step)
+            try await Task.sleep(for: .milliseconds(20)); host.layoutSubtreeIfNeeded()
+        }
+        print("CAPTURE_LAYOUT ticks=24 ancestor_layouts=\(host.layoutCount - layouts)")
+        #expect(try pixels() != initialPixels)
+        #expect(host.layoutCount == layouts)
+    }
+
+    @Test func nativeReadoutKeepsFailureAndClippingDetailsAccessible() async throws {
+        let telemetry = RecorderTelemetry()
+        telemetry.healthTime = 1
+        telemetry.sourceHealth = [.init(id: "input", name: "Microphone", health: .init(
+            startedAt: 0, lastReceivedAt: 1, lastWrittenAt: 1, receivedFrames: 48000, writtenFrames: 48000,
+            sampleRate: 48000, channels: 1, postPeak: 0.2, peak: 0.3))]
+        telemetry.refreshDetails()
+        let view = CaptureHealthDrawingView(telemetry: telemetry, sourceID: "input")
+        defer { view.stopObserving() }
+        telemetry.healthTime = 1.1
+        telemetry.sourceHealth[0].health.failed = true
+        telemetry.sourceHealth[0].health.failureMessage = "Input disconnected"
+        telemetry.sourceHealth[0].health.clipped = true
+        telemetry.refreshDetails()
+        await waitUntil("native failure readout") {
+            (view.accessibilityValue() as? String)?.contains("Input disconnected") == true
+        }
+        let value = try #require(view.accessibilityValue() as? String)
+        #expect(value.contains("Capture or write failed"))
+        #expect(value.contains("Clipping detected"))
+        #expect(telemetry.layoutSources.first?.health.failed == true)
+        #expect(telemetry.layoutSources.first?.health.clipped == true)
+    }
+
     @Test func subcontrollersReleaseNotificationObserversWithRecorder() async throws {
         let center = NotificationCenter()
         let permissions = MockPermissionProviding(.denied)

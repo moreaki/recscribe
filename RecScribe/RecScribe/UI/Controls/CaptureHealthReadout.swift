@@ -108,7 +108,7 @@ final class CaptureHealthDrawingView: NSView {
             }
             let rect = NSRect(x: 0, y: y, width: bounds.width, height: CGFloat(line.1) * lineHeight)
             if rect.intersects(dirtyRect) {
-                let paragraph = NSMutableParagraphStyle(); paragraph.lineBreakMode = .byTruncatingTail
+                let paragraph = NSMutableParagraphStyle(); paragraph.lineBreakMode = .byWordWrapping
                 (line.0 as NSString).draw(with: rect, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
                     attributes: [.font: font, .foregroundColor: line.2, .paragraphStyle: paragraph])
             }

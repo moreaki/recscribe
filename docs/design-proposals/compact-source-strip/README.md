@@ -1,16 +1,19 @@
 # Kompakte Quellensteuerung ohne Auf-/Zuklappen
 
-Designvorschlag für ein neues Umsetzungsticket. Ausgangspunkt: `origin/main` bei
-`265d47b` (inklusive virtueller Eingänge per Opt-in aus PR #76). Ergänzt #59 und
-bezieht die Anforderung aus [#77](https://github.com/moreaki/recscribe/issues/77)
-ein. #77 kann unabhängig als kleiner bestehender UI-Fix umgesetzt werden.
+Designvorschlag für [#79](https://github.com/moreaki/recscribe/issues/79) in
+[Draft-PR #80](https://github.com/moreaki/recscribe/pull/80). Ausgangspunkt:
+`origin/main` bei `265d47b` (virtuelle Eingänge per Opt-in aus PR #76), ergänzt um
+die UI-Konventionen aus [PR #78](https://github.com/moreaki/recscribe/pull/78)
+bei `6d85193` (gemergt). Ergänzt #59 und berücksichtigt damit
+auch die in PR #78 bearbeitete Anforderung aus #77.
 
 ## Entwurf ansehen
 
 - [Interaktiver Prototyp](source-strip.html): herunterladen und lokal im Browser öffnen;
   eine einzelne HTML-Datei ohne externe Abhängigkeiten oder Netzwerkzugriffe.
 - [Übersicht](overview.png), [Mute](muted.png), [32 Kanäle](multichannel.png),
-  [schmale Ansicht](narrow.png), [Wiederanbindung](reconnecting.png).
+  [schmale Ansicht](narrow.png), [Wiederanbindung](reconnecting.png),
+  [virtuelle Aufnahmeaktionen im Idle-Zustand](virtual-input.png).
 - [Ausgangszustand aus dem Nutzer-Screenshot](before.png).
 
 Die HTML-Datei simuliert Pegel und Zustände. Sie greift auf keine Audiogeräte zu.
@@ -24,13 +27,21 @@ werden durch diesen Vorschlag geändert.
 Eine Quellenkarte hat zwei feste Zeilen:
 
 1. Gerätename, Typ, Kanalzahl, Samplerate und Status; rechts ein Mute/Unmute-Button.
-   Virtuelle Eingänge haben zusätzlich die direkt sichtbare Checkbox **Record**.
+   Ausgewählte virtuelle Eingänge haben davor **Don't record** wie in PR #78.
+   Daneben ist **↺** für **Reset gain & mute** direkt erreichbar.
 2. Vier klar getrennte Gruppen: **Mix gain**, **Device · system-wide**,
    **Channels · L / R · trim dB**, **dBFS** mit Input- und Mixpegel.
 
 Kein Disclosure-Pfeil, keine verschachtelten Disclosure-Gruppen, kein „Done“ und
 kein Menü als Zugang zu einem wesentlichen Quellenregler. Ein normaler Picker
 für App-/Systemauswahl oder Kanalbezug ist weiterhin sinnvoll.
+
+Nicht ausgewählte virtuelle Eingänge erscheinen gemäß PR #78 zuletzt in
+„Available virtual inputs“, mit **Record <Gerätename>**. Sie benötigen keine
+deaktivierte Vollkarte. Die Aktionen bleiben in der bestehenden Kopfzeile der
+ausgewählten Quelle, ohne zusätzliche Zeile oder Padding. Die in PR #78
+entfernten deaktivierten Erklärungseinträge werden nicht wieder eingeführt;
+der Hinweis auf Mix und Originalspuren steht einmal im Routing-Footer.
 
 Der Mock verwendet **112 logische CSS-Pixel** Kartenhöhe bei 620, 760 und 1040 px
 Pane-Breite. Das ist ein prüfbarer Layoutvorschlag, keine gemessene Gleichheit
@@ -44,9 +55,9 @@ starren Pixelvorgabe. Bedienelemente nicht zur Einhaltung der Höhe abschneiden.
 | Bereich | Direkt erreichbare Funktionen |
 | --- | --- |
 | Identität | Vollständiger Quellenname zugänglich, Typ, Kanalzahl, Rate; bei langen Namen Ellipse und vollständiger Tooltip/Accessibility-Name. Bei fehlender Rate kein erfundener Wert. |
-| Aufnahmeauswahl | Physische Eingänge gemäß bestehender automatischer Auswahl; virtuelle Eingänge nur per explizitem **Record**-Opt-in. Vorhandene Limits (acht Inputs) und interne Gerätefilter beibehalten. |
+| Aufnahmeauswahl | Physische Eingänge gemäß bestehender automatischer Auswahl; virtuelle Eingänge per **Record <Gerätename>** unten in der unbenutzten Gruppe. **Don't record** oben neben Mute schließt ausgewählte virtuelle Eingänge wieder aus. Vorhandene Limits (acht Inputs), Capture-Sperren und interne Gerätefilter beibehalten. |
 | Mute | Ein Button mit festem Platzbedarf; sichtbarer Text plus orangefarbener Rand/Status. „Mute im Mix“ deaktiviert die Quelle nicht für die Aufnahme. |
-| Software-Gain | Slider und editierbarer dB-Wert, Bereich −60 bis +24 dB; vorhandenes native Snap-/Feinsteuerungsverhalten erhalten. **0 dB ↺** setzt nur den Quellen-Gain zurück, ohne Mute, Routing, Kanaltrims oder Hardware zu ändern. |
+| Software-Gain | Slider und editierbarer dB-Wert, Bereich −60 bis +24 dB; vorhandenes native Snap-/Feinsteuerungsverhalten erhalten. **↺ / Reset gain & mute** behält die vorhandene Aktion aus PR #78 bei: Quellen-Gain und Kanaltrims auf 0 dB, Mute aus. Aufnahmeauswahl, L/R-Verbindungen und Hardwarepegel bleiben erhalten. Tooltip und Accessibility-Name benennen den gesamten Effekt. |
 | Kanalrouting | Pro Kanal unabhängige L/R-Tasten, also links, rechts, beide oder weder noch; Kanaltrim direkt als dB-Wert editierbar. Kanalbezeichnungen statt ausschließlich Nummern zugänglich machen. |
 | Hardwarepegel | Klar als **system-wide** getrennt vom Mix. Nur tatsächlich vorhandene schreibbare Master-/Kanalregler anbieten. Bei Kanalreglern direkt sichtbarer Kanalpicker mit dem Wert des gewählten Kanals. Sound-Settings-Verknüpfung bleibt erreichbar. |
 | Nicht unterstützte Hardware | „No writable control“ statt eines wirkungslosen Sliders; manuelle Hardwarebedienung/Sound Settings nennen. Keine erfundenen Masterregler. |
@@ -83,8 +94,9 @@ Stereo-Summing-/Averaging-Verfahrens.
 - **Muted:** Inputpegel läuft weiter, Mixbeitrag ist null; Status/Rand wechseln,
   Höhe und Reglerpositionen bleiben gleich. Einstellungen der Quelle bleiben erhalten.
 - **Virtueller Eingang nicht ausgewählt:** steht in „Available virtual inputs“;
-  **Record** direkt erreichbar, Mixregler als gespeicherte Werte sichtbar und
-  deaktiviert. Opt-out/Opt-in erhält Gain, Mute und Kanalrouting.
+  **Record <Gerätename>** direkt erreichbar. Die schlanke Aktionszeile zeigt
+  keine unbedienbaren Mixregler. **Don't record** verschiebt die Quelle aus der
+  ausgewählten Liste hierhin. Opt-out/Opt-in erhält Gain, Mute und Kanalrouting.
 - **Unterbrochen:** Quelle mit stabilem Namen und Einstellungen behalten,
   „Reconnecting“ zeigen und Hardware-/Livezugriff sperren. Software-Mute/Gain
   für die nächste Wiederanbindung weiterhin setzen können. Eine Unterbrechung
@@ -108,8 +120,11 @@ Stereo-Summing-/Averaging-Verfahrens.
   Pane-Breite; kein horizontaler Scroll der gesamten Ansicht.
 - [ ] Mute, Aufnahmeauswahl, Software-Gain, Kanaltrims und Hardwarepegel bleiben
   semantisch unabhängig. Keine bewusste Nutzereinstellung wird überschrieben.
-- [ ] #77: Aufnahme-Checkbox auch bei ausgewählten virtuellen Eingängen direkt
-  sichtbar; Opt-out verschiebt in die unbenutzte Gruppe, Opt-in stellt Werte wieder her.
+- [ ] #77 / PR #78: **Don't record** bei ausgewählten virtuellen Eingängen neben
+  Mute, ohne zusätzliche Aktionszeile. **Record <Gerätename>** in der unbenutzten
+  Gruppe am Ende; Opt-in stellt gespeicherte Werte wieder her. Keine Checkboxen.
+- [ ] **Reset gain & mute** behält seine vorhandene kombinierte Wirkung; keine
+  deaktivierten Erklärtexte in Quellen-Aktionen. Originalspuren einmal im Footer erklären.
 - [ ] Meter und Status bleiben ohne Aufklappen während Tests/Aufnahmen sichtbar;
   Raw-Signal, Nullbeitrag durch Mute, echte Stille und fehlende Daten unterscheidbar.
 - [ ] Vorhandene Quellennamen, Kanalnamen, Playback-Optionen, Hardwarekanalregler,
@@ -117,7 +132,8 @@ Stereo-Summing-/Averaging-Verfahrens.
 - [ ] Aufnahme-/Test-Sperren, Wiederanbindung, Originalspuren und virtuelle Opt-ins
   entsprechen dem aktuellen Capture-Modell; Redesign erzeugt keine neue Quelle.
 - [ ] Tastatur und VoiceOver prüfen: benannte Regler, sichtbarer Fokus,
-  Kanal-Scroll folgt Fokus, Mute/Record getrennt aktivierbar, Zustände nicht nur Farbe.
+  Kanal-Scroll folgt Fokus, Mute und Aufnahmeaktionen getrennt aktivierbar,
+  Zustände nicht nur Farbe.
 - [ ] Native Screenshots für Normal, Muted, Test, Recording, Offline, schmale
   Pane, langen Namen, fehlende Hardwaresteuerung und 32 Kanäle dokumentieren.
 
@@ -125,10 +141,10 @@ Stereo-Summing-/Averaging-Verfahrens.
 
 `verify.cjs` verwendet Playwright mit lokal installiertem Chrome. Es prüft feste
 112-px-Höhe und die Grenzen aller nicht scrollenden Regler bei 620/760/1040 px
-für fünf Zustände, Gain-Synchronisation/Reset, Mute bei weiter vorhandenem
+für sechs Zustände, Gain-Synchronisation/kombinierten Reset, Mute bei weiter vorhandenem
 Inputsignal, unabhängige L/R-Tasten, gespeicherte virtuelle Opt-ins, Capture-
 Sperren und Erreichbarkeit von Kanal 32 samt Hardware-Kanalwahl. Es erzeugt die
-fünf PNGs und meldet Scriptfehler. Das ersetzt keinen nativen Funktionstest.
+sechs PNGs und meldet Scriptfehler. Das ersetzt keinen nativen Funktionstest.
 
 ```sh
 # Playwright außerhalb des Repos installieren, sofern noch nicht vorhanden:

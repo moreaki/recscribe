@@ -18,8 +18,11 @@ const {pathToFileURL}=require('node:url');
     assert.equal(await mic.locator('.mix output').textContent(),'−∞');
     await mic.locator('.gain-number').fill('6');await mic.locator('.gain-number').press('Tab');
     assert.equal(await mic.locator('.gain-slider').inputValue(),'6');
+    await mic.locator('.trim input').fill('-4');await mic.locator('.trim input').press('Tab');
     await mic.locator('.reset').click();assert.equal(await mic.locator('.gain-number').inputValue(),'0');
-    assert.equal(await mic.locator('.mute').getAttribute('aria-pressed'),'true');
+    assert.equal(await mic.locator('.mute').getAttribute('aria-pressed'),'false');
+    assert.equal(await mic.locator('.trim input').inputValue(),'0');
+    assert.equal(await mic.locator('.hardware-value').textContent(),'42%');
     await page.locator('#test').click(); // idle: source and route editing is available
     const left=mic.locator('.route.left'),right=mic.locator('.route.right');
     await left.click();assert.equal(await left.getAttribute('aria-pressed'),'false');
@@ -27,9 +30,13 @@ const {pathToFileURL}=require('node:url');
     await right.click();assert.equal(await right.getAttribute('aria-pressed'),'false');
     await right.click();await left.click();
     const teams=page.locator('[data-id=teams]');
-    await teams.locator('.capture-check').check();await teams.locator('.mute').click();
+    await teams.locator('.capture-action').click();await teams.locator('.mute').click();
     await teams.locator('.gain-number').fill('3');await teams.locator('.gain-number').press('Tab');
-    await teams.locator('.capture-check').uncheck();await teams.locator('.capture-check').check();
+    await teams.locator('.capture-action').click();
+    assert.equal(await teams.getAttribute('class'),'unused-input');
+    assert.equal(await teams.locator('.capture-action').textContent(),'Record Microsoft Teams Audio');
+    await teams.locator('.capture-action').click();
+    assert.equal(await teams.locator('.capture-action').textContent(),"Don't record");
     assert.equal(await teams.locator('.mute').getAttribute('aria-pressed'),'true');
     assert.equal(await teams.locator('.gain-number').inputValue(),'3');
     assert.equal(await height(),112);
@@ -38,7 +45,7 @@ const {pathToFileURL}=require('node:url');
     assert.equal(await teams.locator('.mix output').textContent(),'-21');
     await page.locator('#test').click();
     await page.locator('#scenario').selectOption('recording');
-    assert(await teams.locator('.capture-check').isDisabled());
+    assert(await teams.locator('.capture-action').isDisabled());
     assert(await mic.locator('.route.left').isDisabled());
     assert(await mic.locator('.mute').isEnabled());assert(await mic.locator('.gain-number').isEnabled());
     await page.locator('#scenario').selectOption('overview');
@@ -69,7 +76,7 @@ const {pathToFileURL}=require('node:url');
     for(const width of [1040,760,620]){
       await page.locator('#width').selectOption(String(width));
       await page.setViewportSize({width:width+32,height:840});
-      for(const scenario of ['overview','muted','multichannel','offline','recording']){
+      for(const scenario of ['overview','muted','multichannel','offline','recording','virtual']){
         await page.locator('#scenario').selectOption(scenario);
         const overflow=await page.evaluate(()=>({document:document.documentElement.scrollWidth>innerWidth,
           bad:[...document.querySelectorAll('.source')].flatMap(card=>{
@@ -84,6 +91,9 @@ const {pathToFileURL}=require('node:url');
         assert.deepEqual(overflow.bad,[],`card controls overflow at ${width} ${scenario}`);
       }
     }
+    await page.locator('#scenario').selectOption('virtual');
+    assert(await teams.locator('.capture-action').isEnabled());
+    await page.screenshot({path:path.join(__dirname,'virtual-input.png'),fullPage:true});
     await page.locator('#scenario').selectOption('muted');
     await page.screenshot({path:path.join(__dirname,'narrow.png'),fullPage:true});
     await page.locator('#scenario').selectOption('offline');

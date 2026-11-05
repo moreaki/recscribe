@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RecScribe · Compact source controls · Design proposal</title>
+<style>
+:root{color-scheme:dark;--bg:#101116;--card:#1b1e25;--line:#34373e;--text:#e5e6eb;--dim:#a4a9b4;--blue:#7db9ff;--mint:#77dcc7;--orange:#ffab57}
+*{box-sizing:border-box}body{margin:0;background:#090b0e;color:var(--text);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit;color:inherit}button,select,input[type=number]{background:#262c36;border:1px solid transparent;border-radius:5px}button,select{cursor:pointer}button{height:26px;padding:0 9px;color:var(--blue)}button:hover{background:#303b4a}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}button:disabled,input:disabled,select:disabled{cursor:default;opacity:.45}input[type=range]{accent-color:var(--blue);width:100%;height:17px;margin:0;min-width:0}input[type=checkbox]{accent-color:var(--blue)}input[type=number]{font-variant-numeric:tabular-nums;width:58px;height:21px;padding:0 3px;appearance:textfield}input::-webkit-inner-spin-button{appearance:none}select{max-width:100%;height:23px;padding:0 4px}h1,h2,p{margin:0}h1{font-size:21px}h2{font-size:15px}a{color:var(--blue)}
+.design-tools{max-width:1120px;margin:24px auto 18px;padding:0 20px}.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--mint);margin-bottom:7px}.design-tools p{color:var(--dim);line-height:1.5;margin:8px 0 14px;max-width:900px}.tool-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tool-row label{display:flex;align-items:center;gap:6px;font-size:12px}.tool-row select{height:28px}.stage{width:1040px;max-width:calc(100% - 32px);margin:0 auto 20px;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}.nav{display:flex;align-items:center;gap:25px;height:64px;padding:0 20px;border-bottom:1px solid var(--line);white-space:nowrap}.brand{font-weight:700;font-size:16px;margin-right:10px}.nav span{font-size:12px;color:var(--dim);height:64px;display:flex;align-items:center}.nav .active{color:var(--blue);border-bottom:2px solid var(--blue)}.header{display:flex;justify-content:space-between;align-items:center;padding:18px 16px 14px;gap:12px}.header p{font-size:11px;color:var(--dim);margin-top:5px}.header button{white-space:nowrap}.sources{padding:0 16px 16px;display:grid;gap:10px}.list-caption{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:4px}.source{height:112px;min-width:0;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:32px 56px;gap:6px}.source.muted{border-color:var(--orange)}.source.offline{border-style:dashed}.source.unused{opacity:.85}.identity{min-width:0;display:flex;align-items:center;gap:9px}.source-icon{color:var(--dim);width:17px;font-size:19px;text-align:center;flex-shrink:0}.name-block{min-width:0;flex:1}.name{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;line-height:17px}.meta{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;font-size:10px;line-height:15px;color:var(--dim)}.state{color:var(--mint)}.muted .state,.offline .state{color:var(--orange)}.capture-action{white-space:nowrap;font-size:11px;height:26px;padding:0 8px;flex-shrink:0}.identity>.reset{height:26px;width:26px;padding:0;flex-shrink:0;font-size:17px;background:#262c36}.unused-input{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0}.unused-input .capture-action{max-width:100%;height:auto;min-height:26px;white-space:normal;text-align:left}.unused-input .subtle{flex-shrink:0}.mute{width:68px;flex-shrink:0;font-size:12px}.muted .mute{color:var(--orange);background:#392c23}.controls{display:grid;grid-template-columns:1fr 1fr 1.6fr .94fr;gap:16px;min-width:0}.group{min-width:0;display:flex;flex-direction:column;gap:2px}.group-head{height:13px;font-size:10px;color:var(--dim);display:flex;align-items:center;justify-content:space-between;gap:3px;white-space:nowrap}.reset{height:15px;font-size:10px;padding:0 3px;background:transparent}.number-line{display:flex;align-items:center;gap:4px;height:22px;font-size:10px;color:var(--dim)}.number-line input{color:var(--text)}.sound{font-size:10px;margin-left:auto;white-space:nowrap}.muted .gain input[type=range]{accent-color:var(--orange)}.not-supported{font-size:10px;height:22px;display:flex;align-items:center;color:var(--dim)}.channel-nav{display:flex;gap:2px;align-items:center}.channel-nav button{height:15px;width:18px;padding:0;font-size:12px;background:transparent}.channel-range{font-size:9px;min-width:32px;text-align:right}.channels{height:43px;display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#677385 transparent;overscroll-behavior:contain}.channels::-webkit-scrollbar{height:4px}.channels::-webkit-scrollbar-thumb{background:#677385;border-radius:2px}.channel{width:68px;flex-shrink:0;display:grid;grid-template-rows:19px 18px 2px;gap:1px}.routing{display:flex;align-items:center;gap:2px}.channel-id{font-size:10px;width:14px;color:var(--dim);text-align:center}.route{height:19px;width:23px;padding:0;font-size:10px;color:var(--dim);background:#282c34}.route[aria-pressed=true]{color:var(--mint);background:#263c3e}.trim{display:flex;gap:2px;align-items:center;color:var(--dim);font-size:9px}.trim input{width:48px;height:18px;font-size:10px;text-align:center;padding:0}.channel-peak{height:2px;background:#333842}.channel-peak i{display:block;height:100%;background:var(--mint)}.meter-line{display:grid;grid-template-columns:25px 1fr 28px;gap:4px;align-items:center;height:19px;font-size:10px;color:var(--dim)}.meter-line output{text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}.meter{height:5px;background:#343841;border-radius:3px;overflow:hidden}.meter i{height:100%;display:block;background:var(--mint);border-radius:3px}.muted .meter-line.mix output{color:var(--orange)}.subtle{color:var(--dim);font-size:10px}.footer{border-top:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;gap:20px;font-size:10px;color:var(--dim);line-height:1.5}.footer strong{color:var(--text);font-weight:500}.demo-status{max-width:1040px;margin:0 auto 22px;padding:0 16px;font-size:11px;line-height:1.6;color:var(--dim)}.demo-status strong{color:var(--mint);font-weight:500}.unused .controls{pointer-events:none}.unused .controls input,.unused .controls button{opacity:.45}.context-picker{font-size:10px;height:18px;max-width:142px}.level-channel{font-size:10px;height:15px;padding:0 2px;max-width:60px}.hw-channel{font-size:10px;height:20px;max-width:75px}.sound-note{font-size:9px;color:var(--dim);line-height:13px}.help-row{display:flex;gap:6px;align-items:center;height:17px}.help-row button{height:16px;font-size:10px;padding:0 4px}.locked .channel-nav button{opacity:1}
+@media(max-width:700px){.nav{gap:18px;padding:0 16px}.brand{margin-right:0}.controls{gap:10px;grid-template-columns:1fr 1fr 1.55fr .95fr}.source{padding-inline:8px}.sources{padding-inline:12px}.header{padding-inline:12px}.meta{gap:4px}.sound{font-size:9px}.capture-action{font-size:11px}.footer{gap:12px}.nav span{font-size:11px}.channel-range{min-width:29px}}
+</style>
+<div class="design-tools">
+  <div class="eyebrow">Design proposal · Interactive mock · No device access</div>
+  <h1>Everything in one source strip.</h1>
+  <p>Direct controls, fixed height. Gain changes the mix; device level changes the hardware system-wide. Channels keep independent L / R connections and trims. Original tracks remain unchanged.</p>
+  <div class="tool-row">
+    <label>Example <select id="scenario"><option value="overview">Everyday sources</option><option value="muted">Muted microphone</option><option value="multichannel">32-channel interface</option><option value="virtual">Virtual capture actions · idle</option><option value="offline">Source reconnecting</option><option value="recording">Recording in progress</option></select></label>
+    <label>Pane width <select id="width"><option value="1040">1040 px</option><option value="760">760 px</option><option value="620">620 px</option></select></label>
+    <span class="subtle">Each source: 112 logical px · controls are interactive</span>
+  </div>
+</div>
+<main class="stage" id="stage">
+  <nav class="nav" aria-label="Workspace"><b class="brand">◉ RecScribe</b><span>Studio</span><span class="active">Audio Routing</span><span>Recordings</span><span>Settings</span></nav>
+  <header class="header"><div><h2>Audio routing</h2><p id="activity">Preview signal · no files saved</p></div><button id="test">Stop test</button></header>
+  <section class="sources" aria-label="Sources" id="sources"></section>
+  <footer class="footer"><span><strong>Mute affects the mix.</strong> Captured original tracks stay at unity gain.<br>Input = before gain · Mix = this source’s routed contribution.</span><span>Device level is system-wide.<br>Software gain cannot repair hardware clipping.</span></footer>
+</main>
+<p class="demo-status" id="demo-status" role="status">The meters are simulated. <strong>No recording, permissions or device settings are changed.</strong></p>
+<script>
+const $ = s => document.querySelector(s);
+const fmt = n => (n >= 0 ? '+' : '') + Number(n).toFixed(1);
+const escapeHTML = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let testing = true, recording = false, sources = [];
+function source(id,name,kind,channels,hardware=true,extra={}) {
+  return {id,name,kind,count:channels,hardware,hw:42,hwChannel:0,gain:0,muted:false,captured:true,offline:false,raw:-18,
+    routes:Array.from({length:channels},(_,i)=>({l:channels===1 || i%2===0,r:channels===1 || i%2===1,trim:0})),...extra};
+}
+function setup(scenario) {
+  recording=scenario==='recording';testing=true;
+  sources=[source('mic','MacBook Air Microphone','Hardware input',1),source('system','System audio','Playback',2,false),source('teams','Microsoft Teams Audio','Virtual input',1,false,{captured:false,virtual:true,raw:-24})];
+  if(scenario==='muted') sources[0].muted=true;
+  if(scenario==='multichannel') sources=[source('interface','Studio interface · 32-channel aggregate','Aggregate input',32,true,{perChannelHW:true,hwChannel:1,raw:-12}),...sources.slice(1)];
+  if(scenario==='multichannel'){sources[2].captured=true;sources[2].muted=true;}
+  if(scenario==='virtual'){sources[2].captured=true;sources[2].muted=true;testing=false;}
+  if(scenario==='offline') sources[0].offline=true;
+  render();
+}
+function isLocked(){return recording||testing;}
+function card(s) {
+  const e=escapeHTML, locked=isLocked(), off=!s.captured, hwOff=off||s.offline||!s.hardware;
+  const state=s.offline?'Reconnecting':!s.captured?'Not captured':s.muted?'Muted in mix':recording?'Recording':testing?'Preview':'Ready';
+  const hwLabel=s.perChannelHW?`<select class="hw-channel" aria-label="${e(s.name)} hardware channel">${Array.from({length:s.count},(_,i)=>`<option value="${i+1}">Ch ${i+1}</option>`).join('')}</select>`:'<span>Device</span>';
+  return `<article class="source ${s.muted?'muted':''} ${s.offline?'offline':''} ${!s.captured?'unused':''} ${locked?'locked':''}" data-id="${s.id}" aria-label="${e(s.name)}">
+    <div class="identity"><span class="source-icon" aria-hidden="true">${s.id==='system'?'▧':'♩'}</span><div class="name-block"><span class="name" title="${e(s.name)}">${e(s.name)}</span><div class="meta"><span>${e(s.kind)} · ${s.count} ch · 48 kHz</span><span>·</span><span class="state">${state}</span>${s.id==='system'?'<select class="context-picker" aria-label="Playback source" '+(locked?'disabled':'')+'><option>All system audio</option><option>Browser · app audio</option></select>':''}</div></div>
+    ${s.virtual?captureButton(s):''}
+    <button class="mute" aria-label="${s.muted?'Unmute':'Mute'} ${e(s.name)} in mix" aria-pressed="${s.muted}" ${off?'disabled':''}>${s.muted?'Unmute':'Mute'}</button><button class="reset" title="Reset gain &amp; mute" aria-label="Reset gain &amp; mute for ${e(s.name)}">↺</button></div>
+    <div class="controls">
+      <div class="group gain"><div class="group-head">Mix gain</div><label class="number-line"><input class="gain-number" type="number" min="-60" max="24" step="0.1" value="${s.gain}" aria-label="${e(s.name)} mix gain in decibels" ${off?'disabled':''}>dB</label><input class="gain-slider" type="range" min="-60" max="24" step="0.1" value="${s.gain}" aria-label="${e(s.name)} mix gain" ${off?'disabled':''}></div>
+      <div class="group hardware"><div class="group-head">Device · system-wide <a href="#" class="sound" aria-label="Open Sound settings for ${e(s.name)}" title="Open macOS Sound settings">↗</a></div>${s.hardware?`<div class="number-line">${hwLabel}<output class="hardware-value">${s.hw}%</output></div><input class="hw-slider" type="range" min="0" max="100" step="1" value="${s.hw}" aria-label="${e(s.name)} system-wide hardware input level" ${hwOff?'disabled':''}>`:'<div class="not-supported">No writable control</div><div class="sound-note">Use device controls</div>'}</div>
+      <div class="group channel-group"><div class="group-head"><span>Channels · L / R · trim dB</span><span class="channel-nav"><span class="channel-range"></span><button class="prev" aria-label="Previous channels for ${e(s.name)}">‹</button><button class="next" aria-label="Next channels for ${e(s.name)}">›</button></span></div><div class="channels" tabindex="0" aria-label="${e(s.name)} channels, scroll horizontally for all ${s.count}">${s.routes.map((r,i)=>`<div class="channel" data-channel="${i}"><div class="routing"><span class="channel-id" title="Channel ${i+1}">${i+1}</span><button class="route left" aria-label="${e(s.name)} channel ${i+1} to left" aria-pressed="${r.l}" ${locked||off||s.offline?'disabled':''}>L</button><button class="route right" aria-label="${e(s.name)} channel ${i+1} to right" aria-pressed="${r.r}" ${locked||off||s.offline?'disabled':''}>R</button></div><label class="trim"><input type="number" min="-60" max="24" step="0.1" value="${r.trim}" aria-label="${e(s.name)} channel ${i+1} trim in decibels" ${off?'disabled':''}>dB</label><span class="channel-peak" title="Channel ${i+1} input peak"><i></i></span></div>`).join('')}</div></div>
+      <div class="group levels"><div class="group-head">dBFS <select class="level-channel" aria-label="${e(s.name)} level channel"><option value="all">All</option>${s.routes.map((_,i)=>`<option value="${i}">Ch ${i+1}</option>`).join('')}</select></div><div class="meter-line raw"><span>Input</span><span class="meter"><i></i></span><output>−∞</output></div><div class="meter-line mix"><span>Mix</span><span class="meter"><i></i></span><output>−∞</output></div></div>
+    </div></article>`;
+}
+function captureButton(s) {
+  const name=escapeHTML(s.name),title=s.captured?"Don't record":'Record '+s.name;
+  const limited=!s.captured&&sources.filter(x=>x.captured&&x.id!=='system').length>=8;
+  return `<button class="capture-action" aria-label="${escapeHTML((s.captured?"Don't record":'Record')+' '+s.name)}" title="${s.captured?'Exclude this virtual device from capture.':'Include this virtual device in capture and preserve its original source track.'}" ${isLocked()||limited||s.offline?'disabled':''}>${escapeHTML(title)}</button>`;
+}
+function unusedInput(s) {
+  return `<div class="unused-input" data-id="${s.id}" aria-label="${escapeHTML(s.name)} · not captured"><span class="subtle">Virtual input · not captured</span>${captureButton(s)}</div>`;
+}
+function render() {
+  const selected=sources.filter(s=>s.captured), unused=sources.filter(s=>!s.captured);
+  $('#sources').innerHTML='<div class="list-caption"><span>Sources</span><span>'+ (isLocked()?'Capture & L / R locked · gain and mute stay live':'All controls available')+'</span></div>'+selected.map(card).join('')+(unused.length?'<div class="list-caption"><span>Available virtual inputs · opt in to record</span></div>'+unused.map(unusedInput).join(''):'');
+  $('#activity').textContent=recording?'Recording · original source tracks preserved':testing?'Preview signal · no files saved':'Ready · start a test to check signal';
+  $('#test').textContent=recording?'Stop recording':testing?'Stop test':'Test audio';
+  document.querySelectorAll('.source').forEach(el=>bind(el,sources.find(s=>s.id===el.dataset.id)));
+  document.querySelectorAll('.capture-action').forEach(button=>button.onclick=()=>{
+    const id=button.closest('[data-id]').dataset.id,s=sources.find(s=>s.id===id);s.captured=!s.captured;render();
+    document.querySelector(`[data-id="${id}"] .capture-action`).focus();
+  });
+}
+function bind(el,s) {
+  const q=x=>el.querySelector(x);
+  q('.mute').onclick=()=>{s.muted=!s.muted;el.classList.toggle('muted',s.muted);q('.mute').textContent=s.muted?'Unmute':'Mute';q('.mute').setAttribute('aria-pressed',s.muted);q('.mute').setAttribute('aria-label',`${s.muted?'Unmute':'Mute'} ${s.name} in mix`);q('.state').textContent=s.offline?(s.muted?'Reconnecting · muted':'Reconnecting'):s.muted?'Muted in mix':recording?'Recording':testing?'Preview':'Ready';meters(el,s);};
+  function gain(value){const n=Number(value);if(!Number.isFinite(n))return;s.gain=Math.min(24,Math.max(-60,n));q('.gain-number').value=s.gain;q('.gain-slider').value=s.gain;meters(el,s);}
+  q('.gain-slider').oninput=e=>gain(e.target.value);q('.gain-number').onchange=e=>gain(e.target.value);
+  q('.reset').disabled=!s.captured;q('.reset').onclick=()=>{s.gain=0;s.muted=false;s.routes.forEach(r=>r.trim=0);render();document.querySelector(`[data-id="${s.id}"] .reset`).focus();};
+  if(q('.hw-slider'))q('.hw-slider').oninput=e=>{s.hw=+e.target.value;q('.hardware-value').textContent=s.hw+'%';};
+  if(q('.hw-channel')){s.hardwareValues??=Array(s.count+1).fill(42);q('.hw-channel').value=s.hwChannel;q('.hw-channel').onchange=e=>{s.hwChannel=+e.target.value;s.hw=s.hardwareValues[s.hwChannel];q('.hw-slider').value=s.hw;q('.hardware-value').textContent=s.hw+'%';};q('.hw-slider').oninput=e=>{s.hw=+e.target.value;s.hardwareValues[s.hwChannel]=s.hw;q('.hardware-value').textContent=s.hw+'%';};}
+  q('.sound').onclick=e=>{e.preventDefault();$('#demo-status').textContent='Prototype: in the app this shortcut opens macOS Sound settings. No device settings were changed.';};
+  q('.level-channel').value=s.meterChannel??'all';q('.level-channel').onchange=e=>{s.meterChannel=e.target.value;meters(el,s);};
+  q('.context-picker')?.addEventListener('change',e=>{s.playbackChoice=e.target.value;$('#demo-status').textContent='Prototype: playback choice updated to '+s.playbackChoice+'. No capture was started.';});
+  if(q('.context-picker')&&s.playbackChoice)q('.context-picker').value=s.playbackChoice;
+  el.querySelectorAll('.channel').forEach(ch=>{const i=+ch.dataset.channel,r=s.routes[i];for(const [cls,key] of [['left','l'],['right','r']])ch.querySelector('.'+cls).onclick=e=>{r[key]=!r[key];e.target.setAttribute('aria-pressed',r[key]);meters(el,s);};ch.querySelector('input').onchange=e=>{r.trim=Math.max(-60,Math.min(24,+e.target.value||0));e.target.value=r.trim;meters(el,s);};});
+  const strip=q('.channels');q('.prev').onclick=()=>strip.scrollBy({left:-146});q('.next').onclick=()=>strip.scrollBy({left:146});
+  function range(){const end=Math.min(s.count,Math.max(1,Math.floor((strip.scrollLeft+strip.clientWidth+5)/73)));const start=Math.min(s.count,Math.floor(strip.scrollLeft/73)+1);q('.channel-range').textContent=s.count===1?'1':`${start}–${end}/${s.count}`;q('.prev').disabled=strip.scrollLeft<1;q('.next').disabled=strip.scrollLeft+strip.clientWidth>=strip.scrollWidth-1;}
+  strip.onscroll=range;new ResizeObserver(range).observe(strip);range();meters(el,s);
+}
+function meters(el,s) {
+  const active=(testing||recording)&&s.captured&&!s.offline;
+  const raw=active?s.raw:-Infinity;
+  // Illustrative hottest routed channel. Actual stereo summing remains the app engine's job.
+  const routes=s.meterChannel&&s.meterChannel!=='all'?[s.routes[+s.meterChannel]]:s.routes;
+  const routed=routes.filter(r=>r.l||r.r), mix=active&&!s.muted&&routed.length?raw+s.gain+Math.max(...routed.map(r=>r.trim)):-Infinity;
+  const level=(cls,n)=>{el.querySelector('.'+cls+' output').textContent=Number.isFinite(n)?(n>0?'+':'')+n.toFixed(0):'−∞';el.querySelector('.'+cls+' i').style.width=Number.isFinite(n)?Math.max(0,Math.min(100,(n+60)/60*100))+'%':'0%';};
+  level('raw',raw);level('mix',mix);el.querySelector('.mix').title=Number.isFinite(mix)&&mix>0?'Mix clips · reduce gain':'Routed contribution';el.querySelectorAll('.channel-peak i').forEach(i=>i.style.width=active?'68%':'0%');
+}
+$('#scenario').onchange=e=>setup(e.target.value);
+$('#width').onchange=e=>{$('#stage').style.width=e.target.value+'px';};
+$('#test').onclick=()=>{if(recording){recording=false;testing=false;}else testing=!testing;render();};
+setup('overview');
+</script>
+</html>

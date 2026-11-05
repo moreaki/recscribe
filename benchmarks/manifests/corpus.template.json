@@ -1,15 +1,135 @@
 {
   "schema_version": "2.0",
-  "corpus_version": "priority-nine-preparation-v1",
+  "corpus_version": "priority-nine-preparation-v2",
   "frozen": false,
   "coverage_status": "pending; no approved audio or human references",
   "cases": [
+    {
+      "id": "de-CH-rendering-development-short_form",
+      "category": "short_form",
+      "language": "de-CH",
+      "variety": null,
+      "planned_variety": "Swiss German source; written Standard German using reviewed Swiss conventions",
+      "script": "Latn",
+      "task": "standard_rendering",
+      "split": "development",
+      "duration_seconds": null,
+      "conditions": [
+        "short_form"
+      ],
+      "domain": null,
+      "speaker_ids": [],
+      "session_id": null,
+      "source_id": null,
+      "source_channel": null,
+      "code_switches": [],
+      "audio": null,
+      "reference": null,
+      "sha256": null,
+      "reference_sha256": null,
+      "license": null,
+      "source_url": null,
+      "reference_conventions": null,
+      "reviewed": false,
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
+    },
+    {
+      "id": "de-CH-rendering-development-long_form",
+      "category": "long_form",
+      "language": "de-CH",
+      "variety": null,
+      "planned_variety": "Swiss German source; written Standard German using reviewed Swiss conventions",
+      "script": "Latn",
+      "task": "standard_rendering",
+      "split": "development",
+      "duration_seconds": null,
+      "conditions": [
+        "long_form"
+      ],
+      "domain": null,
+      "speaker_ids": [],
+      "session_id": null,
+      "source_id": null,
+      "source_channel": null,
+      "code_switches": [],
+      "audio": null,
+      "reference": null,
+      "sha256": null,
+      "reference_sha256": null,
+      "license": null,
+      "source_url": null,
+      "reference_conventions": null,
+      "reviewed": false,
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
+    },
+    {
+      "id": "de-CH-rendering-held_out-short_form",
+      "category": "short_form",
+      "language": "de-CH",
+      "variety": null,
+      "planned_variety": "Swiss German source; written Standard German using reviewed Swiss conventions",
+      "script": "Latn",
+      "task": "standard_rendering",
+      "split": "held_out",
+      "duration_seconds": null,
+      "conditions": [
+        "short_form"
+      ],
+      "domain": null,
+      "speaker_ids": [],
+      "session_id": null,
+      "source_id": null,
+      "source_channel": null,
+      "code_switches": [],
+      "audio": null,
+      "reference": null,
+      "sha256": null,
+      "reference_sha256": null,
+      "license": null,
+      "source_url": null,
+      "reference_conventions": null,
+      "reviewed": false,
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
+    },
+    {
+      "id": "de-CH-rendering-held_out-long_form",
+      "category": "long_form",
+      "language": "de-CH",
+      "variety": null,
+      "planned_variety": "Swiss German source; written Standard German using reviewed Swiss conventions",
+      "script": "Latn",
+      "task": "standard_rendering",
+      "split": "held_out",
+      "duration_seconds": null,
+      "conditions": [
+        "long_form"
+      ],
+      "domain": null,
+      "speaker_ids": [],
+      "session_id": null,
+      "source_id": null,
+      "source_channel": null,
+      "code_switches": [],
+      "audio": null,
+      "reference": null,
+      "sha256": null,
+      "reference_sha256": null,
+      "license": null,
+      "source_url": null,
+      "reference_conventions": null,
+      "reviewed": false,
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
+    },
     {
       "id": "de-CH-development-short_form",
       "category": "short_form",
       "language": "de-CH",
       "variety": null,
-      "planned_variety": "Swiss German; region pending",
+      "planned_variety": "Swiss German; optional dialect spelling; region pending",
       "script": "Latn",
       "task": "dialect_transcription",
       "split": "development",
@@ -31,14 +151,15 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "optional"
     },
     {
       "id": "de-CH-development-long_form",
       "category": "long_form",
       "language": "de-CH",
       "variety": null,
-      "planned_variety": "Swiss German; region pending",
+      "planned_variety": "Swiss German; optional dialect spelling; region pending",
       "script": "Latn",
       "task": "dialect_transcription",
       "split": "development",
@@ -60,14 +181,15 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "optional"
     },
     {
       "id": "de-CH-held_out-short_form",
       "category": "short_form",
       "language": "de-CH",
       "variety": null,
-      "planned_variety": "Swiss German; region pending",
+      "planned_variety": "Swiss German; optional dialect spelling; region pending",
       "script": "Latn",
       "task": "dialect_transcription",
       "split": "held_out",
@@ -89,14 +211,15 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "optional"
     },
     {
       "id": "de-CH-held_out-long_form",
       "category": "long_form",
       "language": "de-CH",
       "variety": null,
-      "planned_variety": "Swiss German; region pending",
+      "planned_variety": "Swiss German; optional dialect spelling; region pending",
       "script": "Latn",
       "task": "dialect_transcription",
       "split": "held_out",
@@ -118,7 +241,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "optional"
     },
     {
       "id": "de-development-short_form",
@@ -147,7 +271,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "de-development-long_form",
@@ -176,7 +301,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "de-held_out-short_form",
@@ -205,7 +331,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "de-held_out-long_form",
@@ -234,7 +361,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "fr-development-short_form",
@@ -263,7 +391,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "fr-development-long_form",
@@ -292,7 +421,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "fr-held_out-short_form",
@@ -321,7 +451,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "fr-held_out-long_form",
@@ -350,7 +481,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "it-development-short_form",
@@ -379,7 +511,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "it-development-long_form",
@@ -408,7 +541,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "it-held_out-short_form",
@@ -437,7 +571,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "it-held_out-long_form",
@@ -466,7 +601,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "en-development-short_form",
@@ -495,7 +631,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "en-development-long_form",
@@ -524,7 +661,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "en-held_out-short_form",
@@ -553,7 +691,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "en-held_out-long_form",
@@ -582,7 +721,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "ar-development-short_form",
@@ -611,7 +751,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "arabic-nfc-strict-v2"
+      "scoring_policy": "arabic-nfc-strict-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "ar-development-long_form",
@@ -640,7 +781,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "arabic-nfc-strict-v2"
+      "scoring_policy": "arabic-nfc-strict-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "ar-held_out-short_form",
@@ -669,7 +811,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "arabic-nfc-strict-v2"
+      "scoring_policy": "arabic-nfc-strict-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "ar-held_out-long_form",
@@ -698,7 +841,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "arabic-nfc-strict-v2"
+      "scoring_policy": "arabic-nfc-strict-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "zh-development-short_form",
@@ -727,7 +871,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-cer-v2"
+      "scoring_policy": "unicode-nfc-cer-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "zh-development-long_form",
@@ -756,7 +901,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-cer-v2"
+      "scoring_policy": "unicode-nfc-cer-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "zh-held_out-short_form",
@@ -785,7 +931,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-cer-v2"
+      "scoring_policy": "unicode-nfc-cer-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "zh-held_out-long_form",
@@ -814,7 +961,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-cer-v2"
+      "scoring_policy": "unicode-nfc-cer-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "es-development-short_form",
@@ -843,7 +991,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "es-development-long_form",
@@ -872,7 +1021,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "es-held_out-short_form",
@@ -901,7 +1051,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "es-held_out-long_form",
@@ -930,7 +1081,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "pt-development-short_form",
@@ -959,7 +1111,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "pt-development-long_form",
@@ -988,7 +1141,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "pt-held_out-short_form",
@@ -1017,7 +1171,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "pt-held_out-long_form",
@@ -1046,123 +1201,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
-    },
-    {
-      "id": "de-CH-rendering-development-short_form",
-      "category": "short_form",
-      "language": "de-CH",
-      "variety": null,
-      "planned_variety": "Swiss German source; Standard German rendering",
-      "script": "Latn",
-      "task": "standard_rendering",
-      "split": "development",
-      "duration_seconds": null,
-      "conditions": [
-        "short_form"
-      ],
-      "domain": null,
-      "speaker_ids": [],
-      "session_id": null,
-      "source_id": null,
-      "source_channel": null,
-      "code_switches": [],
-      "audio": null,
-      "reference": null,
-      "sha256": null,
-      "reference_sha256": null,
-      "license": null,
-      "source_url": null,
-      "reference_conventions": null,
-      "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
-    },
-    {
-      "id": "de-CH-rendering-development-long_form",
-      "category": "long_form",
-      "language": "de-CH",
-      "variety": null,
-      "planned_variety": "Swiss German source; Standard German rendering",
-      "script": "Latn",
-      "task": "standard_rendering",
-      "split": "development",
-      "duration_seconds": null,
-      "conditions": [
-        "long_form"
-      ],
-      "domain": null,
-      "speaker_ids": [],
-      "session_id": null,
-      "source_id": null,
-      "source_channel": null,
-      "code_switches": [],
-      "audio": null,
-      "reference": null,
-      "sha256": null,
-      "reference_sha256": null,
-      "license": null,
-      "source_url": null,
-      "reference_conventions": null,
-      "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
-    },
-    {
-      "id": "de-CH-rendering-held_out-short_form",
-      "category": "short_form",
-      "language": "de-CH",
-      "variety": null,
-      "planned_variety": "Swiss German source; Standard German rendering",
-      "script": "Latn",
-      "task": "standard_rendering",
-      "split": "held_out",
-      "duration_seconds": null,
-      "conditions": [
-        "short_form"
-      ],
-      "domain": null,
-      "speaker_ids": [],
-      "session_id": null,
-      "source_id": null,
-      "source_channel": null,
-      "code_switches": [],
-      "audio": null,
-      "reference": null,
-      "sha256": null,
-      "reference_sha256": null,
-      "license": null,
-      "source_url": null,
-      "reference_conventions": null,
-      "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
-    },
-    {
-      "id": "de-CH-rendering-held_out-long_form",
-      "category": "long_form",
-      "language": "de-CH",
-      "variety": null,
-      "planned_variety": "Swiss German source; Standard German rendering",
-      "script": "Latn",
-      "task": "standard_rendering",
-      "split": "held_out",
-      "duration_seconds": null,
-      "conditions": [
-        "long_form"
-      ],
-      "domain": null,
-      "speaker_ids": [],
-      "session_id": null,
-      "source_id": null,
-      "source_channel": null,
-      "code_switches": [],
-      "audio": null,
-      "reference": null,
-      "sha256": null,
-      "reference_sha256": null,
-      "license": null,
-      "source_url": null,
-      "reference_conventions": null,
-      "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-quiet_speech",
@@ -1191,7 +1231,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-quiet_opening",
@@ -1220,7 +1261,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-long_pauses",
@@ -1249,7 +1291,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-word_boundaries",
@@ -1278,7 +1321,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-overlap",
@@ -1307,7 +1351,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-code_switching",
@@ -1336,7 +1381,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-names_numbers_negation",
@@ -1365,7 +1411,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-noise_only",
@@ -1394,7 +1441,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-music_only",
@@ -1423,7 +1471,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     },
     {
       "id": "shared-silence",
@@ -1452,7 +1501,8 @@
       "source_url": null,
       "reference_conventions": null,
       "reviewed": false,
-      "scoring_policy": "unicode-nfc-apostrophe-v2"
+      "scoring_policy": "unicode-nfc-apostrophe-v2",
+      "coverage_role": "primary"
     }
   ]
 }

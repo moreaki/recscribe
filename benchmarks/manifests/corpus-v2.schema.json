@@ -147,6 +147,13 @@
               "non_speech"
             ]
           },
+          "coverage_role": {
+            "enum": [
+              "primary",
+              "optional"
+            ],
+            "description": "Coverage-planning role. Omitted in earlier v2 manifests; Swiss written-German rendering is primary and dialect spelling is optional. This field does not approve a case or prove coverage."
+          },
           "split": {
             "enum": [
               "development",
@@ -230,5 +237,5 @@
       }
     }
   },
-  "$comment": "Runtime validation additionally rejects duplicate IDs, invalid switch intervals, ambiguous Swiss task and development/held-out speaker/session/source/audio overlap. Null preparation fields remain pending."
+  "$comment": "Runtime validation additionally rejects duplicate IDs, invalid switch intervals, ambiguous Swiss task and development/held-out speaker/session/source/audio overlap. New Swiss coverage targets written Standard German through standard_rendering; dialect_transcription remains a separate optional task. coverage_role records planning only. Null preparation fields remain pending."
 }

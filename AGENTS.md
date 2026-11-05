@@ -70,6 +70,15 @@ Before merging, all applicable checks must be green on the current PR head.
 Neither focused CI nor full CI replaces the manual UI review workflow above;
 long-running checks must not delay availability of the local UI candidate.
 
+## Return control while CI is pending
+
+Do not keep the chat active waiting for or repeatedly polling CI unless the user
+explicitly asks you to wait. Complete the work that can be done immediately,
+report passed, failed and pending checks separately, and link the PR or CI run
+when available. Then return control so the user can work in other chats.
+If required checks block a merge, report that blocker and return control;
+pending checks remain required and must never be reported as passed.
+
 ## Preserve the installed app and recording data
 
 Before replacing the installed app, inspect the exact running app and confirm

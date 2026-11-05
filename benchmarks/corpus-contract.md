@@ -1,8 +1,9 @@
 # Corpus and lexical scoring contract (v2)
 
 This is a preparation contract, not an approved corpus or recognition result.
-All 50 template entries are pending. No public recordings, private recordings,
-references or model weights have been downloaded, uploaded or committed.
+All 50 template entries are pending. No recordings, references or model weights
+are committed with this preparation template. Acquired evaluation material belongs
+in a separate protected corpus and needs case-level provenance/review.
 The manifest format is additive: schema 1.0 remains readable with its exact legacy
 normalization; schema 2.0 requires explicit evidence and reference policies.
 Do not use the readiness template to claim complete language or condition coverage.
@@ -18,7 +19,7 @@ noise/music/silence cases supplement these; they do not fill speech coverage.
 
 | Language | Planned task/script | Regional coverage still pending |
 | --- | --- | --- |
-| Swiss German (`de-CH`) | Dialect wording, Latin; separate Standard German rendering | AG, BE, BS, GR, LU, SG, VS, ZH and further dialects; a source labelled `de` does not prove dialect fidelity |
+| Swiss German (`de-CH`) | Primary: faithful written Standard German with reviewed Swiss conventions, Latin; optional separate dialect-spelling task | AG, BE, BS, GR, LU, SG, VS, ZH and further dialects; record the source dialect/variety and assess content fidelity in the intended written output |
 | German (`de`) | Transcription, Latin | DE, AT and Swiss Standard German; regional accents |
 | French (`fr`) | Transcription, Latin | FR, CH, BE, CA and other varieties |
 | Italian (`it`) | Transcription, Latin | IT, CH and regional accents |
@@ -33,7 +34,16 @@ is an optional selection note, never proof of coverage. `und` shared placeholder
 have no language evidence and must be replaced with labelled speech or retained as
 non-speech. Additional languages use the same fields and scoring policies.
 
-## Source inventory; no source is approved yet
+Preparation version `priority-nine-preparation-v2` keeps every earlier case ID
+and output task, but prioritizes the four existing `de-CH-rendering-*` short/long,
+development/held-out cases. They have `coverage_role: "primary"`; the four
+`de-CH-*` dialect-spelling cases have `coverage_role: "optional"`. Other required
+language/condition cases are primary. Earlier v2 manifests may omit this additive
+planning field. Roles neither approve files nor prove coverage; optional dialect
+spelling must not gate acceptance of the primary Swiss written-German task.
+Reference conventions/hashes remain null and review remains false in the template.
+
+## Candidate source inventory; case-level approval required
 
 Reviewed source documentation on 2026-11-05. Exact release, attribution, access
 terms and speaker/session mapping must be retained with the private selection.
@@ -43,14 +53,18 @@ recorded holdouts are preferable for the final claim.
 
 | Candidate source | Suitable material and terms | Selection limitations / status |
 | --- | --- | --- |
+| [FHNW Swiss Parliaments Corpus and All Swiss German Dialects Test Set](https://www.cs.technik.fhnw.ch/i4ds-datasets) | Rights-holder page lists MIT for Swiss German parliament speech with Standard German transcripts (versions 1/2) and the dialect test set (version 1, 2021-03-10) | Retain the exact release/archive license and attribution; inspect transcript/audio alignment, original speaker/session grouping and actual dialect representation. Automatically aligned parliament text and possible Standard German speech need inspection under the primary rendering rubric. No candidate source alone proves conversational or fresh held-out coverage |
+| [Google FLEURS, pinned dataset card](https://huggingface.co/datasets/google/fleurs/blob/b4a42ed06e12025c42f3b4eff6338ace2fe2447a/README.md) | CC BY 4.0 at the pinned revision; initial configs `ar_eg`, `cmn_hans_cn`, `de_de`, `en_us`, `es_419`, `fr_fr`, `it_it`, `pt_br` cover the other eight language targets | Read-sentence domain, not natural long form. Retain original/raw references, exact release and attribution. Published metadata lacks individual speaker/session IDs; inspect the grouping limits rather than invent IDs. The card states training speakers differ from dev/test, not that arbitrary dev/test samples form speaker-disjoint experiment splits. Missing v2 grouping stays pending; an exploratory pilot cannot claim completed held-out coverage |
 | [Multilingual LibriSpeech, official OpenSLR release](https://www.openslr.org/94/) | Read audiobooks in German, French, Italian, English, Spanish and Portuguese; CC BY 4.0, retain attribution | Scripted audiobook domain; native long sessions/speaker IDs must be retained; not proof of conversational or regional coverage. Release and local selection pending |
 | [Common Voice dataset catalog](https://commonvoice.mozilla.org/en/datasets) and [contributor terms](https://commonvoice.mozilla.org/en/terms) | Candidate short speech including Arabic and Chinese locale-labelled releases; catalog lists release-specific licenses, commonly CC0 | Pin release and locale, verify its own license and access terms; scripts/dialects and anonymous speaker grouping need review; not a long-form corpus. Pending |
 | [SwissDial, ETH source](https://mtc.ethz.ch/publications/open-source/swiss-dial.html) | Swiss German and High German transcripts for eight listed dialects; ETH offers research-community access | Restricted access/use requires obtaining the actual agreement and verifying this project's permitted use; do not assume product/commercial permission. Speaker diversity and spontaneous long-form material limited. Pending |
 | [STT4SG-350/SDS-200, rights-holder page](https://swissnlp.org/home/activities/datasets/) | Swiss German speech with Standard German text; research access under META-SHARE ResearchUsageOnly NoRedistribution terms, commercial arrangements separately | Standard German references evaluate rendering, not dialect wording. Signed permission and compatible use pending. Automatically generated dialect transcripts are not human ground truth |
 | Explicitly consented local recordings | Nine-language long-form conversations, independent channels, adverse conditions and fresh holdouts | Record participant consent, permitted evaluation scope, anonymous speaker/session/source IDs and reference reviewers. No consented inputs have been approved here |
 
-No listed source fills all gaps. Acquisition, license review, native-language
-reference review and a frozen private manifest remain pending. Do not substitute
+No listed source fills all gaps. Dataset-level terms and acquisition do not
+establish per-case reference quality or representative coverage. Retain acquisition,
+rights/provenance, native-language reference review and a frozen private manifest.
+Missing material/review remains pending. Do not substitute
 synthetic tests, generated transcripts or concatenated unrelated clips for a
 natural long-form or human-reference acceptance requirement.
 
@@ -65,7 +79,9 @@ normalization, references and recognizer outputs are separate derived artifacts.
 V2 stores language, variety, ISO 15924 script, duration, conditions, source domain,
 anonymous speaker IDs, session/source IDs, zero-based source channel or `mix`,
 code-switch source-time intervals, output task, split, source URL, license/consent,
-reference conventions and human review. Empty/missing evidence remains pending.
+reference conventions and human review. Optional `coverage_role` is validated as
+`primary` or `optional`; absent roles retain earlier v2 compatibility. Empty/missing
+evidence remains pending.
 References must match exactly the declared source channel: use channel-specific human
 references for independent-channel final jobs, or a separately reviewed interleaved
 reference for a derived `mix` preview. Never compare all final channels joined together
@@ -87,11 +103,15 @@ in every run. A legitimate reference correction gets a new corpus version and
 review record; rerun both baseline and candidate, never change a reference merely
 to improve a candidate score. Keep held-out references inaccessible during tuning.
 
-Swiss German uses `dialect_transcription` for audible dialect wording, with an
-agreed spelling convention and documented acceptable variants. Standard German
-rendering uses `standard_rendering` as a separate case/task and separate score;
-translation is another task. Raw Whisper `de` is only a base-language argument.
-The scorer does not choose whichever alternate spelling makes a candidate win.
+For Swiss German speech, the primary task is `standard_rendering`: faithful
+written Standard German using reviewed Swiss conventions. It is scored directly
+against the reviewed written-German reference; no automatic LLM cleanup or
+translation stage is required by this output contract. Preserve the source
+meaning, names, numbers and negation. Optional `dialect_transcription` measures
+audible dialect wording under an agreed spelling convention in separate cases
+and scores. Other translation tasks also remain separate. Raw Whisper `de` is
+only a base-language argument, not evidence of dialect identification or content
+accuracy. The scorer does not choose whichever alternate spelling makes a candidate win.
 If multiple spellings are acceptable, preserve the reviewed variant list privately
 and report human adjudication independently from exact-reference lexical scores.
 
@@ -134,12 +154,23 @@ Tiny slices remain exploratory; confidence intervals and critical-content labels
 are unmeasured until sufficient reviewed data exists. No lexical score implies
 semantic, speaker, timestamp, language-ID or dialect-ID accuracy.
 
+The same frozen corpus/reference/scoring versions support untouched models,
+runtime controls and AI-directed model edits under #112. Keep candidate
+development evidence separate from held-out references/outcomes. Runtime, model
+and compression effects need isolated paired comparisons under #105; corpus
+preparation itself is not a model improvement. Repeated fresh processes do not
+establish cold filesystem caches, and read-speech subsets do not establish
+long-form or adverse-condition acceptance.
+
 ## Human review rubric
 
 For each paired transcript, native-language reviewers record the source-time span,
 reference, raw hypothesis, severity and adjudication for names, quantities/units,
 negation, omitted meaning, invented speech, repetition, code-switch content and
-dialect preservation. Record `correct`, `incorrect`, `uncertain` or `not reviewed`
+source-content preservation in the intended written output. For primary Swiss
+cases, acceptable Standard German rendering is reviewed against the dialect
+audio; dialect spelling is not required. Review optional dialect-spelling fidelity
+only in its declared task. Record `correct`, `incorrect`, `uncertain` or `not reviewed`
 for each applicable item; uncertainty is not a pass. Critical errors that reverse
 meaning remain visible even if normalization or average WER improves. Review
 independent channels and overlapping speech against their own source evidence;

@@ -76,18 +76,45 @@ import Testing
             var missing = item(); var fields = missing.object!; fields.removeValue(forKey: field); missing = .object(fields)
             #expect(throws: CoreFailure.self) { try CorpusManifest.validate(document([missing])) }
         }
-        let invalidValues: [(String, JSONValue)] = [("id", "../escape"), ("duration_seconds", -1), ("sha256", "bad"), ("scoring_policy", "unknown"), ("source_channel", -1)]
+        let invalidValues: [(String, JSONValue)] = [("id", "../escape"), ("duration_seconds", -1), ("sha256", "bad"), ("scoring_policy", "unknown"), ("source_channel", -1), ("coverage_role", "approved")]
         for (field, invalid) in invalidValues {
             var bad = item(); bad[field] = invalid
             #expect(throws: CoreFailure.self) { try CorpusManifest.validate(document([bad])) }
         }
         var swiss = item(); swiss["language"] = "de-CH"
         #expect(throws: CoreFailure.self) { try CorpusManifest.validate(document([swiss])) }
+        swiss["task"] = "standard_rendering"; swiss["coverage_role"] = "primary"
+        swiss["reference_conventions"] = "Reviewed written Standard German with Swiss conventions; preserve source meaning"
+        #expect(try CorpusManifest.validate(document([swiss])).count == 1)
         swiss["task"] = "dialect_transcription"
+        swiss["coverage_role"] = "optional"
         #expect(try CorpusManifest.validate(document([swiss])).count == 1)
         var extensionCase = item(); extensionCase["language"] = "ja"; extensionCase["scoring_policy"] = "unicode-nfc-cer-v2"
         #expect(try CorpusManifest.validate(document([extensionCase])).count == 1)
         #expect(try TranscriptAccuracy.policy(for: swiss, schemaVersion: "1.0") == .legacyV1)
+    }
+
+    @Test func preparationTemplatePrioritizesWrittenGermanWithoutChangingEvidenceOrCaseIDs() throws {
+        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let bytes = try Data(contentsOf: repo.appendingPathComponent("benchmarks/manifests/corpus.template.json"))
+        let template = try JSONDecoder().decode(JSONValue.self, from: bytes)
+        let cases = try CorpusManifest.validate(template)
+        let swiss = cases.filter { $0["language"] == "de-CH" }
+        let primary = swiss.filter { $0["coverage_role"] == "primary" }
+        let optional = swiss.filter { $0["coverage_role"] == "optional" }
+        #expect(primary.count == 4 && primary.allSatisfy { $0["task"] == "standard_rendering" })
+        #expect(optional.count == 4 && optional.allSatisfy { $0["task"] == "dialect_transcription" })
+        for split in ["development", "held_out"] {
+            for form in ["short_form", "long_form"] {
+                #expect(primary.contains { $0["id"] == .string("de-CH-rendering-\(split)-\(form)") })
+                #expect(optional.contains { $0["id"] == .string("de-CH-\(split)-\(form)") })
+            }
+        }
+        #expect(template["corpus_version"] == "priority-nine-preparation-v2" && template["frozen"] == false)
+        #expect(swiss.allSatisfy { $0["reference_conventions"] == .null && $0["reference_sha256"] == .null && $0["reviewed"] == false })
+        #expect(Set(cases.filter { $0["coverage_role"] == "primary" }.compactMap { $0["language"].string })
+            .isSuperset(of: ["de-CH", "de", "fr", "it", "en", "ar", "zh", "es", "pt"]))
     }
 
     @Test func heldOutSplitRejectsSpeakerSessionSourceAndAudioLeakage() throws {

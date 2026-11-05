@@ -38,7 +38,10 @@ public enum CorpusManifest {
                   let speakers = item["speaker_ids"].array, speakers.allSatisfy(nonempty),
                   item["code_switches"].array != nil else { throw CoreFailure("Invalid corpus v2 metadata: \(id)") }
             if language == "de-CH" && task == "transcription" {
-                throw CoreFailure("Swiss German cases must choose dialect_transcription or standard_rendering explicitly")
+                throw CoreFailure("Swiss German cases must choose standard_rendering (primary written-German target) or a separate dialect_transcription task explicitly")
+            }
+            if let role = item.object?["coverage_role"], ![JSONValue.string("primary"), "optional"].contains(role) {
+                throw CoreFailure("coverage_role must be primary or optional: \(id)")
             }
             if let duration = item["duration_seconds"].double, !duration.isFinite || duration <= 0 {
                 throw CoreFailure("Corpus duration must be positive: \(id)")

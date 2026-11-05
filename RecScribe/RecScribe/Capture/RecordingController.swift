@@ -317,6 +317,8 @@ class RecordingController: RecordingControlling {
         return [.init(id: "capture", name: activeSourceName, health: audioRecorder.healthSnapshot)]
     }
 
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] { multiRecorder?.sourceMeters ?? [:] }
+
     /// Check if currently recording
     var isRecording: Bool {
         return captureManager.capturing
@@ -380,6 +382,7 @@ protocol RecordingControlling: AnyObject {
     var onStreamError: (@MainActor (String) -> Void)? { get set }
     var isRecording: Bool { get }
     var sourceHealth: [SourceRecordingHealth] { get }
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] { get }
     var stopReviewMessage: String? { get }
     var recordingURL: URL? { get }
     func startRecording() async throws -> URL
@@ -389,5 +392,6 @@ protocol RecordingControlling: AnyObject {
 
 extension RecordingControlling {
     var sourceHealth: [SourceRecordingHealth] { [] }
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] { [:] }
     var stopReviewMessage: String? { nil }
 }

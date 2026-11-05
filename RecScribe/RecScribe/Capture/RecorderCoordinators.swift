@@ -9,6 +9,7 @@ import SwiftUI
 @MainActor
 @Observable final class RecorderTelemetry {
     var sourceHealth: [SourceRecordingHealth] = []
+    var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
     var healthTime = ProcessInfo.processInfo.systemUptime
     var duration: TimeInterval = 0
     var waveformSamples: [Float] = Array(repeating: 0, count: 200)

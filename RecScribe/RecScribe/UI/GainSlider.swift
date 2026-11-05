@@ -29,7 +29,7 @@ struct GainSlider: NSViewRepresentable {
     let label: String
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
-    func makeNSView(context: Context) -> GainSliderControl {
+    func makeNSView(context: Context) -> GainSliderContainer {
         let slider = GainSliderControl(value: value, minValue: GainSliderSnap.range.lowerBound,
                                        maxValue: GainSliderSnap.range.upperBound,
                                        target: context.coordinator, action: #selector(Coordinator.changed(_:)))
@@ -37,13 +37,16 @@ struct GainSlider: NSViewRepresentable {
         slider.numberOfTickMarks = 0
         slider.allowsTickMarkValuesOnly = false
         slider.isVertical = false
+        slider.controlSize = .small
         slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
         slider.onBeginTracking = { [weak coordinator = context.coordinator] in coordinator?.snap.reset() }
         slider.toolTip = "0 dB keeps the original level. Drag near round values to snap; hold Option for fine adjustment. Arrow keys adjust by 0.5 dB, Option-arrow by 0.1 dB."
-        updateNSView(slider, context: context)
-        return slider
+        let container = GainSliderContainer(slider: slider)
+        updateNSView(container, context: context)
+        return container
     }
-    func updateNSView(_ slider: GainSliderControl, context: Context) {
+    func updateNSView(_ container: GainSliderContainer, context: Context) {
+        let slider = container.slider
         context.coordinator.parent = self
         if slider.doubleValue != value {
             context.coordinator.snap.reset()
@@ -52,6 +55,8 @@ struct GainSlider: NSViewRepresentable {
         slider.isEnabled = context.environment.isEnabled
         slider.setAccessibilityLabel(label)
         slider.setAccessibilityValueDescription(String(format: "%+.1f decibels", value))
+        container.referenceLabel.textColor = slider.isEnabled ? .labelColor : .disabledControlTextColor
+        container.needsLayout = true
         slider.needsDisplay = true
     }
     @MainActor final class Coordinator: NSObject {
@@ -65,6 +70,41 @@ struct GainSlider: NSViewRepresentable {
             slider.setAccessibilityValueDescription(String(format: "%+.1f decibels", next))
             parent.value = next
         }
+    }
+}
+
+/// Reserve a separate label lane: the knob can never paint over the unity label.
+@MainActor
+final class GainSliderContainer: NSView {
+    let slider: GainSliderControl
+    let referenceLabel = NSTextField(labelWithString: "0 dB")
+
+    init(slider: GainSliderControl) {
+        self.slider = slider
+        super.init(frame: .zero)
+        referenceLabel.font = .monospacedDigitSystemFont(ofSize: 10, weight: .medium)
+        referenceLabel.textColor = .labelColor
+        referenceLabel.alignment = .center
+        referenceLabel.setAccessibilityElement(false)
+        addSubview(slider)
+        addSubview(referenceLabel)
+    }
+    required init?(coder: NSCoder) { nil }
+
+    override func layout() {
+        super.layout()
+        let labelHeight: CGFloat = 12
+        slider.frame = NSRect(x: 0, y: labelHeight + 2, width: bounds.width,
+                              height: max(0, bounds.height - labelHeight - 2))
+        let labelWidth: CGFloat = 32
+        referenceLabel.frame = NSRect(x: max(0, min(bounds.width - labelWidth, slider.zeroReferenceX - labelWidth / 2)),
+                                      y: 0, width: labelWidth, height: labelHeight)
+        needsDisplay = true
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        (slider.isEnabled ? NSColor.labelColor : .disabledControlTextColor).setFill()
+        NSRect(x: slider.zeroReferenceX - 0.5, y: 12, width: 1, height: 2).fill()
     }
 }
 
@@ -85,20 +125,6 @@ final class GainSliderControl: NSSlider {
         let knob = cell.knobRect(flipped: isFlipped)
         let fraction = CGFloat((0 - minValue) / (maxValue - minValue))
         return track.minX + knob.width / 2 + max(0, track.width - knob.width) * fraction
-    }
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard let cell = cell as? NSSliderCell else { return }
-        let track = cell.barRect(flipped: isFlipped)
-        let y = isFlipped ? track.maxY + 3 : track.minY - 8
-        let color = isEnabled ? NSColor.secondaryLabelColor : NSColor.disabledControlTextColor
-        color.setFill()
-        NSBezierPath(roundedRect: NSRect(x: zeroReferenceX - 0.75, y: y, width: 1.5, height: 5),
-                     xRadius: 0.75, yRadius: 0.75).fill()
-        let label = NSAttributedString(string: "0 dB", attributes: [
-            .font: NSFont.systemFont(ofSize: 8), .foregroundColor: color
-        ])
-        label.draw(at: NSPoint(x: zeroReferenceX + 5, y: y + (5 - label.size().height) / 2))
     }
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {

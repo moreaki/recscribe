@@ -241,6 +241,7 @@ import Observation
     func refreshCaptureHealth() {
         healthTime = ProcessInfo.processInfo.systemUptime
         sourceHealth = controller.sourceHealth
+        telemetry.sourceMeters = controller.sourceMeters
     }
 
     private func stopTimer() {

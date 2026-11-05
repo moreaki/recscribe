@@ -58,6 +58,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run unit tests (Thread Sanitizer)
+        id: sanitizer
         # Blocking after #83: fixture sample storage has an explicit, observable
         # lifetime. A green xcodebuild exit alone can hide a diagnostic/restart;
         # verify both the result bundle and complete captured log below.
@@ -90,7 +91,7 @@ jobs:
           done
 
       - name: Reject sanitizer diagnostics and incomplete runs
-        if: always()
+        if: ${{ always() && steps.sanitizer.outcome != 'skipped' }}
         run: python3 scripts/check-sanitizer-results.py TestResults.json TestResults-functional.json TestResults-tsan.log
 
       - name: Upload test results

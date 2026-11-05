@@ -160,6 +160,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             self?.onStreamError?(failure)
         }
         let configured = SCStream(filter: selection, configuration: settings, delegate: self)
+        receiver.retainSynchronizationClock(configured.synchronizationClock)
         try configured.addStreamOutput(receiver, type: .screen, sampleHandlerQueue: receiver.queue)
         try configured.addStreamOutput(receiver, type: .audio, sampleHandlerQueue: receiver.queue)
         output = receiver
@@ -198,6 +199,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             }
             if let stream {
                 try await stream.startCapture()
+                output?.retainSynchronizationClock(stream.synchronizationClock)
             }
             isCapturing = true
             if !pendingInputs.isEmpty {
@@ -386,6 +388,7 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
     private var buffers = 0
     private var callbackMS = 0.0
     private var maxCallbackMS = 0.0
+    private var synchronizationClock: CMClockOrTimebase?
     private let onError: @MainActor @Sendable (String) -> Void
 
     init(id: UUID = UUID(), audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
@@ -409,16 +412,32 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         }
     }
 
+    func retainSynchronizationClock(_ clock: CMClockOrTimebase?) {
+        guard let clock else { return }
+        queue.sync { synchronizationClock = clock }
+    }
+
     func stream(
         _ stream: SCStream,
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType
     ) {
-        process(sampleBuffer, type: type)
+        if sampleCallback != nil, type == .audio || type == .microphone {
+            // Retain the stream clock through shutdown: callbacks admitted
+            // before stop still need its timebase while the output drains.
+            guard let clock = stream.synchronizationClock ?? synchronizationClock else {
+                rejectPacket("Playback synchronization clock is unavailable; source tracks are preserved", conversion: false)
+                return
+            }
+            process(sampleBuffer, type: type, clock: clock)
+        } else {
+            process(sampleBuffer, type: type)
+        }
     }
 
-    func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType) {
+    func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType, clock: CMClockOrTimebase? = nil) {
         dispatchPrecondition(condition: .onQueue(queue))
+        if let clock { synchronizationClock = clock }
         let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
         guard accepting, frameCount > 0, type == .audio || type == .microphone else { return }
         let began = ContinuousClock.now
@@ -445,7 +464,8 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
             return
         }
         if let callback = sampleCallback {
-            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let presentation = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let timestamp = synchronizationClock.map { CMSyncConvertTime(presentation, from: $0, to: CMClockGetHostTimeClock()) } ?? presentation
             guard timestamp.isNumeric, timestamp.seconds.isFinite else {
                 rejectPacket("Capture timestamps are invalid; source tracks are preserved", conversion: false)
                 return

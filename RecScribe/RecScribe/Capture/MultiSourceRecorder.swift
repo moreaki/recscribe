@@ -11,6 +11,7 @@ import os
 final class MultiSourceRecorder {
     private nonisolated struct State: Sendable {
         var id = UUID()
+        var recordingID: UUID?
         var active = false
         var accepting = false
         var failedTracks: Set<CaptureTrack> = []
@@ -40,17 +41,20 @@ final class MultiSourceRecorder {
     private(set) var manifestURL: URL?
     private(set) var audioURL: URL?
     private var descriptors: [RecordingSession.SourceTrack] = []
+    private let writerFactory: (RecordingStorageOptions) -> SessionWAVWriter
     nonisolated private let monitor: CapturedAudioMonitor
     nonisolated let onError: @MainActor @Sendable (String) -> Void
     nonisolated let onWaveform: (@MainActor @Sendable ([Float]) -> Void)?
 
     init(onError: @escaping @MainActor @Sendable (String) -> Void,
          onWaveform: (@MainActor @Sendable ([Float]) -> Void)? = nil,
-         maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256, monitor: CapturedAudioMonitor? = nil) {
+         maximumBytes: Int = 4 * 1_024 * 1_024, maximumBuffers: Int = 256, monitor: CapturedAudioMonitor? = nil,
+         writerFactory: @escaping (RecordingStorageOptions) -> SessionWAVWriter = { SessionWAVWriter(options: $0) }) {
         precondition(maximumBytes > 0 && maximumBuffers > 0)
         self.monitor = monitor ?? CapturedAudioMonitor()
         self.maximumBytes = maximumBytes; self.maximumBuffers = maximumBuffers
         self.onError = onError; self.onWaveform = onWaveform
+        self.writerFactory = writerFactory
     }
 
     func start(at url: URL, descriptors: [RecordingSession.SourceTrack], options: RecordingStorageOptions,
@@ -58,7 +62,7 @@ final class MultiSourceRecorder {
                levels: @escaping @Sendable () -> RecordingLevels = { .init() }, continueOnSourceFailure: Bool = false,
                maximumFrames: Int64? = nil) throws {
         guard !stopping, !state.withLock({ $0.active }) else { throw AudioRecorderError.alreadyRecording }
-        let mix = SessionWAVWriter(options: options)
+        let mix = writerFactory(options)
         try mix.createFile(at: url, sampleRate: 48_000, channels: 2)
         let resolvedEpoch = epoch ?? CMClockGetTime(CMClockGetHostTimeClock()).seconds
         try begin(mix: mix, descriptors: descriptors, options: options, epoch: resolvedEpoch, levels: levels,
@@ -81,8 +85,10 @@ final class MultiSourceRecorder {
         self.descriptors = descriptors
         audioURL = mix?.audioURL; manifestURL = mix?.manifestURL
         let now = ProcessInfo.processInfo.systemUptime
+        let recordingID = mix?.sessionID
         state.withLock { s in
             s = State(); s.active = true; s.accepting = true
+            s.recordingID = recordingID
             s.tracks = descriptors.map(\.role); s.continueOnSourceFailure = continueOnSourceFailure
             for track in s.tracks { s.health[track] = .init(startedAt: now) }
         }
@@ -140,7 +146,12 @@ final class MultiSourceRecorder {
             s.health[sample.track]?.sampleRate = rate
             s.health[sample.track]?.channels = channels
             s.health[sample.track]?.lastReceivedAt = now
-            if s.health[sample.track]?.firstReceivedAt == nil { s.health[sample.track]?.firstReceivedAt = now }
+            if s.health[sample.track]?.firstReceivedAt == nil {
+                s.health[sample.track]?.firstReceivedAt = now
+                let arrival = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+                let recordingID = s.recordingID ?? s.id
+                Log.capture.notice("Source admitted session=\(recordingID.uuidString, privacy: .public) role=\(sample.track.rawValue, privacy: .public) pts_host_s=\(sample.presentationTime) arrival_host_s=\(arrival)")
+            }
             queue.async { self.write(sample, bytes: bytes, submitted: submitted) }
         }
     }
@@ -172,7 +183,11 @@ final class MultiSourceRecorder {
                 s.meters = meters; s.mixMeter = mixMeter
             }
         } catch {
-            if case SessionError.invalid = error, state.withLock({ $0.continueOnSourceFailure }) {
+            if error is SourceMixdown.Failure {
+                // Stop new admission, but every admitted source packet must
+                // still spool even when the independent mix sink has failed.
+                state.withLock { fail(error, state: &$0) }
+            } else if case SessionError.invalid = error, state.withLock({ $0.continueOnSourceFailure }) {
                 let message = "Input timing or format changed; other sources continue. " + error.localizedDescription
                 do {
                     try writer.sourceFailed(sample.track, message: message)
@@ -262,7 +277,7 @@ final class MultiSourceRecorder {
                     let meters = writer?.sourceMeters ?? [:], mixMeter = writer?.mixMeter ?? .init()
                     state.withLock { $0.meters = meters; $0.mixMeter = mixMeter }
                     if reportReviewIssues, resultError == nil, writer?.mix?.hasIssues == true {
-                        state.withLock { $0.reviewMessage = "Recording saved with review notes: clipping, timing gaps or incomplete source coverage. Review the preserved source tracks and mix." }
+                        state.withLock { $0.reviewMessage = "Recording saved with review notes. Review the preserved source tracks and mix." }
                     }
                     let finalizeMS = Self.milliseconds(finalizeStarted.duration(to: .now))
                     let timings = state.withLock { ($0.writeMS, $0.maxWriteMS, $0.maxQueueMS, $0.peakBytes) }

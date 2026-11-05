@@ -137,7 +137,7 @@ struct SynchronizedCaptureTests {
         #expect(mix[1].dropFirst(100).allSatisfy { abs($0 - 0.5) < 0.005 })
     }
 
-    @Test func missingSourceAndLateCallbacksRemainVisibleAndSourceAudioIsPreserved() throws {
+    @Test func lateCallbacksOnlyLimitMonitoringAndEverySourceIsInTheSavedMix() throws {
         let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
         var policy = SynchronizedCaptureWriter.Policy(); policy.mixWindowFrames = 960
         let writer = try worker(directory, policy: policy)
@@ -146,8 +146,11 @@ struct SynchronizedCaptureTests {
         try writer.finish()
         let manifest = try #require(writer.mix?.manifestURL)
         let parent = try RecordingSession.read(manifest)
-        #expect(parent.status == .needsReview)
-        #expect(parent.issues.contains { $0.contains("too late") })
+        #expect(parent.status == .finalized)
+        #expect(parent.issues.isEmpty)
+        let mix = try decoded(parent, beside: manifest)
+        #expect(mix[0].allSatisfy { abs($0 - 0.4) < 0.0001 })
+        #expect(mix[1].allSatisfy { abs($0 - 0.5) < 0.0001 })
         let mic = try LinkedSourceSessions.read(#require(parent.sourceTracks?.last), parent: parent, at: manifest)
         #expect(try decoded(mic.session, beside: mic.id)[0].allSatisfy { abs($0 - 0.6) < 0.0001 })
     }

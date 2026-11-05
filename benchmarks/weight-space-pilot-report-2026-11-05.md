@@ -1,11 +1,20 @@
-# AI weight-edit development pilot — 2026-11-05
+# AI weight-edit pilot: round-1 candidate rejected — 2026-11-05
 
-On all **27 development utterances**, the last-layer Tiny edit reduced equal-
-language macro CER from **18.83% to 17.16%**, an **8.9% relative reduction** in
-both known and automatic modes. Swiss CER improved **45.42% → 43.75%**, while
-Swiss WER worsened **111.76% → 120.59%**. German and Arabic CER also rose slightly.
-This is a mixed lexical result, with native/critical-content review unresolved,
-rather than evidence for a bundled default or general semantic improvement.
+**Reject the selected Last +10% Tiny candidate for promotion.** On the sealed
+27-source held-out trial, equal-language macro CER worsened from **12.9195574%
+to 14.0808580%**, an **8.9887025% relative increase**, in both known and automatic
+modes. Swiss German and French exceeded the frozen two-percentage-point
+per-language CER regression limit. WER worsened in seven of the eight languages
+where it is reported. Both model files remain **77,691,713 bytes**; this edit
+provides no size reduction and selects no bundled default.
+
+The earlier 27-source development gain (**18.83% → 17.16% CER**, 8.9% relative)
+did not carry through to this trial. Swiss development CER had improved while
+WER worsened; German and Arabic development CER had also risen slightly. The
+complete positive and negative development history is retained below. The
+held-out data is now consumed: do not retune this candidate on it or reuse it
+as a fresh holdout. Further candidates require a new predeclared experiment and
+fresh held-out data.
 
 The first nine-utterance diagnostic completed **324/324 inference cells** and
 **216/216 paired cells**; its last-layer macro CER was **21.37% → 18.96%**
@@ -17,11 +26,14 @@ reported separately and do not create extra independent speech samples.
 Recipes and source selection were fixed before edited-model outcomes. Only
 successful repeat 1 supplies quality; repeated inference measures variation.
 Latency/RSS observations are **UNCONTROLLED** and the 10% resource gate is
-**NOT EVALUATED**. No held-out score, release approval or model promotion is
-claimed. The completed expansion and per-language table appear below the first
-diagnostic's full results and execution history.
+**NOT EVALUATED**. Native/critical-content, v2, grouping and representative
+coverage gates remain unresolved. The freeze is an explicit **AI chronology/hash
+attestation, not human/native approval**. This result applies to one scaling
+recipe, artifact and small research sample; it establishes no general conclusion
+about weight-space methods. No release or default change is approved.
 
-This report covers the first diagnostic for [#112](https://github.com/moreaki/recscribe/issues/112).
+This report covers the diagnostic, development expansion and final exploratory
+held-out trial for [#112](https://github.com/moreaki/recscribe/issues/112).
 The [frozen protocol](weight-space-pilot-protocol.md) defines the experiment and
 execution-policy amendment. The separate [untouched five-model baseline](pilot-baseline-2026-11-05.md)
 covers tiny, base, small, large-v3-turbo and full large-v3 on 27 utterances;
@@ -376,13 +388,151 @@ substantial desktop noise and provides no resource acceptance. The complete
 nine-source diagnostic reported above retains its original uniform 300% policy;
 the two attempts are not pooled or silently resumed.
 
-Representative multilingual claims still require broader speakers/sessions,
+At the development decision point, representative multilingual claims still
+required broader speakers/sessions,
 regional/script coverage, natural and adverse long-form conditions, silence,
 overlap, language switches, independent channels, native audio/reference and
 critical-content adjudication, and controlled resource measurements. A frozen
-combined configuration must then be evaluated once on untouched held-out data.
-Held-out references remain unopened for this work. No UI/default/packaging
+combined configuration was required before a held-out evaluation. Held-out
+references had not been interpreted at that decision point. No UI/default/packaging
 change is authorized by these development results. Native reference and
 critical-content review remain **UNRESOLVED**; resource acceptance remains
 **NOT EVALUATED** under shared-desktop load. The completed numeric screen and
 coarse labels authorize no promotion.
+
+## Final sealed exploratory held-out trial
+
+The frozen trial under `heldout-27-frozen-defaults/` completed **324/324 inference
+cells and 162/162 matched pairs**, all with completed/review-required status.
+There are **27 new sources, three per language**, evaluated with both models,
+known and automatic modes, and three repeats: 36 model/language/mode cohorts
+and 18 paired cohorts. Only successful repeat 1 supplies quality. No source
+becomes an extra independent observation through repetition or mode reuse.
+
+The selected configuration retained the same Last +10% artifact and matching
+unchanged Tiny control, current default decoding/search/fallback/context,
+`current_auto`, **VAD off**, two threads and the final-file preparation path.
+Runtime beam/VAD candidates had mixed or regressive development results and
+were not stacked into this trial. All model, native binary, runner and runtime
+settings hashes are unchanged from the tables above. Original audio/references,
+raw transcripts, source timing, sealed manifests and all provenance remain
+protected outside the checkout.
+
+### Held-out quality and decision
+
+The following table applies to **both known and automatic modes**; their
+aggregate lexical results were identical and checked separately. Each language
+has three unique sources. Reference counts were unknown before outcome
+inspection and are now the validated counted units from repeat 1. CER is weighted
+by those units within each language, followed by an equal nine-language mean.
+Chinese whitespace WER stays unreported and all scores retain the legacy v1
+normalizer; no strict Arabic/v2 score is implied.
+
+| Language | Unique sources | Reference words | Reference scalars | Tiny WER% / CER% | Last +10% WER% / CER% | CER delta pp |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Swiss German → German | 3 | 39 | 217 | 66.67 / 31.80 | 82.05 / 36.41 | +4.61 |
+| German | 3 | 62 | 344 | 32.26 / 3.78 | 33.87 / 5.52 | +1.74 |
+| French | 3 | 109 | 523 | 30.28 / 9.37 | 34.86 / 13.38 | +4.02 |
+| Italian | 3 | 79 | 392 | 24.05 / 5.36 | 26.58 / 6.38 | +1.02 |
+| English | 3 | 73 | 323 | 17.81 / 4.64 | 17.81 / 6.19 | +1.55 |
+| Arabic | 3 | 69 | 339 | 49.28 / 21.83 | 52.17 / 21.24 | −0.59 |
+| Mandarin / Simplified | 3 | — | 81 | — / 24.69 | — / 22.22 | −2.47 |
+| Spanish | 3 | 102 | 484 | 11.76 / 4.13 | 16.67 / 3.93 | −0.21 |
+| Portuguese | 3 | 75 | 384 | 29.33 / 10.68 | 33.33 / 11.46 | +0.78 |
+
+| Frozen numeric criterion | Held-out result |
+| --- | --- |
+| Known-mode macro CER reduction at least 5% | **Not met**: 12.9195574% → 14.0808580%; relative reduction `−0.08988702527820767` |
+| No per-language CER increase over 0.02 | **Not met**: Swiss German +4.6083 pp; French +4.0153 pp |
+| Separate automatic-mode CER checks | Same macro loss and Swiss/French regression flags |
+| Per-case coarse auto label comparison | 27/27 preserved matches; no new/repaired/persisting mismatch or unobserved case |
+| WER product acceptance | **UNRESOLVED**: no predeclared product WER pass budget; losses reported descriptively |
+| Promotion decision for this round-1 candidate | **REJECT** |
+
+WER rises for Swiss German, German, French, Italian, Arabic, Spanish and
+Portuguese; English is unchanged. Swiss speech is scored against written
+Standard German: its CER loss is accompanied by WER worsening from **66.67% to
+82.05%**. Arabic and Spanish CER gains do not cancel their WER losses. The
+predeclared CER criteria fail independently of these descriptive word-level
+observations. The coarse `de` label for Swiss speech does not establish dialect
+recognition or wording fidelity, and 27 correct base labels do not establish
+switch handling, out-of-set detection, confidence or semantic accuracy.
+
+### Held-out latency and memory observations
+
+These are **UNCONTROLLED shared-desktop observations** on the same M2 Ultra
+host and software stack. The guard retained capture priority, known competing
+ASR/build/test/VM cancellation, serial utility work and the frozen 1,000% raw
+per-process CPU stop threshold. This is no aggregate CPU/GPU isolation proof;
+the latency/RSS acceptance gate remains **NOT EVALUATED**.
+
+Each wall-time entry is the median of three complete workloads of that
+language's three sources, including job setup/preparation/model loading and
+rendering. Each RSS entry is the largest recorded per-invocation process peak
+among nine invocations for the indicated model/mode, in MiB (2²⁰ bytes).
+Entries are **known / automatic**. They do not measure first-result latency,
+steady decoder throughput, total system memory or unified GPU allocation.
+
+| Language | Audio s per workload | Tiny wall median s, known / auto | Last +10% wall median s, known / auto | Tiny max process RSS MiB, known / auto | Last +10% max process RSS MiB, known / auto |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Swiss German → German | 25.227 | 3.370 / 3.457 | 3.365 / 3.329 | 274.44 / 274.69 | 273.52 / 274.58 |
+| German | 41.520 | 3.519 / 3.340 | 3.596 / 3.614 | 276.45 / 276.09 | 275.00 / 275.39 |
+| French | 41.880 | 3.664 / 3.612 | 3.773 / 3.541 | 280.30 / 280.62 | 278.06 / 278.28 |
+| Italian | 39.000 | 3.567 / 3.464 | 3.544 / 3.521 | 276.41 / 276.09 | 275.20 / 275.44 |
+| English | 30.780 | 3.327 / 3.464 | 3.355 / 3.450 | 274.52 / 275.58 | 273.89 / 273.86 |
+| Arabic | 38.340 | 3.666 / 3.637 | 3.716 / 3.736 | 276.44 / 277.61 | 277.05 / 277.09 |
+| Mandarin / Simplified | 32.520 | 3.351 / 3.406 | 3.306 / 3.418 | 274.83 / 275.78 | 275.75 / 276.02 |
+| Spanish | 43.920 | 3.521 / 3.550 | 3.699 / 3.609 | 276.88 / 277.81 | 278.73 / 277.25 |
+| Portuguese | 39.780 | 3.427 / 3.444 | 3.304 / 3.727 | 277.67 / 275.81 | 276.34 / 276.52 |
+
+Full min/max distributions, per-repeat workloads, RTF and native model-load
+timer observations remain in the structured report. The small differences here
+provide no controlled speed or memory improvement claim. Both raw model files
+are still **77,691,713 bytes**, with no removed tensors/parameters or assembled
+candidate bundle; download/container/bundle tradeoffs have not been established
+for a shippable default.
+
+### Seal, source identity and unresolved gates
+
+The AI operator sealed the corpus/configuration/model/settings/budgets before
+this trial. The freeze explicitly records actor **Codex / AI**, scope
+**chronology/hash-lock research attestation only**, and
+`human_native_approval: false`. Its declared UTC time is
+`2026-11-05T22:37:20.553424+00:00`. Matching retained snapshot hashes and declared
+timestamp ordering were validated; this is operator-attested/hash-bound
+chronology, not independent human verification of blindness or native content.
+The analyzer was separately hash-frozen after inference completed and before
+held-out outcome inspection, using unchanged predeclared quality criteria.
+
+| Held-out evidence identity | SHA-256 |
+| --- | --- |
+| Original source manifest | `2b1ef9b99b2e077064ace6bd346314553ac155b15684eedbc7a9a12cd2a88ef1` |
+| Sealed corpus metadata | `3c1c3c88c0b7b8d491f2cfff992ab0c05718861c3770f9ed73a266b02d49f2fc` |
+| Frozen experiment configuration | `f93a19d329da19e45ce8097916208542d5a6aaef31d1313a966e8886d806508b` |
+| Pre-trial AI freeze/budgets | `ba2c4e379735cd0f0aa38b965b8b8bf2764fb541c7f43dd2da280e913b571d7e` |
+| Execution lock/native dependency inventory | `e06351b25927294eb9f5b24e5c5f7401847f7d405132278f9823dfb688fcb8ba` |
+| Complete matrix | `a74e0063122c9f09186fa3514aa0700284857a495cda3873a5d466d16856c726` |
+| Structured report, `quality-pilot-report-1.1` | `eb14f74a7aa67cf3938098ef51a5b630c132649bc9cfbca7a8373cd616d70253` |
+| Analyzer, `heldout27-weight-screen-1.0` | `6047f02090ea5db2257fd8ebeead70de9f1b9c2302e61bff96190661069a5ecd` |
+| Analyzer hash/criteria freeze record | `bd5cc0d262ec962f01fdf939214e93a3e06b72eb7c71ca3994008d100fb4e6e9` |
+| Structured screen summary | `f66a4eb6451a24e673a83130216e7e5ae43993b1be6fd7813f5b2416e1b7a1b9` |
+
+The 35 synthetic validation groups passed before outcome inspection. The actual
+screen then validated the full grid, exact sealed source/reference/channel
+hashes, model lineage, profiles/budgets, AI-only attestation, verified retained
+corpus/experiment/freeze snapshots, counted denominators/rates and per-case
+automatic labels, with no input problems. It read explicit structured metadata
+and report/matrix evidence; it did not follow linked audio/reference/transcript/
+log/model paths or rescore original material. Complete protected evidence lives
+under `heldout-27-frozen-defaults/`, including `report-v1.1/`, `screen-v1/`,
+immutable corpus/configuration/freeze snapshots and the preserved raw job data.
+
+All source/native review flags remain false/unapproved. Independent native
+audio/reference/critical-content review, representative v2 scoring/coverage,
+adequate individual speaker/session grouping, broader regions/scripts, natural
+adverse and long-form conditions, independent channels/live replay, language
+switches/out-of-set/fallback behavior and controlled resource acceptance remain
+unresolved. Public-source pretraining overlap is also possible. No app default,
+bundled model or model download is changed. Preserve this rejected artifact and
+all evidence; future research must use fresh held-out sources rather than
+retuning or claiming another blind evaluation on this consumed trial.

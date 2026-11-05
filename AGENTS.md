@@ -40,7 +40,7 @@ Do not opt out of full validation using a PR label or a UI filename alone.
 - Only recognized literal labels, icons, help/accessibility text or simple
   spacing, frame, font, foreground, corner-radius and line-limit modifiers in
   `RecScribe/RecScribe/UI/*.swift` (including subdirectories), or Markdown in
-  `docs/` and `README.md`.
+  `docs/`, `README.md` and `AGENTS.md`.
 - No change to callbacks, state, lifecycle, async work, disabled/safety gates or
   other behavior. Unrecognized visual syntax conservatively requires full CI.
 
@@ -55,7 +55,8 @@ cancellation, sessions/storage/deletion, transcription, permissions,
 models/schemas, dependencies, tests, build or CI-policy changes. This also applies
 to behavior changes inside UI files, mixed UI/backend changes, broad changes,
 new/deleted/renamed/type-changed files, missing baselines and classification errors.
-`AGENTS.md` is outside the focused allowlist and therefore uses full CI as well.
+Documentation-only edits to `AGENTS.md` may use focused CI; changes to the
+classifier or workflow itself still require full validation.
 When in doubt, keep the full path; do not reclassify risky work as presentation.
 
 On every path, keep the required `Unit tests` and `Release build` check names,

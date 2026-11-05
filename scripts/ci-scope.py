@@ -48,7 +48,7 @@ def classify(changes):
     for status, path, added, removed in changes:
         if status != 'M':
             return 'full', 'Added, deleted, renamed or type-changed files'
-        if path.endswith('.md') and (path.startswith('docs/') or path == 'README.md'):
+        if path.endswith('.md') and (path.startswith('docs/') or path in {'README.md', 'AGENTS.md'}):
             continue
         if not (path.startswith('RecScribe/RecScribe/UI/') and path.endswith('.swift')):
             return 'full', 'Non-presentation path: ' + path

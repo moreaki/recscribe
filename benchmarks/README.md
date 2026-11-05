@@ -119,5 +119,8 @@ bound snapshots and the predeclared review/budget evidence after candidate
 selection is frozen. See the experiment contract before using that path.
 
 For the protected synthetic Q30/attenuation preparation, `derive-sensitivity.py`
-usage and the still-unexecuted VAD/language/padding stages, see
+usage and the staged VAD/language/padding design, see
 [speech and language experiments](speech-language-experiments.md#prepared-synthetic-development-inputs).
+The [2026-11-05 runtime sensitivity pilot](runtime-sensitivity-pilot-2026-11-05.md)
+records the completed Tiny diagnostic; defaults remain unchanged and resource
+comparisons remain uncontrolled/not evaluated.

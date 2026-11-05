@@ -81,8 +81,9 @@ performs no recognition or downloads. The protected preparation at
 `~/Library/Application Support/RecScribe/Benchmarks/Corpora/runtime-sensitivity-20261105-v1/`
 contains 18 derivatives from nine parent utterances, one per priority language,
 plus byte snapshots of each selected input WAV, reference and provenance, the
-input manifest and the preparation recipe. Preparation completed; VAD/language
-inference on these inputs has not started and no quality results are claimed.
+input manifest and the preparation recipe. Preparation and the Tiny-only
+540-cell evaluation completed; the [runtime sensitivity report](runtime-sensitivity-pilot-2026-11-05.md)
+records the per-language results, regressions and unresolved coverage gates.
 
 The unchanged-input stage U uses the existing nine-case
 `Research/112/round-1/development.selected.json` manifest. Q30 adds exactly 480,000
@@ -160,8 +161,9 @@ The official MIT-declared Silero v6.2.0 input is retained externally under
 It matches the published LFS hash at pinned
 [model revision 9ffd54a1e1ee413ddf265af9913beaf518d1639b](https://huggingface.co/ggml-org/whisper-vad/tree/9ffd54a1e1ee413ddf265af9913beaf518d1639b),
 is listed by the pinned upstream download script, and passed static header
-validation. This preparation is not an executed runtime-compatibility, quality
-or latency result. Freeze settings/identities and finite run budgets before
+validation. Static preparation alone establishes no runtime quality or latency
+result; the linked Tiny diagnostic separately records executed compatibility
+and quality observations. Freeze settings/identities and finite run budgets before
 inference, give recording priority, retain failures/pending cells, and complete
 native review and held-out validation before considering defaults.
 

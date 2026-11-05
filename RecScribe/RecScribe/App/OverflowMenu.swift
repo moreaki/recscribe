@@ -28,7 +28,6 @@ indirect enum OverflowEntry {
 @MainActor struct OverflowMenu {
     var onSelectSource: @MainActor (AudioSource) -> Void = { _ in }
     var onRequestPermission: @MainActor () -> Void = {}
-    var onRecoverRecordings: @MainActor () -> Void = {}
     var openWindow: @MainActor (AppWindow) -> Void = AppWindow.openFromMenu
     static let perAppItemIdentifier = "sourcePerApp"
 
@@ -118,8 +117,6 @@ indirect enum OverflowEntry {
             .action(.init(id: "showWindow", title: "Show Window", perform: { navigate(.studio) })),
             .action(.init(id: "recordings", title: AppWindow.recordings.title, perform: { openWindow(.recordings) })),
             .action(.init(id: "settings", title: AppWindow.settings.title, perform: { openWindow(.settings) })), .separator,
-            .action(.init(id: "recoverRecordings", title: "Recover Recordings…",
-                          toolTip: "Verify and recover interrupted saved sessions.", perform: { onRecoverRecordings(); navigate(.recordings) })), .separator,
             .action(.init(id: "exportDiagnostics", title: "Export Diagnostics…", perform: Diagnostics.exportReport)),
             .action(.init(id: "reportProblem", title: "Report a Problem", perform: Diagnostics.reportProblem)),
             .action(.init(id: "about", title: "About RecScribe", perform: {

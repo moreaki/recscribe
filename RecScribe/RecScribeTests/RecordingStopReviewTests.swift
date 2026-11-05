@@ -11,6 +11,51 @@ struct RecordingStopReviewTests {
               buffer: SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 480, interleaved: false) { _, _ in 0.4 })
     }
 
+    @Test func normalStopVerifiesAndPlaysWhileLiveTranscriptionIsStillBusy() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let library = SessionLibrary(settings: {
+            var values = AppSettings.Values()
+            values.autoTranscribe = true
+            return values
+        })
+        library.setLiveWork(true)
+        let capture = MockAudioCapturing()
+        let controller = RecordingController(captureManager: capture,
+            saveLocation: MockSaveLocationProviding(directory: root),
+            audioSource: MockAudioSourceProviding(selectedSource: .mixed(appBundleID: nil, deviceUID: "test")),
+            sessionLibrary: library)
+        let audio = try await controller.startRecording()
+        let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        for index in 0..<10 {
+            capture.emit(packet(.playback, at: now + Double(index) / 100))
+            capture.emit(packet(.microphone, at: now + Double(index) / 100))
+        }
+        try await controller.stopRecording()
+        let manifest = RecordingSession.manifestURL(for: audio)
+        let originalHash = try RecordingSession.hash(audio)
+        await waitUntil("normal stop automatically verified") {
+            library.entries.first?.session.status == .completed && !library.workInProgress
+        }
+        #expect(library.liveWorkActive)
+        #expect(library.activity == "Final transcription queued · waiting for live transcription")
+        library.cancel() // Cancel only the queued final ASR.
+        let session = try RecordingSession.read(manifest)
+        #expect(session.status == .completed && session.issues.isEmpty)
+        #expect(session.parts.allSatisfy { $0.status == .verified })
+        #expect(try RecordingSession.hash(audio) == originalHash)
+        for track in session.sourceTracks ?? [] {
+            let child = try LinkedSourceSessions.read(track, parent: session, at: manifest)
+            #expect(child.session.status == .completed)
+        }
+        let item = try await SessionPlaybackBuilder.item(for: .init(id: manifest, session: session))
+        #expect(try await item.asset.load(.isPlayable))
+        library.setLiveWork(false)
+        #expect(library.latestJob == nil)
+        await library.shutdown()
+    }
+
     @Test(arguments: ["clean", "clipping", "gap", "missing"], [false, true])
     func combinedStopSeparatesReviewFromFailureAndOptionalVAD(quality: String, vadFails: Bool) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

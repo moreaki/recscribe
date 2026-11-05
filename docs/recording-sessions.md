@@ -55,6 +55,16 @@ a three-hour physical-device recording.
 
 ## Implemented boundaries
 
+After Stop, the existing utility worker verifies the sealed WAVs independently
+of optional live transcription. Cancelling text work never removes pending audio
+verification. A new capture still preempts the worker and verification resumes
+afterwards. Final transcription waits until verification and live ASR finish.
+Startup and opening Recordings automatically resume finalized or interrupted
+sessions; each pending session is attempted once per launch to avoid retry loops
+on storage errors. Recovery preserves originals and keeps genuine review notes.
+There is no manual Verify/Recover action. Playback reads the current manifest so
+an already-open workspace does not retain a stale pre-verification status.
+
 Capture always writes native 64-bit-process PCM16 WAV, regardless of archival
 preferences. RIFF itself still has 32-bit sizes; `SessionWAVWriter` caps each file
 at **3.5 GiB including its header**, or a smaller user-selected size. It splits

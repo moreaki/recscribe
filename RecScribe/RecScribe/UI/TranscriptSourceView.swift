@@ -9,11 +9,15 @@ struct TranscriptSourceView: View {
     let recording: Bool
     @Bindable var playback: SessionPlayback
     @Binding var pendingSeekSeconds: Double?
-    @State private var entry: SessionEntry?
+    @State private var loadedEntry: SessionEntry?
     @State private var error: String?
     @State private var wavDuration: Double?
     @State private var sourceAvailable = false
     private let sourceAvailabilityChanged: (Bool) -> Void
+
+    private var entry: SessionEntry? {
+        library.entries.first(where: { $0.id == source }) ?? loadedEntry
+    }
 
     init(
         source: URL,
@@ -54,7 +58,7 @@ struct TranscriptSourceView: View {
                 VStack(alignment: .leading, spacing: StudioSpacing.xxs) {
                     if let entry {
                         SessionTitleView(entry: entry, library: library, allowsEditing: !recording) { updated in
-                            if self.entry?.id == updated.id { self.entry = updated }
+                            if self.entry?.id == updated.id { self.loadedEntry = updated }
                         }
                         Text(name).font(.caption).foregroundStyle(.secondary).help(source.path)
                     } else {
@@ -67,7 +71,8 @@ struct TranscriptSourceView: View {
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
                     startPlayback()
-                }.disabled(!sourceAvailable || recording || (source.pathExtension.lowercased() != "wav" && entry == nil))
+                }.disabled(!sourceAvailable || recording || (source.pathExtension.lowercased() != "wav"
+                    && (entry?.session.parts.isEmpty != false || entry?.session.parts.allSatisfy { $0.status == .verified } != true)))
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }.disabled(!sourceAvailable)
             }
             if playback.hasPresentation {
@@ -76,7 +81,7 @@ struct TranscriptSourceView: View {
             if let message = error { Text(message).font(.caption).foregroundStyle(.orange) }
         }
         .task(id: "\(source.path):\(recording)") {
-            playback.stop(); entry = nil; error = nil; wavDuration = nil
+            playback.stop(); loadedEntry = nil; error = nil; wavDuration = nil
             sourceAvailable = false
             sourceAvailabilityChanged(false)
             do {
@@ -85,7 +90,7 @@ struct TranscriptSourceView: View {
                 if source.lastPathComponent.hasSuffix(".recscribe.json") {
                     let session = try await Task.detached(priority: .utility) { try RecordingSession.read(source) }.value
                     try Task.checkCancellation()
-                    entry = SessionEntry(id: source, session: session)
+                    loadedEntry = SessionEntry(id: source, session: session)
                 } else if duration == nil, source.pathExtension.lowercased() == "wav" {
                     let seconds = try await Task.detached(priority: .utility) {
                         let audio = try AVAudioFile(forReading: source)

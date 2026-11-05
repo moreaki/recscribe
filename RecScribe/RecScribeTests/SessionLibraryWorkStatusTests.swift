@@ -66,24 +66,27 @@ struct SessionLibraryWorkStatusTests {
         await library.shutdown()
     }
 
-    @Test(arguments: Gate.allCases)
-    func queuedWorkNamesItsGateAndCanBeCancelledWithoutAWorker(_ gate: Gate) async {
+    @Test
+    func cancellingOptionalWorkDoesNotDiscardQueuedVerification() async {
         let worker = Worker()
-        // No process may be admitted while capture has priority.
         let observed = self.library(worker: worker)
-        gate.set(true, on: observed)
+        observed.setRecording(true)
         observed.enqueue(URL(fileURLWithPath: "/synthetic/first.recscribe.json"), recover: true)
         observed.enqueue(URL(fileURLWithPath: "/synthetic/second.recscribe.json"))
-        #expect(observed.activity == "Recording verification/recovery queued (2) · waiting for \(gate.label)")
+        #expect(observed.activity == "Recording verification/recovery queued (2) · waiting for recording")
         #expect(!observed.workInProgress)
-        #expect(observed.canCancelWork)
+        #expect(!observed.canCancelWork)
         #expect(worker.calls.withLock { $0.isEmpty })
         observed.cancel()
-        #expect(observed.activity == "Cancelled; originals retained")
+        #expect(observed.activity == "Recording verification/recovery queued (2) · waiting for recording")
         #expect(!observed.canCancelWork)
-        gate.set(false, on: observed)
-        await settle()
-        #expect(worker.calls.withLock { $0.isEmpty })
+        observed.setRecording(false)
+        await worker.waitForStart()
+        worker.release.signal()
+        await worker.waitForStart()
+        worker.release.signal()
+        await waitUntil("both recordings verified") { observed.canDeleteRecording }
+        #expect(worker.calls.withLock { $0.count } == 2)
         #expect(!observed.workInProgress)
         await observed.shutdown()
     }
@@ -98,7 +101,7 @@ struct SessionLibraryWorkStatusTests {
         await worker.waitForStart()
         #expect(library.activity == "Verifying recording and archive…")
         #expect(library.workInProgress)
-        #expect(library.canCancelWork)
+        #expect(!library.canCancelWork)
         worker.release.signal()
         await waitUntil("verification completed") { library.canDeleteRecording }
         #expect(library.activity == "Recording verified; originals retained")
@@ -110,55 +113,46 @@ struct SessionLibraryWorkStatusTests {
         await library.shutdown()
     }
 
-    @Test(arguments: Gate.allCases, [false, true])
-    func captureInterruptionRequeuesUnlessTheUserCancels(_ gate: Gate, cancel: Bool) async {
+    @Test(arguments: [false, true])
+    func captureInterruptionRequeuesRequiredVerification(cancel: Bool) async {
         let worker = Worker(), library = library(worker: worker)
         defer { worker.release.signal() }
         let first = URL(fileURLWithPath: "/synthetic/first.recscribe.json")
         library.enqueue(first, recover: true)
         await worker.waitForStart()
-        gate.set(true, on: library)
+        library.setRecording(true)
         library.enqueue(URL(fileURLWithPath: "/synthetic/second.recscribe.json"))
         #expect(!library.workInProgress)
-        #expect(library.canCancelWork)
+        #expect(!library.canCancelWork)
         if cancel { library.cancel() }
         worker.release.signal()
-        if cancel {
-            await waitUntil("cancelled worker drained") { library.activity == "Cancelled; originals retained" }
-            gate.set(false, on: library)
-            await settle()
-            #expect(worker.calls.withLock { $0 } == [first])
-            #expect(!library.canCancelWork)
-            #expect(!library.workInProgress)
-        } else {
-            await waitUntil("interrupted job requeued") {
-                library.activity == "Recording verification/recovery queued (2) · waiting for \(gate.label)"
-            }
-            gate.set(false, on: library)
-            await worker.waitForStart()
-            #expect(library.activity == "Recovering recording parts…")
-            #expect(library.workInProgress)
-            worker.release.signal()
-            await worker.waitForStart()
-            worker.release.signal()
-            await waitUntil("queue drained") { library.canDeleteRecording }
-            #expect(worker.calls.withLock { $0.count } == 3)
-            #expect(library.activity == "Recording verified; originals retained")
-            #expect(!library.canCancelWork)
+        await waitUntil("interrupted job requeued") {
+            library.activity == "Recording verification/recovery queued (2) · waiting for recording"
         }
+        library.setRecording(false)
+        await worker.waitForStart()
+        #expect(library.activity == "Recovering recording parts…")
+        #expect(library.workInProgress)
+        worker.release.signal()
+        await worker.waitForStart()
+        worker.release.signal()
+        await waitUntil("queue drained") { library.canDeleteRecording }
+        #expect(worker.calls.withLock { $0.count } == 3)
+        #expect(library.activity == "Recording verified; originals retained")
+        #expect(!library.canCancelWork)
         await library.shutdown()
     }
 
-    @Test(arguments: Gate.allCases)
-    func quickCaptureCycleStillResumesTheInterruptedWorker(_ gate: Gate) async {
+    @Test
+    func quickCaptureCycleStillResumesTheInterruptedWorker() async {
         let worker = Worker(), library = library(worker: worker)
         defer { worker.release.signal() }
         let manifest = URL(fileURLWithPath: "/synthetic/quick-cycle.recscribe.json")
         library.enqueue(manifest)
         await worker.waitForStart()
-        gate.set(true, on: library)
-        #expect(library.canCancelWork)
-        gate.set(false, on: library) // The original worker has not drained yet.
+        library.setRecording(true)
+        #expect(!library.canCancelWork)
+        library.setRecording(false) // The original worker has not drained yet.
         worker.release.signal()
         await worker.waitForStart()
         #expect(library.activity == "Verifying recording and archive…")
@@ -168,6 +162,24 @@ struct SessionLibraryWorkStatusTests {
         #expect(library.activity == "Recording verified; originals retained")
         #expect(!library.canCancelWork)
         #expect(!library.workInProgress)
+        await library.shutdown()
+    }
+
+    @Test(arguments: [false, true])
+    func liveASRAndCancelNeverInterruptVerification(liveAlreadyRunning: Bool) async {
+        let worker = Worker(), library = library(worker: worker)
+        if liveAlreadyRunning { library.setLiveWork(true) }
+        let manifest = URL(fileURLWithPath: "/synthetic/live.recscribe.json")
+        library.enqueue(manifest)
+        await worker.waitForStart()
+        if !liveAlreadyRunning { library.setLiveWork(true) }
+        library.cancel()
+        #expect(library.workInProgress)
+        worker.release.signal()
+        await waitUntil("verified during live ASR") { !library.workInProgress }
+        #expect(library.activity == "Recording verified; originals retained")
+        library.setLiveWork(false)
+        #expect(worker.calls.withLock { $0 } == [manifest])
         await library.shutdown()
     }
 
@@ -182,6 +194,26 @@ struct SessionLibraryWorkStatusTests {
         #expect(!library.canCancelWork)
         library.setRecording(true)
         library.setRecording(false)
+        #expect(library.activity == "Needs attention")
+        await library.shutdown()
+    }
+
+    @Test func automaticRecoveryDoesNotLoopOnStorageFailure() async {
+        let manifest = URL(fileURLWithPath: "/synthetic/failed.recscribe.json")
+        var session = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mono"], options: .init())
+        session.status = .finalized
+        let snapshot = SessionSnapshot(entries: [.init(id: manifest, session: session)])
+        let calls = OSAllocatedUnfairLock(initialState: 0)
+        let library = SessionLibrary(processSession: { _, _, _, _, _ in
+            calls.withLock { $0 += 1 }
+            throw POSIXError(.ENOSPC)
+        }, readSessions: { _ in snapshot })
+        for _ in 0..<2 {
+            library.recoverUnfinalizedSessions(in: manifest.deletingLastPathComponent())
+            await waitUntil("automatic scan finishes") { !library.refreshing && !library.workInProgress }
+        }
+        #expect(calls.withLock { $0 } == 1)
+        #expect(library.errorMessage != nil)
         #expect(library.activity == "Needs attention")
         await library.shutdown()
     }

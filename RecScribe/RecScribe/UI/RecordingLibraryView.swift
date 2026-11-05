@@ -60,20 +60,14 @@ struct RecordingLibraryView: View {
                             RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
                         }
                         Spacer()
-                        Text(entry.needsRecovery && !library.recordingActive ? "Not finalized — verify / recover" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
+                        Text((entry.needsRecovery || entry.session.status == .finalized) && !library.recordingActive
+                            ? "Preparing recording…" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
                     }
                     Text("\(entry.session.parts.count) parts · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
                         .font(.caption).foregroundStyle(.secondary)
                     HStack {
-                        if entry.needsRecovery, !library.recordingActive, !library.liveWorkActive {
-                            Button("Recover session", systemImage: "arrow.clockwise.circle") {
-                                library.enqueue(entry.id, recover: true)
-                            }
-                            .disabled(!library.canDeleteRecording)
-                            .help("Verify and recover this interrupted session, preserving its original audio")
-                            .accessibilityIdentifier("recover-session")
-                        }
                         Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
+                            .disabled(entry.session.parts.isEmpty || !entry.session.parts.allSatisfy { $0.status == .verified })
                         Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
                         Menu {
                             if entry.session.title != nil {
@@ -96,7 +90,6 @@ struct RecordingLibraryView: View {
                                     }
                                 }.disabled(source.manifestPath == nil)
                             }
-                            Button("Verify / Recover", systemImage: "checkmark.shield") { library.enqueue(entry.id, recover: true) }
                             Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
                         } label: { Label("More", systemImage: "ellipsis.circle") }
                         Button("Export…") {
@@ -162,7 +155,7 @@ struct RecordingLibraryView: View {
                 Text("\(entry.displayTitle) and its audio parts and archives move together. By default transcripts are kept. The second option also groups finished jobs with a verified source identity under Transcripts in the same Trash folder. Active or unverifiable jobs and raw Live drafts are kept. You can restore the folder from Trash.")
             }
     }
-    private func reload() { library.load(URL(fileURLWithPath: recorder.saveLocationPath)) }
+    private func reload() { library.recoverUnfinalizedSessions(in: URL(fileURLWithPath: recorder.saveLocationPath)) }
 }
 
 /// Shared inline editor for the library and the transcript's source header.

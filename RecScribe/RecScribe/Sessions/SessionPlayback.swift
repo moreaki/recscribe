@@ -8,26 +8,29 @@ enum SessionPlaybackBuilder {
     static func item(for entry: SessionEntry) async throws -> AVPlayerItem {
         // Validate on a utility worker before asking AVFoundation to load tracks.
         let validation = Task.detached(priority: .utility) {
-            _ = try entry.session.validated(beside: entry.id)
-            guard !entry.session.parts.isEmpty else { throw SessionError.invalid("Session contains no parts") }
+            // A workspace can retain the snapshot taken before verification finished.
+            let session = try RecordingSession.read(entry.id)
+            guard session.id == entry.session.id else { throw SessionError.invalid("Recording changed; reopen it") }
+            guard !session.parts.isEmpty else { throw SessionError.invalid("Session contains no parts") }
             var end: Int64 = 0
-            return try entry.session.parts.map { part in
+            let urls = try session.parts.map { part in
                 try Task.checkCancellation()
                 guard part.status == .verified, part.startSample == end else {
-                    throw SessionError.invalid("Verify all parts and resolve timeline gaps before playback")
+                    throw SessionError.invalid("Recording is not ready for playback; check its preparation status and review notes")
                 }
                 let url = try RecordingSession.safeURL(part.path, beside: entry.id)
                 let header = try PCM16WAV.read(url)
                 let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize
-                guard header.sampleRate == entry.session.sampleRate, header.channels == entry.session.channels,
+                guard header.sampleRate == session.sampleRate, header.channels == session.channels,
                       header.frames == part.frames, size.map(UInt64.init) == header.fileBytes else {
-                    throw SessionError.invalid("Part length or format changed; verify it again")
+                    throw SessionError.invalid("Audio part length or format changed; check the recording’s review notes")
                 }
                 end = part.startSample + part.frames
                 return url
             }
+            return (session, urls)
         }
-        let urls = try await withTaskCancellationHandler {
+        let (session, urls) = try await withTaskCancellationHandler {
             try await validation.value
         } onCancel: { validation.cancel() }
         try Task.checkCancellation()
@@ -48,8 +51,8 @@ enum SessionPlaybackBuilder {
         guard let track = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw SessionError.invalid("Could not create playback track")
         }
-        let rate = Int32(entry.session.sampleRate)
-        for (part, url) in zip(entry.session.parts, urls) {
+        let rate = Int32(session.sampleRate)
+        for (part, url) in zip(session.parts, urls) {
             try Task.checkCancellation()
             let asset = AVURLAsset(url: url)
             guard let source = try await asset.loadTracks(withMediaType: .audio).first else {
@@ -277,7 +280,7 @@ final class SessionPlaybackCoordinator {
     private func failPlayback(_ error: Error?) {
         guard phase != .failed else { return }
         phase = .failed
-        errorMessage = error?.localizedDescription ?? "Audio playback could not continue. Reopen or verify the recording."
+        errorMessage = error?.localizedDescription ?? "Audio playback could not continue. Reopen the recording."
         isPlaying = false; isScrubbing = false; resumeAfterSeek = nil
         pendingSeekTarget = nil; seekInFlight = false
         player?.pause()

@@ -1,24 +1,14 @@
-//
-//  RecordingController.swift
-//  RecScribe
-//
-//  Orchestrates the recording workflow
-//
-
 import Foundation
 import os
 
-/// Errors originating from the recording controller before/around capture.
 enum RecordingControllerError: Error {
     case insufficientDiskSpace
     case captureShutdownFailed(Error)
 }
 
-/// Controller that coordinates audio recording workflow
-class RecordingController: RecordingControlling {
-
-    // MARK: - Properties
-
+/// Coordinates capture, durable writing and post-recording work. Capture stops
+/// before the writer is sealed; every error path releases the shared capture lease.
+@MainActor final class RecordingController: RecordingControlling {
     private let captureManager: AudioCapturing
     private let audioRecorder: AudioFileWriting
     private let saveLocation: SaveLocationProviding
@@ -30,354 +20,261 @@ class RecordingController: RecordingControlling {
     private let monitor: CapturedAudioMonitor
     private let captureGate: CaptureSessionGate
     private let captureID = UUID()
-
-    private var currentRecordingURL: URL?
-    private var activeSourceName = "Selected source"
-    private var starting = false
-    private(set) var stopReviewMessage: String?
-    private var multiRecorder: MultiSourceRecorder?
     private let storageOptions: () -> RecordingStorageOptions
-
-    /// Callback for waveform visualization data
+    private var multiRecorder: MultiSourceRecorder?
+    private var opening = false
+    private var currentRecordingURL: URL?
+    private var sourceTitle = "Selected source"
+    private(set) var stopReviewMessage: String?
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)?
-
-    /// Forwarded from the capture manager when the stream fails mid-recording.
     var onStreamError: (@MainActor (String) -> Void)?
 
-    // MARK: - Initialization
-
-    init(
-        captureManager: AudioCapturing? = nil,
-        audioRecorder: AudioFileWriting? = nil,
-        saveLocation: SaveLocationProviding? = nil,
-        audioSource: AudioSourceProviding? = nil,
-        sessionLibrary: SessionLibrary? = nil,
-        liveTranscription: LiveTranscription? = nil,
-        activity: RecordingActivity? = nil,
-        levels: AudioLevels? = nil,
-        monitor: CapturedAudioMonitor? = nil,
-        captureGate: CaptureSessionGate = CaptureSessionGate(),
-        storageOptions: @escaping () -> RecordingStorageOptions = { .init() }
-    ) {
-        self.levels = levels ?? AudioLevels()
-        self.monitor = monitor ?? CapturedAudioMonitor()
-        self.captureGate = captureGate
-        self.storageOptions = storageOptions
+    init(captureManager: AudioCapturing? = nil, audioRecorder: AudioFileWriting? = nil,
+         saveLocation: SaveLocationProviding? = nil, audioSource: AudioSourceProviding? = nil,
+         sessionLibrary: SessionLibrary? = nil, liveTranscription: LiveTranscription? = nil,
+         activity: RecordingActivity? = nil, levels: AudioLevels? = nil, monitor: CapturedAudioMonitor? = nil,
+         captureGate: CaptureSessionGate = CaptureSessionGate(),
+         storageOptions: @escaping () -> RecordingStorageOptions = { .init() }) {
         self.captureManager = captureManager ?? ScreenCaptureAudioManager()
-        self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in
-            SessionWAVWriter(options: storageOptions())
-        })
+        self.audioRecorder = audioRecorder ?? AudioRecorder(encoderFactory: { _ in SessionWAVWriter(options: storageOptions()) })
         self.saveLocation = saveLocation ?? SaveLocationManager()
         self.audioSource = audioSource ?? AudioSourceManager()
         self.sessionLibrary = sessionLibrary
         self.liveTranscription = liveTranscription
         self.activity = activity ?? RecordingActivity()
-        self.activity.onInterruption = { [weak self] message in self?.onStreamError?(message) }
-        self.captureManager.onStreamError = { [weak self] message in
-            self?.onStreamError?(message)
-        }
-        self.captureManager.onSourceFailure = { [weak self] track, message in
-            self?.multiRecorder?.sourceFailed(track, message: message)
-        }
+        self.levels = levels ?? AudioLevels()
+        self.monitor = monitor ?? CapturedAudioMonitor()
+        self.captureGate = captureGate
+        self.storageOptions = storageOptions
+        self.captureManager.onStreamError = { [weak self] in self?.onStreamError?($0) }
+        self.activity.onInterruption = { [weak self] in self?.onStreamError?($0) }
+        self.audioRecorder.onWriteError = { [weak self] in self?.onStreamError?($0) }
+        self.captureManager.onSourceFailure = { [weak self] track, reason in self?.multiRecorder?.sourceFailed(track, message: reason) }
         self.captureManager.onInputAvailable = { [weak self] device, selection in
-            guard let self, let worker = self.multiRecorder else { return false }
-            let track = CaptureTrack.input(device.uid)
-            if !worker.hasSource(track), !self.levels.hasSetting("input:" + device.uid) {
-                self.levels.set("input:" + device.uid, .init(muted: true))
-            }
-            do {
-                try await worker.prepareSource(.init(role: track, name: device.name, deviceUID: device.uid,
-                    channelRoutes: selection.routes, channelLabels: device.channelLabels))
-                var current = self.audioSource.selectedSource
-                if !current.inputs.contains(where: { $0.deviceUID == device.uid }) {
-                    current.inputs.append(selection)
-                    current.allowDuplicateRoutes = false
-                }
-                self.audioSource.setSelectedSource(current)
-                if device.mayLoopBack, self.monitor.enabled { self.monitor.setEnabled(true, source: current) }
-                return true
-            } catch { return false }
-        }
-        self.audioRecorder.onWriteError = { [weak self] message in
-            self?.onStreamError?(message)
+            await self?.prepareDiscoveredInput(device, selection: selection) ?? false
         }
     }
 
-    // MARK: - Public Methods
+    private func prepareDiscoveredInput(_ device: InputDeviceInfo, selection: InputSelection) async -> Bool {
+        guard let sink = multiRecorder else { return false }
+        let identity = CaptureTrack.input(device.uid)
+        let preference = "input:" + device.uid
+        if !sink.hasSource(identity), !levels.hasSetting(preference) { levels.set(preference, .init(muted: true)) }
+        do {
+            try await sink.prepareSource(.init(role: identity, name: device.name, deviceUID: device.uid,
+                channelRoutes: selection.routes, channelLabels: device.channelLabels))
+            var source = audioSource.selectedSource
+            if !source.inputs.contains(where: { $0.deviceUID == device.uid }) {
+                source.inputs.append(selection)
+                source.allowDuplicateRoutes = false
+            }
+            audioSource.setSelectedSource(source)
+            if device.mayLoopBack, monitor.enabled { monitor.setEnabled(true, source: source) }
+            return true
+        } catch { return false }
+    }
 
-    /// Start lossless WAV capture; archive conversion is a separate post-recording operation.
-    /// - Returns: URL where the recording is being saved
-    /// - Throws: Error if recording cannot start
-    @MainActor
     func startRecording() async throws -> URL {
-        guard !starting, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
+        guard !opening, !audioRecorder.recording, multiRecorder == nil else { throw AudioRecorderError.alreadyRecording }
+        opening = true
         stopReviewMessage = nil
-        starting = true
-        defer { starting = false }
+        defer { opening = false }
         try captureGate.acquire(captureID)
         sessionLibrary?.setRecording(true)
-        var started = false
-        defer { if !started { captureGate.release(captureID); monitor.recordingStopped(); activity.stop(); sessionLibrary?.setRecording(false) } }
-        // Pre-flight: fail before touching disk if the selected source isn't
-        // capturable right now (BL-100 — e.g. the chosen app isn't running).
-        let source = audioSource.selectedSource
-        try await audioSource.validate(source)
-        if monitor.enabled { monitor.setEnabled(true, source: source) }
-        if let uid = source.microphoneUID { activeSourceName = audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Input" }
-        else if let bundle = source.appBundleID { activeSourceName = audioSource.knownAppName(forBundleID: bundle) ?? bundle }
-        else { activeSourceName = "System playback" }
-
-        // Live capture always writes canonical WAV, regardless of archive preferences.
-        let fileURL = generateFilePath()
-
-        // Refuse to start a doomed recording on a near-full disk.
-        if let available = DiskSpace.availableBytes(at: fileURL),
-           !DiskSpace.hasEnoughSpace(availableBytes: available) {
+        var completed = false
+        defer { if !completed { releaseRecordingResources(needsReview: false, notifyTranscription: false) } }
+        let selection = audioSource.selectedSource
+        try await audioSource.validate(selection)
+        let destination = generateFilePath()
+        if let capacity = DiskSpace.availableBytes(at: destination), !DiskSpace.hasEnoughSpace(availableBytes: capacity) {
             throw RecordingControllerError.insufficientDiskSpace
         }
-
-        // Wire waveform callback
-        audioRecorder.onWaveformData = onWaveformData
-
-        // Mark activity before opening the WAV writer and configuring capture.
+        if monitor.enabled { monitor.setEnabled(true, source: selection) }
+        sourceTitle = name(for: selection)
         activity.start()
-        if source.isMixed {
-            let bundle = source.appBundleID
-            let devices = audioSource.availableInputDevices()
-            var descriptors: [RecordingSession.SourceTrack] = []
-            if source.requiresScreenCapture {
-                let playbackName = bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
-                descriptors.append(.init(role: .playback, name: playbackName, bundleID: bundle))
-            }
-            let multiple = source.kind == .multiple
-            for selection in source.inputSelections {
-                let device = devices.first { $0.uid == selection.deviceUID }
-                descriptors.append(.init(role: multiple ? .input(selection.deviceUID) : .microphone,
-                    name: device?.name ?? "Input", deviceUID: selection.deviceUID,
-                    channelRoutes: multiple ? selection.routes : nil, channelLabels: device?.channelLabels))
-            }
-            let recorder = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) }, onWaveform: onWaveformData, monitor: monitor)
-            multiRecorder = recorder
-            do {
-                try recorder.start(at: fileURL, descriptors: descriptors, options: storageOptions(),
-                    levels: { [levels] in levels.snapshot(for: source, includingDiscoveredInputs: true) }, continueOnSourceFailure: multiple)
-                try await captureManager.setupMultiCapture(source: source) { recorder.accept($0) }
-                try await captureManager.startCapture()
-                guard !activity.interrupted else { throw ScreenCaptureAudioError.interruptedBySleep }
-            } catch {
-                await captureManager.cleanup()
-                try? await recorder.stop(failure: error)
-                if let manifest = recorder.manifestURL { sessionLibrary?.enqueue(manifest, issue: error.localizedDescription) }
-                multiRecorder = nil
-                throw error
-            }
-            let actual = recorder.audioURL ?? fileURL
-            currentRecordingURL = actual
-            liveTranscription?.recordingStarted(actual)
-            started = true
-            return actual
-        }
-        (audioRecorder as? AudioRecorder)?.configureLevels(source: source, levels: levels, monitor: monitor)
-        try audioRecorder.startRecording(to: fileURL, format: .wav)
+        let actual: URL
+        if selection.isMixed { actual = try await beginMultiSource(selection, destination: destination) }
+        else { actual = try await beginSingleSource(selection, destination: destination) }
+        currentRecordingURL = actual
+        liveTranscription?.recordingStarted(actual)
+        completed = true
+        return actual
+    }
 
-        // Set up capture with audio callback
-        let recorder = audioRecorder  // Keep strong reference
+    private func beginSingleSource(_ selection: AudioSource, destination: URL) async throws -> URL {
+        audioRecorder.onWaveformData = onWaveformData
+        (audioRecorder as? AudioRecorder)?.configureLevels(source: selection, levels: levels, monitor: monitor)
+        try audioRecorder.startRecording(to: destination, format: .wav)
         do {
-            try await captureManager.setupCapture(source: source) { pcmBuffer in
-                recorder.processAudioSample(pcmBuffer)
-            }
+            let sink = audioRecorder
+            try await captureManager.setupCapture(source: selection) { sink.processAudioSample($0) }
             try await captureManager.startCapture()
-            guard !activity.interrupted else {
-                throw ScreenCaptureAudioError.interruptedBySleep
-            }
+            if activity.interrupted { throw ScreenCaptureAudioError.interruptedBySleep }
         } catch {
             await captureManager.cleanup()
             try? await audioRecorder.stopRecording()
             audioRecorder.onWaveformData = nil
-            if let manifest = audioRecorder.sessionManifestURL { sessionLibrary?.enqueue(manifest, issue: error.localizedDescription) }
+            enqueue(audioRecorder.sessionManifestURL, issue: error.localizedDescription)
             throw error
         }
-
-        let actualURL = audioRecorder.actualAudioURL ?? fileURL
-        currentRecordingURL = actualURL
-        liveTranscription?.recordingStarted(actualURL)
-        started = true
-        Log.recorder.info("Recording started")
-        return actualURL
+        return audioRecorder.actualAudioURL ?? destination
     }
 
-    /// Stop recording
-    /// - Throws: Error if stop fails
+    private func beginMultiSource(_ selection: AudioSource, destination: URL) async throws -> URL {
+        let sink = MultiSourceRecorder(onError: { [weak self] in self?.onStreamError?($0) },
+                                       onWaveform: onWaveformData, monitor: monitor)
+        multiRecorder = sink
+        do {
+            try sink.start(at: destination, descriptors: descriptors(for: selection), options: storageOptions(),
+                levels: { [levels] in levels.snapshot(for: selection, includingDiscoveredInputs: true) },
+                continueOnSourceFailure: selection.kind == .multiple)
+            try await captureManager.setupMultiCapture(source: selection) { sink.accept($0) }
+            try await captureManager.startCapture()
+            if activity.interrupted { throw ScreenCaptureAudioError.interruptedBySleep }
+        } catch {
+            await captureManager.cleanup()
+            try? await sink.stop(failure: error)
+            enqueue(sink.manifestURL, issue: error.localizedDescription)
+            multiRecorder = nil
+            throw error
+        }
+        return sink.audioURL ?? destination
+    }
+
+    private func name(for selection: AudioSource) -> String {
+        if let uid = selection.microphoneUID { return audioSource.availableInputDevices().first { $0.uid == uid }?.name ?? "Input" }
+        return selection.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback"
+    }
+
+    private func descriptors(for selection: AudioSource) -> [RecordingSession.SourceTrack] {
+        var tracks: [RecordingSession.SourceTrack] = []
+        if selection.requiresScreenCapture {
+            let bundle = selection.appBundleID
+            tracks.append(.init(role: .playback, name: bundle.map { audioSource.knownAppName(forBundleID: $0) ?? $0 } ?? "System playback", bundleID: bundle))
+        }
+        let devices = audioSource.availableInputDevices()
+        for input in selection.inputSelections {
+            let details = devices.first { $0.uid == input.deviceUID }
+            let multiple = selection.kind == .multiple
+            tracks.append(.init(role: multiple ? .input(input.deviceUID) : .microphone, name: details?.name ?? "Input",
+                deviceUID: input.deviceUID, channelRoutes: multiple ? input.routes : nil, channelLabels: details?.channelLabels))
+        }
+        return tracks
+    }
+
     func stopRecording() async throws {
         var needsReview = false
-        defer {
-            captureGate.release(captureID)
-            monitor.recordingStopped()
-            activity.stop()
-            liveTranscription?.recordingStopped(needsReview: needsReview)
-            sessionLibrary?.setRecording(false)
-        }
-        // Stop capturing audio
-        var captureError: Error?
-        do { try await captureManager.stopCapture() } catch {
-            Log.recordFailure(error, operation: "capture_shutdown")
-            captureError = error
-        }
-
-        if let recorder = multiRecorder {
-            var failure = captureError
-            do { try await recorder.stop(failure: captureError) } catch { if failure == nil { failure = error } }
+        defer { releaseRecordingResources(needsReview: needsReview) }
+        let captureFailure = await haltCapture()
+        if let sink = multiRecorder {
+            var writeFailure: Error?
+            do { try await sink.stop(failure: captureFailure) }
+            catch { writeFailure = error }
             await captureManager.cleanup()
-            currentRecordingURL = nil
             multiRecorder = nil
-            stopReviewMessage = recorder.reviewMessage
+            currentRecordingURL = nil
+            stopReviewMessage = sink.reviewMessage
+            let failure = captureFailure ?? writeFailure
             needsReview = failure != nil || stopReviewMessage != nil || activity.interrupted
-            if let manifest = recorder.manifestURL {
-                sessionLibrary?.enqueue(manifest, issue: failure?.localizedDescription ?? stopReviewMessage)
-            }
-            if let failure {
-                if captureError != nil { throw RecordingControllerError.captureShutdownFailed(failure) }
-                throw failure
-            }
+            enqueue(sink.manifestURL, issue: failure?.localizedDescription ?? stopReviewMessage)
+            if let captureFailure { throw RecordingControllerError.captureShutdownFailed(captureFailure) }
+            if let writeFailure { throw writeFailure }
             return
         }
-        // Finalize the file, but capture the error rather than rethrowing here:
-        // the teardown below must run either way, or a failed finalize would leak
-        // the capture session and leave a stale recording URL behind. (BL-016 —
-        // the error used to be swallowed inside AudioRecorder, so before now this
-        // path could never be reached.)
-        let finalizeError: Error?
-        do {
-            try await audioRecorder.stopRecording()
-            finalizeError = nil
-        } catch {
-            finalizeError = error
-        }
-
-        // Clean up capture manager
-        await captureManager.cleanup()
-
-        audioRecorder.onWaveformData = nil
-        currentRecordingURL = nil
-        if let manifest = audioRecorder.sessionManifestURL {
-            let issue = (finalizeError ?? captureError)?.localizedDescription
-                ?? (activity.interrupted ? "Sleep interrupted recording; review the end of this session" : nil)
-            sessionLibrary?.enqueue(manifest, issue: issue)
-        }
-        needsReview = finalizeError != nil || captureError != nil || activity.interrupted
-
-        if let finalizeError {
-            Log.recordFailure(finalizeError, operation: "audio_finalization")
-            throw finalizeError
-        }
-        if let captureError { throw RecordingControllerError.captureShutdownFailed(captureError) }
-        Log.recorder.info("Recording stopped")
-    }
-
-    /// Finalize after an unexpected capture failure. The stream has already
-    /// stopped, so capture teardown is best-effort; finalizing the recorder
-    /// preserves the audio captured before the failure as a playable file.
-    func finalizeAfterFailure() async {
-        defer {
-            captureGate.release(captureID)
-            monitor.recordingStopped()
-            activity.stop()
-            liveTranscription?.recordingStopped(needsReview: true)
-            sessionLibrary?.setRecording(false)
-        }
-        try? await captureManager.stopCapture()
-        if let recorder = multiRecorder {
-            let failure = SessionError.invalid("Capture interrupted; review the preserved source tracks and mix")
-            try? await recorder.stop(failure: failure)
-            await captureManager.cleanup()
-            if let manifest = recorder.manifestURL { sessionLibrary?.enqueue(manifest, issue: failure.localizedDescription) }
-            multiRecorder = nil
-            currentRecordingURL = nil
-            return
-        }
-        // Keep the original interruption visible, but don't lose a secondary
-        // finalization failure: record it in diagnostics and the session issue.
-        var issue = "Capture stopped unexpectedly; review the end of this session"
+        var writeFailure: Error?
         do { try await audioRecorder.stopRecording() }
-        catch {
-            Log.recordFailure(error, operation: "finalize_after_capture_failure")
-            issue += "; audio finalization also failed; verify or recover the saved parts"
-        }
+        catch { writeFailure = error }
         await captureManager.cleanup()
         audioRecorder.onWaveformData = nil
         currentRecordingURL = nil
-        if let manifest = audioRecorder.sessionManifestURL {
-            sessionLibrary?.enqueue(manifest, issue: issue)
-        }
-        Log.recorder.error("Recording finalized after stream failure")
+        let failure = writeFailure ?? captureFailure
+        needsReview = failure != nil || activity.interrupted
+        enqueue(audioRecorder.sessionManifestURL, issue: failure?.localizedDescription
+            ?? (activity.interrupted ? "Sleep interrupted recording; review the end of this session" : nil))
+        if let writeFailure { throw writeFailure }
+        if let captureFailure { throw RecordingControllerError.captureShutdownFailed(captureFailure) }
     }
 
+    func finalizeAfterFailure() async {
+        defer { releaseRecordingResources(needsReview: true) }
+        _ = await haltCapture()
+        if let sink = multiRecorder {
+            let failure = SessionError.invalid("Capture interrupted; review the preserved source tracks and mix")
+            try? await sink.stop(failure: failure)
+            await captureManager.cleanup()
+            enqueue(sink.manifestURL, issue: failure.localizedDescription)
+            multiRecorder = nil
+        } else {
+            var reason = "Capture stopped unexpectedly; review the end of this session"
+            do { try await audioRecorder.stopRecording() }
+            catch {
+                Log.recordFailure(error, operation: "finalize_after_capture_failure")
+                reason += "; audio finalization also failed; verify or recover the saved parts"
+            }
+            await captureManager.cleanup()
+            audioRecorder.onWaveformData = nil
+            enqueue(audioRecorder.sessionManifestURL, issue: reason)
+        }
+        currentRecordingURL = nil
+    }
+
+    private func haltCapture() async -> Error? {
+        do { try await captureManager.stopCapture(); return nil }
+        catch { Log.recordFailure(error, operation: "capture_shutdown"); return error }
+    }
+    private func enqueue(_ manifest: URL?, issue: String?) {
+        if let manifest { sessionLibrary?.enqueue(manifest, issue: issue) }
+    }
+    private func releaseRecordingResources(needsReview: Bool, notifyTranscription: Bool = true) {
+        captureGate.release(captureID)
+        monitor.recordingStopped()
+        activity.stop()
+        sessionLibrary?.setRecording(false)
+        if notifyTranscription { liveTranscription?.recordingStopped(needsReview: needsReview) }
+    }
     var sourceHealth: [SourceRecordingHealth] {
-        if let multiRecorder { return multiRecorder.sourceHealth }
-        return [.init(id: "capture", name: activeSourceName, health: audioRecorder.healthSnapshot)]
+        multiRecorder?.sourceHealth ?? [.init(id: "capture", name: sourceTitle, health: audioRecorder.healthSnapshot)]
     }
-
     var sourceMeters: [CaptureTrack: CaptureSourceMeters] { multiRecorder?.sourceMeters ?? [:] }
+    var isRecording: Bool { captureManager.capturing }
+    var recordingURL: URL? { currentRecordingURL }
 
-    /// Check if currently recording
-    var isRecording: Bool {
-        return captureManager.capturing
-    }
-
-    /// Get current recording URL
-    var recordingURL: URL? {
-        return currentRecordingURL
-    }
-
-    // MARK: - File path
-
-    /// Generate a unique file path in the resolved save directory, with the
-    /// WAV extension. `internal` for unit testing. The directory
-    /// comes from `SaveLocationProviding`, which always resolves to a writable
-    /// folder (falling back to the Desktop).
     func generateFilePath() -> URL {
+        let date = DateFormatter()
+        date.locale = Locale(identifier: "en_US_POSIX")
+        date.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let stem = "recording_" + date.string(from: .now)
         let directory = saveLocation.resolvedDirectory
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-        let timestamp = formatter.string(from: Date())
-        let base = "recording_\(timestamp)"
-        let ext = AudioFormat.wav.fileExtension
-
-        // Avoid clobbering an existing file (timestamps are second-granular).
-        var candidate = directory.appendingPathComponent("\(base).\(ext)")
-        var suffix = 1
-        while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = directory.appendingPathComponent("\(base) (\(suffix)).\(ext)")
-            suffix += 1
+        for counter in 0...Int.max {
+            let suffix = counter == 0 ? "" : " (\(counter))"
+            let proposal = directory.appendingPathComponent(stem + suffix).appendingPathExtension("wav")
+            if !FileManager.default.fileExists(atPath: proposal.path) { return proposal }
         }
-        return candidate
+        // Exclusive file creation by the sink remains the final collision guard.
+        return directory.appendingPathComponent(stem + "-" + UUID().uuidString + ".wav")
     }
-
-    // MARK: - Cleanup
 
     deinit {
-        // Capture managers directly to avoid referencing self inside the Task closure
-        let captureManager = captureManager
-        let audioRecorder = audioRecorder
-        let sessionLibrary = sessionLibrary
-        let activity = activity
+        let capture = captureManager, writer = audioRecorder, multi = multiRecorder
+        let library = sessionLibrary, activity = activity, gate = captureGate, owner = captureID
         Task { @MainActor in
-            defer { activity.stop() }
-            guard captureManager.capturing || audioRecorder.recording else { return }
-            try? await captureManager.stopCapture()
-            try? await audioRecorder.stopRecording()
-            await captureManager.cleanup()
-            if let manifest = audioRecorder.sessionManifestURL { sessionLibrary?.enqueue(manifest, issue: "Recorder closed before normal stop") }
-            sessionLibrary?.setRecording(false)
+            defer { activity.stop(); gate.release(owner) }
+            guard capture.capturing || writer.recording || multi != nil else { return }
+            try? await capture.stopCapture()
+            if let multi {
+                try? await multi.stop(failure: SessionError.invalid("Recorder closed before normal stop"))
+                if let manifest = multi.manifestURL { library?.enqueue(manifest, issue: "Recorder closed before normal stop") }
+            } else {
+                try? await writer.stopRecording()
+                if let manifest = writer.sessionManifestURL { library?.enqueue(manifest, issue: "Recorder closed before normal stop") }
+            }
+            await capture.cleanup()
+            library?.setRecording(false)
         }
     }
 }
 
-
-/// Orchestrates the start/stop recording workflow. Implemented by `RecordingController`.
-@MainActor
-protocol RecordingControlling: AnyObject {
+@MainActor protocol RecordingControlling: AnyObject {
     var onWaveformData: (@MainActor @Sendable ([Float]) -> Void)? { get set }
     var onStreamError: (@MainActor (String) -> Void)? { get set }
     var isRecording: Bool { get }

@@ -1,36 +1,23 @@
-//
-//  DiagnosticsTests.swift
-//  RecScribeTests
-//
-//  BL-042: the diagnostics report and "Report a Problem" URL carry the
-//  environment info needed to act on a user report.
-//
-
-import Testing
 import Foundation
+import Testing
 @testable import RecScribe
 
-@MainActor
-struct DiagnosticsTests {
-
-    @Test("Report includes app + macOS version")
-    func reportIncludesEnvironment() {
-        let report = Diagnostics.report()
-        #expect(report.contains("RecScribe Diagnostics"))
-        #expect(report.contains(Diagnostics.appVersion))
-        #expect(report.contains(Diagnostics.systemVersion))
-        #expect(report.contains("Recent log entries:"))
-    }
-
-    @Test("Report-a-Problem URL is valid and prefilled with version info")
-    func reportIssueURLIsPrefilled() throws {
-        let url = try #require(Diagnostics.reportIssueURL())
-        #expect(url.absoluteString.contains("github.com/moreaki/recscribe/issues/new"))
-
-        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        let body = components.queryItems?.first { $0.name == "body" }?.value ?? ""
-        #expect(body.contains("App version:"))
-        #expect(body.contains("macOS:"))
-        #expect(components.queryItems?.contains { $0.name == "title" } == true)
+@MainActor struct DiagnosticsTests {
+    @Test func localReportAndIssueLinkContainVersionContext() throws {
+        let fixed = Date(timeIntervalSince1970: 1_700_000_000)
+        let report = Diagnostics.report(date: fixed)
+        for part in ["RecScribe Diagnostics", "Recent log entries:", Diagnostics.appVersion,
+                     Diagnostics.systemVersion, ISO8601DateFormatter().string(from: fixed)] {
+            #expect(report.contains(part))
+        }
+        let page = try #require(Diagnostics.reportIssueURL())
+        let link = try #require(URLComponents(url: page, resolvingAgainstBaseURL: false))
+        #expect(link.host == "github.com")
+        #expect(link.path == "/moreaki/recscribe/issues/new")
+        let fields = Dictionary((link.queryItems ?? []).map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { a, _ in a })
+        #expect(fields["title"]?.isEmpty == false)
+        #expect(fields["body"]?.contains(Diagnostics.appVersion) == true)
+        #expect(fields["body"]?.contains(Diagnostics.systemVersion) == true)
+        #expect(Diagnostics.recentLogLines(limit: 0).isEmpty)
     }
 }

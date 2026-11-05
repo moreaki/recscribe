@@ -1,47 +1,183 @@
-//
-//  RecorderViewModelTests.swift
-//  RecScribeTests
-//
-//  BL-005: view-model lifecycle tests — state transitions, permission gating,
-//  error handling, duration timing (via injected clock), and stream-failure.
-//  Deterministic, no hardware/permission, no sleeps.
-//
-
-import Testing
 import Foundation
+import Testing
 @testable import RecScribe
 
-/// A controllable error with a known message for assertions.
-private struct TestError: LocalizedError {
-    let message: String
-    var errorDescription: String? { message }
+private struct LifecycleFailure: LocalizedError {
+    let payload: String
+    var errorDescription: String? { payload }
 }
 
-@MainActor
-struct RecorderViewModelTests {
-
-    private func makeViewModel(
-        controller: MockRecordingControlling? = nil,
-        permission: PermissionStatus = .granted,
-        clock: ManualClock? = nil,
-        saveLocation: SaveLocationProviding? = nil
-    ) -> RecorderViewModel {
-        RecorderViewModel(
-            controller: controller ?? MockRecordingControlling(),
-            permissions: MockPermissionProviding(permission),
-            clock: clock ?? ManualClock(),
-            saveLocation: saveLocation,
-            // Pinned, not defaulted. Without this the view model builds a real
-            // `AudioSourceManager` and reads the *developer's* UserDefaults, so
-            // the suite's behaviour depends on whichever source was last chosen
-            // in the running app (TEST_HOST is the app itself). That went
-            // unnoticed while a mic denial was silently swallowed; the moment
-            // it stopped being swallowed, a machine with a microphone selected
-            // failed a test about System Settings.
-            audioSource: MockAudioSourceProviding(selectedSource: .systemAll)
-        )
+@MainActor struct RecorderViewModelTests {
+    @Test(arguments: [false, true])
+    func captureLifecycleRequiresUserPermissionAndKeepsSharedSourceOwner(granted: Bool) async {
+        let h = RecorderContractHarness(permission: granted ? .granted : .denied)
+        defer { h.cleanup() }
+        #expect(h.model.state == .idle && !h.model.isRecording)
+        #expect(h.model.audioSource === h.source)
+        #expect(h.model.showsSettingsShelf)
+        await h.model.startRecording()
+        if granted {
+            #expect(h.model.isRecording && h.controller.startCount == 1 && !h.model.showsSettingsShelf)
+            h.controller.onWaveformData?([0.25, -0.5])
+            #expect(h.model.waveformSamples == [0.25, -0.5])
+            await h.model.stopRecording()
+            #expect(h.model.state == .idle && h.model.showsSettingsShelf)
+            #expect(h.model.waveformSamples == [Float](repeating: 0, count: 200))
+            #expect(!h.clock.isTicking && h.controller.stopCount == 1)
+        } else {
+            #expect(h.controller.startCount == 0 && !h.model.isRecording)
+            #expect(h.model.showError && h.model.recoverySuggestion == .openSettings)
+        }
     }
-
+    @Test func permissionRecheckAndSettingsRecoveryAreExplicit() async {
+        let h = RecorderContractHarness(permission: .denied, pollClock: ImmediatePollClock(), timeout: 0)
+        defer { h.cleanup() }
+        await h.model.requestPermission()
+        #expect(h.model.showError && h.model.recoverySuggestion == .openSettings)
+        h.model.performRecovery()
+        await waitUntil("explicit Settings recovery") { h.permissions.openSettingsCount == 1 }
+        #expect(!h.model.showError)
+        h.permissions.status = .granted
+        await h.model.checkPermission()
+        #expect(h.model.permissionStatus == .granted && h.model.canRecord)
+        #expect(h.controller.startCount == 0)
+    }
+    @Test(arguments: [0, 1, 2])
+    func startFailuresHaveSpecificRecoveryWithoutExposingTechnicalDetails(kind: Int) async {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        let expected: RecorderError
+        switch kind {
+        case 0:
+            h.controller.startError = LifecycleFailure(payload: "internal-start-detail")
+            expected = .startFailed("internal-start-detail")
+        case 1:
+            h.controller.startError = RecordingControllerError.insufficientDiskSpace
+            expected = .diskFull
+        default:
+            h.controller.startError = AudioSourceError.appNotRunning("test.player")
+            expected = .sourceUnavailable(.appNotRunning("test.player"))
+        }
+        await h.model.startRecording()
+        #expect(h.model.state == .error(expected))
+        #expect(h.model.errorMessage == expected.message && h.model.recoverySuggestion == expected.recovery)
+        #expect(h.model.errorMessage?.contains("internal-start-detail") == false)
+        #expect(h.model.showsSettingsShelf && !h.clock.isTicking)
+    }
+    @Test(arguments: [0, 1, 2])
+    func everyStopFailureClearsTransportAndPublishesTheSpecificDiagnosis(kind: Int) async {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        await h.model.startRecording()
+        h.clock.advance(by: 5)
+        h.clock.advance(by: 2.5)
+        #expect(h.model.duration == 7.5 && h.clock.isTicking)
+        let expected: RecorderError
+        switch kind {
+        case 0: h.controller.stopError = LifecycleFailure(payload: "stop-detail"); expected = .stopFailed("stop-detail")
+        case 1: h.controller.stopError = RecordingControllerError.captureShutdownFailed(LifecycleFailure(payload: "stop-detail")); expected = .captureStopFailed("stop-detail")
+        default: h.controller.stopError = SessionError.noAudio; expected = .noAudio
+        }
+        await h.model.stopRecording()
+        #expect(h.model.state == .error(expected) && !h.model.isRecording)
+        #expect(!h.clock.isTicking && h.model.waveformSamples.allSatisfy { $0 == 0 })
+    }
+    @Test func elapsedTimeWarningIsOncePerTakeAndDiskBoundaryIsExact() async {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        await h.model.startRecording()
+        h.clock.advance(by: DiskSpace.longRecordingThreshold + 1)
+        #expect(h.model.showLongRecordingWarning)
+        h.model.showLongRecordingWarning = false
+        h.clock.advance(by: 10)
+        #expect(!h.model.showLongRecordingWarning)
+        await h.model.stopRecording()
+        await h.model.startRecording()
+        #expect(h.model.duration == 0)
+        h.clock.advance(by: DiskSpace.longRecordingThreshold)
+        #expect(h.model.showLongRecordingWarning)
+        await h.model.stopRecording()
+        #expect(DiskSpace.hasEnoughSpace(availableBytes: DiskSpace.minimumBytesToRecord))
+        #expect(!DiskSpace.hasEnoughSpace(availableBytes: DiskSpace.minimumBytesToRecord - 1))
+        #expect(!DiskSpace.hasEnoughSpace(availableBytes: 10_000_000))
+    }
+    @Test func preferencePresentationPersistsOnboardingAndWarnsWithoutAbortingFallbackCapture() async {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        #expect(h.model.showOnboarding)
+        h.model.completeOnboarding()
+        #expect(!h.model.showOnboarding)
+        #expect(!RecorderPreferences(saveLocation: h.location, defaults: h.defaults).showOnboarding)
+        h.model.showOnboardingAgain()
+        #expect(h.model.showOnboarding)
+        #expect(h.model.saveLocationName == h.location.configuredDirectory?.lastPathComponent)
+        h.model.resetSaveLocation()
+        #expect(h.location.resetCount == 1 && !h.model.hasCustomSaveLocation && h.model.saveLocationName == "Desktop")
+        h.location.isConfiguredLocationUnavailable = true
+        await h.model.startRecording()
+        #expect(h.model.isRecording && h.model.showError)
+        #expect(h.model.recoverySuggestion == .chooseFolder)
+        await h.model.stopRecording()
+    }
+    @Test func failureFinalizationRunsOnceAndBlocksAnEarlyRestart() async throws {
+        let h = RecorderContractHarness()
+        defer { h.cleanup() }
+        var gate: CheckedContinuation<Void, Never>?
+        h.controller.beforeFinalize = { await withCheckedContinuation { gate = $0 } }
+        await h.model.startRecording()
+        h.controller.emitStreamError("stream-ended")
+        h.controller.emitStreamError("late-duplicate")
+        #expect(h.model.state == .error(.streamFailed("stream-ended")))
+        await waitUntil("failure drain to suspend") { gate != nil }
+        await h.model.startRecording()
+        #expect(h.controller.startCount == 1 && h.model.isFinalizingAfterFailure)
+        let suspended = try #require(gate)
+        gate = nil
+        suspended.resume()
+        await h.model.waitForFailureFinalization()
+        #expect(h.controller.finalizeCount == 1 && !h.model.isFinalizingAfterFailure)
+        h.controller.beforeFinalize = nil
+        await h.model.startRecording()
+        #expect(h.controller.startCount == 2 && h.model.isRecording)
+        await h.model.stopRecording()
+    }
+    @Test(arguments: [false, true], [false, true])
+    func microphoneRequestsUseTheirOwnPermissionScopeAndRepeatDeniedFeedback(screenGranted: Bool, microphoneGranted: Bool) async {
+        let h = RecorderContractHarness(permission: screenGranted ? .granted : .denied, selection: .mic(deviceUID: "test.input"))
+        defer { h.cleanup() }
+        h.permissions.micStatus = microphoneGranted ? .granted : .denied
+        #expect(h.model.canRecord)
+        await h.model.startRecording()
+        #expect(h.permissions.requestedPermissionKinds == [.microphone])
+        if microphoneGranted {
+            #expect(h.model.isRecording && h.controller.startCount == 1)
+            await h.model.stopRecording()
+        } else {
+            #expect(h.model.state == .error(.microphoneDenied) && h.model.showError)
+            #expect(h.model.recoverySuggestion == .openMicrophoneSettings)
+            h.model.showError = false
+            await h.model.startRecording()
+            #expect(h.model.showError && h.controller.startCount == 0)
+            #expect(h.permissions.requestedPermissionKinds == [.microphone, .microphone])
+        }
+        #expect(PermissionKind.microphone.settingsAnchor == "Privacy_Microphone")
+        #expect(PermissionKind.screenCapture.settingsAnchor == "Privacy_ScreenCapture")
+    }
+    @Test func sourceNamesAreCachedAndShelfLockAgreesWithMenuLock() async {
+        let h = RecorderContractHarness(selection: .app(bundleID: "test.player"))
+        defer { h.cleanup() }
+        #expect(h.model.captureSourceName == "test.player")
+        h.source.knownAppNamesResult = ["test.player": "Known Player"]
+        #expect(h.model.captureSourceName == "Known Player")
+        #expect(h.model.statusText == "Ready to record Known Player")
+        #expect(h.source.availableAppsCallCount == 0)
+        await h.model.startRecording()
+        #expect(h.model.statusText == "Recording Known Player")
+        #expect(h.model.showsSettingsShelf == h.model.state.allowsCaptureSourceChange)
+        #expect(OverflowMenu().captureSourceEntries(.init(allowsCaptureSourceChange: h.model.allowsCaptureSourceChange)).isEmpty)
+        await h.model.stopRecording()
+        #expect(h.model.showsSettingsShelf)
+    }
     @Test("Meter publication preserves raw channels, muted contributions and source settings")
     func publishesCaptureMetersWithoutEditingAudio() throws {
         let suite = "compact-source-telemetry-\(UUID())"
@@ -72,612 +208,5 @@ struct RecorderViewModelTests {
         #expect(controller.startCount == 0)
     }
 
-    @Test("Initial state is idle")
-    func initialStateIsIdle() {
-        let viewModel = makeViewModel()
-        #expect(viewModel.state == .idle)
-        #expect(viewModel.isRecording == false)
-    }
 
-    @Test("The capture source the menu reads is the instance it was given")
-    func captureSourceIsSharedNotDuplicated() {
-        // The menu writes the selection through `viewModel.audioSource`; the
-        // controller reads it at `startRecording`. A second instance would make
-        // that write invisible to the next recording — silent today, because
-        // every read hits UserDefaults and so duplicates agree by accident.
-        // Pin the exposure before BL-111's in-memory cache removes that accident.
-        let shared = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.example.app"))
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(),
-            audioSource: shared
-        )
-        #expect(viewModel.audioSource === shared)
-        #expect(viewModel.audioSource.selectedSource == .app(bundleID: "com.example.app"))
-    }
-
-    @Test("Re-probing reflects a newly granted permission without relaunch (BL-040)")
-    func permissionReprobeUpdatesState() async {
-        let permission = MockPermissionProviding(.denied)
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permission,
-            clock: ManualClock()
-        )
-
-        await viewModel.checkPermission()
-        #expect(viewModel.permissionStatus == .denied)
-
-        // User flips the toggle in System Settings; app re-probes on regaining focus.
-        permission.status = .granted
-        await viewModel.checkPermission()
-        #expect(viewModel.permissionStatus == .granted)
-    }
-
-    @Test("startRecording with granted permission transitions to recording")
-    func startWithPermissionRecords() async {
-        let controller = MockRecordingControlling()
-        let viewModel = makeViewModel(controller: controller, permission: .granted)
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .recording)
-        #expect(viewModel.isRecording)
-        #expect(controller.startCount == 1)
-        #expect(viewModel.lastRecordingURL == controller.fileURL)
-    }
-
-    @Test("startRecording with denied permission does not record and surfaces an error")
-    func startWithoutPermissionDoesNotRecord() async {
-        let controller = MockRecordingControlling()
-        let viewModel = makeViewModel(controller: controller, permission: .denied)
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .idle)
-        #expect(controller.startCount == 0)
-        #expect(viewModel.showError)
-    }
-
-    @Test("stopRecording returns to idle and resets the waveform")
-    func stopReturnsToIdle() async {
-        let controller = MockRecordingControlling()
-        let viewModel = makeViewModel(controller: controller)
-
-        await viewModel.startRecording()
-        #expect(viewModel.state == .recording)
-
-        await viewModel.stopRecording()
-
-        #expect(viewModel.state == .idle)
-        #expect(controller.stopCount == 1)
-        #expect(viewModel.waveformSamples == Array(repeating: 0, count: 200))
-    }
-
-    @Test("A controller start error transitions to .error with plain copy + recovery")
-    func startErrorSurfacesErrorState() async {
-        let controller = MockRecordingControlling()
-        controller.startError = TestError(message: "no capture device")
-        let viewModel = makeViewModel(controller: controller)
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .error(.startFailed("no capture device")))
-        // User-facing copy is plain language and does not leak the raw detail.
-        #expect(viewModel.errorMessage == RecorderError.startFailed("no capture device").message)
-        #expect(viewModel.errorMessage?.contains("no capture device") == false)
-        #expect(viewModel.recoverySuggestion == .tryAgain)
-        #expect(viewModel.showError)
-    }
-
-    @Test("Recovery action .openSettings opens System Settings and dismisses the error")
-    func recoveryOpensSettings() async {
-        let controller = MockRecordingControlling()
-        // An actual permission denial offers Settings. A generic stream
-        // interruption (which can also mean sleep) must not assume revocation.
-        let permission = MockPermissionProviding(.denied)
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: MockAudioSourceProviding(selectedSource: .systemAll),
-            pollClock: ImmediatePollClock(),
-            registrationTimeout: 0
-        )
-        await viewModel.requestPermission()
-        #expect(viewModel.recoverySuggestion == .openSettings)
-        #expect(viewModel.showError)
-
-        viewModel.performRecovery()
-        // Opening Settings is now async: it waits for the registering probe first
-        // so the pane doesn't render a list RecScribe isn't in yet (BL-087).
-        await waitUntil("recovery to open System Settings") { permission.openSettingsCount == 1 }
-
-        #expect(permission.openSettingsCount == 1)
-        #expect(viewModel.showError == false)
-    }
-
-    @Test("Duration advances using the injected clock, not a real timer")
-    func durationAdvancesWithClock() async {
-        let clock = ManualClock()
-        let viewModel = makeViewModel(clock: clock)
-
-        await viewModel.startRecording()
-        #expect(viewModel.duration == 0)
-        #expect(clock.isTicking)
-
-        clock.advance(by: 5)
-        #expect(viewModel.duration == 5)
-
-        clock.advance(by: 2.5)
-        #expect(viewModel.duration == 7.5)
-
-        await viewModel.stopRecording()
-        #expect(clock.isTicking == false)
-    }
-
-    /// BL-016 made the stop path's catch branch reachable (finalize errors used
-    /// to be swallowed inside AudioRecorder). The timer must be torn down there
-    /// too — otherwise it keeps republishing `duration` at 10Hz for the lifetime
-    /// of the app, and can fire the long-recording warning about a recording
-    /// that has already ended.
-    @Test("A failed stop surfaces the error and still stops the timer")
-    func failedStopStopsTheTimer() async {
-        struct FinalizeFailure: Error {}
-        let controller = MockRecordingControlling()
-        let clock = ManualClock()
-        let viewModel = makeViewModel(controller: controller, clock: clock)
-
-        await viewModel.startRecording()
-        #expect(clock.isTicking)
-
-        controller.stopError = FinalizeFailure()
-        await viewModel.stopRecording()
-
-        // The failure is surfaced, not silently treated as a clean stop…
-        if case .error(.stopFailed) = viewModel.state {} else {
-            Issue.record("expected .stopFailed, got \(viewModel.state)")
-        }
-        // …and the timer is not leaked.
-        #expect(clock.isTicking == false)
-        #expect(viewModel.isRecording == false)
-    }
-
-    @Test("Onboarding shows on first launch, and not after completion (BL-041)")
-    func onboardingShownOnce() {
-        let defaults = UserDefaults(suiteName: "onboarding-test-\(UUID().uuidString)")!
-
-        let first = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: MockPermissionProviding(),
-            clock: ManualClock(),
-            defaults: defaults
-        )
-        #expect(first.showOnboarding)
-
-        first.completeOnboarding()
-        #expect(first.showOnboarding == false)
-
-        // A fresh launch with the same defaults does not show it again.
-        let second = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: MockPermissionProviding(),
-            clock: ManualClock(),
-            defaults: defaults
-        )
-        #expect(second.showOnboarding == false)
-
-        // …but it can be re-opened on demand.
-        second.showOnboardingAgain()
-        #expect(second.showOnboarding)
-    }
-
-    @Test("An unavailable save folder records to Desktop with a non-blocking notice")
-    func unavailableSaveLocationShowsNoticeWhileRecording() async {
-        let gone = FileManager.default.temporaryDirectory
-            .appendingPathComponent("gone-\(UUID().uuidString)", isDirectory: true)
-        let saveLocation = MockSaveLocationProviding(directory: gone)
-        saveLocation.isConfiguredLocationUnavailable = true
-        let viewModel = makeViewModel(saveLocation: saveLocation)
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .recording)          // recording proceeds (to Desktop)
-        #expect(viewModel.showError)                     // non-blocking notice
-        #expect(viewModel.recoverySuggestion == .chooseFolder)
-    }
-
-    @Test("View model reflects a custom save location and resets it to Desktop")
-    func saveLocationDisplayAndReset() {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("vm-save-\(UUID().uuidString)", isDirectory: true)
-        let mock = MockSaveLocationProviding(directory: dir)
-        let viewModel = makeViewModel(saveLocation: mock)
-
-        #expect(viewModel.saveLocationName == dir.lastPathComponent)
-        #expect(viewModel.hasCustomSaveLocation)
-
-        viewModel.resetSaveLocation()
-
-        #expect(viewModel.saveLocationName == "Desktop")
-        #expect(viewModel.hasCustomSaveLocation == false)
-        #expect(mock.resetCount == 1)
-    }
-
-    @Test("Disk-space threshold logic")
-    func diskSpaceThreshold() {
-        #expect(DiskSpace.hasEnoughSpace(availableBytes: DiskSpace.minimumBytesToRecord))
-        #expect(DiskSpace.hasEnoughSpace(availableBytes: DiskSpace.minimumBytesToRecord - 1) == false)
-        #expect(DiskSpace.hasEnoughSpace(availableBytes: 10 * 1024 * 1024) == false)
-    }
-
-    @Test("Insufficient disk space surfaces a disk-full error, not a generic one")
-    func insufficientDiskSpaceSurfacesDiskFull() async {
-        let controller = MockRecordingControlling()
-        controller.startError = RecordingControllerError.insufficientDiskSpace
-        let viewModel = makeViewModel(controller: controller)
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .error(.diskFull))
-        #expect(viewModel.errorMessage == RecorderError.diskFull.message)
-    }
-
-    @Test("A long recording triggers a one-time warning once past the threshold")
-    func longRecordingWarning() async {
-        let clock = ManualClock()
-        let viewModel = makeViewModel(clock: clock)
-
-        await viewModel.startRecording()
-        #expect(viewModel.showLongRecordingWarning == false)
-
-        clock.advance(by: DiskSpace.longRecordingThreshold + 1)
-        #expect(viewModel.showLongRecordingWarning)
-    }
-
-    @Test("Stream-failure callback transitions to .error and finalizes once")
-    func streamFailureHandled() async {
-        let controller = MockRecordingControlling()
-        let viewModel = makeViewModel(controller: controller)
-
-        await viewModel.startRecording()
-        #expect(viewModel.state == .recording)
-
-        await confirmation("controller finalized exactly once") { finalized in
-            controller.onFinalize = { finalized() }
-            controller.emitStreamError("display went to sleep")
-
-            #expect(viewModel.state == .error(.streamFailed("display went to sleep")))
-
-            await waitUntil("the controller to finalize") { controller.finalizeCount > 0 }
-        }
-
-        #expect(controller.finalizeCount == 1)
-        #expect(viewModel.isRecording == false)
-    }
-
-}
-
-// MARK: - The source name shown on both surfaces
-
-@MainActor
-struct CaptureSourceNameTests {
-
-    private func makeViewModel(
-        source: MockAudioSourceProviding
-    ) -> RecorderViewModel {
-        RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(),
-            audioSource: source
-        )
-    }
-
-    @Test("A selected app is named, not shown as a bundle identifier")
-    func selectedAppIsNamed() {
-        // Regression: `captureSourceName` read a `knownAppNames` dictionary on
-        // the view model that nothing ever wrote, so this fell through to
-        // `?? bundleID` and the status line read "Ready to record
-        // com.ableton.live" on both surfaces — for the headline feature.
-        let source = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.ableton.live"))
-        source.knownAppNamesResult = ["com.ableton.live": "Ableton Live"]
-        let viewModel = makeViewModel(source: source)
-
-        #expect(viewModel.captureSourceName == "Ableton Live")
-        #expect(viewModel.statusText == "Ready to record Ableton Live")
-    }
-
-    @Test("An app never seen in the picker still renders something usable")
-    func unknownAppFallsBackToBundleID() {
-        // Only reachable for a selection restored from a build that predates the
-        // name memory. Ugly, but naming it wrongly would be worse.
-        let source = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.unknown.app"))
-        let viewModel = makeViewModel(source: source)
-        #expect(viewModel.captureSourceName == "com.unknown.app")
-    }
-
-    @Test("Naming the source performs zero app enumeration")
-    func namingNeverEnumerates() {
-        // Enumeration costs a permission prompt. The status line is evaluated on
-        // every view update, so if it ever enumerated the app would prompt
-        // continuously — the worst possible version of the BL-085 bug.
-        let source = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.ableton.live"))
-        source.knownAppNamesResult = ["com.ableton.live": "Ableton Live"]
-        let viewModel = makeViewModel(source: source)
-
-        _ = viewModel.statusText
-        _ = viewModel.captureSourceName
-        #expect(source.availableAppsCallCount == 0)
-    }
-}
-
-// MARK: - The settings shelf follows the state machine
-
-@MainActor
-struct SettingsShelfVisibilityTests {
-
-    private func makeViewModel() -> RecorderViewModel {
-        RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(),
-            audioSource: MockAudioSourceProviding()
-        )
-    }
-
-    @Test("The shelf is shown when idle and hidden while a take is running")
-    func shelfHidesForTheWholeTake() async {
-        let viewModel = makeViewModel()
-        #expect(viewModel.showsSettingsShelf)
-
-        await viewModel.startRecording()
-        #expect(viewModel.state == .recording)
-        #expect(viewModel.showsSettingsShelf == false)
-
-        await viewModel.stopRecording()
-        #expect(viewModel.showsSettingsShelf)
-    }
-
-    @Test("The shelf reappears after a failure so the user can change settings to fix it")
-    func shelfIsAvailableInErrorState() async {
-        let controller = MockRecordingControlling()
-        controller.startError = NSError(domain: "test", code: 1)
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(),
-            audioSource: MockAudioSourceProviding()
-        )
-
-        await viewModel.startRecording()
-        #expect(viewModel.showsSettingsShelf)
-    }
-
-    @Test("The shelf and the capture-source menu are driven by one rule")
-    func shelfAgreesWithMenuSection() {
-        // Was gated on `isRecording`, i.e. `.recording` **only** — so the shelf
-        // stayed visible and clickable through `.starting` and `.stopping`,
-        // offering a format switch for a take whose format was already captured.
-        // Two rules for "settings are locked" is what let them diverge; this
-        // pins that there is now one. The per-state truth table lives in
-        // `CaptureSourceMenuTests.lockMirrorsRecordingState`.
-        #expect(RecordingState.starting.allowsCaptureSourceChange == false)
-        #expect(RecordingState.stopping.allowsCaptureSourceChange == false)
-        #expect(RecordingState.recovering.allowsCaptureSourceChange == false)
-    }
-}
-
-// MARK: - Errors from the v1.1 capture sources say what actually went wrong
-
-@MainActor
-struct CaptureSourceErrorTests {
-
-    @Test("An unavailable source keeps its own copy instead of the generic message")
-    func sourceUnavailableUsesItsOwnCopy() async {
-        // Regression: every non-disk-space failure was flattened into
-        // `.startFailed(error.localizedDescription)`, so a quit app or an
-        // unplugged mic reported "Make sure some audio is playing, then try
-        // again" — advice that cannot work for either cause — and discarded the
-        // accurate copy `AudioSourceError` had already written.
-        let source = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.ableton.live"))
-        source.validateError = AudioSourceError.appNotRunning("com.ableton.live")
-        let controller = RecordingController(
-            captureManager: MockAudioCapturing(),
-            audioRecorder: MockAudioFileWriting(),
-            saveLocation: MockSaveLocationProviding(directory: FileManager.default.temporaryDirectory),
-            audioSource: source
-        )
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .error(.sourceUnavailable(.appNotRunning("com.ableton.live"))))
-        #expect(viewModel.errorMessage?.contains("not currently running") == true)
-        #expect(viewModel.errorMessage?.contains("audio is playing") == false)
-    }
-
-    @Test("An unavailable source does not offer Try again")
-    func sourceUnavailableOffersNoRetry() {
-        // The app is still closed and the mic is still unplugged, so a retry
-        // fails identically. Offering it is a loop dressed as a way out.
-        #expect(RecorderError.sourceUnavailable(.appNotRunning("x")).recovery == nil)
-        #expect(RecorderError.sourceUnavailable(.micNotAvailable("y")).recovery == nil)
-    }
-
-    @Test("Denied microphone access points at Settings, never at Try again")
-    func microphoneDeniedOffersSettings() {
-        // Once denied, `AVCaptureDevice.requestAccess` returns false immediately
-        // and without prompting — so `.tryAgain` here is an infinite loop with a
-        // button on it. Settings is the only real way out.
-        #expect(RecorderError.microphoneDenied.recovery == .openMicrophoneSettings)
-        #expect(RecorderError.microphoneDenied.recovery != .tryAgain)
-        #expect(RecorderError.microphoneDenied.message.contains("microphone"))
-    }
-
-    @Test("A denied microphone reaches the user instead of vanishing")
-    func micDenialReachesTheUser() async {
-        // BL-161, shipped in v1.1.0. The mic gate ran *before* the move to
-        // `.starting`, so the denial was raised from `.idle` — and
-        // `(.idle → .error)` is not a legal transition, so `transition(to:)`
-        // rejected it and returned. `presentError` sits after that guard, so
-        // nothing was ever shown: state stayed `.idle`, the status line still
-        // read "Ready to record", and the button did nothing. For ever.
-        //
-        // Fails without the fix: `state` is `.idle` and `showError` is false.
-        let controller = MockRecordingControlling()
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.granted)
-        permission.micStatus = .denied
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .error(.microphoneDenied))
-        #expect(viewModel.showError)
-        #expect(viewModel.errorMessage?.contains("microphone") == true)
-        #expect(viewModel.recoverySuggestion == .openMicrophoneSettings)
-        // The denial must stop the recording, not merely be reported alongside it.
-        #expect(controller.startCount == 0)
-    }
-
-    @Test("The mic denial is not reported as the generic start failure")
-    func micDenialKeepsItsOwnCopy() async {
-        // The same class f9517a3 fixed for `AudioSourceError`: "Make sure some
-        // audio is playing, then try again" is nonsense advice for a mic, and
-        // `.tryAgain` is a loop because a denied `requestAccess` returns false
-        // immediately without prompting.
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.granted)
-        permission.micStatus = .denied
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.errorMessage?.contains("audio is playing") == false)
-        #expect(viewModel.recoverySuggestion != .tryAgain)
-    }
-
-    @Test("The mic grant is asked for through the permission seam")
-    func micAccessGoesThroughThePermissionSeam() async {
-        // The view model used to call `AVCaptureDevice.requestAccess` directly,
-        // which no test could mock — the reason the branch above shipped
-        // unexercised. Asserting the seam is used keeps it reachable.
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.granted)
-        permission.micStatus = .denied
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-
-        #expect(permission.requestedPermissionKinds == [.microphone])
-    }
-
-    @Test("Pressing record again after a denial says so again")
-    func micDenialRepeatsOnASecondPress() async {
-        // The failure mode a design review flagged for the *other* candidate
-        // fix: if the denial is raised while still `.idle`, then after the
-        // first error the state is `.error`, and `.error → .error` is illegal
-        // too — so the second press goes silent again and the user is back to
-        // "the button does nothing", permanently.
-        //
-        // Raising it from `.starting` avoids that: `.error → .starting` and
-        // `.starting → .error` are both legal, so every press reports. This
-        // test is what keeps that property from being refactored away.
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.granted)
-        permission.micStatus = .denied
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-        #expect(viewModel.state == .error(.microphoneDenied))
-
-        // The user dismisses the alert and tries again.
-        viewModel.showError = false
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .error(.microphoneDenied))
-        #expect(viewModel.showError)
-        #expect(permission.requestedPermissionKinds == [.microphone, .microphone])
-    }
-
-    @Test("A granted microphone still records")
-    func micGrantedStillRecords() async {
-        // The control. Without it the denial test above could pass simply
-        // because the mic path never runs at all — the BL-150 trap, where every
-        // test stopped one stage before the thing that was broken.
-        let controller = MockRecordingControlling()
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.granted)
-        permission.micStatus = .granted
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .recording)
-        #expect(controller.startCount == 1)
-        #expect(!viewModel.showError)
-    }
-
-    @Test("Microphone recovery opens the Microphone pane, not Screen Recording")
-    func microphoneRecoveryOpensTheRightPane() {
-        // Sending someone to the wrong System Settings pane is the exact failure
-        // BL-081 existed to fix.
-        #expect(PermissionKind.microphone.settingsAnchor == "Privacy_Microphone")
-        #expect(PermissionKind.screenCapture.settingsAnchor == "Privacy_ScreenCapture")
-    }
-
-    @Test("Mic-only recording starts without Screen Recording permission when Microphone permission is granted (#40)")
-    func micOnlyRecordingDoesNotRequireScreenRecordingPermission() async {
-        let controller = MockRecordingControlling()
-        let source = MockAudioSourceProviding(selectedSource: .mic(deviceUID: "scarlett-2i2"))
-        let permission = MockPermissionProviding(.denied)
-        permission.micStatus = .granted
-        let viewModel = RecorderViewModel(
-            controller: controller,
-            permissions: permission,
-            clock: ManualClock(),
-            audioSource: source
-        )
-
-        #expect(viewModel.canRecord)
-        #expect(viewModel.statusText.contains("Ready to record"))
-
-        await viewModel.startRecording()
-
-        #expect(viewModel.state == .recording)
-        #expect(controller.startCount == 1)
-        #expect(permission.requestedPermissionKinds == [.microphone])
-    }
 }

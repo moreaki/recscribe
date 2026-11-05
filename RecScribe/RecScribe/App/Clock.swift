@@ -1,60 +1,54 @@
-//
-//  Clock.swift
-//  RecScribe
-//
-//  Time source for the recording duration timer. Injecting it lets tests
-//  advance time deterministically instead of waiting on a real Timer.
-//
-
 import Foundation
 
-/// Supplies the current time and a repeating tick for the duration display.
-@MainActor
-protocol DurationClock: AnyObject {
+@MainActor protocol DurationClock: AnyObject {
     var now: Date { get }
     func startTicking(every interval: TimeInterval, onTick: @escaping @MainActor () -> Void)
     func stopTicking()
 }
 
-/// Production clock backed by the system clock and a run-loop `Timer`.
-@MainActor
-final class SystemDurationClock: DurationClock {
-    /// The run-loop timer is created, mutated, and invalidated on MainActor.
-    /// Deinitializers are nonisolated in Swift 6, so the storage itself must be
-    /// marked as externally synchronized for the final invalidation.
-    nonisolated(unsafe) private var timer: Timer?
-    private var onTick: (@MainActor () -> Void)?
-
-    var now: Date { Date() }
+/// One cancellable task supplies presentation ticks. Its callback and generation
+/// are owned by MainActor, and a stopped generation cannot deliver a late tick.
+@MainActor final class SystemDurationClock: DurationClock {
+    private var generation = UUID()
+    private var callback: (@MainActor () -> Void)?
+    private var ticker: Task<Void, Never>?
+    var now: Date { .now }
 
     func startTicking(every interval: TimeInterval, onTick: @escaping @MainActor () -> Void) {
         stopTicking()
-        self.onTick = onTick
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.onTick?() }
+        guard interval.isFinite, interval > 0 else { return }
+        callback = onTick
+        let identity = generation
+        ticker = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(interval)) }
+                catch { return }
+                self?.deliver(for: identity)
+            }
         }
     }
 
-    func stopTicking() {
-        timer?.invalidate()
-        timer = nil
-        onTick = nil
+    private func deliver(for identity: UUID) {
+        if generation == identity { callback?() }
     }
 
-    deinit {
-        timer?.invalidate()
+    func stopTicking() {
+        generation = UUID()
+        ticker?.cancel()
+        ticker = nil
+        callback = nil
     }
+
+    deinit { ticker?.cancel() }
 }
 
-
-@MainActor
-protocol PollClock: AnyObject, Sendable {
+@MainActor protocol PollClock: AnyObject, Sendable {
     func sleep(for interval: TimeInterval) async throws
 }
 
-@MainActor
-final class SystemPollClock: PollClock {
+@MainActor final class SystemPollClock: PollClock {
     func sleep(for interval: TimeInterval) async throws {
-        try await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+        guard interval.isFinite else { throw CancellationError() }
+        try await Task.sleep(for: .seconds(max(0, interval)))
     }
 }

@@ -1,10 +1,8 @@
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -12,135 +10,65 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests
-    # Match local development's Xcode/SDK generation. Pin the minor version in
-    # .xcode-version; the runner's default can differ (including RC builds).
     runs-on: xcode-27
-    # Without this, GitHub's default is SIX HOURS. A single hung test then
-    # quietly consumes the runner budget and leaves no log to diagnose from.
-    # The suite completes in 2-3 minutes; 20 is generous headroom that still
-    # fails fast.
     timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Select Xcode
+      - uses: actions/checkout@v4
+      - name: Select pinned compiler
         run: |
-          ci_xcode_version="$(cat .xcode-version)"
-          sudo xcode-select -s "/Applications/Xcode_${ci_xcode_version}.app/Contents/Developer"
+          sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"
           ./scripts/check-toolchain.sh
-
-      - name: Run native audio/text, frozen reference and CLI tests
+      - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
-
-      - name: Run unit tests (functional)
-        # BLOCKING gate: full unit-test suite WITHOUT Thread Sanitizer. Covers all
-        # correctness, including the AVAssetWriter-based encoder tests. No
-        # TCC/Screen-Recording UI tests (can't run headless).
+      - name: Functional app contracts
         run: |
-          set -o pipefail
-          xcodebuild test \
-            -project RecScribe/RecScribe.xcodeproj \
-            -scheme RecScribe \
-            -destination 'platform=macOS' \
-            -only-testing:RecScribeTests \
-            -parallel-testing-enabled NO \
-            -parallel-testing-worker-count 1 \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 120 \
-            -resultBundlePath TestResults-functional.xcresult \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: Run unit tests (Thread Sanitizer, advisory)
-        # ADVISORY (continue-on-error): TSan reliably aborts the test host with
-        # SIGABRT on this CI runner during the audio tests — a CoreMedia/AVFoundation
-        # instrumentation issue exercised by the buffer fixtures (since BL-007), NOT
-        # a race in our code, and not reproducible locally (the full suite + TSan
-        # passes locally, repeatedly). We can't fix Apple's frameworks, so this step
-        # does not block: it still runs and uploads results to surface real races
-        # when it completes, but a system-framework abort won't fail the PR. The
-        # authoritative TSan run for the BL-024 serial-queue guard is the local dev
-        # loop (targeted `-enableThreadSanitizer YES` runs, which are reliable).
+          xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
+            -destination 'platform=macOS' -only-testing:RecScribeTests \
+            -parallel-testing-enabled NO -parallel-testing-worker-count 1 \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 120 \
+            -resultBundlePath TestResults-functional.xcresult CODE_SIGNING_ALLOWED=NO
+      # Advisory instrumentation is retained separately from the blocking suite.
+      - name: Thread Sanitizer
         continue-on-error: true
         run: |
-          set -o pipefail
-          xcodebuild test \
-            -project RecScribe/RecScribe.xcodeproj \
-            -scheme RecScribe \
-            -destination 'platform=macOS' \
-            -only-testing:RecScribeTests \
-            -parallel-testing-enabled NO \
-            -parallel-testing-worker-count 1 \
-            -enableThreadSanitizer YES \
-            -test-timeouts-enabled YES \
+          xcodebuild test -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
+            -destination 'platform=macOS' -only-testing:RecScribeTests \
+            -parallel-testing-enabled NO -parallel-testing-worker-count 1 \
+            -enableThreadSanitizer YES -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 300 \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: Export test diagnostics
+            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Export result summaries
         if: always()
         run: |
-          for bundle in TestResults-functional.xcresult TestResults.xcresult; do
-            if [ -d "$bundle" ]; then
-              stem="${bundle%.xcresult}"
-              xcrun xcresulttool get test-results summary --path "$bundle" > "$stem.json" \
-                || echo "::warning::Could not export summary for $bundle"
-              xcrun xcresulttool export diagnostics --path "$bundle" --output-path "$stem-diagnostics" \
-                || echo "::warning::Could not export diagnostics for $bundle"
+          for result in TestResults-functional.xcresult TestResults.xcresult; do
+            if [ -d "$result" ]; then
+              xcrun xcresulttool get test-results summary --path "$result" > "${result%.xcresult}.json" \
+                || echo "::warning::Summary export unavailable for $result"
+              xcrun xcresulttool export diagnostics --path "$result" --output-path "${result%.xcresult}-diagnostics" \
+                || echo "::warning::Diagnostic export unavailable for $result"
             fi
           done
-
-      - name: Upload test results
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
-            TestResults.xcresult
-            TestResults-functional.xcresult
+            TestResults*.xcresult
             TestResults*.json
             TestResults*-diagnostics/
           if-no-files-found: ignore
 
   release-build:
     name: Release build
-    # BLOCKING gate, and deliberately a SEPARATE JOB rather than a step after
-    # the tests (BL-156). Everything in `unit-tests` is a Debug build, and
-    # Release is not the same compilation: whole-module optimization and
-    # `#if DEBUG` code is gone from it.
-    #
-    # That last difference shipped a defect. A `#Preview` in a vendored file
-    # referenced fixtures guarded by `#if DEBUG`; every Debug build and the
-    # whole test suite passed, and the archive failed with "cannot find
-    # 'GlassSampleWaveforms' in scope" — found by hand, mid-release, after the
-    # tag had been cut. A green suite said nothing about whether the product
-    # could be built at all.
-    #
-    # As a trailing step it inherited that same blindness from the other side:
-    # any test failure — including a flaky one — skipped it, so exactly when
-    # the tree was in doubt, nobody learned whether it still built. That
-    # happened on `main` at 66d0702. A separate job has no `needs:`, so the two
-    # gates fail independently and both always report.
     runs-on: xcode-27
     timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Select Xcode
+      - uses: actions/checkout@v4
+      - name: Select pinned compiler
         run: |
-          ci_xcode_version="$(cat .xcode-version)"
-          sudo xcode-select -s "/Applications/Xcode_${ci_xcode_version}.app/Contents/Developer"
+          sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"
           ./scripts/check-toolchain.sh
-
-      - name: Release build
+      - name: Compile optimized application
         run: |
-          set -o pipefail
-          xcodebuild build \
-            -project RecScribe/RecScribe.xcodeproj \
-            -scheme RecScribe \
-            -configuration Release \
-            -destination 'platform=macOS' \
-            CODE_SIGNING_ALLOWED=NO
+          xcodebuild build -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
+            -configuration Release -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO

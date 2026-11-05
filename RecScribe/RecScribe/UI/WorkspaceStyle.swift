@@ -3,12 +3,12 @@ import SwiftUI
 /// Shared app chrome, inspired by Quantivane's compact cards and Modex's
 /// restrained workspace. Capture red is reserved for recording, not navigation.
 enum WorkspaceStyle {
-    static let blue = Color(glassHex: 0x70AEF6)
-    static let violet = Color(glassHex: 0xB39CF7)
-    static let mint = Color(glassHex: 0x79DCC3)
-    static let background = Color(glassHex: 0x101116)
-    static let panel = Color(glassHex: 0x1B1D25)
-    static let selected = Color(glassHex: 0x282C38)
+    static let blue = Color(studioHex: 0x70AEF6)
+    static let violet = Color(studioHex: 0xB39CF7)
+    static let mint = Color(studioHex: 0x79DCC3)
+    static let background = Color(studioHex: 0x101116)
+    static let panel = Color(studioHex: 0x1B1D25)
+    static let selected = Color(studioHex: 0x282C38)
     static let border = Color.white.opacity(0.09)
     static let contentPadding: CGFloat = 22
     static let railWidth: CGFloat = 320
@@ -66,7 +66,7 @@ enum WorkspaceStyle {
     }
 
     static func size(_ role: TextRole, for dynamicTypeSize: DynamicTypeSize = .large) -> CGFloat {
-        (role.baseSize * dynamicTypeSize.glassScale).rounded()
+        (role.baseSize * dynamicTypeSize.studioScale).rounded()
     }
 
     static func font(_ role: TextRole, for dynamicTypeSize: DynamicTypeSize = .large) -> Font {
@@ -100,7 +100,7 @@ struct WorkspaceIcon: View {
     var body: some View {
         Image(systemName: symbol).font(.system(.body, design: .rounded, weight: .semibold))
             .foregroundStyle(tint).frame(width: WorkspaceStyle.iconSize, height: WorkspaceStyle.iconSize)
-            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: GlassRadius.control))
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: StudioRadius.control))
             .accessibilityHidden(true)
     }
 }
@@ -108,9 +108,9 @@ struct WorkspaceIcon: View {
 struct WorkspaceCard<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
-        content.padding(GlassSpacing.xl).frame(maxWidth: .infinity, alignment: .leading)
-            .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
-            .overlay { RoundedRectangle(cornerRadius: GlassRadius.card).stroke(WorkspaceStyle.border) }
+        content.padding(StudioSpacing.xl).frame(maxWidth: .infinity, alignment: .leading)
+            .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: StudioRadius.card))
+            .overlay { RoundedRectangle(cornerRadius: StudioRadius.card).stroke(WorkspaceStyle.border) }
     }
 }
 

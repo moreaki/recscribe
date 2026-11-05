@@ -78,7 +78,7 @@ struct AudioRoutingView: View {
             minWidth: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.width,
             minHeight: embeddedInStudio ? 0 : AppWindow.routing.minimumSize.height
         )
-        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
+        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast()
         .onExitCommand { collapsePanel() }
         .onAppear {
             recorder.audioTest?.opened()
@@ -583,11 +583,11 @@ struct CaptureHealthView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+        VStack(alignment: .leading, spacing: StudioSpacing.sm) {
             Text(recorder.captureSourceHint).font(.caption).foregroundStyle(.secondary)
             if recorder.isRecording {
                 if let summary = recorder.interruptedSourceSummary {
-                    VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                    VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                         Label(summary, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.orange)
@@ -599,7 +599,7 @@ struct CaptureHealthView: View {
                 }
                 ForEach(telemetry.sourceHealth) { source in
                     let status = source.health.status(at: telemetry.healthTime)
-                    VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                    VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                         Text("\(source.name): \(status.label)")
                             .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)
                         if let message = source.health.failureMessage { Text(message).foregroundStyle(.orange) }

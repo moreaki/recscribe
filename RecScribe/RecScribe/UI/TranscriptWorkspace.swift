@@ -29,7 +29,7 @@ struct LiveTranscriptView: View {
     var onSeek: ((Double) -> Void)?
     @State private var followsLatest = true
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
+        VStack(alignment: .leading, spacing: StudioSpacing.l) {
             HStack {
                 Label("Live draft", systemImage: "text.bubble.fill").font(.headline).foregroundStyle(WorkspaceStyle.blue)
                 Spacer()
@@ -51,9 +51,9 @@ struct LiveTranscriptView: View {
             } else {
                 ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: GlassSpacing.xl) {
+                    LazyVStack(alignment: .leading, spacing: StudioSpacing.xl) {
                         ForEach(live.segments) { segment in
-                            VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+                            VStack(alignment: .leading, spacing: StudioSpacing.sm) {
                                 MarkdownReadingText(text: segment.text)
                                 let timing = "\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")"
                                 if let onSeek {
@@ -69,9 +69,9 @@ struct LiveTranscriptView: View {
                                         .font(.caption).foregroundStyle(.orange)
                                 }
                             }
-                            .padding(GlassSpacing.xs)
+                            .padding(StudioSpacing.xs)
                             .background((playback?.isPlaying == true && segment.containsPlayback(playback?.position ?? -1)) ? WorkspaceStyle.blue.opacity(0.12) : .clear,
-                                        in: RoundedRectangle(cornerRadius: GlassRadius.control))
+                                        in: RoundedRectangle(cornerRadius: StudioRadius.control))
                             .id(segment.id)
                         }
                     }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
@@ -183,10 +183,10 @@ struct TranscriptWorkspace: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.xl) {
+        VStack(alignment: .leading, spacing: StudioSpacing.xl) {
             HStack {
                 WorkspaceIcon(symbol: section == .summary ? "sparkles" : "text.alignleft", tint: WorkspaceStyle.violet)
-                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     Text("Your words, in focus").font(.title3.weight(.semibold))
                     Text("From lossless audio to a readable, traceable draft.").font(.caption).foregroundStyle(.secondary)
                 }
@@ -254,7 +254,7 @@ struct TranscriptWorkspace: View {
                     ContentUnavailableView(section == .summary ? "No summary yet" : "No review notes", systemImage: section == .summary ? "sparkles" : "checkmark.shield",
                         description: Text(section == .summary ? "Choose Ollama or OpenAI in Settings → Intelligence, then Generate summary above. Cloud text transfer always asks for confirmation." : "Inspect the transcript before relying on it."))
                 } else {
-                    ScrollView { MarkdownReadingText(text: content).frame(maxWidth: WorkspaceStyle.readingWidth).padding(.vertical, GlassSpacing.s) }
+                    ScrollView { MarkdownReadingText(text: content).frame(maxWidth: WorkspaceStyle.readingWidth).padding(.vertical, StudioSpacing.s) }
                 }
                 Spacer(minLength: 0)
                 Label("\(document.processing.mode.rawValue) · \(document.includesCloudAudio ? "Includes cloud audio transcription" : document.includesCloudText ? "Includes cloud text" : "Processed locally") · review required", systemImage: "checkmark.shield").font(.caption).foregroundStyle(.secondary)

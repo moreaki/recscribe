@@ -187,3 +187,25 @@ because active inherited code and tests still exist.
   manual test before marking the PR ready. Do not auto-close #51 from a partial PR.
 
 Git history and existing releases/discussions are outside the current-tree rewrite.
+
+## Second implementation batch
+
+The inherited control library has been removed. New native Studio controls,
+waveform rendering, typography and theme adapters now live in `UI/Controls/`.
+Timer, folder resolution, installation checks, diagnostics, source discovery,
+input monitoring, menu construction, permission coordination, transport state
+transitions, the recording controller and view-model lifecycle have replacement
+implementations. Existing preference keys and saved-session contracts are retained.
+
+The broad existing behavioral batch passed with 562 tests before the test-source
+replacement. Focused controller/menu/permission and helper batches also passed.
+Inherited test helpers and cases are now being re-expressed independently; this
+phase is incomplete. Mandatory native-core frozen reference files are unchanged.
+The staged-content hook and microphone-rate measurement tool have replacement
+implementations; synthetic positive/negative tool checks passed.
+
+The owner confirmed recording, stopping and playback on the first installed
+candidate. One short combined-source take reported incomplete end coverage;
+its individual tracks completed, with zero registered timestamp gaps, no clipping
+and no reported PCM conversion failure. That timing finding remains open and is
+not evidence that the final replacement candidate has been manually accepted.

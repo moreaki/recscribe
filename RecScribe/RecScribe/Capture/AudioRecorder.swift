@@ -312,25 +312,22 @@ extension AudioFileWriting {
     var actualAudioURL: URL? { nil }
 }
 
-enum WaveformDownsampler {
-    nonisolated static func downsample(_ buffer: AVAudioPCMBuffer, targetSamples: Int = 200) -> [Float] {
-        guard let floatChannelData = buffer.floatChannelData else { return [] }
-        let frameCount = Int(buffer.frameLength)
-        let channelCount = Int(buffer.format.channelCount)
-        guard frameCount > 0, channelCount > 0 else { return [] }
-
-        let step = max(1, frameCount / targetSamples)
-        var samples: [Float] = []
-        samples.reserveCapacity(targetSamples)
-
-        for i in stride(from: 0, to: frameCount, by: step) {
-            var sample: Float = 0
-            for channel in 0..<channelCount {
-                sample += floatChannelData[channel][i]
+nonisolated enum WaveformDownsampler {
+    static func downsample(_ buffer: AVAudioPCMBuffer, targetSamples: Int = 200) -> [Float] {
+        withExtendedLifetime(buffer) {
+            let length = Int(buffer.frameLength)
+            let channels = Int(buffer.format.channelCount)
+            guard targetSamples > 0, length > 0, channels > 0,
+                  let planes = buffer.floatChannelData else { return [] }
+            let step = max(1, length / targetSamples)
+            let interleaved = buffer.format.isInterleaved
+            return stride(from: 0, to: length, by: step).map { frame in
+                let total = (0..<channels).reduce(Float.zero) { sum, channel in
+                    let plane = planes[interleaved ? 0 : channel]
+                    return sum + plane[frame * buffer.stride + (interleaved ? channel : 0)]
+                }
+                return total / Float(channels)
             }
-            sample /= Float(channelCount)
-            samples.append(sample)
         }
-        return samples
     }
 }

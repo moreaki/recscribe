@@ -1,19 +1,6 @@
-//
-//  AudioSource.swift
-//  RecScribe
-//
-//  What to capture audio from (BL-100 / #40). `AudioSourceManager` owns selection
-//  and persistence; `ScreenCaptureAudioManager` and `DeviceInputCapture` resolve
-//  the composable `{ playback, inputs, allowDuplicateRoutes }` graph at capture setup time.
-//
 
 import Foundation
 
-/// Composable audio capture configuration combining an optional playback source
-/// with zero or more input device selections (#40).
-///
-/// Supports lossless `Codable` decoding of both the composable schema and legacy
-/// 5-case enum payloads (`systemAll`, `app`, `mic`, `mixed`, `multiple`).
 nonisolated struct AudioSource: Sendable, Equatable, Hashable {
 
     nonisolated enum Playback: Codable, Sendable, Equatable, Hashable {
@@ -25,9 +12,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
     var playback: Playback
     var inputs: [InputSelection]
     var allowDuplicateRoutes: Bool
-    /// Preserves whether the selection uses the multi-input routing surface (`.multiple`)
-    /// so single-input + playback presets (`.mixed`) and multi-input routing groups remain
-    /// distinguishable where required by menu and manifest-version semantics.
     var usesMultiInputRouting: Bool
 
     init(
@@ -44,9 +28,7 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
             || (usesMultiInputRouting ?? (inputs.count > 1 || allowDuplicateRoutes || (playback == .none && inputs.count != 1)))
     }
 
-    // MARK: - Canonical Presets & Factories
 
-    /// Everything the Mac plays (excluding RecScribe), with no input device.
     static let systemAll = AudioSource(
         playback: .systemAll,
         inputs: [],
@@ -54,7 +36,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         usesMultiInputRouting: false
     )
 
-    /// Only the playback emitted by the application with `bundleID`.
     static func app(bundleID: String) -> AudioSource {
         AudioSource(
             playback: .app(bundleID: bundleID),
@@ -64,8 +45,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         )
     }
 
-    /// A microphone or other input device alone, by `AVCaptureDevice.uniqueID` / Core Audio UID (BL-130).
-    /// Uses `DeviceInputCapture` directly (`playback == .none`), requiring only Microphone permission.
     static func mic(deviceUID: String) -> AudioSource {
         AudioSource(
             playback: .none,
@@ -75,7 +54,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         )
     }
 
-    /// System or application playback recorded simultaneously with one explicit input device.
     static func mixed(appBundleID: String?, deviceUID: String) -> AudioSource {
         AudioSource(
             playback: appBundleID.map(Playback.app(bundleID:)) ?? .systemAll,
@@ -85,7 +63,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         )
     }
 
-    /// Multi-source routing configuration with optional app/system playback and `0...N` inputs.
     static func multiple(
         appBundleID: String?,
         inputs: [InputSelection],
@@ -99,7 +76,6 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
         )
     }
 
-    /// Inputs-only configuration with no playback capture (`playback == .none`).
     static func inputsOnly(
         _ inputs: [InputSelection],
         allowDuplicateRoutes: Bool = false
@@ -113,19 +89,11 @@ nonisolated struct AudioSource: Sendable, Equatable, Hashable {
     }
 }
 
-/// The *category* a source belongs to, which is what the menu renders as a row.
-///
-/// One row per kind, always — so the menu's shape never changes in response to
-/// what the world does (an app launching, a mic being plugged in). Only the
-/// contents behind a row change (BL-111).
 nonisolated enum AudioSourceKind: Hashable, Sendable, CaseIterable {
     case mixed
     case multiple
-    /// Everything the Mac plays. A singleton: it needs no submenu.
     case systemAll
-    /// One running app, chosen from a list enumerated at runtime.
     case app
-    /// One input device, chosen from a list enumerated at runtime.
     case microphone
 }
 
@@ -148,8 +116,6 @@ nonisolated extension AudioSource {
         }
     }
 
-    /// Whether this configuration captures system or application playback via ScreenCaptureKit.
-    /// False when `playback == .none` (input-only capture uses `DeviceInputCapture` without `SCStream`).
     var requiresScreenCapture: Bool {
         playback != .none
     }
@@ -196,16 +162,13 @@ nonisolated extension AudioSource {
     }
 }
 
-// MARK: - Backward-Compatible Codable (#40)
 
 nonisolated extension AudioSource: Codable {
     private enum CodingKeys: String, CodingKey {
-        // Composable schema keys
         case playback
         case inputs
         case allowDuplicateRoutes
         case usesMultiInputRouting
-        // Legacy 5-case enum keys
         case systemAll
         case app
         case mic
@@ -252,7 +215,6 @@ nonisolated extension AudioSource: Codable {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        // 1. Composable `{ playback, inputs, allowDuplicateRoutes }` schema
         if container.contains(.playback) || container.contains(.inputs) {
             let playback = try container.decodeIfPresent(Playback.self, forKey: .playback) ?? .systemAll
             let inputs = try container.decodeIfPresent([InputSelection].self, forKey: .inputs) ?? []
@@ -267,7 +229,6 @@ nonisolated extension AudioSource: Codable {
             return
         }
 
-        // 2. Legacy 5-case enum payloads
         if container.contains(.systemAll) {
             _ = try container.nestedContainer(keyedBy: EmptyKeys.self, forKey: .systemAll)
             self = .systemAll
@@ -331,9 +292,7 @@ nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Ident
     static let defaultRoutes: [InputChannelRoute] = [.init(channel: 0, placement: .center)]
     var id: String { deviceUID }
     var deviceUID: String
-    /// Mix routing only. All native channels are retained in the source session.
     var routes: [InputChannelRoute]
-    /// Ordered sub-device UIDs recorded when selecting a Core Audio aggregate device (#36).
     var aggregateMembers: [String]?
     static let maximumDevices = 8
     init(
@@ -352,8 +311,6 @@ nonisolated struct InputSelection: Codable, Equatable, Sendable, Hashable, Ident
         }
         aggregateMembers = device.isAggregate && !device.aggregateMembers.isEmpty ? device.aggregateMembers : nil
     }
-    /// True when the channel routing differs from the canonical single-input mono-center default,
-    /// requiring `MultiSourceRecorder` to preserve custom channel placement and multi-channel source tracks.
     var hasCustomRoutes: Bool {
         routes != Self.defaultRoutes
     }

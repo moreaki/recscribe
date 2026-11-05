@@ -111,11 +111,11 @@ struct ReskinSnapshots {
         //
         // Injecting the theme is therefore the only lever that actually changes
         // anything here. The cost is that it proves the *palette* is legible,
-        // not that `glassThemeAdaptingToContrast()` fires — the wiring itself
+        // not that `studioThemeAdaptingToContrast()` fires — the wiring itself
         // stays a human check with the real system setting.
         let root = view()
             .background(WorkspaceStyle.background)
-            .glassTheme(contrast == .increased ? .highContrast : .standard)
+            .studioTheme(contrast == .increased ? .highContrast : .standard)
 
         let hosting = NSHostingView(rootView: root)
         hosting.frame = CGRect(origin: .zero, size: size)
@@ -234,15 +234,15 @@ struct ReskinSnapshots {
         guard Self.outputDirectory != nil else { return }
         let document = try ReadingFixtures.preview
         write("transcript-reading", size: CGSize(width: 680, height: 500), contrast: .standard) {
-            TranscriptReadingView(document: document).padding(GlassSpacing.xl)
+            TranscriptReadingView(document: document).padding(StudioSpacing.xl)
                 .background(WorkspaceStyle.background).preferredColorScheme(.dark)
         }
         write("transcript-variants-expanded", size: CGSize(width: 680, height: 640), contrast: .standard) {
-            TranscriptReadingView(document: document, expandedGroups: ["s3"]).padding(GlassSpacing.xl)
+            TranscriptReadingView(document: document, expandedGroups: ["s3"]).padding(StudioSpacing.xl)
                 .background(WorkspaceStyle.background).preferredColorScheme(.dark)
         }
         write("transcript-all-channels", size: CGSize(width: 680, height: 640), contrast: .standard) {
-            TranscriptReadingView(document: document, mode: .channels).padding(GlassSpacing.xl)
+            TranscriptReadingView(document: document, mode: .channels).padding(StudioSpacing.xl)
                 .background(WorkspaceStyle.background).preferredColorScheme(.dark)
         }
     }
@@ -252,14 +252,14 @@ struct ReskinSnapshots {
         for section in TranscriptWorkspace.Section.allCases {
             for width: CGFloat in [560, 340, 220] {
                 write("transcript-tabs-\(section.rawValue)-\(Int(width))", size: CGSize(width: width, height: 72), contrast: .standard) {
-                    WorkspaceTabs(title: "Text view", selection: .constant(section)).padding(GlassSpacing.md)
+                    WorkspaceTabs(title: "Text view", selection: .constant(section)).padding(StudioSpacing.md)
                         .background(WorkspaceStyle.background).preferredColorScheme(.dark)
                 }
             }
         }
         for section in SettingsSection.allCases {
             write("settings-tabs-\(section.rawValue)", size: CGSize(width: 720, height: 72), contrast: .standard) {
-                WorkspaceTabs(title: "Settings", selection: .constant(section)).padding(GlassSpacing.md)
+                WorkspaceTabs(title: "Settings", selection: .constant(section)).padding(StudioSpacing.md)
                     .background(WorkspaceStyle.background).preferredColorScheme(.dark)
             }
         }
@@ -381,7 +381,7 @@ struct ReskinSnapshots {
 
     /// Standard palette only, unlike the main window.
     ///
-    /// `MenuBarPopoverView` calls `.glassThemeAdaptingToContrast()` on itself —
+    /// `MenuBarPopoverView` calls `.studioThemeAdaptingToContrast()` on itself —
     /// it is hosted by AppKit, so that is the only place the injection can go —
     /// which overrides anything set from outside and resolves back to
     /// `.standard`. Emitting an "increased contrast" image here would show the

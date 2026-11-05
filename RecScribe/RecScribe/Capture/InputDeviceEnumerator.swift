@@ -1,20 +1,7 @@
-//
-//  InputDeviceEnumerator.swift
-//  RecScribe
-//
-//  Lists microphones and other audio input devices for the capture-source
-//  picker (BL-130).
-//
-//  Discovery is prompt-free. Core Audio adds channel/rate capabilities and
-//  eligible virtual/aggregate inputs; UID identity is retained for SCK.
-//
-
 import AVFoundation
 import CoreAudio
 
-/// One input device the picker can offer.
 nonisolated struct InputDeviceInfo: Identifiable, Sendable, Equatable {
-    /// `AVCaptureDevice.uniqueID`, passed straight to `microphoneCaptureDeviceID`.
     var id: String { uid }
     let uid: String
     let name: String
@@ -34,7 +21,6 @@ nonisolated struct InputDeviceInfo: Identifiable, Sendable, Equatable {
 
 @MainActor
 protocol InputDeviceEnumerating: AnyObject {
-    /// Currently connected input devices, in the order macOS reports them.
     func availableInputDevices() -> [InputDeviceInfo]
 }
 
@@ -42,18 +28,12 @@ protocol InputDeviceEnumerating: AnyObject {
 final class InputDeviceEnumerator: InputDeviceEnumerating {
 
     func availableInputDevices() -> [InputDeviceInfo] {
-        // `.microphone` covers built-in and USB/Thunderbolt interfaces;
-        // `.external` picks up devices macOS classifies separately.
-        let session = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.microphone, .external],
-            mediaType: .audio,
-            position: .unspecified
-        )
-        // Names come from macOS verbatim; capabilities and aggregate membership
-        // come from HAL. Filter only after merging so neither discovery API can
-        // reintroduce a helper excluded by the other.
-        let discovered = session.devices.map { InputDeviceInfo(uid: $0.uniqueID, name: $0.localizedName) }
-        return Self.mergedInputs(discovered: discovered, hardware: Self.coreAudioInputs())
+        let discovery = AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external],
+                                                          mediaType: .audio, position: .unspecified)
+        let labels = discovery.devices.map { device in
+            InputDeviceInfo(uid: device.uniqueID, name: device.localizedName)
+        }
+        return Self.mergedInputs(discovered: labels, hardware: Self.coreAudioInputs())
     }
 
     nonisolated static func mergedInputs(discovered: [InputDeviceInfo], hardware: [InputDeviceInfo]) -> [InputDeviceInfo] {

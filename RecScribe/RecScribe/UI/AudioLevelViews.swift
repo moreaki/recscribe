@@ -221,7 +221,7 @@ struct SessionPlaybackView: View {
 
     var body: some View {
         if playback.hasPresentation {
-            VStack(alignment: .leading, spacing: GlassSpacing.s) {
+            VStack(alignment: .leading, spacing: StudioSpacing.s) {
                 if showsSourceIdentity, let name = playback.sourceName {
                     Text(name).workspaceFont(.detail).lineLimit(2).fixedSize(horizontal: false, vertical: true).help(name)
                         .accessibilityIdentifier("playback-source")
@@ -229,14 +229,14 @@ struct SessionPlaybackView: View {
                 PlaybackStatusView(phase: playback.phase, errorMessage: playback.errorMessage)
                 if playback.player != nil {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: GlassSpacing.s) {
+                        HStack(spacing: StudioSpacing.s) {
                             transportButtons
                             timeline.frame(minWidth: WorkspaceStyle.playbackSliderMinimumWidth)
                             timecode.fixedSize(horizontal: true, vertical: false)
                             stopButton
                         }
-                        VStack(alignment: .leading, spacing: GlassSpacing.s) {
-                            HStack(spacing: GlassSpacing.s) { transportButtons; Spacer(); stopButton }
+                        VStack(alignment: .leading, spacing: StudioSpacing.s) {
+                            HStack(spacing: StudioSpacing.s) { transportButtons; Spacer(); stopButton }
                             timeline
                             timecode.frame(maxWidth: .infinity, alignment: .trailing)
                         }
@@ -244,7 +244,7 @@ struct SessionPlaybackView: View {
                     if showListeningControls {
                         DisclosureGroup("Playback output", isExpanded: $showOutput) {
                             ListeningControls(levels: playback.levels, title: "Playback output", hardwareObserver: playback.hardwareObserver)
-                                .padding(.top, GlassSpacing.xs)
+                                .padding(.top, StudioSpacing.xs)
                         }.workspaceFont(.detail)
                     }
                 } else {
@@ -256,7 +256,7 @@ struct SessionPlaybackView: View {
     }
 
     private var transportButtons: some View {
-        HStack(spacing: GlassSpacing.s) {
+        HStack(spacing: StudioSpacing.s) {
             Button { playback.togglePlayback() } label: {
                 Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
             }.accessibilityLabel(playback.isPlaying ? "Pause playback" : "Resume playback")
@@ -296,16 +296,16 @@ struct SessionPlaybackView: View {
 struct PlaybackStatusView: View {
     let phase: PlaybackPhase
     var errorMessage: String?
-    @Environment(\.glassTheme) private var theme
+    @Environment(\.studioTheme) private var theme
     var body: some View {
         Group {
             if phase == .preparing || phase == .buffering {
-                HStack(spacing: GlassSpacing.sm) {
+                HStack(spacing: StudioSpacing.sm) {
                     ProgressView().controlSize(.small)
                     Text(phase.label)
                 }
             } else if phase == .failed {
-                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     Label(phase.label, systemImage: "exclamationmark.triangle")
                     if let errorMessage { Text(errorMessage).textSelection(.enabled) }
                     Text("Reopen or verify the recording before trying playback again.")

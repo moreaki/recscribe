@@ -10,131 +10,73 @@ struct MenuBarPopoverView: View {
     var body: some View {
         PopoverFrame(layout: layout) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    GlassBrandLockup(size: .compact)
-
-                    Spacer()
-
-                    OverflowMenuButton()
-                }
-
-                HStack(spacing: 8) {
-                    if viewModel.isRecording {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 8, height: 8)
-                    }
-
-                    Text(viewModel.statusText)
-                        .workspaceFont(.status)
-                        .foregroundColor(viewModel.isRecording ? .red : .primary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer()
-
-                    if viewModel.isRecording {
-                        PopoverDurationText(telemetry: viewModel.telemetry)
-                    }
-                }
-
+                HStack { StudioBrandLockup(); Spacer(); OverflowMenuButton() }
+                status
                 CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
-            RecordingReviewNotice(recorder: viewModel)
+                RecordingReviewNotice(recorder: viewModel)
                 MultipleInputsView(recorder: viewModel)
-                if viewModel.selectedSource.kind != .multiple {
-                    RecordingLevelsView(recorder: viewModel)
-                }
-
-                if case .error = viewModel.state, let message = viewModel.errorMessage {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(message)
-                            .workspaceFont(.detail)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        if let recovery = viewModel.recoverySuggestion {
-                            GlassPillButton(
-                                recovery.label,
-                                emphasis: .secondary,
-                                size: .mini
-                            ) {
-                                viewModel.performRecovery()
-                            }
-                        }
-                    }
-                }
-
-                if viewModel.isRecording {
-                    PopoverWaveformSection(telemetry: viewModel.telemetry)
-                }
-
-                if viewModel.installLocationBlocksRecording, let message = viewModel.installNotice {
-                    Text(message)
-                        .workspaceFont(.detail)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    GlassPillButton(
-                        "Reveal in Finder",
-                        emphasis: .primaryNeutral,
-                        size: .medium,
-                        isFullWidth: true
-                    ) {
-                        viewModel.revealAppInFinder()
-                    }
-                } else {
-                    GlassPillButton(
-                        viewModel.isRecording ? "Stop recording" : "Start recording",
-                        systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle",
-                        emphasis: .primary,
-                        size: .medium,
-                        isFullWidth: true
-                    ) {
-                        Task {
-                            await viewModel.toggleRecording()
-                        }
-                    }
-                }
-
+                if viewModel.selectedSource.kind != .multiple { RecordingLevelsView(recorder: viewModel) }
+                failureActions
+                if viewModel.isRecording { PopoverWaveformSection(telemetry: viewModel.telemetry) }
+                transport
                 if let live {
                     Divider()
                     LiveTranscriptionControl(live: live)
                     Text(live.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
-
-                if let url = viewModel.lastRecordingURL,
-                    !viewModel.isRecording,
-                    !viewModel.installLocationBlocksRecording
-                {
+                if !viewModel.isRecording, !viewModel.installLocationBlocksRecording,
+                   let recording = viewModel.lastRecordingURL {
                     HStack {
-                        Image(systemName: "doc.fill")
-                            .foregroundColor(.secondary)
-                        Text(url.lastPathComponent)
-                            .workspaceFont(.detail)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .foregroundColor(.secondary)
-
+                        Label(recording.lastPathComponent, systemImage: "doc.fill")
+                            .workspaceFont(.detail).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                         Spacer()
-
-                        GlassPillButton(
-                            "Reveal",
-                            emphasis: .tertiary,
-                            size: .mini
-                        ) {
-                            viewModel.revealInFinder()
-                        }
+                        Button("Reveal") { viewModel.revealInFinder() }.buttonStyle(.borderless)
                     }
                 }
-
             }
-            .padding(WorkspaceStyle.contentPadding)
-            .frame(width: WorkspaceStyle.popoverWidth)
-        } footer: {
-            footer
+            .padding(WorkspaceStyle.contentPadding).frame(width: WorkspaceStyle.popoverWidth)
+        } footer: { footer }
+        .fixedSize(horizontal: false, vertical: true).background(WorkspaceStyle.background).studioThemeAdaptingToContrast()
+    }
+
+    private var status: some View {
+        HStack(spacing: 8) {
+            if viewModel.isRecording { Circle().fill(.red).frame(width: 8, height: 8) }
+            Text(viewModel.statusText).workspaceFont(.status)
+                .foregroundStyle(viewModel.isRecording ? Color.red : Color.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            if viewModel.isRecording { PopoverDurationText(telemetry: viewModel.telemetry) }
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .background(WorkspaceStyle.background)
-        .glassThemeAdaptingToContrast()
+    }
+    @ViewBuilder private var failureActions: some View {
+        if case .error = viewModel.state, let explanation = viewModel.errorMessage {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(explanation).workspaceFont(.detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let action = viewModel.recoverySuggestion {
+                    Button(action.label) { viewModel.performRecovery() }.buttonStyle(.bordered)
+                }
+            }
+        }
+    }
+    @ViewBuilder private var transport: some View {
+        if viewModel.installLocationBlocksRecording {
+            if let explanation = viewModel.installNotice {
+                Text(explanation).workspaceFont(.detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            StudioPillButton("Reveal in Finder", emphasis: .primaryNeutral, size: .medium, isFullWidth: true) {
+                viewModel.revealAppInFinder()
+            }
+        } else if !viewModel.canRecord {
+            StudioPillButton("Open System Settings", emphasis: .primaryNeutral, size: .medium, isFullWidth: true) {
+                viewModel.openSystemSettings()
+            }
+        } else {
+            StudioPillButton(viewModel.isRecording ? "Stop recording" : "Start recording",
+                systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle",
+                size: .medium, isFullWidth: true) { Task { await viewModel.toggleRecording() } }
+                .disabled(viewModel.isFinalizingAfterFailure || (!viewModel.allowsCaptureSourceChange && !viewModel.isRecording))
+        }
     }
 
     private var footer: some View {
@@ -226,7 +168,7 @@ private struct PopoverWaveformSection: View {
     @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
-        GlassLiveWaveform(
+        StudioLiveWaveform(
             samples: RecorderWaveformAdapter.magnitudes(
                 telemetry.waveformSamples,
                 bucketedTo: RecorderWaveformAdapter.popoverBarCount

@@ -82,170 +82,121 @@ import Observation
     }
 
     func startRecording() async {
-        if automaticRoutingEnabled, allowsCaptureSourceChange { refreshAvailableRoutingSources(audioSource.availableInputDevices()) }
+        if automaticRoutingEnabled, allowsCaptureSourceChange {
+            refreshAvailableRoutingSources(audioSource.availableInputDevices())
+        }
         guard !isFinalizingAfterFailure, state.canTransition(to: .starting) else { return }
-
-        guard !installLocation.blocksRecording else {
-            showInstallLocationNotice()
-            return
-        }
-
-        if selectedSource.requiresScreenCapture && permissionStatus != .granted {
+        if installLocation.blocksRecording { showInstallLocationNotice(); return }
+        if selectedSource.requiresScreenCapture, permissionStatus != .granted {
             await requestPermission()
-            if permissionStatus != .granted {
-                return
-            }
+            guard permissionStatus == .granted else { return }
         }
-
+        // A second command may have arrived during the permission request.
+        guard !isFinalizingAfterFailure, state.canTransition(to: .starting) else { return }
         transition(to: .starting)
         await audioTest?.prepareForRecording()
         alerts.reviewMessage = nil
-        errorMessage = nil
-        showError = false
-        recoverySuggestion = nil
-
-        // Move to .starting before microphone denial: idle → error is illegal.
-        if selectedSource.requiresMicrophone {
-            guard await requestMicrophoneAccess() else {
-                transition(to: .error(.microphoneDenied))
-                return
-            }
+        alerts.errorMessage = nil
+        alerts.showError = false
+        alerts.recoverySuggestion = nil
+        if selectedSource.requiresMicrophone, !(await requestMicrophoneAccess()) {
+            transition(to: .error(.microphoneDenied))
+            return
         }
-
+        controller.onWaveformData = { [weak self] in self?.telemetry.waveformSamples = $0 }
         do {
-            controller.onWaveformData = { [weak self] samples in
-                Task { @MainActor in
-                    self?.waveformSamples = samples
-                }
-            }
-            let fileURL = try await controller.startRecording()
-            lastRecordingURL = fileURL
+            lastRecordingURL = try await controller.startRecording()
             recordingStartTime = clock.now
-            duration = 0
+            telemetry.duration = 0
             longRecordingWarned = false
-
             transition(to: .recording)
-
             refreshCaptureHealth()
-            startTimer()
-
+            clock.startTicking(every: 0.1) { [weak self] in self?.updateElapsedTime() }
             if preferences.saveLocation.isConfiguredLocationUnavailable {
                 presentError(RecorderError.saveLocationUnavailable.message, recovery: .chooseFolder)
             }
-
-        } catch RecordingControllerError.insufficientDiskSpace {
-            Log.recorder.error("Refusing to record: insufficient disk space")
-            transition(to: .error(.diskFull))
-        } catch let sourceError as AudioSourceError {
-            Log.recorder.error(
-                "Capture source unavailable: \(sourceError.localizedDescription, privacy: .public)")
-            transition(to: .error(.sourceUnavailable(sourceError)))
         } catch {
-            Log.recorder.error(
-                "Failed to start recording: \(error.localizedDescription, privacy: .public)")
-            transition(to: .error(.startFailed(error.localizedDescription)))
+            Log.recordFailure(error, operation: "recording_start")
+            let failure: RecorderError
+            if case RecordingControllerError.insufficientDiskSpace = error { failure = .diskFull }
+            else if let missing = error as? AudioSourceError { failure = .sourceUnavailable(missing) }
+            else { failure = .startFailed(error.localizedDescription) }
+            transition(to: .error(failure))
         }
     }
 
     func stopRecording() async {
         guard state.canTransition(to: .stopping) else { return }
-
         transition(to: .stopping)
-
-        defer {
-            stopTimer()
-            waveformSamples = Array(repeating: 0, count: 200)
-        }
-
+        defer { clearTransportTelemetry() }
         do {
             try await controller.stopRecording()
             alerts.reviewMessage = controller.stopReviewMessage
             transition(to: .idle)
-
         } catch {
             Log.recordFailure(error, operation: "recording_stop")
-            if case RecordingControllerError.captureShutdownFailed(let cause) = error {
-                transition(to: .error(.captureStopFailed(cause.localizedDescription)))
-            } else if case SessionError.noAudio = error {
-                transition(to: .error(.noAudio))
-            } else {
-                transition(to: .error(.stopFailed(error.localizedDescription)))
+            let failure: RecorderError
+            switch error {
+            case RecordingControllerError.captureShutdownFailed(let cause): failure = .captureStopFailed(cause.localizedDescription)
+            case SessionError.noAudio: failure = .noAudio
+            default: failure = .stopFailed(error.localizedDescription)
             }
+            transition(to: .error(failure))
         }
     }
 
     func toggleRecording() async {
-        switch state {
-        case .idle, .error:
-            await startRecording()
-        case .recording:
-            await stopRecording()
-        case .starting, .stopping, .recovering:
-            break
-        }
+        if state == .recording { await stopRecording() }
+        else if state.allowsCaptureSourceChange { await startRecording() }
     }
-
     func stopAndStartNewTake() async {
-        guard state == .recording else { return }
+        guard isRecording else { return }
         await stopRecording()
-        guard state == .idle else { return }
-        await startRecording()
+        if state == .idle { await startRecording() }
     }
 
     private func handleStreamFailure(_ message: String) {
-        guard state == .recording else { return }
-        stopTimer()
+        guard isRecording else { return }
         isFinalizingAfterFailure = true
-        waveformSamples = Array(repeating: 0, count: 200)
+        clearTransportTelemetry()
         transition(to: .error(.streamFailed(message)))
+        let workflow = controller
         failureFinalizationTask = Task { [weak self] in
-            await self?.controller.finalizeAfterFailure()
+            await workflow.finalizeAfterFailure()
             self?.isFinalizingAfterFailure = false
             self?.failureFinalizationTask = nil
         }
     }
-
-    func waitForFailureFinalization() async {
-        await failureFinalizationTask?.value
-    }
+    func waitForFailureFinalization() async { await failureFinalizationTask?.value }
 
     private func transition(to next: RecordingState) {
         guard state.canTransition(to: next) else {
-            Log.recorder.error(
-                """
-                Rejected illegal recording-state transition: \
-                \(String(describing: self.state), privacy: .public) → \
-                \(String(describing: next), privacy: .public)
-                """)
+            Log.recorder.error("Rejected recording transition from \(String(describing: self.state), privacy: .public) to \(String(describing: next), privacy: .public)")
             return
         }
         state = next
         if next.allowsCaptureSourceChange { audioTest?.recordingFinished() }
-        if case .error(let recorderError) = next {
-            presentError(recorderError.message, recovery: recorderError.recovery)
-        }
+        if case .error(let failure) = next { alerts.present(failure.message, recovery: failure.recovery) }
     }
 
-    private func startTimer() {
-        clock.startTicking(every: 0.1) { [weak self] in
-            guard let self, let startTime = self.recordingStartTime else { return }
-            self.duration = self.clock.now.timeIntervalSince(startTime)
-            self.refreshCaptureHealth()
-            if !self.longRecordingWarned && self.duration >= DiskSpace.longRecordingThreshold {
-                self.longRecordingWarned = true
-                self.showLongRecordingWarning = true
-            }
+    private func updateElapsedTime() {
+        guard let began = recordingStartTime else { return }
+        telemetry.duration = clock.now.timeIntervalSince(began)
+        refreshCaptureHealth()
+        if telemetry.duration >= DiskSpace.longRecordingThreshold, !longRecordingWarned {
+            longRecordingWarned = true
+            alerts.showLongRecordingWarning = true
         }
+    }
+    private func clearTransportTelemetry() {
+        clock.stopTicking()
+        telemetry.waveformSamples = .init(repeating: 0, count: 200)
     }
 
     func refreshCaptureHealth() {
         healthTime = ProcessInfo.processInfo.systemUptime
         sourceHealth = controller.sourceHealth
         telemetry.sourceMeters = controller.sourceMeters
-    }
-
-    private func stopTimer() {
-        clock.stopTicking()
     }
 
     func enableAutomaticRouting(_ devices: [InputDeviceInfo]) {
@@ -281,20 +232,11 @@ import Observation
     }
 
     func performRecovery() {
-        let suggestion = recoverySuggestion
-        showError = false
-        switch suggestion {
-        case .openSettings:
-            openSystemSettings()
-        case .openMicrophoneSettings:
-            permissionCoordinator.openSystemPreferences(for: .microphone)
-        case .tryAgain:
-            Task { await startRecording() }
-        case .chooseFolder:
-            chooseSaveLocation()
-        case nil:
-            break
-        }
+        let action = alerts.recoverySuggestion
+        alerts.showError = false
+        if action == .openSettings { openSystemSettings() }
+        if action == .openMicrophoneSettings { permissionCoordinator.openSystemPreferences(for: .microphone) }
+        if action == .chooseFolder { chooseSaveLocation() }
+        if action == .tryAgain { Task { await startRecording() } }
     }
-
 }

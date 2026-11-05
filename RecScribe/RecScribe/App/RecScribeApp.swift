@@ -1,5 +1,3 @@
-// Based on Home Rec by Melissa de Britto Pereira; see NOTICE.
-// Modified for RecScribe's single-window studio and optional live ASR (2026).
 import SwiftUI
 import os
 

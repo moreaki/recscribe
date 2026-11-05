@@ -27,13 +27,24 @@ nonisolated enum LiveWhisperTranscriber {
     private static let nonSpeechMarkers: Set<String> = ["[blank_audio]", "[silence]", "[no_speech]"]
 
     static func step(manifest: URL, directory: URL, cursor: Int64, finished: Bool,
-                     settings: AppSettings.Values, cancel: WorkCancellation) throws -> LiveChunkResult? {
+                     settings: AppSettings.Values, cancel: WorkCancellation,
+                     profile: WhisperDecodingProfile = .baseline, capabilities: String? = nil,
+                     runtimeVersion: String? = nil) throws -> LiveChunkResult? {
         try cancel.check()
         let manager = FileManager.default
         guard manager.isExecutableFile(atPath: settings.whisperPath),
               manager.isReadableFile(atPath: settings.modelPath),
               LiveTranscriptionPolicy.threadRange.contains(settings.liveThreads) else {
             throw SessionError.invalid("Select an installed Whisper executable and model in Settings → Models")
+        }
+        // Experimental callers provide capabilities captured once when their
+        // worker starts. Saved settings remain the unchanged baseline, and no
+        // help/version/model hashing process runs for every live chunk.
+        if !profile.isBaseline {
+            guard let capabilities else { throw SessionError.invalid("Experimental live profiles require validated Whisper capabilities") }
+            try profile.validate(help: capabilities)
+            try profile.languagePolicy.validateRuntime(version: runtimeVersion ?? "unknown")
+            try profile.speech.validateModel(fallback: settings.vadModelPath.isEmpty ? nil : URL(fileURLWithPath: settings.vadModelPath))
         }
         let clock = ContinuousClock.now
         let attempt = directory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -61,11 +72,42 @@ nonisolated enum LiveWhisperTranscriber {
         defer { try? manager.removeItem(at: audio) }
         if try convert(source, channel: channel, to: audio, cancel: cancel) {
             let output = attempt.appendingPathComponent("channel-\(channel).raw")
-            let arguments = arguments(audio: audio, output: output, settings: settings)
-            _ = try LocalProcessRunner.run(URL(fileURLWithPath: settings.whisperPath), arguments,
-                                          in: attempt, cancel: cancel, timeout: LiveTranscriptionPolicy.timeout)
+            let arguments: [String]
+            if profile.isBaseline { arguments = Self.arguments(audio: audio, output: output, settings: settings) }
+            else {
+                arguments = try Self.arguments(audio: audio, output: output, settings: settings,
+                                               profile: profile, capabilities: capabilities!, runtimeVersion: runtimeVersion)
+            }
+            var evidence: JSONValue = ["decoding": profile.provenance, "speech": profile.speech.evidence,
+                "command": .array(([settings.whisperPath] + arguments).map(JSONValue.string)),
+                "source_manifest": .string(manifest.path), "scope": "derived_live_mix",
+                "source_start_frame": .integer(slice.startFrame), "committed_start_frame": .integer(cursor),
+                "source_end_frame": .integer(slice.endFrame), "sample_rate": .integer(Int64(slice.sampleRate)),
+                "language_policy": profile.languagePolicy.provenance(configured: settings.sourceLanguage, detected: .null)]
+            let evidenceURL = output.appendingPathExtension("profile.json")
+            try evidence.encoded().write(to: evidenceURL, options: .withoutOverwriting)
+            var runner = LocalProcessRunner()
+            runner.policy.timeout = LiveTranscriptionPolicy.timeout
+            let process = try runner.execute(URL(fileURLWithPath: settings.whisperPath), arguments, in: attempt, cancel: cancel)
+            // The general diagnostic ring is disposable. Keep this attempt's
+            // bounded prefix/tail and outcome beside its raw recognizer bytes,
+            // including failed/cancelled processing, without logging text.
+            let processURL = output.appendingPathExtension("process.json")
+            let processEncoder = JSONEncoder()
+            processEncoder.dateEncodingStrategy = .iso8601
+            try processEncoder.encode(process).write(to: processURL, options: .withoutOverwriting)
+            evidence["process_evidence"] = .string(processURL.lastPathComponent)
+            evidence["process_output_truncated"] = .bool(process.outputTruncated)
+            try evidence.encoded().write(to: evidenceURL, options: .atomic)
+            if process.outcome == .cancelled { throw CancellationError() }
+            guard process.outcome == .exited, process.exitCode == 0, process.diagnosticError == nil else {
+                throw LocalProcessRunner.Failure(result: process)
+            }
             asrRuns += 1
             segments += try parse(output.appendingPathExtension("json"), slice: slice, cursor: cursor, channel: channel)
+            evidence["language_policy"] = profile.languagePolicy.provenance(configured: settings.sourceLanguage,
+                detected: segments.first?.language.map(JSONValue.string) ?? .null)
+            try evidence.encoded().write(to: evidenceURL, options: .atomic)
         } else {
             try Data("Digital silence; no ASR run.\n".utf8).write(to: attempt.appendingPathComponent("channel-\(channel).silence.txt"))
         }
@@ -91,7 +133,19 @@ nonisolated enum LiveWhisperTranscriber {
         let configured = settings.sourceLanguage.trimmingCharacters(in: .whitespacesAndNewlines)
         let language = configured.split(separator: "-", maxSplits: 1).first.map { $0.lowercased() } ?? "auto"
         return ["-m", settings.modelPath, "-f", audio.path, "-l", language,
-                "-ojf", "-of", output.path, "-t", String(settings.liveThreads), "-tp", "0", "-mc", "0"]
+                "-ojf", "-of", output.path, "-t", String(settings.liveThreads)] + WhisperDecodingProfile.baseline.decodingArguments
+    }
+
+    static func arguments(audio: URL, output: URL, settings: AppSettings.Values,
+                          profile: WhisperDecodingProfile, capabilities: String,
+                          runtimeVersion: String? = nil) throws -> [String] {
+        try profile.validate(help: capabilities)
+        try profile.languagePolicy.validateRuntime(version: runtimeVersion ?? "unknown")
+        let language = try profile.languagePolicy.effectiveArgument(configured: settings.sourceLanguage, speech: profile.speech)
+        let vad = settings.vadModelPath.isEmpty ? nil : URL(fileURLWithPath: settings.vadModelPath)
+        try profile.speech.validateModel(fallback: vad)
+        return ["-m", settings.modelPath, "-f", audio.path, "-l", language,
+                "-ojf", "-of", output.path, "-t", String(settings.liveThreads)] + profile.decodingArguments + (try profile.speech.arguments(vad: vad))
     }
 
     /// Live and final jobs share the same bounded native converter.

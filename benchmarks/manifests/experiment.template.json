@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "baseline_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4",
+  "baseline_cli": null,
+  "baseline_cli_sha256": null,
+  "whisper_cli": null,
+  "split": "development",
+  "threads": 2,
+  "repetitions": 3,
+  "language_modes": ["known", "auto"],
+  "paths": ["final", "live-replay"],
+  "capture_inactive": false,
+  "workload_attestation": null,
+  "freeze": null,
+  "profiles": [{"id": "untouched", "kind": "baseline", "source_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4", "settings": null}],
+  "models": [
+    {"id": "tiny", "checkpoint": "multilingual-tiny", "precision": null, "path": null, "sha256": null},
+    {"id": "base", "checkpoint": "multilingual-base", "precision": null, "path": null, "sha256": null},
+    {"id": "small", "checkpoint": "multilingual-small", "precision": null, "path": null, "sha256": null},
+    {"id": "large-v3-turbo", "checkpoint": "multilingual-large-v3-turbo", "precision": null, "path": null, "sha256": null},
+    {"id": "large-v3", "checkpoint": "multilingual-large-v3", "precision": null, "path": null, "sha256": null}
+  ]
+}

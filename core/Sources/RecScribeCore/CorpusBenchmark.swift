@@ -96,6 +96,7 @@ public enum CorpusBenchmark {
                             guard let whisper, let model else {
                                 throw CoreFailure("A measured run requires --whisper-cli and --model")
                             }
+                            row["artifact_metrics"] = try WhisperBenchmarkMetrics.artifact(model, check: check)
                             let timing = output.appendingPathComponent("\(id).time.txt")
                             let started = ContinuousClock.now
                             var command = [
@@ -133,12 +134,15 @@ public enum CorpusBenchmark {
                             row["status"] = value["status"]
                             row["wall_seconds"] = .number(seconds)
                             row["real_time_factor"] = duration > 0 ? .number(seconds / (duration / 1000)) : nil
+                            row["source_audio_seconds"] = duration > 0 ? .number(duration / 1_000) : nil
+                            row["end_to_end_audio_seconds_per_second"] = duration > 0 && seconds > 0 ? .number(duration / 1_000 / seconds) : nil
                             row["peak_rss_bytes"] = rss.map(JSONValue.integer) ?? .null
                             row["hypothesis_sha256"] = .string(TextJob.hash(Data(hypothesis.utf8)))
                             row["memory_method"] = "macOS time -l; maximum process RSS, not summed concurrent memory"
                             row["source_sha256"] = eligibility.audioSHA256.map(JSONValue.string) ?? .null
                             row["reference_sha256"] = eligibility.referenceSHA256.map(JSONValue.string) ?? .null
                             row["engine_passes"] = value["processing"]["engine_passes"]
+                            row["engine_runtime_measurements"] = try WhisperBenchmarkMetrics.retainedPasses(value["processing"]["engine_passes"], job: job, check: check)
                             row["threads"] = .integer(Int64(threads))
                             let referenceData = try read(truth, maximum: TranscriptAccuracy.maximumScoringTextBytes)
                             guard TextJob.hash(referenceData) == eligibility.referenceSHA256,

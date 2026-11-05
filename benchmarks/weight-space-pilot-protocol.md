@@ -153,3 +153,11 @@ gate **not evaluated** for this diagnostic. Shared desktop-load measurements
 cannot establish a speed/memory pass. Native critical-content review and all
 product-promotion gates remain unresolved. A later controlled resource comparison
 requires a fresh matching parent/candidate experiment, with this history retained.
+
+The later 27-utterance expansion was also interrupted before its edited-model
+half: Contacts reached 369.2% raw CPU. Clean cancellation retained 23 completed
+Tiny cells and one cancelled cell. A fresh, uniformly configured accuracy-only
+expansion uses a 1000% raw per-process extreme-contention stop (ten of 24 cores).
+Its partial predecessors remain separate; capture and known-heavy-work gates,
+model/decoding identities and all numerical quality thresholds stay unchanged.
+This operational change establishes no resource acceptance or idle-host claim.

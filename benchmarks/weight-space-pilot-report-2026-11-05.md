@@ -1,19 +1,25 @@
-# First AI weight-edit diagnostic — 2026-11-05
+# AI weight-edit development pilot — 2026-11-05
 
-The last-layer Tiny weight edit reduced known-language macro CER from
-**21.37% to 18.96%**, an **11.3% relative reduction**, on nine
-preselected development utterances. Swiss German remained poor and unchanged:
-**54.65% CER / 115.38% WER** against written Standard German. This result supports
-a larger development comparison; it does not establish representative accuracy,
-an improved causal mechanism, a smaller model, or a new default.
+On all **27 development utterances**, the last-layer Tiny edit reduced equal-
+language macro CER from **18.83% to 17.16%**, an **8.9% relative reduction** in
+both known and automatic modes. Swiss CER improved **45.42% → 43.75%**, while
+Swiss WER worsened **111.76% → 120.59%**. German and Arabic CER also rose slightly.
+This is a mixed lexical result, with native/critical-content review unresolved,
+rather than evidence for a bundled default or general semantic improvement.
 
-All **324/324 inference cells** and **216/216 paired cells** completed. The
-three weight recipes and source selection were fixed before edited-model
-outcomes. Only successful repeat 1 supplies quality; three repeats are runtime
-and variation observations, not additional independent speech. Native reference
-and critical-content review remain unresolved. Latency/RSS observations are
-**UNCONTROLLED**; the 10% resource gate is **NOT EVALUATED**. No held-out score,
-release approval or model promotion is claimed.
+The first nine-utterance diagnostic completed **324/324 inference cells** and
+**216/216 paired cells**; its last-layer macro CER was **21.37% → 18.96%**
+(11.3% relative). It selected the unchanged last-layer artifact for the separate
+27-utterance expansion, which completed another **324/324 cells and 162/162
+pairs**. The first nine sources are a subset of those 27; the two studies are
+reported separately and do not create extra independent speech samples.
+
+Recipes and source selection were fixed before edited-model outcomes. Only
+successful repeat 1 supplies quality; repeated inference measures variation.
+Latency/RSS observations are **UNCONTROLLED** and the 10% resource gate is
+**NOT EVALUATED**. No held-out score, release approval or model promotion is
+claimed. The completed expansion and per-language table appear below the first
+diagnostic's full results and execution history.
 
 This report covers the first diagnostic for [#112](https://github.com/moreaki/recscribe/issues/112).
 The [frozen protocol](weight-space-pilot-protocol.md) defines the experiment and
@@ -148,6 +154,13 @@ CER against Base and has the four listed per-language CER regressions; against
 Tiny its Mandarin CER also worsens substantially. No independent critical names,
 numbers, negation, omission or semantic review has cleared any candidate.
 
+A separate AI-only text comparison of the nine known-mode pairs found lingering
+geography/time-zone/entity errors and possible French/Spanish wording regressions.
+Some Italian/Portuguese wording improves, while critical actors and claims remain
+unresolved. Swiss and English outputs are byte-identical. Hash-linked review
+notes remain protected externally. This text comparison supplies no native,
+audio or human adjudication and does not clear a critical-content gate.
+
 ### Observed automatic labels
 
 | Model | Observed repeat-1 labels | Coarse source-label matches | Mismatch |
@@ -275,15 +288,81 @@ replace the pending human/reference review or applicable full PR CI.
 
 ## Development expansion and remaining gates
 
-A fresh paired **27-utterance** development expansion of unchanged Tiny and
-Last +10% is **in progress**, under `development-27-last-layer-shared-v3/`:
-two models × 27 sources × two language modes × three repeats = 324 inference
-cells, with 162 planned matched pairs. Its configuration SHA-256 is
+The fresh paired **27-utterance** development expansion of unchanged Tiny and
+Last +10% completed **324/324 inference cells and 162/162 matched pairs**, under
+`development-27-last-layer-shared-v3/`: two models × 27 sources × two language
+modes × three repeats. Its 36 model/language/mode cohorts each contain three
+unique sources and nine invocations; its 18 comparison cohorts each contain
+nine matched repeat pairs. Its configuration SHA-256 is
 `1b2d1f7826073ea8bacc7e040ca21e286b61077da17699fdcf34f23428b308fb`.
-It retains the same frozen binary, profile and model artifacts. No expansion
-quality outcome is included in this report. The expansion is still development
-data and follows selection on this nine-source subset; it is not an independent
-held-out confirmation.
+It retains the same frozen binary, profile and model artifacts. The corpus
+snapshot is the full 27-source development manifest, SHA-256
+`c030afc5394a1774d317c70ce9f404145b20cb4700f14d8da271a699673a4ed8`.
+These sources include the diagnostic subset used to select Last +10%; the
+expansion remains dependent development evidence.
+
+Known-mode macro CER was **18.8307333% → 17.1633645%**, an **8.8545078% relative
+reduction** (`0.08854507786140603`). Automatic-mode aggregate lexical scores
+were identical and were checked separately. Both use successful repeat 1 only,
+corpus-weighted CER within each three-source language, then an equal mean of
+the nine languages. Chinese whitespace WER remains suppressed. The fixed
+quality target of at least 5% relative known-mode macro CER reduction is met;
+no language's absolute CER rose by more than 0.02.
+
+The following table applies to **both known and automatic modes**. Each language
+has **three unique sources**, with the listed repeat-1 reference denominators.
+Cells are WER% / CER%; the final column is Last +10% minus Tiny CER in percentage
+points, so positive values retain regressions.
+
+| Language | Unique sources | Reference words | Reference scalars | Tiny WER% / CER% | Last +10% WER% / CER% | CER delta pp |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Swiss German → German | 3 | 34 | 240 | 111.76 / 45.42 | 120.59 / 43.75 | −1.67 |
+| German | 3 | 81 | 411 | 18.52 / 5.60 | 19.75 / 6.08 | +0.49 |
+| French | 3 | 99 | 464 | 33.33 / 11.21 | 35.35 / 9.70 | −1.51 |
+| Italian | 3 | 67 | 326 | 32.84 / 9.82 | 28.36 / 8.90 | −0.92 |
+| English | 3 | 58 | 261 | 15.52 / 9.58 | 15.52 / 9.58 | 0.00 |
+| Arabic | 3 | 57 | 279 | 64.91 / 25.45 | 66.67 / 25.81 | +0.36 |
+| Mandarin / Simplified | 3 | — | 114 | — / 42.11 | — / 34.21 | −7.89 |
+| Spanish | 3 | 67 | 301 | 25.37 / 7.64 | 22.39 / 5.32 | −2.33 |
+| Portuguese | 3 | 100 | 521 | 34.00 / 12.67 | 27.00 / 11.13 | −1.54 |
+
+Swiss written-German WER **worsened from 111.76% to 120.59%**, despite its modest
+CER reduction from 45.42% to 43.75%. German and Arabic CER also rose slightly;
+French WER rose despite lower CER. These word-level losses and still-poor Swiss,
+Arabic and Mandarin scores remain reasons for native reference/critical-content
+review, rather than being cleared by the macro result.
+
+The new analyzer checks structured matrix rows per exact source/hash/channel
+identity, not only aggregate language confusion. All **27/27 planned automatic
+repeat-1 cases** had one eligible nonempty native pass for each model and
+preserved their expected coarse base-language label: **27 preserved matches,
+zero newly wrong cases, zero repairs, zero persisting mismatches and zero
+unobserved cases**. The expected Swiss base label is `de`; this is not dialect
+identification. Unknown/multipass/region-only observations would have remained
+inconclusive, and a repaired case could not offset a different newly wrong case.
+Human language-ID accuracy, confidence, switches and out-of-set/fallback coverage
+remain unmeasured.
+
+| Full-27 evidence identity | SHA-256 |
+| --- | --- |
+| Complete matrix | `38357f129551b667407be66d05c48fc448f10ed7602e2ecb3e8c880753914776` |
+| Structured report, `quality-pilot-report-1.1` | `411aec1740e4a4c615327c7917cfa98da7f1a73e98668bb07272dfb40cc5f8a9` |
+| Analyzer, `development27-weight-screen-1.0` | `5bc3676339421e2041b68fde444f1bb1c86d9012004457ea2d532837ce916c1e` |
+| Analyzer hash/criteria freeze record | `310c3dc92b9209fe99f336b2ca504b45c1777e20068f38ac3b41c0ac8fabb4a6` |
+| Structured screen summary | `9a9f925fb901046dffb18601ef9883d7345052454c297a43e9a7a59d96854f77` |
+
+The helper validates all 324 cells/162 pairs, fixed model/runner/configuration/
+corpus/settings/scorer identities, exact 27-source membership, 36/18 cohorts,
+reference units and repeat-1 counted scores. It distinguishes corpus-weighted
+language rates from mean per-utterance pair deltas. Its 24 synthetic bookkeeping
+groups passed, including a repaired mismatch hiding a new wrong case, missing
+labels, multiple passes and later-repeat fallback refusal. The helper hash was
+frozen after initial aggregate inspection and before its actual evidence read;
+the original recipe and quality thresholds remained unchanged. The actual
+validation passed with no input problems. It opened only the explicitly supplied
+structured report/matrix and its own source; it did not rescore or follow linked
+audio/reference/hypothesis/log/model paths. All results and the freeze remain
+protected under `development-27-last-layer-shared-v3/` and its parent.
 
 The preceding full-27 attempt under `development-27-last-layer/` stopped after
 23 unchanged Tiny cells completed and one was canceled: `contactsd` reached
@@ -303,4 +382,7 @@ overlap, language switches, independent channels, native audio/reference and
 critical-content adjudication, and controlled resource measurements. A frozen
 combined configuration must then be evaluated once on untouched held-out data.
 Held-out references remain unopened for this work. No UI/default/packaging
-change is authorized by these diagnostic results.
+change is authorized by these development results. Native reference and
+critical-content review remain **UNRESOLVED**; resource acceptance remains
+**NOT EVALUATED** under shared-desktop load. The completed numeric screen and
+coarse labels authorize no promotion.

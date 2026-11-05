@@ -3,9 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 label="${1:-$(date +%Y%m%d-%H%M%S)}"
 [[ "$label" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Use a simple benchmark label" >&2; exit 2; }
-output="$PWD/Build/RecorderBenchmarks/$label"
-[[ ! -e "$output" ]] || { echo "Benchmark already exists: $output" >&2; exit 2; }
-mkdir -p "$output"
+if [[ -z "${RECSCRIBE_RUN_DIR:-}" ]]; then
+    exec python3 "$PWD/scripts/work-artifacts.py" run --label "$label" benchmark -- "$PWD/scripts/benchmark-recorder.sh" "$label"
+fi
+output="$RECSCRIBE_RUN_DIR"
 {
     git rev-parse HEAD
     git diff --stat
@@ -17,7 +18,7 @@ xcodebuild test -quiet \
     -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
     -configuration Release -destination 'platform=macOS,arch=arm64' \
     -parallel-testing-enabled NO \
-    -derivedDataPath Build/RecorderAudit ENABLE_TESTABILITY=YES \
+    -derivedDataPath Build/DerivedData ENABLE_TESTABILITY=YES \
     -only-testing:RecScribeTests/RecorderBenchmarkTests \
     -resultBundlePath "$output/result.xcresult" 2>&1 | tee "$output/build.log"
 xcrun xcresulttool export diagnostics --path "$output/result.xcresult" --output-path "$output/diagnostics"

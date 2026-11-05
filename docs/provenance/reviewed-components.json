@@ -10,9 +10,9 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "477bb09cf8c5ec098ce8768d984e27eccf66465ace88a6abdb226c59c3d4c923",
+      "sha256": "9eebe8d0a4c0f4d1c57267be38f517fad190d54efe45888c4417c31459699570",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored workflow, pinned compiler, source/bundle boundary scans, frozen core and functional/Release jobs. Adds RecScribe-owned PCM/evidence tools and a blocking sanitizer run with pipefail, complete raw-log artifact and summary/completeness gate. Shared shell/YAML/xcodebuild syntax is a standard build contract; no retired workflow implementation was restored. Final notice-disposition review: full repository history is now checked out so the zero-exception guard can discover retired identities from the preserved baseline; all blocking functional/sanitizer/evidence/Release gates remain. Boundary regressions exercise all former exception paths and reject missing/shallow history."
+      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored workflow, pinned compiler, source/bundle boundary scans, frozen core and functional/Release jobs. Adds RecScribe-owned PCM/evidence tools and a blocking sanitizer run with pipefail, complete raw-log artifact and summary/completeness gate. Shared shell/YAML/xcodebuild syntax is a standard build contract; no retired workflow implementation was restored. Final notice-disposition review: full repository history is now checked out so the zero-exception guard can discover retired identities from the preserved baseline; all blocking functional/sanitizer/evidence/Release gates remain. Boundary regressions exercise all former exception paths and reject missing/shallow history. Artifact-retention review: bounded opt-in developer output and preservation regressions added; all prior blocking gates and original-data/reference protections remain."
     },
     {
       "path": ".gitignore",
@@ -40,9 +40,9 @@
     },
     {
       "path": "README.md",
-      "sha256": "f1389ff49699afb3f118643365f19aa879e056555ff63b7a6312176a7db53eba",
+      "sha256": "9ffa26b0fc5f61308d71ce40bbf9cb782c71249dacb3b3eb2e0e6268ad951b1e",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text. Final completion review updates the migration status to the implemented source replacement and zero-exception guard; no baseline implementation or prose is restored."
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text. Final completion review updates the migration status to the implemented source replacement and zero-exception guard; no baseline implementation or prose is restored. Artifact-retention review: bounded opt-in developer output and preservation regressions added; all prior blocking gates and original-data/reference protections remain."
     },
     {
       "path": "RecScribe/RecScribe.entitlements",

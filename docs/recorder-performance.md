@@ -43,7 +43,7 @@ to overwrite an existing result, records environment/source state and runs only
 `RecorderBenchmarkTests` in optimized Release with `ENABLE_TESTABILITY=YES`.
 This override enables test imports; it does not change shipped Release settings.
 Results, diagnostics and the `.xcresult` bundle are in
-`Build/RecorderBenchmarks/my-label/`. The script requires Xcode and `rg`.
+`Build/Artifacts/benchmark/<timestamp>-my-label-<id>/`. The script requires Xcode and `rg`.
 
 The unchanged workload submits 100 synthetic stereo buffers of 4,800 frames
 (10 seconds at 48 kHz), then finalizes. Three iterations per format, two Xcode

@@ -5,18 +5,19 @@ It covers Swiss German, Standard German, English, noise-only audio and multiple
 speakers. Fill a private copy with local WAV paths, reference TXT paths, audio
 SHA-256, license/consent evidence and speaker count. Paths resolve relative to the
 manifest. Nothing is downloaded. Keep actual recordings, references and results
-under ignored `benchmarks/audio/`, `benchmarks/results/` or outside the repository.
+outside the checkout, for example under `~/Library/Application Support/RecScribe/Benchmarks/`.
+These are preserved evaluation evidence, not disposable developer output.
 Synthetic unit tests need no licensed audio download and are not an ASR benchmark.
 
 ```sh
 swift build --package-path core -c release
 core/.build/release/recscribe-text benchmark \
   benchmarks/manifests/corpus.template.json --dry-run \
-  --output benchmarks/results/readiness
+  --output "$HOME/Library/Application Support/RecScribe/Benchmarks/readiness"
 
 core/.build/release/recscribe-text benchmark /path/to/private-corpus.json \
   --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin \
-  --threads 2 --output benchmarks/results/whisper-small-run-1
+  --threads 2 --output "$HOME/Library/Application Support/RecScribe/Benchmarks/whisper-small-run-1"
 ```
 
 Missing corpus entries are `pending_corpus`, never zero error. The runner produces

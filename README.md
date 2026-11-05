@@ -126,7 +126,7 @@ core/.build/release/recscribe-text transcribe recording.wav \
   --whisper-cli /absolute/path/to/whisper-cli \
   --model /absolute/path/to/ggml-model.bin \
   --source-language de-CH --mode verbatim --threads 2 --local-only \
-  --output jobs/first-recording
+  --output "$HOME/Library/Application Support/RecScribe/Jobs/first-recording"
 ```
 
 Jobs preserve original audio and exact per-channel ASR JSON/logs. Disposable
@@ -142,6 +142,26 @@ requires a second distinct model. The old Python pipeline has been removed.
 Frozen synthetic reference fixtures now check canonical semantics and byte-identical
 exports in every Swift test run. Corpus benchmarks also use the native CLI;
 see [benchmark instructions](benchmarks/README.md).
+
+## Developer output retention
+
+Local builds reuse `Build/DerivedData`; app products and recoverable app copies
+stay under `Build/Products` and `Build/InstalledBackups`. These are never pruned.
+For disposable test/log/scratch output use:
+
+```bash
+python3 scripts/work-artifacts.py run --label investigation test -- your-command
+python3 scripts/work-artifacts.py prune         # preview expired managed runs
+python3 scripts/work-artifacts.py prune --apply # remove only eligible managed output
+```
+
+The command receives `$RECSCRIBE_RUN_DIR` under `Build/Artifacts/<category>/` and
+its console output is retained there. Managed jobs and local builds enforce a
+five-run/seven-day policy per category, always retaining the latest completed run.
+Active leases, `.pin` files, unknown directories, required fixtures/reference data,
+audio/transcripts and app backups are protected. Only explicitly disposable marked
+runs can be removed; no recording-data directory or current cache is swept.
+`benchmark-recorder.sh` uses this wrapper automatically.
 
 ## Source provenance
 

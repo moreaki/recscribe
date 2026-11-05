@@ -45,3 +45,38 @@ as presentation-only to avoid that validation. Preserve original audio and raw
 transcripts, bounded background work, cancellation, and existing preservation
 contracts. Keep mandatory frozen-reference checks and run them at the appropriate
 validation stage; never rebaseline fixtures merely to obtain a pass.
+
+
+## Bound disposable developer artifacts
+
+Reuse `Build/DerivedData` (and the existing SwiftPM cache); do not create a new
+DerivedData directory per ticket or visual iteration. Keep app products under
+`Build/Products` and recoverable installed-app copies under `Build/InstalledBackups`.
+These locations are never part of automatic retention cleanup.
+
+Run temporary test, benchmark, diagnostic and scratch commands with:
+
+```bash
+python3 scripts/work-artifacts.py run --label issue-123 test -- command arguments
+```
+
+Write disposable outputs to `$RECSCRIBE_RUN_DIR`; the wrapper captures stdout/stderr
+in `console.log`, records status and holds a process-inherited lease. Use the fixed
+categories `test`, `benchmark`, `logs` or `scratch`, and labels for individual tasks.
+Do not scatter logs, result bundles, copied source trees or synthetic audio into
+new top-level Build directories or the project root. Use system temporary directories
+with scoped cleanup for short-lived audio fixtures. Original audio/raw transcripts,
+frozen reference captures and required test inputs belong outside this disposable
+root; never enroll them for automatic deletion. Persistent CLI jobs and corpus
+results belong under the app support directory or another explicit external
+data location, not a new `jobs/` or results directory in the checkout. A `.pin` file retains a run explicitly.
+
+Retention runs before/after managed jobs and local builds. It keeps the latest
+completed run per category, at most five completed runs within seven days, plus
+active, pinned and protected-data runs. Expired output is permanently disposable;
+only opt-in marked runs with an unlocked lease are eligible. Unmanaged directories,
+symlinks, fixtures, reference captures, audio/transcripts and app backups are excluded.
+An incomplete unlocked run gets seven days of grace before crash-output cleanup.
+Preview cleanup with `python3 scripts/work-artifacts.py prune`; use `--apply` to apply.
+Do not add a scheduled/global cleanup or extend deletion to unknown folders without
+reviewing the data-preservation contract.

@@ -49,7 +49,6 @@ struct OverflowMenuTests {
         func actions(_ name: String) -> OverflowMenu {
             OverflowMenu(onSelectSource: { _ in events.append(name + ":source") },
                 onRequestPermission: { events.append(name + ":permission") },
-                onRecoverRecordings: { events.append(name + ":recover") },
                 openWindow: { events.append(name + ":" + $0.rawValue) })
         }
         let first = actions("first"), second = actions("second")
@@ -57,9 +56,9 @@ struct OverflowMenuTests {
         let secondMenu = second.actions()
         #expect(events.isEmpty)
         try #require(firstMenu.first { $0.id == "sourceSystemAll" }).perform()
-        try #require(secondMenu.first { $0.id == "recoverRecordings" }).perform()
+        try #require(secondMenu.first { $0.id == "recordings" }).perform()
         try #require(firstMenu.first { $0.id == "settings" }).perform()
-        #expect(events == ["first:source", "second:recover", "second:recordings", "first:settings"])
+        #expect(events == ["first:source", "second:recordings", "first:settings"])
     }
 
 }

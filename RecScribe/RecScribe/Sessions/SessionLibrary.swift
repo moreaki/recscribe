@@ -33,6 +33,8 @@ import RecScribeCore
         let issue: String?
     }
     private var pending: [PendingSession] = []
+    private var pendingTranscriptions: [URL] = []
+    private var recoveryAttempts = Set<URL>()
     private var pendingRecoveryDirectory: URL?
     private var activeManifest: URL?
     private var resumeInterruptedSession = false
@@ -107,19 +109,21 @@ import RecScribeCore
 
     /// Waiting is derived from actual queued work, never retained as an idle label.
     var activity: String {
-        if !pending.isEmpty, recordingActive || liveWorkActive {
-            let reason = recordingActive ? "recording" : "live transcription"
-            return "Recording verification/recovery queued (\(pending.count)) · waiting for \(reason)"
+        if !pending.isEmpty, recordingActive {
+            return "Recording verification/recovery queued (\(pending.count)) · waiting for recording"
+        }
+        if !pendingTranscriptions.isEmpty, recordingActive || liveWorkActive {
+            return "Final transcription queued · waiting for \(recordingActive ? "recording" : "live transcription")"
         }
         return operationActivity
     }
 
     var workInProgress: Bool {
-        cancellation != nil && !recordingActive && !liveWorkActive
+        cancellation != nil && !recordingActive && (activeManifest != nil || !liveWorkActive)
     }
 
     var canCancelWork: Bool {
-        !pending.isEmpty || resumeInterruptedSession || (cancellation != nil && cancellation?.isCancelled == false)
+        !pendingTranscriptions.isEmpty || (activeManifest == nil && cancellation != nil && cancellation?.isCancelled == false)
     }
 
     func load(_ directory: URL) {
@@ -127,7 +131,7 @@ import RecScribeCore
     }
 
     func recoverUnfinalizedSessions(in directory: URL) {
-        refresh(directory, recoverUnfinalized: !recordingActive && !liveWorkActive)
+        refresh(directory, recoverUnfinalized: !recordingActive)
     }
 
     private func refresh(_ directory: URL, recoverUnfinalized: Bool) {
@@ -136,7 +140,7 @@ import RecScribeCore
         let id = UUID(), read = readSessions
         refreshID = id
         refreshing = true
-        pendingRecoveryDirectory = (recoverUnfinalized && !recordingActive && !liveWorkActive) ? directory : nil
+        pendingRecoveryDirectory = (recoverUnfinalized && !recordingActive) ? directory : nil
         refreshTask = Task(priority: .utility) { [weak self] in
             do {
                 let snapshot = try await read(directory)
@@ -145,11 +149,13 @@ import RecScribeCore
                 self.readFailures = snapshot.failures
                 let shouldRecover = self.pendingRecoveryDirectory == directory
                 self.pendingRecoveryDirectory = nil
-                if shouldRecover, !self.shuttingDown, !self.recordingActive, !self.liveWorkActive {
+                if shouldRecover, !self.shuttingDown, !self.recordingActive {
                     var enqueued = false
-                    for entry in snapshot.entries where entry.needsRecovery {
-                        if self.activeManifest != entry.id, !self.pending.contains(where: { $0.manifest == entry.id }) {
-                            self.pending.append(.init(manifest: entry.id, recover: true, issue: nil))
+                    for entry in snapshot.entries where entry.needsRecovery || entry.session.status == .finalized
+                        || entry.session.parts.contains(where: { $0.status == .finalized }) {
+                        if self.activeManifest != entry.id, !self.pending.contains(where: { $0.manifest == entry.id }),
+                           self.recoveryAttempts.insert(entry.id).inserted {
+                            self.pending.append(.init(manifest: entry.id, recover: entry.needsRecovery, issue: nil))
                             enqueued = true
                         }
                     }
@@ -267,14 +273,13 @@ import RecScribeCore
         liveWorkActive = active
         if active {
             cancelRestoration()
-            pendingRecoveryDirectory = nil
-            if activeManifest != nil, cancellation?.isCancelled == false {
-                resumeInterruptedSession = true
+            // Live ASR preempts optional jobs, never finalized-audio verification.
+            if activeManifest == nil {
+                cancellation?.cancel()
+                task?.cancel()
+                progressMonitor.stop()
+                if cancellation != nil { operationActivity = "Stopping background work for live transcription…" }
             }
-            cancellation?.cancel()
-            task?.cancel()
-            progressMonitor.stop()
-            if cancellation != nil { operationActivity = "Stopping background work for live transcription…" }
         } else {
             startNext()
         }
@@ -289,10 +294,9 @@ import RecScribeCore
     }
     func cancel() {
         guard canCancelWork else { return }
-        pending.removeAll()
-        // An explicit Cancel must also prevent a capture-interrupted worker from
-        // putting its item back into the queue when it finishes draining.
-        resumeInterruptedSession = false
+        pendingTranscriptions.removeAll()
+        // Audio verification is required, even when optional text work is cancelled.
+        guard activeManifest == nil else { return }
         cancellation?.cancel()
         task?.cancel()
         progressMonitor.stop()
@@ -364,13 +368,20 @@ import RecScribeCore
         cancelRefresh()
         progressMonitor.stop()
         pending.removeAll()
+        pendingTranscriptions.removeAll()
         cancellation?.cancel()
         task?.cancel()
         await task?.value
     }
 
     private func startNext() {
-        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, !pending.isEmpty else { return }
+        guard !shuttingDown, !recordingActive, task == nil else { return }
+        guard !pending.isEmpty else {
+            if !liveWorkActive, !pendingTranscriptions.isEmpty {
+                transcribe(pendingTranscriptions.removeFirst())
+            }
+            return
+        }
         let item = pending.removeFirst()
         let token = WorkCancellation()
         activeManifest = item.manifest
@@ -387,7 +398,9 @@ import RecScribeCore
                 }.value
                 try token.check()
                 operationActivity = result.status == .completed ? "Recording verified; originals retained" : "Recording needs review; inspect session issues"
-                if settings.autoTranscribe && settings.processingLocation != .cloud && !recordingActive { try await runTranscription(item.manifest, settings: settings, cancel: token) }
+                if settings.autoTranscribe && settings.processingLocation != .cloud {
+                    pendingTranscriptions.append(item.manifest)
+                }
             } catch is CancellationError {
                 if resumeInterruptedSession && !shuttingDown { pending.insert(item, at: 0) }
                 operationActivity = "Cancelled; originals retained"

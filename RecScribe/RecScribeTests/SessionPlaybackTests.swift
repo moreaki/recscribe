@@ -107,7 +107,11 @@ struct SessionPlaybackTests {
         }
         var unverified = selected
         unverified.session.parts[0].status = .finalized
-        await #expect(throws: (any Error).self) { try await SessionPlaybackBuilder.item(for: unverified) }
+        // The workspace may still hold the pre-verification snapshot.
+        _ = try await SessionPlaybackBuilder.item(for: unverified)
+        try unverified.session.save(manifest)
+        await #expect(throws: (any Error).self) { try await SessionPlaybackBuilder.item(for: selected) }
+        try session.save(manifest)
         try FileManager.default.removeItem(at: directory.appendingPathComponent(session.parts[1].path))
         await #expect(throws: (any Error).self) { try await SessionPlaybackBuilder.item(for: selected) }
     }

@@ -308,7 +308,7 @@ struct PlaybackStatusView: View {
                 VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     Label(phase.label, systemImage: "exclamationmark.triangle")
                     if let errorMessage { Text(errorMessage).textSelection(.enabled) }
-                    Text("Reopen or verify the recording before trying playback again.")
+                    Text("Check the recording’s status and review notes before trying playback again.")
                 }.foregroundStyle(theme.colors.statusWarning)
             } else { Text(phase.label).foregroundStyle(.secondary) }
         }

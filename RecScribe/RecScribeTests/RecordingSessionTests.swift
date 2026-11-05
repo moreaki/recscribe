@@ -250,6 +250,28 @@ struct RecordingSessionTests {
         try model.verifyAndInstall(source, to: fresh, cancel: WorkCancellation())
         #expect(try RecordingSession.hash(fresh) == model.sha256)
     }
+    @Test("Automatic scan verifies finalized and recovers interrupted sessions without changing audio")
+    @MainActor
+    func libraryAutomaticallyVerifiesFinalizedSessions() async throws {
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = try record(directory)
+        let before = try RecordingSession.read(manifest)
+        let hashes = try before.parts.map { try RecordingSession.hash(directory.appendingPathComponent($0.path)) }
+        var settings = AppSettings.Values()
+        settings.autoTranscribe = false
+        let library = SessionLibrary(settings: { settings })
+        library.setLiveWork(true)
+        library.recoverUnfinalizedSessions(in: directory)
+        await waitUntil("finalized session resumed automatically") {
+            library.entries.first?.session.status == .completed && !library.refreshing
+        }
+        let verified = try RecordingSession.read(manifest)
+        #expect(verified.parts.allSatisfy { $0.status == .verified })
+        #expect(try verified.parts.map { try RecordingSession.hash(directory.appendingPathComponent($0.path)) } == hashes)
+        await library.shutdown()
+    }
+
     @Test("SessionLibrary.recoverUnfinalizedSessions recovers interrupted .recscribe.json sessions and surfaces corrupt manifests")
     @MainActor
     func libraryRecoversUnfinalizedSessionsInDirectory() async throws {

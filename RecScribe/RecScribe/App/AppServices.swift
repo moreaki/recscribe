@@ -60,10 +60,7 @@ final class AppServices {
                                          defaults: defaults, audio: audio, audioTest: test)
         self.recorder = recorder
         overflowMenu = OverflowMenu(onSelectSource: { [weak recorder] in recorder?.setCaptureSource($0) },
-            onRequestPermission: { [weak recorder] in recorder?.openSystemSettings() },
-            onRecoverRecordings: { [weak library] in
-                library?.recoverUnfinalizedSessions(in: location.resolvedDirectory)
-            })
+            onRequestPermission: { [weak recorder] in recorder?.openSystemSettings() })
         test.canStart = { [weak recorder] in
             guard let recorder else { return false }
             return recorder.state.allowsCaptureSourceChange && !recorder.installLocationBlocksRecording && !recorder.isFinalizingAfterFailure
@@ -79,6 +76,10 @@ final class AppServices {
 
     func start() {
         guard menuBarController == nil else { return }
+        // The hosted test app must not resume jobs in the user's recording folder.
+        if NSClassFromString("XCTestCase") == nil {
+            library.recoverUnfinalizedSessions(in: URL(fileURLWithPath: recorder.saveLocationPath))
+        }
         menuBarController = MenuBarController(viewModel: recorder, live: live, actions: overflowMenu)
         let hardware = audio.hardware
         routingObservation = ObservationSubscription(read: { [recorder] in

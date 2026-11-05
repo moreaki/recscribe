@@ -281,7 +281,8 @@ struct SourceMixdownTests {
         let captured = OSAllocatedUnfairLock(initialState: Double.nan)
         let output = AudioCaptureOutput(audioCallback: { _ in }, sampleCallback: { sample in captured.withLock { $0 = sample.presentationTime } })
         let sample = try #require(timed)
-        output.queue.sync { output.process(sample, type: .audio, clock: clock) }
+        output.retainSynchronizationClock(clock)
+        output.queue.sync { output.process(sample, type: .audio) }
         #expect(abs(captured.withLock { $0 } - 10900) < 1 / 48000.0)
         captured.withLock { $0 = .nan }
         output.queue.sync { output.process(sample, type: .audio) } // Drain after the stream no longer supplies its clock.
@@ -439,5 +440,24 @@ struct SourceMixdownTests {
         let pcm = try decode(session, manifest: manifest)
         #expect(pcm[0][19200..<192000].allSatisfy { abs($0 - 0.2) < 0.0001 })
         #expect(pcm[0].suffix(4800).allSatisfy { abs($0 - 0.3) < 0.0001 })
+    }
+
+    @Test func partialMixClippingRemainsDiagnosedWhenCompletionIsCancelled() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let mix = SessionWAVWriter()
+        try mix.createFile(at: root.appendingPathComponent("mix.wav"), sampleRate: 48000, channels: 2)
+        let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: tracks, epoch: 100,
+            options: .init(), levels: { .init(master: .init(decibels: 24)) })
+        for index in 0..<40 { try writer.accept(packet(.microphone, index: index)) }
+        var checks = 0
+        #expect(throws: CancellationError.self) {
+            try writer.finish(check: {
+                checks += 1
+                if checks == 3 { throw CancellationError() }
+            })
+        }
+        let session = try RecordingSession.read(#require(mix.manifestURL))
+        #expect(session.status == .needsReview && session.totalFrames == 4096)
+        #expect(session.issues.contains(SourceMixdown.clippingIssue))
     }
 }

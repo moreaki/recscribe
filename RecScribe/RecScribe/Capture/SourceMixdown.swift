@@ -17,6 +17,7 @@ nonisolated final class SourceMixdown {
         var manifest: URL
     }
     static let blockFrames = 4096
+    static let clippingIssue = "The derived mix clipped; unattenuated source tracks are retained."
     private(set) var position: Int64
     private(set) var clippedFrames: Int64 = 0
     private var readers: [CaptureTrack: Reader] = [:]
@@ -240,8 +241,8 @@ nonisolated final class SourceMixdown {
             part.startSample += start
             replacement.parts.append(part)
         }
-        if renderer.clippedFrames > 0, !replacement.issues.contains("The derived mix clipped; unattenuated source tracks are retained.") {
-            replacement.issues.append("The derived mix clipped; unattenuated source tracks are retained.")
+        if renderer.clippedFrames > 0, !replacement.issues.contains(clippingIssue) {
+            replacement.issues.append(clippingIssue)
         }
         try verifySources()
         _ = try replacement.validated(beside: manifest)

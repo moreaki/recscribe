@@ -316,8 +316,13 @@ nonisolated final class SynchronizedCaptureWriter {
         do {
             try fileMix.render(sources: sources, tracks: descriptors, events: automation.events,
                                to: target, check: check, write: mix.writeBuffer)
-        } catch is CancellationError { throw CancellationError() }
+            if fileMix.clippedFrames > 0 { try mix.addIssue(SourceMixdown.clippingIssue) }
+        } catch is CancellationError {
+            if fileMix.clippedFrames > 0 { try? mix.addIssue(SourceMixdown.clippingIssue) }
+            throw CancellationError()
+        }
         catch {
+            if fileMix.clippedFrames > 0 { try? mix.addIssue(SourceMixdown.clippingIssue) }
             let failure = SourceMixdown.Failure(detail: error.localizedDescription)
             savedMixFailure = failure
             throw failure
@@ -455,9 +460,6 @@ nonisolated final class SynchronizedCaptureWriter {
         do {
             if let savedMixFailure { throw savedMixFailure }
             try flushSaved(to: end, check: check)
-            if (fileMix?.clippedFrames ?? clippedFrames) > 0 {
-                try mix?.addIssue("The derived mix clipped; unattenuated source tracks are retained.")
-            }
             Log.recorder.notice("Saved mix complete frames=\(self.fileMix?.position ?? 0) late_monitor_frames=\(self.lateMonitorFrames) saved_mix_clipped_frames=\(self.fileMix?.clippedFrames ?? 0)")
         } catch { if failureToReport == nil { failureToReport = error } }
         do {

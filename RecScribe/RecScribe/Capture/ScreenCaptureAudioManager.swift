@@ -160,6 +160,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             self?.onStreamError?(failure)
         }
         let configured = SCStream(filter: selection, configuration: settings, delegate: self)
+        receiver.retainSynchronizationClock(configured.synchronizationClock)
         try configured.addStreamOutput(receiver, type: .screen, sampleHandlerQueue: receiver.queue)
         try configured.addStreamOutput(receiver, type: .audio, sampleHandlerQueue: receiver.queue)
         output = receiver
@@ -198,6 +199,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
             }
             if let stream {
                 try await stream.startCapture()
+                output?.retainSynchronizationClock(stream.synchronizationClock)
             }
             isCapturing = true
             if !pendingInputs.isEmpty {
@@ -408,6 +410,11 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
                 continuation.resume()
             }
         }
+    }
+
+    func retainSynchronizationClock(_ clock: CMClockOrTimebase?) {
+        guard let clock else { return }
+        queue.sync { synchronizationClock = clock }
     }
 
     func stream(

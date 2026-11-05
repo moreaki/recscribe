@@ -139,11 +139,18 @@ Do not select settings or budgets without development baselines. Before opening
 held-out outcomes, retain a freeze JSON with `schema_version: "1.0"`, SHA-256s in
 `corpus_sha256` and `experiment_sha256`, `profiles` mapping candidate IDs to exact
 profile hashes, a nonempty `budgets` object, and
-`frozen_before_held_out: true` as the human review attestation. The corpus must be
-`frozen: true`; hashes and speaker/session/source separation are validated. The
-experiment must select `held_out` and reference that freeze file. The experiment
-hash binds model identities, decoding, language modes, input paths and repeat
-budgets; altered settings fail. Candidate bytes are retained in output.
+`frozen_before_held_out: true` as the operator's chronology and hash-lock
+attestation. Record whether the actor is AI or human and explicitly retain the
+native critical-content review and v2 corpus approval statuses. An automated
+exploratory legacy research seal may preserve `reviewed: false` and unknown
+speaker/session grouping; it does not approve v2 eligibility, representative
+coverage or product/default promotion gates. The corpus must be `frozen: true`;
+validate hashes and all known speaker/session/source separation, and identify
+unknown grouping explicitly rather than reporting it as passed. Approved-v2
+eligibility requirements remain enforced. The experiment must select `held_out`
+and reference that freeze file.
+The experiment hash binds model identities, decoding, language modes, input paths
+and repeat budgets; altered settings fail. Candidate bytes are retained in output.
 
 Budget review must predeclare per-language/model WER/CER and quiet-speech deletion
 limits, critical names/numbers/negation/omission/invented-speech tolerances,

@@ -279,8 +279,9 @@ counts and element totals sum to each inventory's recorded totals.
 
 Stored scalar elements include positional tensors; they are **not an inferred
 trainable parameter count**. Layout/precision metadata establishes neither
-recognition quality nor a failure mechanism. No model binary was reread and no
-tensor statistics were recomputed for this supplement. Exact evidence files are
+recognition quality nor a failure mechanism. The table assembly reads retained
+JSON inventories; the inspections that produced them read model artifacts
+without changing them. Exact evidence files are
 `tiny-static-v1.json`, `base-tensor-inventory.json`,
 `small-tensor-inventory.json`, `large-v3-turbo-tensor-inventory.json` and
 `large-v3-tensor-inventory.json` under the protected research directory above.

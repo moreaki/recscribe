@@ -41,6 +41,23 @@ import RecScribeCore
     @ObservationIgnored private var task: Task<Void, Never>?
     private var cancellation: WorkCancellation?
     private var shuttingDown = false
+    private var deletionPreviewID: UUID?
+    private var deletionPreparationID: UUID?
+    private let trashRecording: @Sendable (URL) throws -> Void
+    private(set) var deletingRecordings = false
+    private(set) var deletionCompleted = 0
+    private var stopDeletionRequested = false
+    private(set) var deletionSources = Set<URL>()
+    func isDeleting(_ source: URL) -> Bool { deletionSources.contains(source.standardizedFileURL) }
+
+    var deletionBlockedReason: String? {
+        if shuttingDown { return "The app is shutting down." }
+        if recordingActive { return "Deletion is available after recording or audio testing finishes." }
+        if liveWorkActive { return "Deletion is available after live transcription finishes." }
+        if task != nil { return "Wait for background work to finish before deleting." }
+        return nil
+    }
+
     private let exportSession: @Sendable (URL, URL, WorkCancellation) throws -> URL
     private let processSession: @Sendable (URL, URL, WorkCancellation, Bool, String?) throws -> RecordingSession
     private let cancelRuntime: () -> Void
@@ -60,7 +77,11 @@ import RecScribeCore
          readSessions: (@Sendable (URL) async throws -> SessionSnapshot)? = nil,
          readJob: (@Sendable (URL) async throws -> JobSnapshot)? = nil,
          initialJob: URL? = nil, initialSource: URL? = nil,
-         rememberJob: @escaping (URL?, URL?) -> Void = { _, _ in }, jobsDirectory: URL? = nil) {
+         rememberJob: @escaping (URL?, URL?) -> Void = { _, _ in }, jobsDirectory: URL? = nil,
+         trashRecording: @escaping @Sendable (URL) throws -> Void = {
+             try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
+         }) {
+        self.trashRecording = trashRecording
         let repository = ManifestRepository()
         let jobReader: @Sendable (URL) async throws -> JobSnapshot = readJob ?? { try await repository.job(at: $0) }
         self.exportSession = exportSession
@@ -123,7 +144,7 @@ import RecScribeCore
     }
 
     var canCancelWork: Bool {
-        !pendingTranscriptions.isEmpty || (activeManifest == nil && cancellation != nil && cancellation?.isCancelled == false)
+        !deletingRecordings && (!pendingTranscriptions.isEmpty || (activeManifest == nil && cancellation != nil && cancellation?.isCancelled == false))
     }
 
     func load(_ directory: URL) {
@@ -183,7 +204,7 @@ import RecScribeCore
         refreshing = false
     }
     var canDeleteRecording: Bool {
-        !shuttingDown && !recordingActive && !liveWorkActive && task == nil
+        deletionBlockedReason == nil && deletionPreviewID == nil
     }
 
     @discardableResult
@@ -252,6 +273,80 @@ import RecScribeCore
         if let previousJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == previousJob.standardizedFileURL.path }) { self.previousJob = nil }
         operationActivity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
     }
+    func prepareDeletion(_ selected: [Entry], inspectJobs: Bool = true) async -> RecordingDeletionPlan? {
+        guard !deletingRecordings else { return nil }
+        deletionPreviewID = nil
+        let request = UUID()
+        deletionPreparationID = request
+        let snapshot = entries
+        let root = inspectJobs ? jobsDirectory : nil
+        let plan = await editSession(activity: "Checking selected recordings and linked data…") { token in
+            try RecordingDeletionPlanner.prepare(selected, library: snapshot, jobsDirectory: root, cancel: token)
+        }
+        guard deletionPreparationID == request else { startNext(); return nil }
+        deletionPreparationID = nil
+        if let plan, deletionBlockedReason == nil { deletionPreviewID = plan.id }
+        else if deletionBlockedReason != nil { return nil }
+        return plan
+    }
+
+    func closeDeletionPreview() {
+        guard !deletingRecordings else { return }
+        deletionPreviewID = nil
+        if deletionPreparationID != nil { deletionPreparationID = nil; cancellation?.cancel() }
+        startNext()
+    }
+
+    func stopDeletionAfterCurrent() { stopDeletionRequested = true }
+
+    func deleteRecordings(_ plan: RecordingDeletionPlan, includeJobs: Bool) async -> RecordingDeletionResult {
+        var result = RecordingDeletionResult(remaining: plan.items.map { $0.entry.id })
+        guard deletionPreviewID == plan.id, deletionBlockedReason == nil,
+              !includeJobs || plan.checkedJobs else {
+            result.failure = deletionBlockedReason ?? "Review a new deletion preview before continuing."
+            return result
+        }
+        cancelRefresh()
+        cancelRestoration()
+        let token = WorkCancellation()
+        cancellation = token
+        deletionSources = Set(plan.items.flatMap { Array($0.files) })
+        deletingRecordings = true; busy = true; deletionCompleted = 0; stopDeletionRequested = false
+        errorMessage = nil
+        let trash = trashRecording
+        let work = Task {
+            for item in plan.items {
+                if stopDeletionRequested || token.isCancelled || shuttingDown || recordingActive || liveWorkActive {
+                    result.stopped = true; break
+                }
+                operationActivity = "Moving recording \(deletionCompleted + 1) of \(plan.items.count) to Trash…"
+                do {
+                    let jobs = try await Task.detached(priority: .utility) {
+                        try SessionDeletion.moveToTrash(item.entry.id, cancel: token, expected: item, includePlannedJobs: includeJobs, trash: trash)
+                    }.value
+                    result.moved.append(item.entry.id); result.jobs += jobs
+                    result.remaining.removeAll { $0 == item.entry.id }
+                    deletionCompleted += 1
+                    entries.removeAll { $0.id == item.entry.id }
+                    pending.removeAll { $0.manifest == item.entry.id }
+                    pendingTranscriptions.removeAll { $0 == item.entry.id }
+                    for job in jobs { forgetTranscript(job) }
+                } catch is CancellationError {
+                    result.stopped = true; break
+                } catch {
+                    result.failure = "\(item.entry.displayTitle): \(error.localizedDescription)"; break
+                }
+            }
+        }
+        task = work
+        await work.value
+        task = nil; cancellation = nil; deletingRecordings = false; busy = false; deletionPreviewID = nil; deletionSources.removeAll()
+        operationActivity = result.summary + (result.remaining.isEmpty ? "" : "; \(result.remaining.count) kept")
+        if let directory = plan.items.first?.entry.id.deletingLastPathComponent() { load(directory) }
+        startNext()
+        return result
+    }
+
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active {
@@ -375,7 +470,7 @@ import RecScribeCore
     }
 
     private func startNext() {
-        guard !shuttingDown, !recordingActive, task == nil else { return }
+        guard !shuttingDown, !recordingActive, task == nil, deletionPreviewID == nil else { return }
         guard !pending.isEmpty else {
             if !liveWorkActive, !pendingTranscriptions.isEmpty {
                 transcribe(pendingTranscriptions.removeFirst())
@@ -415,7 +510,7 @@ import RecScribeCore
     }
 
     func transcribe(_ source: URL, summarize: Bool = false) {
-        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, deletionPreviewID == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         var settings = settings()
         guard settings.processingLocation != .cloud else {
             errorMessage = "Cloud mode transcribes newly approved live audio. Choose Local or Hybrid to re-transcribe a completed recording locally; no fallback or upload was started."
@@ -495,7 +590,7 @@ import RecScribeCore
     }
 
     private func processText(_ request: TextProcessingRequest, cloudConsent: Bool) {
-        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else { errorMessage = "Wait for capture/background work to finish"; return }
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, deletionPreviewID == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         guard !request.isCloud || cloudConsent else { return }
         guard !request.isCloud || settings().processingLocation != .local else {
             errorMessage = "Cloud text consent was revoked by Local mode"
@@ -542,7 +637,7 @@ import RecScribeCore
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {
-        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil else {
+        guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, deletionPreviewID == nil else {
             throw SessionError.invalid("Wait for capture/background work to finish before exporting")
         }
         let token = WorkCancellation()

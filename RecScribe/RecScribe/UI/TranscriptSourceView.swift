@@ -43,7 +43,7 @@ struct TranscriptSourceView: View {
     }
 
     private func startPlayback() {
-        guard sourceAvailable else { return }
+        guard sourceAvailable, !library.isDeleting(source) else { return }
         if let entry {
             playback.play(entry)
         } else if source.pathExtension.lowercased() == "wav" {
@@ -71,7 +71,7 @@ struct TranscriptSourceView: View {
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
                     startPlayback()
-                }.disabled(!sourceAvailable || recording || (source.pathExtension.lowercased() != "wav"
+                }.disabled(library.isDeleting(source) || !sourceAvailable || recording || (source.pathExtension.lowercased() != "wav"
                     && (entry?.session.parts.isEmpty != false || entry?.session.parts.allSatisfy { $0.status == .verified } != true)))
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }.disabled(!sourceAvailable)
             }
@@ -105,8 +105,9 @@ struct TranscriptSourceView: View {
             } catch is CancellationError { }
             catch { self.error = error.localizedDescription }
         }
+        .onChange(of: library.deletionSources) { _, _ in if library.isDeleting(source) { playback.stop() } }
         .onChange(of: pendingSeekSeconds) { _, target in
-            guard let target, !recording else { return }
+            guard let target, !recording, !library.isDeleting(source) else { return }
             if playback.player != nil, playback.phase != .failed {
                 playback.seek(to: target)
                 pendingSeekSeconds = nil

@@ -9,8 +9,13 @@ struct RecordingLibraryView: View {
     @Environment(\.studioNavigation) private var navigation
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var playback: SessionPlayback
-    @State private var recordingToDelete: SessionEntry?
-    @State private var showingDeleteConfirmation = false
+    @State private var selection = Set<URL>()
+    @State private var selectionAnchor: URL?
+    @State private var deletionRequest: RecordingDeletionRequest?
+    @State private var result: RecordingDeletionResult?
+    @State private var details = Set<URL>()
+    @State private var renameEntry: SessionEntry?
+    @State private var title = ""
     var embeddedInStudio = false
     var onOpenStudio: (() -> Void)? = nil
 
@@ -22,140 +27,335 @@ struct RecordingLibraryView: View {
     }
 
     private func navigateToStudio() {
-        if let onOpenStudio {
-            onOpenStudio()
-        } else {
-            AppWindow.open(.studio, using: openWindow, navigation: navigation)
-        }
+        if let onOpenStudio { onOpenStudio() }
+        else { AppWindow.open(.studio, using: openWindow, navigation: navigation) }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: StudioSpacing.xl) {
-            HStack {
-                WorkspaceIcon(symbol: "rectangle.stack.fill", tint: WorkspaceStyle.mint)
-                VStack(alignment: .leading) {
-                    Text("Your recordings").font(.title2.bold())
-                    Text("Listen, transcribe and make sense of your recordings.").font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Import WAV / session…") {
-                    let panel = NSOpenPanel(); panel.canChooseDirectories = false
-                    if panel.runModal() == .OK, let url = panel.url {
-                        library.transcribe(url)
-                        navigateToStudio()
-                    }
-                }.disabled(library.recordingActive)
-                Button("Refresh") { reload() }.disabled(library.refreshing)
-            }
+        VStack(alignment: .leading, spacing: StudioSpacing.m) {
+            header
             SessionPlaybackView(playback: playback)
-            List(library.entries) { entry in
-                VStack(alignment: .leading, spacing: StudioSpacing.m) {
-                    HStack(alignment: .top) {
-                        WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
-                        VStack(alignment: .leading, spacing: 6) {
-                            SessionTitleView(entry: entry, library: library)
-                            if entry.session.title != nil {
-                                Text(entry.filenameStem).font(.caption).foregroundStyle(.secondary)
-                            }
-                            RecordingTimestampPill(date: entry.session.startedAt, tint: WorkspaceStyle.blue)
-                        }
-                        Spacer()
-                        Text((entry.needsRecovery || entry.session.status == .finalized) && !library.recordingActive
-                            ? "Preparing recording…" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Text("\(entry.session.parts.count) parts · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
-                        .font(.caption).foregroundStyle(.secondary)
+            if let result {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Button(playback.playing == entry.session.id ? "Restart" : "Play session", systemImage: "play.fill") { playback.play(entry) }
-                            .disabled(entry.session.parts.isEmpty || !entry.session.parts.allSatisfy { $0.status == .verified })
-                        Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
-                        Menu {
-                            if entry.session.title != nil {
-                                Button("Reset title", systemImage: "arrow.counterclockwise") {
-                                    Task { await library.rename(entry, title: "") }
-                                }
-                            }
-                            Button("Transcribe & summarize", systemImage: "sparkles") {
-                                library.transcribe(entry.id, summarize: true)
-                                navigateToStudio()
-                            }
-                            ForEach(entry.session.sourceTracks ?? [], id: \.role) { source in
-                                Menu(source.name) {
-                                    Button("Play source track") { playback.playSource(source, parent: entry) }
-                                    Button("Transcribe source track") {
-                                        if let path = source.manifestPath,
-                                           let url = try? RecordingSession.safeURL(path, beside: entry.id) {
-                                            library.transcribe(url); navigateToStudio()
-                                        }
-                                    }
-                                }.disabled(source.manifestPath == nil)
-                            }
-                            Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
-                        } label: { Label("More", systemImage: "ellipsis.circle") }
-                        Button("Export…") {
-                            let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-                            if panel.runModal() == .OK, let url = panel.url {
-                                Task { do { let result = try await library.export(entry.id, to: url); NSWorkspace.shared.activateFileViewerSelecting([result]) }
-                                    catch is CancellationError { /* Cancellation is shown by the library, not an error alert. */ }
-                                    catch { library.errorMessage = error.localizedDescription } }
-                            }
-                        }
-                        Button("Delete…", systemImage: "trash", role: .destructive) {
-                            recordingToDelete = entry
-                            showingDeleteConfirmation = true
-                        }
-                            .disabled(!library.canDeleteRecording)
-                    }.buttonStyle(.borderless).disabled(library.recordingActive || library.liveWorkActive)
-                    RecordingReviewNotesView(notes: RecordingReviewNotes(session: entry.session))
-                }.padding(.vertical, StudioSpacing.s)
-            }.listStyle(.inset).scrollContentBackground(.hidden).overlay {
-                if library.entries.isEmpty { ContentUnavailableView("No sessions yet", systemImage: "waveform", description: Text("New recordings appear here. Existing WAV files can be imported for optional transcription.")) }
+                        Text(result.summary).font(.callout.bold())
+                        Spacer()
+                        Button("Dismiss", systemImage: "xmark") { self.result = nil }.labelStyle(.iconOnly)
+                    }
+                    if !result.remaining.isEmpty {
+                        Text("\(result.remaining.count) recordings kept and selected. \(result.stopped ? "Stopped before the next recording." : "Review the failure before retrying.")")
+                    }
+                    if let failure = result.failure { Text(failure).textSelection(.enabled) }
+                    Text("Restore moved folders from macOS Trash. Transcription data was kept unless explicitly included.")
+                }.font(.caption).padding(12).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            }
+            selectionToolbar
+            if let reason = library.deletionBlockedReason {
+                Text(reason).font(.caption).foregroundStyle(.secondary)
+            }
+            List {
+                ForEach(library.entries) { entry in
+                    recordingRow(entry)
+                        .listRowBackground(selection.contains(entry.id) ? WorkspaceStyle.blue.opacity(0.12) : Color.clear)
+                }
+            }
+            .listStyle(.inset).scrollContentBackground(.hidden)
+            .onCommand(#selector(NSResponder.selectAll(_:))) { selection = Set(library.entries.map(\.id)) }
+            .onExitCommand { selection.removeAll(); selectionAnchor = nil }
+            .overlay {
+                if library.entries.isEmpty {
+                    ContentUnavailableView("No recordings yet", systemImage: "waveform",
+                        description: Text("New recordings appear here. Import a WAV file for optional transcription."))
+                }
             }
             ForEach(library.readFailures) { failure in
                 Text("\(failure.id.lastPathComponent): \(failure.message)")
                     .font(.caption).foregroundStyle(theme.colors.statusWarning).textSelection(.enabled)
             }
-            HStack {
-                if library.workInProgress {
-                    ProgressView(value: library.progress).frame(width: theme.metrics.controlHeightMedium * 3)
-                }
-                Text(library.activity).font(.caption)
-                Spacer()
-                if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
-                if library.canCancelWork {
-                    Button("Cancel work") { library.cancel() }
-                }
-                if !embeddedInStudio {
-                    Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) }
-                        .help("Close the Recordings window; background processing continues.")
-                }
+            footer
+            if let error = library.errorMessage {
+                Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled)
             }
-            if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
-        }.padding(StudioSpacing.xxl).frame(
+        }
+        .padding(StudioSpacing.xxl).frame(
             minWidth: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.width,
-            minHeight: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.height
-        )
-            .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast().onAppear {
-                playback.setRecording(library.recordingActive)
-                reload()
+            minHeight: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.height)
+        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast()
+        .onAppear { playback.setRecording(library.recordingActive); reload() }
+        .onDisappear { playback.stop(); library.cancelRefresh() }
+        .onChange(of: library.recordingActive) { _, active in playback.setRecording(active) }
+        .onChange(of: library.entries.map(\.id)) { _, ids in selection.formIntersection(ids) }
+        .sheet(item: $deletionRequest, onDismiss: { library.closeDeletionPreview() }) { request in
+            RecordingDeletionSheet(entries: request.entries, playback: playback) { outcome in
+                result = outcome
+                selection = Set(outcome.remaining)
+                deletionRequest = nil
+                selectionAnchor = nil
             }
-            .onDisappear { playback.stop(); library.cancelRefresh() }
-            .onChange(of: library.recordingActive) { _, active in playback.setRecording(active) }
-            .confirmationDialog("Move recording to Trash?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible, presenting: recordingToDelete) { entry in
-                Button("Move to Trash", role: .destructive) {
-                    playback.stop()
-                    Task { await library.moveToTrash(entry) }
-                }
-                Button("Move recording and verified transcript jobs to Trash", role: .destructive) {
-                    playback.stop()
-                    Task { await library.moveToTrash(entry, includeDerivedJobs: true) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { entry in
-                Text("\(entry.displayTitle) and its audio parts and archives move together. By default transcripts are kept. The second option also groups finished jobs with a verified source identity under Transcripts in the same Trash folder. Active or unverifiable jobs and raw Live drafts are kept. You can restore the folder from Trash.")
+        }
+        .alert("Rename recording", isPresented: Binding(get: { renameEntry != nil }, set: { if !$0 { renameEntry = nil } })) {
+            TextField("Recording title", text: $title)
+            Button("Cancel", role: .cancel) { renameEntry = nil }
+            Button("Save") {
+                if let entry = renameEntry { Task { await library.rename(entry, title: title) } }
+                renameEntry = nil
             }
+        }
     }
+
+    private var header: some View {
+        HStack {
+            WorkspaceIcon(symbol: "rectangle.stack.fill", tint: WorkspaceStyle.mint)
+            VStack(alignment: .leading) {
+                Text("Your recordings").font(.title2.bold())
+                Text("Listen, transcribe and make sense of your recordings.").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Import…") {
+                let panel = NSOpenPanel(); panel.canChooseDirectories = false
+                if panel.runModal() == .OK, let url = panel.url { library.transcribe(url); navigateToStudio() }
+            }.disabled(!library.canDeleteRecording)
+            Button("Refresh") { reload() }.disabled(library.refreshing || library.deletingRecordings)
+        }
+    }
+
+    private var selectionToolbar: some View {
+        HStack(spacing: 12) {
+            Toggle("Select all \(library.entries.count) recordings", sources: library.entries.map { entry in
+                Binding(get: { selection.contains(entry.id) }, set: { selected in
+                    if selected { selection.insert(entry.id) } else { selection.remove(entry.id) }
+                    selectionAnchor = nil
+                })
+            }, isOn: \.self)
+            .toggleStyle(.checkbox).labelsHidden().frame(width: 20)
+            .accessibilityLabel("Select all \(library.entries.count) recordings").disabled(library.entries.isEmpty)
+            Text("\(library.entries.count) recordings").font(.callout)
+            Spacer()
+            if !selection.isEmpty {
+                Text("\(selection.count) selected").font(.callout.bold()).accessibilityAddTraits(.updatesFrequently)
+                Button("Clear") { selection.removeAll(); selectionAnchor = nil }.buttonStyle(.borderless)
+            }
+            Button(selection.isEmpty ? "Delete selected…" : "Delete \(selection.count)…", role: .destructive) {
+                beginDeletion(library.entries.filter { selection.contains($0.id) })
+            }.disabled(selection.isEmpty || !library.canDeleteRecording)
+        }.padding(.vertical, 10)
+            .overlay(alignment: .top) { Divider() }.overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func recordingRow(_ entry: SessionEntry) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Toggle("Select \(entry.displayTitle)", isOn: Binding(get: { selection.contains(entry.id) }, set: { _ in
+                selection = RecordingSelection.toggling(entry.id, selected: selection, anchor: selectionAnchor,
+                    order: library.entries.map(\.id), extend: NSApp.currentEvent?.modifierFlags.contains(.shift) == true || NSEvent.modifierFlags.contains(.shift))
+                selectionAnchor = entry.id
+            }))
+            .toggleStyle(.checkbox).labelsHidden().frame(width: 20)
+            .accessibilityLabel("Select \(entry.displayTitle)")
+            VStack(alignment: .leading, spacing: 5) {
+                Text(entry.displayTitle).font(.headline).lineLimit(2).help(entry.displayTitle)
+                ViewThatFits(in: .horizontal) {
+                    HStack { timestamp(entry); status(entry) }
+                    VStack(alignment: .leading, spacing: 2) { timestamp(entry); status(entry) }
+                }
+                RecordingReviewNotesView(notes: RecordingReviewNotes(session: entry.session))
+                if details.contains(entry.id) {
+                    Text("\(entry.session.parts.count) parts · \(entry.session.channels) channels · \(entry.session.sampleRate) Hz PCM")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(entry.filenameStem).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+            }
+            Spacer(minLength: 0)
+            if selection.isEmpty {
+                Button { playback.play(entry) } label: { Image(systemName: playback.playing == entry.session.id ? "arrow.counterclockwise" : "play.fill") }
+                    .accessibilityLabel("Play \(entry.displayTitle)")
+                    .disabled(!library.canDeleteRecording || entry.session.parts.isEmpty || !entry.session.parts.allSatisfy { $0.status == .verified })
+                ViewThatFits(in: .horizontal) {
+                    Button("Transcribe") { library.transcribe(entry.id); navigateToStudio() }.disabled(!library.canDeleteRecording)
+                    EmptyView()
+                }
+                rowMenu(entry)
+            }
+        }.buttonStyle(.borderless).padding(.vertical, 9)
+    }
+
+    private func timestamp(_ entry: SessionEntry) -> some View {
+        Text("\(entry.session.startedAt.formatted(date: .abbreviated, time: .shortened)) · \(entry.session.duration.formatted(.number.precision(.fractionLength(1)))) s")
+            .font(.caption).foregroundStyle(.secondary)
+    }
+    private func status(_ entry: SessionEntry) -> some View {
+        Text((entry.needsRecovery || entry.session.status == .finalized) && !library.recordingActive
+            ? "Preparing recording…" : entry.session.status.label).font(.caption).foregroundStyle(.secondary)
+    }
+
+    private func rowMenu(_ entry: SessionEntry) -> some View {
+        Menu {
+            Button("Rename…", systemImage: "pencil") { title = entry.session.title ?? entry.filenameStem; renameEntry = entry }
+            if entry.session.title != nil {
+                Button("Reset title", systemImage: "arrow.counterclockwise") { Task { await library.rename(entry, title: "") } }
+            }
+            Button(details.contains(entry.id) ? "Hide recording details" : "Recording details", systemImage: "info.circle") {
+                if !details.insert(entry.id).inserted { details.remove(entry.id) }
+            }
+            Divider()
+            Button("Transcribe", systemImage: "text.bubble") { library.transcribe(entry.id); navigateToStudio() }
+            Button("Transcribe & summarize", systemImage: "sparkles") { library.transcribe(entry.id, summarize: true); navigateToStudio() }
+            ForEach(entry.session.sourceTracks ?? [], id: \.role) { source in
+                Menu(source.name) {
+                    Button("Play source track") { playback.playSource(source, parent: entry) }
+                    Button("Transcribe source track") {
+                        if let path = source.manifestPath, let url = try? RecordingSession.safeURL(path, beside: entry.id) {
+                            library.transcribe(url); navigateToStudio()
+                        }
+                    }
+                }.disabled(source.manifestPath == nil)
+            }
+            Divider()
+            Button("Reveal in Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([entry.id]) }
+            Button("Export…", systemImage: "square.and.arrow.up") { export(entry) }
+            Divider()
+            Button("Delete…", systemImage: "trash", role: .destructive) { beginDeletion([entry]) }
+        } label: { Image(systemName: "ellipsis.circle") }
+        .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Actions for \(entry.displayTitle)")
+        .disabled(!library.canDeleteRecording)
+    }
+
+    private var footer: some View {
+        HStack {
+            if library.workInProgress { ProgressView(value: library.progress).frame(width: theme.metrics.controlHeightMedium * 3) }
+            Text(library.activity).font(.caption)
+            Spacer()
+            if let job = library.latestJob { Button("Job artifacts") { NSWorkspace.shared.activateFileViewerSelecting([job]) } }
+            if library.canCancelWork { Button("Cancel work") { library.cancel() } }
+            if !embeddedInStudio { Button("Close window") { dismissWindow(id: AppWindow.recordings.rawValue) } }
+        }
+    }
+    private func beginDeletion(_ entries: [SessionEntry]) { deletionRequest = .init(entries: entries) }
     private func reload() { library.recoverUnfinalizedSessions(in: URL(fileURLWithPath: recorder.saveLocationPath)) }
+    private func export(_ entry: SessionEntry) {
+        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
+        if panel.runModal() == .OK, let url = panel.url {
+            Task { do { let result = try await library.export(entry.id, to: url); NSWorkspace.shared.activateFileViewerSelecting([result]) }
+                catch is CancellationError {} catch { library.errorMessage = error.localizedDescription } }
+        }
+    }
+}
+
+nonisolated enum RecordingSelection {
+    static func toggling(_ id: URL, selected: Set<URL>, anchor: URL?, order: [URL], extend: Bool) -> Set<URL> {
+        var result = selected
+        let remove = selected.contains(id)
+        let targets: [URL]
+        if extend, let anchor, let a = order.firstIndex(of: anchor), let b = order.firstIndex(of: id) {
+            targets = Array(order[min(a,b)...max(a,b)])
+        } else { targets = [id] }
+        for target in targets { if remove { result.remove(target) } else { result.insert(target) } }
+        return result
+    }
+}
+
+private struct RecordingDeletionRequest: Identifiable {
+    let id = UUID()
+    let entries: [SessionEntry]
+}
+
+private struct RecordingDeletionSheet: View {
+    let entries: [SessionEntry]
+    let playback: SessionPlayback
+    var completed: (RecordingDeletionResult) -> Void
+    @Environment(SessionLibrary.self) private var library
+    @Environment(\.dismiss) private var dismiss
+    @State private var plan: RecordingDeletionPlan?
+    @State private var includeJobs = false
+    @State private var checking = true
+    @State private var running = false
+    @FocusState private var cancelFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(running ? "Moving recordings to Trash…" : "Delete \(entries.count) \(entries.count == 1 ? "recording" : "recordings")?").font(.title2.bold())
+            if running {
+                ProgressView(value: Double(library.deletionCompleted), total: Double(entries.count))
+                Text(library.activity).font(.callout)
+                Text("Each recording stays together. Remaining recordings are kept if you stop.").font(.caption).foregroundStyle(.secondary)
+                HStack { Spacer(); Button("Stop after current recording") { library.stopDeletionAfterCurrent() } }
+            } else {
+                Text("Choose what moves to Trash. Nothing is permanently erased.").font(.callout).foregroundStyle(.secondary)
+                Picker("Deletion scope", selection: $includeJobs) {
+                    Text("Recordings only").tag(false)
+                    Text("Recordings + linked transcription data").tag(true)
+                }.pickerStyle(.radioGroup).labelsHidden().disabled(checking)
+                Text(includeJobs ? "Also move all verified finished job folders: transcripts, summaries, edits, reports and generated files."
+                     : "Move audio, source tracks and recording files. Keep all transcription data.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if checking {
+                    HStack { ProgressView().controlSize(.small); Text("Checking linked data…") }
+                } else if let plan {
+                    if !plan.checkedJobs {
+                        Text("Linked data has not been checked. Keep transcription data or check it before including it.").font(.caption)
+                        Button("Check linked data") { Task { await prepare() } }
+                    }
+                    if includeJobs, plan.checkedJobs {
+                        Text("\(plan.jobCount) verified transcript jobs will move with these recordings.").font(.callout)
+                        if !plan.retained.isEmpty {
+                            Text("Some transcription data will be kept. \(plan.retained.count) active or unverified jobs in the library could not be safely included; some may be unrelated. This does not remove all transcription data.")
+                                .font(.caption).foregroundStyle(.orange)
+                            DisclosureGroup("Review retained jobs") {
+                                ScrollView {
+                                    ForEach(plan.retained) { job in
+                                        HStack {
+                                            Text(job.problem ?? (job.isTerminal ? "Unverified source identity" : "Job is not finished")).font(.caption)
+                                            Spacer()
+                                            Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([job.url]) }
+                                        }.padding(.vertical, 2)
+                                    }
+                                }.frame(maxHeight: 100)
+                            }
+                        }
+                    }
+                    DisclosureGroup("Review \(entries.count) selected recordings") {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(plan.items, id: \.entry.id) { item in
+                                    Text(item.entry.displayTitle + (includeJobs ? " · \(item.jobs.count) verified jobs" : "")).font(.caption)
+                                }
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }.frame(maxHeight: 120)
+                    }
+                } else {
+                    Text(library.errorMessage ?? "Could not check linked data. Nothing has been deleted.").font(.callout).textSelection(.enabled)
+                    HStack {
+                        Button("Retry") { Task { await prepare() } }
+                        Button("Keep transcripts and check recordings only") { Task { includeJobs = false; await prepare(inspectJobs: false) } }
+                    }
+                }
+                Text("Recoverable in macOS Trash. Each recording stays together with its selected files. Raw Live drafts and external copies are kept.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let reason = library.deletionBlockedReason, !checking { Text(reason).font(.caption).foregroundStyle(.orange) }
+                Divider()
+                HStack {
+                    Spacer()
+                    Button("Cancel", role: .cancel) { library.closeDeletionPreview(); dismiss() }
+                        .keyboardShortcut(.cancelAction).focused($cancelFocused)
+                    Button("Move \(entries.count) to Trash", role: .destructive) { execute() }
+                        .disabled(checking || plan == nil || library.deletionBlockedReason != nil || (includeJobs && plan?.checkedJobs != true))
+                }
+            }
+        }.padding(28).frame(width: 520).fixedSize(horizontal: false, vertical: true)
+        .interactiveDismissDisabled(running)
+        .task { cancelFocused = true; await prepare() }
+        .onDisappear { library.closeDeletionPreview() }
+    }
+    private func prepare(inspectJobs: Bool = true) async {
+        checking = true; plan = nil
+        plan = await library.prepareDeletion(entries, inspectJobs: inspectJobs)
+        checking = false
+    }
+    private func execute() {
+        guard let plan else { return }
+        if plan.items.flatMap(\.sessions).contains(where: { $0.id == playback.playing }) { playback.stop() }
+        running = true
+        Task { let result = await library.deleteRecordings(plan, includeJobs: includeJobs); completed(result) }
+    }
 }
 
 /// Shared inline editor for the library and the transcript's source header.

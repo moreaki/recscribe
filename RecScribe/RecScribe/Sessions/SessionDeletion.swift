@@ -1,15 +1,14 @@
 import Foundation
-import os
+import CryptoKit
 
 /// Keep the session together in Trash so restoring it also restores its audio.
 nonisolated enum SessionDeletion {
     static let maximumRelatedJobs = 1_024
     static let maximumReferenceBytes = 1_024 * 1_024
-    private static let logger = Logger(subsystem: "com.moreaki.recscribe", category: "SessionDeletion")
 
     @discardableResult
     static func moveToTrash(_ manifest: URL, jobsDirectory: URL? = nil,
-                            cancel: WorkCancellation = WorkCancellation(), trash: (URL) throws -> Void = {
+                            cancel: WorkCancellation = WorkCancellation(), expected: RecordingDeletionPlan.Item? = nil, includePlannedJobs: Bool = false, trash: (URL) throws -> Void = {
         try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
     }) throws -> [URL] {
         try cancel.check()
@@ -29,9 +28,43 @@ nonisolated enum SessionDeletion {
             sourceSessions.append(child.session)
             names += child.session.parts.map(\.path) + child.session.artifacts.map(\.path) + [child.id.lastPathComponent]
         }
-        let jobs = try jobsDirectory.map {
-            try relatedJobs(to: session, beside: manifest, in: $0, cancel: cancel, sourceSessions: sourceSessions)
-        } ?? []
+        var protectionLeases: [SessionLease] = []
+        defer { withExtendedLifetime(protectionLeases) {} }
+        if let expected {
+            for (url, hash) in expected.protectedManifestHashes {
+                try cancel.check()
+                protectionLeases.append(try SessionLease(url))
+                guard try RecordingSession.hash(url) == hash else {
+                    throw SessionError.invalid("Another recording changed since confirmation. Review a new deletion preview.")
+                }
+            }
+            for (url, hash) in expected.manifestHashes {
+                guard try RecordingSession.hash(url) == hash else {
+                    throw SessionError.invalid("Recording changed since confirmation. Review a new deletion preview.")
+                }
+            }
+        }
+        let jobs: [URL]
+        var jobLeases: [SessionLease] = []
+        defer { withExtendedLifetime(jobLeases) {} }
+        if let expected {
+            jobs = includePlannedJobs ? try expected.jobs.map { planned in
+                try cancel.check()
+                // Reject replaced/symlinked job folders before creating any lease sidecar.
+                _ = try inspectJob(planned.url)
+                jobLeases.append(try SessionLease(planned.url.appendingPathComponent("manifest.json")))
+                let current = try inspectJob(planned.url)
+                guard current.isTerminal, current.problem == nil, current.fingerprint == planned.fingerprint,
+                      current.matches([session] + sourceSessions, beside: manifest) else {
+                    throw SessionError.invalid("Transcription data changed since confirmation. Review a new deletion preview.")
+                }
+                return planned.url
+            } : []
+        } else {
+            jobs = try jobsDirectory.map {
+                try relatedJobs(to: session, beside: manifest, in: $0, cancel: cancel, sourceSessions: sourceSessions)
+            } ?? []
+        }
         for name in Set(names) {
             try cancel.check()
             let file = try RecordingSession.safeURL(name, beside: manifest)
@@ -82,72 +115,91 @@ nonisolated enum SessionDeletion {
         }
     }
 
-    /// A name/path alone is not a source identity. Match the session UUID (native
-    /// reports or cloud snapshots), or an exact part path AND its recorded hash.
-    static func relatedJobs(to session: RecordingSession, beside manifest: URL, in root: URL,
-                            cancel: WorkCancellation, sourceSessions: [RecordingSession] = []) throws -> [URL] {
-        struct Reference: Decodable {
-            var session_id: UUID?
-            var path: String?
-            var sha256: String?
+    struct JobEvidence: Sendable, Identifiable {
+        let url: URL
+        let identities: [UUID]
+        let sourcePath: String?
+        let sourceHash: String?
+        let isTerminal: Bool
+        let fingerprint: [String: String]
+        let problem: String?
+        var id: URL { url }
+        func matches(_ sessions: [RecordingSession], beside manifest: URL) -> Bool {
+            let ids = Set(sessions.map(\.id))
+            if !identities.isEmpty { return identities.allSatisfy { ids.contains($0) } }
+            return sessions.flatMap(\.parts).contains { part in
+                guard let hash = part.sha256, hash.count == 64, hash == sourceHash, let sourcePath else { return false }
+                return (try? RecordingSession.safeURL(part.path, beside: manifest).resolvingSymlinksInPath().standardizedFileURL.path)
+                    == URL(fileURLWithPath: sourcePath).resolvingSymlinksInPath().standardizedFileURL.path
+            }
         }
-        struct Snapshot: Decodable { let id: UUID }
-        struct State: Decodable { let state: JobState }
+    }
+
+    /// Scan once for a batch. Unknown, active or conflicting evidence is retained.
+    static func scanJobs(in root: URL, cancel: WorkCancellation) throws -> [JobEvidence] {
         let manager = FileManager.default
-        let sessionIDs = Set(([session] + sourceSessions).map(\.id))
-        let parts = ([session] + sourceSessions).flatMap(\.parts)
         guard manager.fileExists(atPath: root.path) else { return [] }
         var enumerationError: (any Error)?
         guard try root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]).isSymbolicLink != true,
               let iterator = manager.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
                   options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: { _, error in
-                      enumerationError = error
-                      return false
-                  }) else {
-            throw SessionError.invalid("Cannot inspect the Jobs directory; keep transcripts or inspect it in Finder")
-        }
-        func read<Value: Decodable>(_ name: String, in job: URL, as type: Value.Type) throws -> Value? {
-            let url = job.appendingPathComponent(name)
-            guard manager.fileExists(atPath: url.path) else { return nil }
-            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isRegularFile == true, values.isSymbolicLink != true else { return nil }
-            let file = try FileHandle(forReadingFrom: url)
-            defer { try? file.close() }
-            let data = try file.read(upToCount: maximumReferenceBytes + 1) ?? Data()
-            guard data.count <= maximumReferenceBytes else { throw SessionError.invalid("Job reference is too large") }
-            return try JSONDecoder().decode(type, from: data)
-        }
-        var jobs: [URL] = []
-        var scanned = 0
-        for case let job as URL in iterator {
+                      enumerationError = error; return false
+                  }) else { throw SessionError.invalid("Cannot inspect Jobs; keep transcripts or inspect them in Finder") }
+        var result: [JobEvidence] = [], scanned = 0
+        for case let found as URL in iterator {
             try cancel.check()
             scanned += 1
-            guard scanned <= maximumRelatedJobs else {
-                throw SessionError.invalid("Too many Jobs to inspect in one pass; keep transcripts or inspect them in Finder")
-            }
-            let values = try job.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
-            guard values.isDirectory == true, values.isSymbolicLink != true,
-                  UUID(uuidString: job.lastPathComponent) != nil else { continue }
-            do {
-                guard let state = try read("manifest.json", in: job, as: State.self), state.state.isTerminal else { continue }
-                let reference = try read("audio-report.json", in: job, as: Reference.self)
-                let snapshot = try read("source-session.snapshot.json", in: job, as: Snapshot.self)
-                let matchingPart = parts.contains { part in
-                    guard let hash = part.sha256, hash.count == 64, hash == reference?.sha256,
-                          let path = reference?.path else { return false }
-                    return (try? RecordingSession.safeURL(part.path, beside: manifest).standardizedFileURL.path) == URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
-                }
-                let identities = [reference?.session_id, snapshot?.id].compactMap { $0 }
-                let matches = identities.isEmpty ? matchingPart : identities.allSatisfy { sessionIDs.contains($0) }
-                // Enumeration may rewrite /var to /private/var. Keep the caller's
-                // root spelling so remembered job URLs can be cleared after Trash.
-                if matches { jobs.append(root.appendingPathComponent(job.lastPathComponent, isDirectory: true)) }
-            } catch {
-                // Unverifiable evidence is retained, never guessed from a directory/file name.
-                logger.error("Keeping unverifiable job path=\(job.path, privacy: .private) error=\(error.localizedDescription, privacy: .private)")
+            guard scanned <= maximumRelatedJobs else { throw SessionError.invalid("Too many Jobs to inspect in one pass; keep transcripts or inspect them in Finder") }
+            let job = root.appendingPathComponent(found.lastPathComponent, isDirectory: true)
+            guard UUID(uuidString: job.lastPathComponent) != nil else { continue }
+            do { result.append(try inspectJob(job)) }
+            catch {
+                result.append(.init(url: job, identities: [], sourcePath: nil, sourceHash: nil, isTerminal: false,
+                                    fingerprint: [:], problem: error.localizedDescription))
             }
         }
         if let enumerationError { throw enumerationError }
-        return jobs
+        return result
+    }
+
+    static func inspectJob(_ job: URL) throws -> JobEvidence {
+        struct Reference: Decodable { var session_id: UUID?; var path: String?; var sha256: String? }
+        struct Snapshot: Decodable { let id: UUID }
+        struct State: Decodable { let state: JobState }
+        let manager = FileManager.default
+        // URL resource values can be cached from preflight. Read current lstat-backed
+        // attributes so replacing a planned directory with a symlink is detected.
+        let type = try manager.attributesOfItem(atPath: job.path)[.type] as? FileAttributeType
+        let rootType = try manager.attributesOfItem(atPath: job.deletingLastPathComponent().path)[.type] as? FileAttributeType
+        guard type == .typeDirectory, rootType == .typeDirectory else {
+            throw SessionError.invalid("Symbolic links and non-directory jobs are kept")
+        }
+        var fingerprints: [String: String] = [:]
+        func read<Value: Decodable>(_ name: String, as type: Value.Type) throws -> Value? {
+            let url = job.appendingPathComponent(name)
+            guard manager.fileExists(atPath: url.path) else { return nil }
+            guard try manager.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType == .typeRegular else {
+                throw SessionError.invalid("Unverifiable job reference")
+            }
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            let data = try handle.read(upToCount: maximumReferenceBytes + 1) ?? Data()
+            guard data.count <= maximumReferenceBytes else { throw SessionError.invalid("Job reference is too large") }
+            fingerprints[name] = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            return try JSONDecoder().decode(type, from: data)
+        }
+        let state = try read("manifest.json", as: State.self)
+        let reference = try read("audio-report.json", as: Reference.self)
+        let snapshot = try read("source-session.snapshot.json", as: Snapshot.self)
+        return .init(url: job, identities: [reference?.session_id, snapshot?.id].compactMap { $0 },
+                     sourcePath: reference?.path, sourceHash: reference?.sha256, isTerminal: state?.state.isTerminal == true,
+                     fingerprint: fingerprints, problem: state == nil ? "Missing job state" : nil)
+    }
+
+    static func relatedJobs(to session: RecordingSession, beside manifest: URL, in root: URL,
+                            cancel: WorkCancellation, sourceSessions: [RecordingSession] = []) throws -> [URL] {
+        try scanJobs(in: root, cancel: cancel).filter {
+            $0.isTerminal && $0.problem == nil && $0.matches([session] + sourceSessions, beside: manifest)
+        }.map(\.url)
     }
 }

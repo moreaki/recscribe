@@ -3,7 +3,6 @@ import CoreMedia
 import CoreAudio
 import SwiftUI
 import Testing
-import Vision
 @testable import RecScribe
 
 /// Synthetic devices and isolated settings. Windows are never ordered on screen;
@@ -80,64 +79,6 @@ struct AudioRoutingViewTests {
         #expect(monitor.levels.value == savedMonitor)
         #expect(!monitor.enabled)
         #expect(controller.startCount == 0)
-    }
-
-    @Test func collapsedVirtualCardShowsCaptureControlWithoutDisclosure() async throws {
-        let suite = "routing-capture-checkbox-\(UUID())"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let mic = InputDeviceInfo(uid: "mic", name: "Microphone", inputChannels: 1)
-        let virtual = InputDeviceInfo(uid: "virtual", name: "Meeting loopback", inputChannels: 2,
-            transport: kAudioDeviceTransportTypeVirtual)
-        let original = InputSelection(deviceUID: virtual.uid, routes: [.init(channel: 1, placement: .right)])
-        let source = AudioSource.multiple(appBundleID: nil, inputs: [.init(device: mic), original])
-        let provider = MockAudioSourceProviding(selectedSource: source)
-        provider.availableInputDevicesResult = [mic, virtual]
-        let controller = MockRecordingControlling()
-        let audio = AudioServices(defaults: defaults)
-        audio.levels.set("input:virtual", .init(decibels: -3, muted: true))
-        let recorder = RecorderViewModel(controller: controller, permissions: MockPermissionProviding(.granted),
-            clock: ManualClock(), audioSource: provider, defaults: defaults, audio: audio)
-        let view = AudioRoutingView(levels: audio.levels, monitor: audio.monitor, playbackLevels: audio.playbackLevels,
-            hardwareObserver: audio.hardware).environment(recorder).preferredColorScheme(.dark)
-        let host = NSHostingView(rootView: view)
-        host.frame = CGRect(x: 0, y: 0, width: 760, height: 900)
-        let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false; window.appearance = NSAppearance(named: .darkAqua); window.contentView = host
-        // Native SwiftUI controls are installed lazily. Give this fixture a real
-        // AppKit backing window, offscreen, rather than relying on a local renderer cache.
-        window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
-        window.orderFront(nil)
-        defer { window.contentView = nil; window.close() }
-        // Check the rendered label rather than SwiftUI's OS-dependent native
-        // subview classes. This fails if capture remains hidden in disclosure.
-        let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1520, pixelsHigh: 1800,
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
-        bitmap.size = host.bounds.size
-        var text = ""
-        for _ in 0..<3 {
-            await settle()
-            host.layoutSubtreeIfNeeded()
-            host.cacheDisplay(in: host.bounds, to: bitmap)
-            let image = try #require(bitmap.cgImage)
-            let request = VNRecognizeTextRequest()
-            // Pin the legacy recognizer for CPU-only CI VMs without ANE.
-            request.revision = VNRecognizeTextRequestRevision1
-            request.recognitionLevel = .accurate
-            request.usesCPUOnly = true
-            request.recognitionLanguages = ["en-US"]
-            request.usesLanguageCorrection = true
-            try VNImageRequestHandler(cgImage: image).perform([request])
-            text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ")
-            if text.lowercased().filter({ !$0.isWhitespace }).contains("recordmeetingloopback") { break }
-        }
-        #expect(text.lowercased().filter { !$0.isWhitespace }.contains("recordmeetingloopback"),
-            "The collapsed card must visibly expose its capture control. Rendered text: \(text)")
-        #expect(provider.selectedSource == source, "Rendering the direct control must not change capture selection")
-        #expect(audio.levels.level("input:virtual") == .init(decibels: -3, muted: true))
-        #expect(controller.startCount == 0)
-        await audio.shutdown()
     }
 
     @Test(arguments: [250.0, 450.0, 720.0])

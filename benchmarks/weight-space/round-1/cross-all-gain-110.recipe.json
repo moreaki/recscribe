@@ -1,0 +1,61 @@
+{
+  "author": "Codex AI agent; exact model-build identifier unavailable to local runner",
+  "development_evidence": [
+    "https://github.com/moreaki/recscribe/blob/50ff6ab20671e7270d8da5fe85949ef13c103583/benchmarks/pilot-baseline-2026-11-05.md",
+    "Observed source-content substitutions in published development references; no held-out references/outcomes inspected"
+  ],
+  "edits": [
+    {
+      "count": 147456,
+      "dtype": "f16",
+      "factor": 1.1,
+      "op": "scale",
+      "shape": [
+        384,
+        384
+      ],
+      "start": 0,
+      "tensor": "decoder.blocks.0.cross_attn.out.weight"
+    },
+    {
+      "count": 147456,
+      "dtype": "f16",
+      "factor": 1.1,
+      "op": "scale",
+      "shape": [
+        384,
+        384
+      ],
+      "start": 0,
+      "tensor": "decoder.blocks.1.cross_attn.out.weight"
+    },
+    {
+      "count": 147456,
+      "dtype": "f16",
+      "factor": 1.1,
+      "op": "scale",
+      "shape": [
+        384,
+        384
+      ],
+      "start": 0,
+      "tensor": "decoder.blocks.2.cross_attn.out.weight"
+    },
+    {
+      "count": 147456,
+      "dtype": "f16",
+      "factor": 1.1,
+      "op": "scale",
+      "shape": [
+        384,
+        384
+      ],
+      "start": 0,
+      "tensor": "decoder.blocks.3.cross_attn.out.weight"
+    }
+  ],
+  "format": "whisper-ggml-unquantized-v1",
+  "hypothesis": "Test the decoder acoustic cross-attention residual contribution by scaling selected output-projection weights without bias or runtime changes; no claimed causal repair.",
+  "input_sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+  "schema_version": "1.0"
+}

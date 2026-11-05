@@ -3,6 +3,8 @@
 Research issue: #112; corpus/controls: #104/#105. Written on 2026-11-05 before
 any candidate model was evaluated or held-out reference/outcome was inspected.
 This is an exploratory pilot, not a promise of an improved or shippable model.
+The portable [three exact recipes and reproduction commands](weight-space/round-1/README.md)
+are checked in separately from protected model artifacts and recognition results.
 
 ## Available evidence and limits
 

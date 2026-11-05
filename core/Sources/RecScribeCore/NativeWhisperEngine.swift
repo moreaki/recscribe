@@ -90,6 +90,11 @@ public struct NativeWhisperEngine: TranscriptEngine {
         provenance["detected_language_evidence"] = "raw runtime label; language ID unobserved when no speech was returned"
         provenance["command"] = .array(([binary.path] + arguments).map(JSONValue.string))
         provenance["duration_seconds"] = .number(TextJob.seconds(since: started))
+        let logFile = try FileHandle(forReadingFrom: output.appendingPathExtension("log"))
+        defer { try? logFile.close() }
+        let logBytes = try logFile.read(upToCount: 256 * 1_024 + 1) ?? Data()
+        guard logBytes.count <= 256 * 1_024 else { throw CoreFailure("Whisper timing evidence exceeds its bounded limit") }
+        provenance["runtime_timings"] = WhisperBenchmarkMetrics.timings(log: String(decoding: logBytes, as: UTF8.self))
         return AudioEngineResult(segments: segments, rawPath: raw, provenance: provenance)
     }
 

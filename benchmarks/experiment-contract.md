@@ -29,8 +29,10 @@ location. Fill only verified local paths, model checkpoint/precision and SHA-256
 Full large-v3 and large-v3-turbo are separate multilingual controls. No model is
 downloaded automatically. Keep all nine language slices and both `known`/`auto`
 controls. Code-switch and non-speech cases cannot have a single known-language
-control; their rows stay explicitly unsupported. Standard German rendering of
-Swiss speech is a separate output task and is not scored as verbatim recognition.
+control; their rows stay explicitly unsupported. Swiss speech → written Standard
+German is the primary Swiss output task (`standard_rendering`) and is scored
+directly against reviewed written-German references. Optional dialect spelling
+remains a separate task; no automatic LLM cleanup stage is implied.
 
 ```sh
 python3 scripts/work-artifacts.py run --label issue-105-readiness benchmark -- \
@@ -65,6 +67,25 @@ must be validated against actual runtime capabilities. Use one intervention at a
 time on development data, then a combined profile after isolated comparisons.
 Existing installed app preferences remain unchanged and select the control.
 
+Models and runtime profiles are separate axes. A derived model declares `kind`
+(`weight_edit`, `compression`, `conversion_control` or `combined`), its immutable
+`baseline_model_id` and `baseline_model_sha256`, a safe `intervention_id`, its own
+artifact hash, and explicit `profiles`. Derived models cannot run a profile of
+kind `baseline`: that label is reserved for unchanged artifacts through the
+retained control CLI. An optional model `download_artifact` points to an actual
+local distribution file, with optional `download_artifact_sha256`; its measured
+bytes are kept separate from the model's installed bytes.
+
+An explicit `comparisons` entry names `id`, `intervention`,
+`baseline_model_id`, `candidate_model_id`, `baseline_profile_id` and
+`candidate_profile_id`. An isolated model comparison uses one shared profile of
+kind `candidate` for both parent and edited model, preserving the same current
+CLI, settings, Whisper binary and preparation. That shared profile may contain
+only `{"schema_version":"1.0"}` to select unchanged decoding settings. A
+runtime-only comparison uses the same artifact on both sides. Combined changes
+are identified separately. Invalid/recursive lineage, mismatched parent hashes
+and unassociated profiles fail before inference.
+
 `final` uses the real native preprocessing/AudioJob/adapter. Source-channel human
 references are scored against only that canonical channel, with channel identity
 retained. A mixed reference must explicitly describe its interleaved contract.
@@ -76,8 +97,11 @@ this harness until that adapter is integrated and verified.
 Reports retain sample counts, edit counts and denominators; language/condition,
 output task, scorer and configuration groups stay separate. Macro averages and
 corpus-weighted rates are distinct. Repeats report median/range and distinct text
-hashes. Paired deltas require identical source/reference/scorer/task/model hashes,
-language mode, input path and repeat. Failure/pending cells remain unpaired.
+hashes. Paired deltas require identical source/reference/scorer/task/channel,
+language mode, input path, thread/preparation identity and repeat. Runtime-only
+pairs require the same model hash; model-edit pairs retain both distinct artifact
+hashes and verify the declared untouched parent plus identical runtime settings.
+Failure/pending cells remain unpaired.
 Three repeats assess variability; they do not establish independent corpus size.
 Critical-content and language-ID confusion require annotated human ground truth
 and remain unmeasured when unavailable. A `de` recognizer guess does not identify
@@ -86,9 +110,14 @@ Swiss dialect or establish dialect wording fidelity.
 Wall time includes inspection/model load/inference/validation/rendering. Engine
 passes retain their own elapsed times and exact commands/backend logs. Fresh
 processes do not establish cold disk caches or resident-worker performance.
-macOS `time -l` maximum RSS is not total unified CPU/GPU allocation. Initialization,
-GPU allocation, model-load phases and live delay need separate instrumentation;
-never infer them by subtraction or relabel end-to-end time as decoder latency.
+macOS `time -l` maximum RSS is not total unified CPU/GPU allocation. The versioned
+`whisper-cpp-print-timings-v1` parser retains individual upstream load, mel,
+sample, encode, decode, batchd, prompt and total timers from private logs. The
+model-load timer is not total process initialization; overlapping timers are not
+summed/subtracted. End-to-end audio-seconds-per-second is labeled as pipeline
+throughput. First-token/result latency and total unified GPU allocation remain
+unobserved when unavailable. Actual file/download sizes are measured separately;
+incremental bundle bytes stay null until a candidate app bundle is assembled.
 
 ## Freeze and held-out evaluation
 

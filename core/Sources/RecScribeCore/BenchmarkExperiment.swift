@@ -24,6 +24,104 @@ public enum BenchmarkExperiment {
         return text.range(of: "^[a-zA-Z0-9_-]+$", options: .regularExpression) != nil
     }
 
+    struct MatrixPlan {
+        let models: [String: JSONValue]
+        let allowedProfiles: [String: Set<String>]
+        let comparisons: [JSONValue]
+    }
+
+    static func modelKind(_ model: JSONValue) -> String { model["kind"].string ?? "pretrained" }
+
+    /// Model artifacts and runtime profiles are independent axes. A derived
+    /// artifact never inherits the label or executable of an untouched control.
+    static func validateMatrix(models: [JSONValue], profiles: [JSONValue], comparisons: JSONValue) throws -> MatrixPlan {
+        guard !models.isEmpty, !profiles.isEmpty,
+              models.allSatisfy({ safe($0["id"].string) }), profiles.allSatisfy({ safe($0["id"].string) }),
+              Set(models.compactMap { $0["id"].string }).count == models.count,
+              Set(profiles.compactMap { $0["id"].string }).count == profiles.count else {
+            throw CoreFailure("Model and profile IDs must be unique safe identifiers")
+        }
+        let modelMap = Dictionary(uniqueKeysWithValues: models.map { ($0["id"].string!, $0) })
+        let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0["id"].string!, $0) })
+        let kinds = ["pretrained", "weight_edit", "compression", "conversion_control", "combined"]
+        func digest(_ value: JSONValue) -> Bool {
+            value.string?.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil
+        }
+        var assignments: [String: Set<String>] = [:]
+        for model in models {
+            let id = model["id"].string!, kind = modelKind(model)
+            guard kinds.contains(kind), model.object?["kind"] == nil || model["kind"].string != nil else {
+                throw CoreFailure("Unsupported model artifact kind: \(id)")
+            }
+            if let selected = model["profiles"].array {
+                let names = selected.compactMap(\.string)
+                guard !names.isEmpty, names.count == selected.count, Set(names).count == names.count,
+                      names.allSatisfy({ profileMap[$0] != nil }) else {
+                    throw CoreFailure("Model \(id) needs unique configured profile associations")
+                }
+                assignments[id] = Set(names)
+            } else {
+                guard model.object?["profiles"] == nil, kind == "pretrained" else {
+                    throw CoreFailure("Derived model \(id) requires explicit profile associations")
+                }
+                assignments[id] = Set(profileMap.keys)
+            }
+            if kind == "pretrained" {
+                guard model["baseline_model_id"] == .null, model["baseline_model_sha256"] == .null,
+                      model["intervention_id"] == .null else {
+                    throw CoreFailure("Untouched model \(id) cannot declare an adaptation lineage")
+                }
+                continue
+            }
+            guard let parentID = model["baseline_model_id"].string, parentID != id,
+                  let parent = modelMap[parentID], modelKind(parent) == "pretrained",
+                  digest(parent["sha256"]), digest(model["sha256"]),
+                  model["baseline_model_sha256"] == parent["sha256"], safe(model["intervention_id"].string),
+                  kind == "conversion_control" || model["sha256"] != parent["sha256"] else {
+                throw CoreFailure("Derived model \(id) needs a hashed untouched parent and explicit intervention; recursive/cyclic lineage is unsupported")
+            }
+            guard assignments[id]!.allSatisfy({ profileMap[$0]?["kind"] == "candidate" }) else {
+                throw CoreFailure("Derived model \(id) cannot run an untouched-baseline profile")
+            }
+        }
+        let specifications: [JSONValue]
+        if comparisons == .null { specifications = [] }
+        else if let values = comparisons.array { specifications = values }
+        else { throw CoreFailure("comparisons must be an array") }
+        guard specifications.count <= 1_000 else { throw CoreFailure("Experiment exceeds 1,000 comparison specifications") }
+        var ids = Set<String>(), coveredDerivedModels = Set<String>()
+        for specification in specifications {
+            guard let id = specification["id"].string, safe(id), ids.insert(id).inserted,
+                  let intervention = specification["intervention"].string,
+                  ["runtime", "weight_edit", "compression", "conversion_control", "combined"].contains(intervention),
+                  let beforeID = specification["baseline_model_id"].string, let before = modelMap[beforeID],
+                  let afterID = specification["candidate_model_id"].string, let after = modelMap[afterID],
+                  let beforeProfile = specification["baseline_profile_id"].string,
+                  let afterProfile = specification["candidate_profile_id"].string,
+                  assignments[beforeID]!.contains(beforeProfile), assignments[afterID]!.contains(afterProfile) else {
+                throw CoreFailure("Invalid comparison identity, intervention, model or profile association")
+            }
+            if intervention == "runtime" {
+                guard beforeID == afterID else { throw CoreFailure("A runtime-only comparison must use the same model artifact") }
+            } else {
+                guard beforeID != afterID, modelKind(before) == "pretrained", modelKind(after) == intervention,
+                      after["baseline_model_id"] == .string(beforeID), after["baseline_model_sha256"] == before["sha256"] else {
+                    throw CoreFailure("Model comparison \(id) does not reference its declared untouched parent")
+                }
+                if intervention != "combined" {
+                    guard beforeProfile == afterProfile, profileMap[beforeProfile]?["kind"] == "candidate" else {
+                        throw CoreFailure("Isolated model comparison \(id) requires one shared current-runner profile")
+                    }
+                }
+                coveredDerivedModels.insert(afterID)
+            }
+        }
+        guard models.filter({ modelKind($0) != "pretrained" }).allSatisfy({ coveredDerivedModels.contains($0["id"].string!) }) else {
+            throw CoreFailure("Every derived model needs an explicit parent comparison")
+        }
+        return MatrixPlan(models: modelMap, allowedProfiles: assignments, comparisons: specifications)
+    }
+
     /// Dry runs perform no engine calls. Unavailable cells stay explicit, without scores.
     public static func run(manifest: URL, configuration: URL, output: URL, cli: URL,
                            dryRun: Bool, check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
@@ -49,9 +147,13 @@ public enum BenchmarkExperiment {
               paths.allSatisfy({ ["final", "live-replay"].contains($0.string ?? "") }), Set(paths.compactMap { $0.string }).count == paths.count else {
             throw CoreFailure("Unsafe/duplicate matrix IDs or unsupported language/input mode")
         }
+        let plan = try validateMatrix(models: models, profiles: profiles, comparisons: config["comparisons"])
         let cases = allCases.filter { $0["split"] == config["split"] || corpus["schema_version"] == "1.0" }
-        let rowCount = cases.count * models.count * modes.count * paths.count * profiles.count * Int(repeats)
+        let rowCount = cases.count * modes.count * paths.count * Int(repeats) * plan.allowedProfiles.values.reduce(0) { $0 + $1.count }
         guard rowCount <= maximumRows else { throw CoreFailure("Experiment exceeds 20,000 serial cells; split the plan") }
+        guard cases.count * modes.count * paths.count * Int(repeats) * plan.comparisons.count <= maximumRows else {
+            throw CoreFailure("Experiment exceeds 20,000 paired comparison cells; split the plan")
+        }
         let whisper = resolve(config["whisper_cli"].string, relativeTo: configuration)
         let baselineCLI = resolve(config["baseline_cli"].string, relativeTo: configuration)
         func executableIdentity(_ url: URL?) throws -> (hash: String?, failure: String?) {
@@ -149,7 +251,8 @@ public enum BenchmarkExperiment {
             "required_models_missing_from_plan": .array(requiredModels.filter { name in !models.contains { $0["id"] == .string(name) } }.map(JSONValue.string)),
             "limitations": ["Fresh processes do not establish cold filesystem caches", "Peak RSS excludes total unified GPU memory", "Live replay is unsupported until the real app replay adapter is integrated", "Human critical-content, semantic and timing review remain unmeasured"],
             "runner_sha256": .string(runnerHash), "profile_sha256": .object(profileHashes.mapValues(JSONValue.string)),
-            "freeze_sha256": freezeSnapshot.map { .string(TextJob.hash($0)) } ?? .null]
+            "freeze_sha256": freezeSnapshot.map { .string(TextJob.hash($0)) } ?? .null,
+            "comparisons": .array(plan.comparisons)]
         metadata["whisper_binary_sha256"] = whisperHash.map(JSONValue.string) ?? .null
         var readiness: [String: CorpusManifest.Eligibility] = [:]
         var corpusFailures: [String: String] = [:]
@@ -167,14 +270,27 @@ public enum BenchmarkExperiment {
         for model in models {
             let modelURL = resolve(model["path"].string, relativeTo: configuration)
             var modelHash: String?, modelFailure: String?
+            var artifactMetrics: JSONValue = .null
             do {
                 modelHash = try modelURL.flatMap { FileManager.default.isReadableFile(atPath: $0.path) ? try WAVAudio.hash($0, check: check) : nil }
                 if let expected = model["sha256"].string, let modelHash, expected != modelHash {
                     modelFailure = "Model checksum mismatch: \(model["id"].string!)"
                 }
+                if model["download_artifact"] != .null && !nonempty(model["download_artifact"].string) {
+                    throw CoreFailure("Download artifact must be an explicit local file path")
+                }
+                if let modelURL, modelHash != nil {
+                    artifactMetrics = try WhisperBenchmarkMetrics.artifact(modelURL,
+                        download: resolve(model["download_artifact"].string, relativeTo: configuration), check: check)
+                    if let expected = model["download_artifact_sha256"].string,
+                       artifactMetrics["download_artifact_sha256"] != .string(expected) {
+                        throw CoreFailure("Download artifact checksum mismatch: \(model["id"].string!)")
+                    }
+                }
             } catch is CancellationError { throw CancellationError() }
             catch { modelFailure = error.localizedDescription }
-            for profile in profiles { for mode in modes { for path in paths { for item in cases { for repeatIndex in 1...Int(repeats) {
+            for profile in profiles where plan.allowedProfiles[model["id"].string!]!.contains(profile["id"].string!) {
+                for mode in modes { for path in paths { for item in cases { for repeatIndex in 1...Int(repeats) {
                 let ready = readiness[item["id"].string!]!
                 var gaps: [JSONValue] = []
                 var failures = [modelFailure, corpusFailures[item["id"].string!], whisperIdentity.failure].compactMap { $0 }
@@ -192,13 +308,25 @@ public enum BenchmarkExperiment {
                 if profile["kind"] == "baseline", config["baseline_cli_sha256"].string == nil { gaps.append("pending_untouched_binary_hash_lock") }
                 if profile["kind"] == "baseline", baselineCLI == nil || !FileManager.default.isExecutableFile(atPath: baselineCLI!.path) { gaps.append("pending_untouched_binary") }
                 if mode == "known", item["language"] == "auto" || !(item["code_switches"].array ?? []).isEmpty || item["language"] == "und" { gaps.append("unsupported_known_language_control") }
-                if item["task"] != .null && item["task"] != "transcription" && item["task"] != "dialect_transcription" && item["task"] != "non_speech" { gaps.append("unsupported_output_task") }
+                if item["task"] != .null && item["task"] != "transcription" && item["task"] != "dialect_transcription" && item["task"] != "standard_rendering" && item["task"] != "non_speech" { gaps.append("unsupported_output_task") }
+                let derived = modelKind(model) != "pretrained"
                 rows.append(["id": item["id"], "language": item["language"], "conditions": item["conditions"], "task": item["task"],
+                    "coverage_role": item["coverage_role"], "source_channel": item["source_channel"],
                     "model": model["id"], "model_sha256": modelHash.map(JSONValue.string) ?? .null,
+                    "artifact_metrics": artifactMetrics,
+                    "model_kind": .string(modelKind(model)),
+                    "baseline_model_id": derived ? model["baseline_model_id"] : model["id"],
+                    "baseline_model_sha256": derived ? model["baseline_model_sha256"] : modelHash.map(JSONValue.string) ?? .null,
+                    "intervention_id": derived ? model["intervention_id"] : .null,
                     "precision": model["precision"], "checkpoint": model["checkpoint"], "profile": profile["id"],
                     "profile_kind": profile["kind"], "profile_sha256": profileHashes[profile["id"].string!].map(JSONValue.string) ?? .null,
                     "effective_profile_sha256": effectiveProfileHashes[profile["id"].string!].map(JSONValue.string) ?? .null,
                     "vad_model_sha256": profileVADHashes[profile["id"].string!].map(JSONValue.string) ?? .null,
+                    "runtime_settings_sha256": .string(effectiveProfileHashes[profile["id"].string!] ?? WhisperDecodingProfile.baseline.provenance["profile_sha256"].string!),
+                    "whisper_binary_sha256": whisperHash.map(JSONValue.string) ?? .null,
+                    "transcription_runner_sha256": (profile["kind"] == "baseline" ? baselineHash : runnerHash).map(JSONValue.string) ?? .null,
+                    "threads": .integer(threads),
+                    "preparation_policy": .string("\(AudioJob.Policy.version)/fast-verbatim/AVAudioConverter/\(NativeAudioPreparer.sampleRate)Hz/s16/independent-channels"),
                     "baseline_runner_sha256": baselineHash.map(JSONValue.string) ?? .null, "source_revision": profile["source_revision"], "language_mode": mode, "path": path, "repeat": .integer(Int64(repeatIndex)),
                     "source_sha256": ready.audioSHA256.map(JSONValue.string) ?? .null,
                     "reference_sha256": ready.referenceSHA256.map(JSONValue.string) ?? .null,
@@ -212,7 +340,7 @@ public enum BenchmarkExperiment {
             var report = metadata
             report["rows"] = .array(rows)
             report["repeat_summary"] = summarize(rows)
-            report["paired_comparisons"] = paired(rows)
+            report["paired_comparisons"] = paired(rows, specifications: plan.comparisons)
             let scored: [JSONValue] = rows.compactMap { row in
                 guard completed(row), var measurement = row["measurement"].object else { return nil }
                 measurement["configuration_id"] = .string([row["model"].string!, row["profile"].string!, row["language_mode"].string!, row["path"].string!].joined(separator: "/"))
@@ -258,6 +386,11 @@ public enum BenchmarkExperiment {
                         externalCheck: cancellation)
                     let result = report["results"].array!.first!
                     rows[index]["measurement"] = result
+                    guard result["source_sha256"] == row["source_sha256"],
+                          result["reference_sha256"] == row["reference_sha256"],
+                          result["scoring_version"] == row["scoring_policy"] else {
+                        throw CoreFailure("Measured source/reference/scoring identity differs from the planned comparison")
+                    }
                     let observed = try validateEngineIdentity(result["engine_passes"], binaryHash: whisperHash!,
                         modelHash: row["model_sha256"].string!, vadHash: profileVADHashes[profileID], profileHash: effectiveProfileHashes[profileID])
                     rows[index]["engine_identity_observations"] = .integer(Int64(observed))
@@ -332,28 +465,96 @@ public enum BenchmarkExperiment {
         })
     }
 
-    /// Pair only identical evidence/input/model/repeat cells; missing measurements remain pending.
-    static func paired(_ rows: [JSONValue]) -> JSONValue {
+    /// Model comparisons retain both hashes and require explicit lineage. Runtime
+    /// comparisons keep the model hash fixed. Neither path pairs different inputs.
+    static func paired(_ rows: [JSONValue], specifications: [JSONValue] = []) -> JSONValue {
         func identity(_ row: JSONValue) -> String {
-            let fields = ["id", "model", "model_sha256", "language_mode", "path", "source_sha256", "reference_sha256", "scoring_policy", "task"]
-            return fields.map { row[$0].string ?? "unknown" }.joined(separator: "|") + "|\(row["repeat"].integer ?? 0)"
+            let fields = ["id", "language", "language_mode", "path", "source_sha256", "reference_sha256", "scoring_policy", "task"]
+            return fields.map { row[$0].string ?? "unknown" }.joined(separator: "|")
+                + "|\(row["source_channel"].integer.map(String.init) ?? row["source_channel"].string ?? "unknown")|\(row["repeat"].integer ?? 0)"
         }
-        let controls = Dictionary(grouping: rows.filter { $0["profile_kind"] == "baseline" }, by: identity)
-        return .array(rows.filter { $0["profile_kind"] == "candidate" }.map { row in
+        func measuredIdentityMatches(_ row: JSONValue) -> Bool {
+            for (observed, declared) in [("source_sha256", "source_sha256"), ("reference_sha256", "reference_sha256"), ("scoring_version", "scoring_policy")] {
+                let value = row["measurement"][observed]
+                if value != .null && value != row[declared] { return false }
+            }
+            return true
+        }
+        func comparison(_ matches: [JSONValue]?, row: JSONValue, specification: JSONValue) -> JSONValue {
+            let intervention = specification["intervention"].string ?? "runtime"
             var comparison: JSONValue = ["identity": .string(identity(row)), "candidate_profile": row["profile"],
-                "language": row["language"], "conditions": row["conditions"], "status": "pending_pair"]
-            guard let matches = controls[identity(row)], matches.count == 1,
+                "candidate_model": row["model"], "candidate_model_sha256": row["model_sha256"],
+                "comparison_id": specification["id"], "intervention": .string(intervention), "intervention_id": row["intervention_id"],
+                "language": row["language"], "conditions": row["conditions"], "coverage_role": row["coverage_role"],
+                "pairing_contract_version": "model-lineage-v2", "status": "pending_pair"]
+            guard let matches, matches.count == 1,
                   let control = matches.first, completed(control), completed(row), control["measurement"]["wall_seconds"].double != nil,
-                  row["measurement"]["wall_seconds"].double != nil else { return comparison }
+                  row["measurement"]["wall_seconds"].double != nil,
+                  measuredIdentityMatches(control), measuredIdentityMatches(row) else { return comparison }
+            comparison["baseline_model"] = control["model"]
+            comparison["baseline_model_sha256"] = control["model_sha256"]
+            comparison["baseline_profile"] = control["profile"]
+            comparison["baseline_artifact_metrics"] = control["artifact_metrics"]
+            comparison["candidate_artifact_metrics"] = row["artifact_metrics"]
+            for field in ["whisper_binary_sha256", "threads", "preparation_policy"] where control[field] != row[field] {
+                comparison["reason"] = .string("Shared execution identity differs: \(field)")
+                return comparison
+            }
+            if intervention == "runtime" {
+                guard control["model"] == row["model"], control["model_sha256"] == row["model_sha256"] else {
+                    comparison["reason"] = "Runtime comparison changes model identity"
+                    return comparison
+                }
+            } else {
+                guard row["baseline_model_id"] == control["model"], row["baseline_model_sha256"] == control["model_sha256"],
+                      row["model_kind"] == .string(intervention), row["model"] != control["model"] else {
+                    comparison["reason"] = "Model comparison does not match the retained parent artifact"
+                    return comparison
+                }
+                if intervention != "combined" {
+                    for field in ["runtime_settings_sha256", "vad_model_sha256", "transcription_runner_sha256"] where control[field] != row[field] {
+                        comparison["reason"] = .string("Isolated model comparison changes runtime identity: \(field)")
+                        return comparison
+                    }
+                    guard control["profile"] == row["profile"], control["runtime_settings_sha256"].string != nil,
+                          control["transcription_runner_sha256"].string != nil, control["whisper_binary_sha256"].string != nil,
+                          control["threads"].integer != nil, control["preparation_policy"].string != nil else {
+                        comparison["reason"] = "Isolated model comparison lacks a shared verified execution identity"
+                        return comparison
+                    }
+                }
+            }
             comparison["status"] = "paired_exploratory"
             for metric in ["wer", "cer", "word_insertions", "word_deletions", "character_insertions", "false_speech_characters", "wall_seconds", "real_time_factor", "peak_rss_bytes"] {
                 if let before = control["measurement"][metric].double, let after = row["measurement"][metric].double {
                     comparison[metric + "_delta"] = .number(after - before)
                 }
             }
+            for metric in ["model_file_bytes", "filesystem_allocated_bytes", "download_artifact_bytes", "incremental_bundle_bytes"] {
+                if let before = control["artifact_metrics"][metric].integer, let after = row["artifact_metrics"][metric].integer {
+                    comparison[metric + "_delta"] = .integer(after - before)
+                }
+            }
             comparison["critical_content_review"] = "unmeasured"
             return comparison
-        })
+        }
+        if specifications.isEmpty {
+            let controls = Dictionary(grouping: rows.filter { $0["profile_kind"] == "baseline" }, by: identity)
+            return .array(rows.filter { $0["profile_kind"] == "candidate" }.map { row in
+                let matches = controls[identity(row)]?.filter { $0["model"] == row["model"] && $0["model_sha256"] == row["model_sha256"] }
+                return comparison(matches, row: row, specification: ["intervention": "runtime"])
+            })
+        }
+        var values: [JSONValue] = []
+        for specification in specifications {
+            let controls = Dictionary(grouping: rows.filter {
+                $0["model"] == specification["baseline_model_id"] && $0["profile"] == specification["baseline_profile_id"]
+            }, by: identity)
+            for row in rows where row["model"] == specification["candidate_model_id"] && row["profile"] == specification["candidate_profile_id"] {
+                values.append(comparison(controls[identity(row)], row: row, specification: specification))
+            }
+        }
+        return .array(values)
     }
 
     static func hostEvidence(output: URL, check: @Sendable () throws -> Void) throws -> JSONValue {

@@ -153,4 +153,146 @@ import Testing
         baseline["status"] = "failed"
         #expect(BenchmarkExperiment.paired([baseline, candidate]).array?.first?["status"] == "pending_pair")
     }
+
+    private var artifactModels: [JSONValue] {
+        [["id": "tiny", "kind": "pretrained", "sha256": .string(String(repeating: "a", count: 64)), "profiles": ["untouched", "current"]],
+         ["id": "tiny-edited", "kind": "weight_edit", "sha256": .string(String(repeating: "b", count: 64)),
+          "baseline_model_id": "tiny", "baseline_model_sha256": .string(String(repeating: "a", count: 64)),
+          "intervention_id": "attention-pilot-1", "profiles": ["current"]]]
+    }
+
+    private var artifactProfiles: [JSONValue] {
+        [["id": "untouched", "kind": "baseline"], ["id": "current", "kind": "candidate"]]
+    }
+
+    private var artifactComparison: JSONValue {
+        ["id": "weight-pilot", "intervention": "weight_edit", "baseline_model_id": "tiny", "candidate_model_id": "tiny-edited",
+         "baseline_profile_id": "current", "candidate_profile_id": "current"]
+    }
+
+    @Test func derivedModelsRequireDirectLockedLineageAndExplicitProfileAssociations() throws {
+        let plan = try BenchmarkExperiment.validateMatrix(models: artifactModels, profiles: artifactProfiles, comparisons: .array([artifactComparison]))
+        #expect(plan.allowedProfiles["tiny-edited"] == Set(["current"]))
+        let invalidChanges: [(String, JSONValue)] = [
+            ("baseline_model_id", "missing"), ("baseline_model_id", "tiny-edited"),
+            ("baseline_model_sha256", .string(String(repeating: "c", count: 64))),
+            ("sha256", .string(String(repeating: "a", count: 64))), ("sha256", nil),
+            ("profiles", ["untouched"]), ("profiles", ["missing"]), ("profiles", nil),
+            ("intervention_id", "../unsafe")
+        ]
+        for (field, value) in invalidChanges {
+            var models = artifactModels; models[1][field] = value
+            #expect(throws: CoreFailure.self) {
+                try BenchmarkExperiment.validateMatrix(models: models, profiles: artifactProfiles, comparisons: .array([artifactComparison]))
+            }
+        }
+        #expect(throws: CoreFailure.self) {
+            try BenchmarkExperiment.validateMatrix(models: artifactModels, profiles: artifactProfiles, comparisons: nil)
+        }
+        var cycle = artifactModels
+        cycle[0]["kind"] = "weight_edit"; cycle[0]["baseline_model_id"] = "tiny-edited"
+        cycle[0]["baseline_model_sha256"] = cycle[1]["sha256"]; cycle[0]["intervention_id"] = "recursive"
+        cycle[0]["profiles"] = ["current"]
+        #expect(throws: CoreFailure.self) {
+            try BenchmarkExperiment.validateMatrix(models: cycle, profiles: artifactProfiles, comparisons: .array([artifactComparison]))
+        }
+    }
+
+    @Test func modelComparisonsCannotHideRuntimeChangesOrUnrelatedParents() throws {
+        for (field, value) in [("baseline_model_id", JSONValue.string("tiny-edited")),
+                               ("baseline_profile_id", JSONValue.string("untouched")),
+                               ("intervention", JSONValue.string("runtime")),
+                               ("intervention", JSONValue.string("compression"))] {
+            var specification = artifactComparison; specification[field] = value
+            #expect(throws: CoreFailure.self) {
+                try BenchmarkExperiment.validateMatrix(models: artifactModels, profiles: artifactProfiles, comparisons: .array([specification]))
+            }
+        }
+        #expect(throws: CoreFailure.self) {
+            try BenchmarkExperiment.validateMatrix(models: artifactModels, profiles: artifactProfiles, comparisons: .array([artifactComparison, artifactComparison]))
+        }
+        // An unchanged export can be a conversion control, but must still state its parent.
+        var conversion = artifactModels; conversion[1]["kind"] = "conversion_control"; conversion[1]["sha256"] = conversion[0]["sha256"]
+        var specification = artifactComparison; specification["intervention"] = "conversion_control"
+        #expect(try BenchmarkExperiment.validateMatrix(models: conversion, profiles: artifactProfiles,
+            comparisons: .array([specification])).comparisons.count == 1)
+    }
+
+    @Test func dryRunExecutesOnlyDeclaredArtifactProfilesAndAcceptsSwissWrittenGermanTarget() throws {
+        let folder = try AudioFixture.folder(); defer { try? FileManager.default.removeItem(at: folder) }
+        let audio = folder.appendingPathComponent("source.wav"), reference = folder.appendingPathComponent("reference.txt")
+        try AudioFixture.wav(audio); try Data("Das ist geschriebenes Deutsch.".utf8).write(to: reference)
+        let binary = folder.appendingPathComponent("native-cli"), whisper = folder.appendingPathComponent("whisper-cli")
+        try Data("synthetic; dry run must not execute inference".utf8).write(to: binary)
+        try Data("synthetic whisper; dry run must not execute inference".utf8).write(to: whisper)
+        for file in [binary, whisper] { try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: file.path) }
+        let before = folder.appendingPathComponent("tiny.bin"), after = folder.appendingPathComponent("edited.bin")
+        try Data("original weights".utf8).write(to: before); try Data("edited weights".utf8).write(to: after)
+        let profile = folder.appendingPathComponent("profile.json")
+        try WhisperDecodingProfile.baseline.json.encoded().write(to: profile)
+        let manifest = folder.appendingPathComponent("corpus.json")
+        try JSONValue.object(["schema_version": "1.0", "cases": [["id": "swiss", "category": "speech", "language": "de-CH",
+            "task": "standard_rendering", "coverage_role": "primary", "audio": .string(audio.path), "reference": .string(reference.path),
+            "license": "synthetic test", "sha256": .string(try WAVAudio.hash(audio))]]]).encoded().write(to: manifest)
+        var config = experiment(folder)
+        config["baseline_cli"] = .string(binary.path); config["baseline_cli_sha256"] = .string(try WAVAudio.hash(binary))
+        config["whisper_cli"] = .string(whisper.path)
+        config["profiles"] = [["id": "untouched", "kind": "baseline", "source_revision": config["baseline_revision"], "settings": nil],
+            ["id": "current", "kind": "candidate", "source_revision": config["baseline_revision"], "settings": .string(profile.path)]]
+        var models = artifactModels
+        for index in models.indices {
+            models[index]["path"] = .string(index == 0 ? before.path : after.path)
+            models[index]["sha256"] = .string(try WAVAudio.hash(index == 0 ? before : after))
+            models[index]["checkpoint"] = "synthetic-test"; models[index]["precision"] = "synthetic-test"
+        }
+        models[1]["baseline_model_sha256"] = models[0]["sha256"]
+        config["models"] = .array(models); config["comparisons"] = .array([artifactComparison])
+        let configURL = folder.appendingPathComponent("experiment.json"); try config.encoded().write(to: configURL)
+        let report = try BenchmarkExperiment.run(manifest: manifest, configuration: configURL, output: folder.appendingPathComponent("plan"), cli: binary, dryRun: true)
+        let rows = try #require(report["rows"].array)
+        #expect(rows.count == 9 && rows.allSatisfy { $0["status"] == "ready" })
+        #expect(rows.allSatisfy { $0["task"] == "standard_rendering" && $0["coverage_role"] == "primary" })
+        #expect(rows.filter { $0["model"] == "tiny-edited" }.allSatisfy { $0["profile"] == "current" && $0["profile_kind"] == "candidate" })
+        #expect(rows.first { $0["model"] == "tiny" }?["artifact_metrics"]["model_file_bytes"].integer == 16)
+        #expect(report["paired_comparisons"].array?.count == 3)
+        #expect(report["paired_comparisons"].array?.allSatisfy { $0["status"] == "pending_pair" } == true)
+    }
+
+    private var artifactRows: [JSONValue] {
+        let originalHash = JSONValue.string(String(repeating: "a", count: 64))
+        var before: JSONValue = ["id": "speech", "language": "de-CH", "model": "tiny", "model_sha256": originalHash,
+            "model_kind": "pretrained", "profile": "current", "profile_kind": "candidate", "language_mode": "auto", "path": "final",
+            "source_sha256": "audio", "reference_sha256": "reference", "source_channel": 0,
+            "scoring_policy": "unicode-nfc-apostrophe-v2", "task": "standard_rendering", "repeat": 1,
+            "whisper_binary_sha256": "whisper", "transcription_runner_sha256": "native", "runtime_settings_sha256": "settings",
+            "vad_model_sha256": nil, "preparation_policy": "native-s16", "threads": 2, "status": "completed",
+            "artifact_metrics": ["model_file_bytes": 100, "download_artifact_bytes": 80, "incremental_bundle_bytes": nil],
+            "measurement": ["wall_seconds": 2, "cer": .number(0.2)]]
+        before["baseline_model_id"] = "tiny"; before["baseline_model_sha256"] = originalHash
+        var after = before; after["model"] = "tiny-edited"; after["model_sha256"] = .string(String(repeating: "b", count: 64))
+        after["model_kind"] = "weight_edit"; after["intervention_id"] = "attention-pilot-1"
+        after["measurement"] = ["wall_seconds": 3, "cer": .number(0.1)]
+        after["artifact_metrics"] = ["model_file_bytes": 90, "download_artifact_bytes": 75, "incremental_bundle_bytes": nil]
+        return [before, after]
+    }
+
+    @Test func actualWeightComparisonRetainsBothHashesAndPairsOnlyItsExactParent() throws {
+        let rows = artifactRows
+        let pair = try #require(BenchmarkExperiment.paired(rows, specifications: [artifactComparison]).array?.first)
+        #expect(pair["status"] == "paired_exploratory" && pair["cer_delta"].double == -0.1)
+        #expect(pair["baseline_model_sha256"] == rows[0]["model_sha256"] && pair["candidate_model_sha256"] == rows[1]["model_sha256"])
+        #expect(pair["baseline_model_sha256"] != pair["candidate_model_sha256"])
+        #expect(pair["model_file_bytes_delta"] == -10 && pair["download_artifact_bytes_delta"] == -5)
+        #expect(pair["incremental_bundle_bytes_delta"] == .null)
+        for field in ["baseline_model_id", "baseline_model_sha256", "source_sha256", "reference_sha256", "source_channel", "scoring_policy",
+                      "task", "language_mode", "whisper_binary_sha256", "transcription_runner_sha256", "runtime_settings_sha256", "preparation_policy", "threads"] {
+            var changed = rows; changed[1][field] = "changed"
+            #expect(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first?["status"] == "pending_pair")
+        }
+        var changed = rows
+        changed[1]["measurement"]["reference_sha256"] = "different-observed-reference"
+        #expect(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first?["status"] == "pending_pair")
+        changed = rows; changed[0]["status"] = "failed"
+        #expect(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first?["status"] == "pending_pair")
+    }
 }

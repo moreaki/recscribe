@@ -422,7 +422,6 @@ struct AudioRoutingView: View {
                 if let id = levelID(panel) {
                     Button("Reset gain & mute") { levels.set(id, .init()) }
                 }
-                Text("Mute changes the mix. Original source tracks are kept.")
             case .mix:
                 Text("Required stereo recording mix")
                 Button("Reset mix settings") { levels.set("master", .init()) }

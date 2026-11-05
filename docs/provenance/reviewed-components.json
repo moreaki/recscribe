@@ -10,9 +10,9 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "2341f80ce4db5dea486063640c4d4120052d5964257680e3870de2ea9cf1d559",
+      "sha256": "4f530cde4842386d5d26fc2629ca03676cf55cde10f9d97645761c1ff0f914d4",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored workflow, pinned compiler, source/bundle boundary scans, frozen core and functional/Release jobs. Adds RecScribe-owned PCM/evidence tools and a blocking sanitizer run with pipefail, complete raw-log artifact and summary/completeness gate. Shared shell/YAML/xcodebuild syntax is a standard build contract; no retired workflow implementation was restored."
     },
     {
       "path": ".gitignore",
@@ -532,9 +532,9 @@
     },
     {
       "path": "RecScribe/RecScribeTests/SampleBufferFixtures.swift",
-      "sha256": "d3eb2fae49d0ed3a7fd297e000e73d190e7e96719bc37c927227153a6fb5d354",
+      "sha256": "0d668a91f34efccac20650cb34cd7405c8b40efe3aec35bc191f8cf20e4a2b33",
       "decision": "reviewed-replacement",
-      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored fixture and explicit no-copy Float storage. Only the RecScribe retirement callback moves before deallocation so allocator reuse cannot outrun the observation; public fixture API and sample bytes remain unchanged. Combined 100,000-buffer TSan probe and 2,000-buffer queued replacement-WAV test passed with zero owner overlaps/corruption and exact output. No inherited implementation is restored."
     },
     {
       "path": "RecScribe/RecScribeTests/SaveLocationTests.swift",

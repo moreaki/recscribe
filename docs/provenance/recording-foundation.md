@@ -82,3 +82,23 @@ was not established. The finding remains documented and the preservation warning
 was not suppressed.
 
 Keep #51 open and PR #86 in draft until final review and required CI are complete.
+
+## Integration review: main sanitizer correction (#87)
+
+The integration with main at `eafd7cf` preserves the replacement implementations
+and this source-boundary assessment. Two inventory entries changed and were
+reviewed against their exact new contents: the CI workflow now retains the
+blocking PCM/evidence checks, complete sanitizer log and strict result gate from
+#87; the replacement PCM fixture publishes its observational retirement callback
+before freeing samples. Neither change restores a retired implementation. Their
+content hashes and specific integration rationale are recorded in the inventory.
+
+The combined fixture passed a bounded 100,000-buffer TSan probe with no live-owner
+overlap or changed samples (checksum `198400000`). A separate synthetic queued
+run through the replacement WAV writer passed 2,000 buffers / 128,000 frames /
+512,000 exact PCM bytes with all 2,000 owners released and no TSan diagnostic.
+The seven sanitizer-evidence regressions and the tree reference guard passed.
+These targeted checks are separate from the complete combined CI run, which is
+reported with its final revision in PR #86. The installed app remains the
+previously manually tested production implementation; no installation, permission
+or signing change is part of this integration.

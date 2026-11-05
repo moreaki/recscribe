@@ -30,9 +30,6 @@ Package.pins
 *.mobileprovision
 *.provisionprofile
 
-# Claude Code
-.claude/
-CLAUDE.md
 
 # macOS
 .DS_Store

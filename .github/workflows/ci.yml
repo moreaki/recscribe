@@ -144,13 +144,3 @@ jobs:
             -configuration Release \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
-
-# NOT ADDED, deliberately: a job running `scripts/check-docs.sh`.
-# It cannot pass on a clean checkout. Most of what it verifies lives in
-# CLAUDE.md, which is gitignored, so on CI the file is absent and the script
-# exits 1 on a missing-file error rather than on any disagreement about the
-# code. It already skips its private/tech-debt.md section when that file is
-# absent; the CLAUDE.md section needs the same treatment before this is worth a
-# job, and the residue that would actually run here is only the rot guards.
-# Adding it as-is would pin CI red permanently — the failure this file's other
-# changes exist to remove.

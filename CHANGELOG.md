@@ -19,6 +19,10 @@ All notable RecScribe changes will be documented in this file.
 
 ### Changed
 
+- Replaced the native PCM decoder, streaming normalizer, WAV sink and permission
+  request/watcher implementations. Existing recording contracts and quantization
+  remain covered by the established suite; source replacement is still in progress.
+
 - Stopping a finalized multi-source recording reports clipping/timing/coverage
   notes inline instead of misreporting them as a failed save. Genuine capture
   shutdown failures have a distinct diagnosis; recoverable audio remains intact.
@@ -51,7 +55,7 @@ All notable RecScribe changes will be documented in this file.
 - Live source-language arguments now trim whitespace and normalize regional
   choices such as `de-CH` to `de`. Automatic detection remains per chunk/channel
   instead of silently locking later speech to an earlier language.
-- Established RecScribe as an independent application based on Home Rec.
+- Established the RecScribe application identity.
 - Renamed the Xcode project, application target, test targets, source directories,
   product strings, diagnostics, and bundle identifiers.
 - Configured automatic signing for Apple Developer Team `CDS4KLP8GT`.
@@ -60,9 +64,9 @@ All notable RecScribe changes will be documented in this file.
 - Added a command-line signed or ad-hoc Release build under
   `scripts/build-app.sh`.
 - Reset the application version to `0.1.0` (`CFBundleVersion` 100).
-- Removed the inherited Home Rec Sparkle feed, signing key, update UI, and package
+- Removed the inherited automatic-update feed, signing key, update UI, and package
   dependency. RecScribe will add its own update channel before distributing releases.
-- Added explicit Home Rec attribution and licensing guidance.
+- Added source attribution and licensing guidance.
 
-The inherited Home Rec release history is preserved in
-[`docs/upstream-home-rec-changelog.md`](docs/upstream-home-rec-changelog.md).
+Source replacement progress is recorded in
+[`docs/provenance/recording-foundation.md`](docs/provenance/recording-foundation.md).

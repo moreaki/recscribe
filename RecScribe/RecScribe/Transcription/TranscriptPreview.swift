@@ -1,3 +1,5 @@
+import CryptoKit
+import Darwin
 import Foundation
 
 /// A read-only projection of the versioned canonical document. Rendering never
@@ -65,6 +67,8 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     let includesCloudAudio: Bool
     let includesCloudText: Bool
     let recognitionLabel: String
+    private(set) var revision: String?
+    private(set) var reviewItems: [TranscriptReading.ReviewItem] = []
 
     var sourceURL: URL? { source.map { URL(fileURLWithPath: $0.path) } }
 
@@ -141,23 +145,48 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
             blocks.append("## Review Notes\n\n" + reviewBullets)
         }
         self.markdownText = blocks.joined(separator: "\n\n")
+        self.reviewItems = TranscriptReading.reviewItems(in: self)
     }
 
     static func read(_ directory: URL) async throws -> Self {
         let worker = Task.detached(priority: .utility) {
             try Task.checkCancellation()
-            let file = try FileHandle(forReadingFrom: directory.appendingPathComponent("transcript.json"))
-            defer { try? file.close() }
-            let data = try file.read(upToCount: RecordingSession.maximumManifestBytes + 1) ?? Data()
-            guard data.count <= RecordingSession.maximumManifestBytes else { throw SessionError.invalid("Transcript is too large for the preview; open its artifacts") }
+            let data = try readData(directory)
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let result = try decoder.decode(Self.self, from: data)
+            var result = try decoder.decode(Self.self, from: data)
             guard [Self.currentSchemaVersion, "1.1"].contains(result.schemaVersion) else { throw SessionError.invalid("Unsupported transcript version") }
             try Task.checkCancellation()
+            result.revision = digest(data)
             return result
         }
         return try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
+    }
+
+    static func currentRevision(_ directory: URL) throws -> String {
+        digest(try readData(directory))
+    }
+
+    private static func readData(_ directory: URL) throws -> Data {
+        try Task.checkCancellation()
+        let descriptor = Darwin.open(directory.appendingPathComponent("transcript.json").path, O_RDONLY | O_NONBLOCK)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? file.close() }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, info.st_mode & S_IFMT == S_IFREG else {
+            throw SessionError.invalid("Transcript is not a regular file")
+        }
+        let data = try file.read(upToCount: RecordingSession.maximumManifestBytes + 1) ?? Data()
+        guard data.count <= RecordingSession.maximumManifestBytes else {
+            throw SessionError.invalid("Transcript is too large for the preview; open its artifacts")
+        }
+        try Task.checkCancellation()
+        return data
+    }
+
+    private static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     private static func displayedText(_ segment: Segment, mode: TranscriptionMode) -> String {

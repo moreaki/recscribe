@@ -6,15 +6,17 @@ struct MenuBarPopoverView: View {
     @Environment(RecorderViewModel.self) var viewModel
     var live: LiveTranscription?
     var layout = PopoverLayout()
+    var onStartRecording: () -> Void = { AppWindow.openFromMenu(.live) }
+    @State private var showsInfo = false
+    @AppStorage(FocusAppearance.defaultsKey) private var appearance = FocusAppearance.system
 
     var body: some View {
         PopoverFrame(layout: layout) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack { StudioBrandLockup(); Spacer(); OverflowMenuButton() }
                 status
-                CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry)
+                CaptureHealthView(recorder: viewModel, telemetry: viewModel.telemetry, showsExplanation: false, compact: true)
                 RecordingReviewNotice(recorder: viewModel)
-                MultipleInputsView(recorder: viewModel)
                 if viewModel.selectedSource.kind != .multiple { RecordingLevelsView(recorder: viewModel) }
                 failureActions
                 if viewModel.isRecording { PopoverWaveformSection(telemetry: viewModel.telemetry) }
@@ -23,6 +25,16 @@ struct MenuBarPopoverView: View {
                     Divider()
                     LiveTranscriptionControl(live: live)
                     Text(live.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+                HStack {
+                    Button("Audio routing", systemImage: "slider.horizontal.below.rectangle") { AppWindow.openFromMenu(.routing) }
+                    Spacer()
+                    Button("How it works", systemImage: "info.circle") { showsInfo.toggle() }
+                }.buttonStyle(.borderless).font(.caption)
+                if showsInfo {
+                    Text(viewModel.captureSourceHint).font(.caption).foregroundStyle(.secondary)
+                    MultipleInputsView(recorder: viewModel)
+                    CaptureHealthView(recorder: viewModel, showsExplanation: false)
                 }
                 if !viewModel.isRecording, !viewModel.installLocationBlocksRecording,
                    let recording = viewModel.lastRecordingURL {
@@ -37,6 +49,7 @@ struct MenuBarPopoverView: View {
             .padding(WorkspaceStyle.contentPadding).frame(width: WorkspaceStyle.popoverWidth)
         } footer: { footer }
         .fixedSize(horizontal: false, vertical: true).background(WorkspaceStyle.background).studioThemeAdaptingToContrast()
+        .onChange(of: appearance, initial: true) { _, value in value.apply() }
     }
 
     private var status: some View {
@@ -72,9 +85,15 @@ struct MenuBarPopoverView: View {
                 viewModel.openSystemSettings()
             }
         } else {
-            StudioPillButton(viewModel.isRecording ? "Stop recording" : "Start recording",
-                systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle",
-                size: .medium, isFullWidth: true) { Task { await viewModel.toggleRecording() } }
+            Button {
+                    if !viewModel.isRecording { onStartRecording() }
+                    Task { await viewModel.toggleRecording() }
+                } label: {
+                    Label(viewModel.isRecording ? "Stop recording" : "Start recording",
+                          systemImage: viewModel.isRecording ? "stop.circle.fill" : "record.circle")
+                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent).controlSize(.large).tint(WorkspaceStyle.recording)
                 .disabled(viewModel.isFinalizingAfterFailure || (!viewModel.allowsCaptureSourceChange && !viewModel.isRecording))
         }
     }

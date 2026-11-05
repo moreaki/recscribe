@@ -3,6 +3,7 @@ import SwiftUI
 struct AudioTestControls: View {
     @Bindable var test: AudioTestController
     var enabled: Bool
+    var showsExplanation = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -10,7 +11,7 @@ struct AudioTestControls: View {
                 HStack(spacing: 12) { status; Spacer(); actions }
                 VStack(alignment: .leading, spacing: 8) { status; actions }
             }
-            if test.state == .idle && enabled {
+            if showsExplanation && test.state == .idle && enabled {
                 Text("Test audio uses live sources without saving. A fresh sample records up to 10 seconds; capture and monitoring stop before playback.")
                     .font(.caption).foregroundStyle(.secondary)
             }

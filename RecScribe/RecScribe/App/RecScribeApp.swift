@@ -46,12 +46,18 @@ private struct OpenRecordingsCommand: View {
         Button("Recording Studio") {
             AppWindow.open(.studio, using: openWindow, navigation: navigation)
         }.keyboardShortcut(KeyEquivalent(AppWindow.studio.commandKey))
-        Button("Audio Routing…") {
-            AppWindow.open(.routing, using: openWindow, navigation: navigation)
-        }.keyboardShortcut(KeyEquivalent(AppWindow.routing.commandKey))
+        Button("Live recording") {
+            AppWindow.open(.live, using: openWindow, navigation: navigation)
+        }.keyboardShortcut(KeyEquivalent(AppWindow.live.commandKey))
         Button("Recordings & Import…") {
             AppWindow.open(.recordings, using: openWindow, navigation: navigation)
         }.keyboardShortcut(KeyEquivalent(AppWindow.recordings.commandKey))
+        Button("Audio Routing…") {
+            AppWindow.open(.routing, using: openWindow, navigation: navigation)
+        }.keyboardShortcut(KeyEquivalent(AppWindow.routing.commandKey))
+        Button("Settings…") {
+            AppWindow.open(.settings, using: openWindow, navigation: navigation)
+        }.keyboardShortcut(KeyEquivalent(AppWindow.settings.commandKey))
         Button("Open Recordings…") {
             AppWindow.open(.recordings, using: openWindow, navigation: navigation)
         }.keyboardShortcut("o")
@@ -60,14 +66,15 @@ private struct OpenRecordingsCommand: View {
 
 
 enum AppWindow: String {
-    case studio, settings, recordings, routing
+    case studio, live, settings, recordings, routing
 
     var commandKey: Character {
         switch self {
         case .studio: "1"
-        case .routing: "2"
+        case .live: "2"
+        case .routing: "4"
         case .recordings: "3"
-        case .settings: "," // The Settings workspace command.
+        case .settings: "5" // Command-comma remains available in the app menu.
         }
     }
 
@@ -106,6 +113,7 @@ enum AppWindow: String {
     var title: String {
         switch self {
         case .studio: "Recording Studio"
+        case .live: "Live recording"
         case .settings: "Settings…"
         case .recordings: "Recordings, Transcription & Summary…"
         case .routing: "Audio Routing…"
@@ -113,7 +121,7 @@ enum AppWindow: String {
     }
     var minimumSize: CGSize {
         switch self {
-        case .studio: CGSize(width: 940, height: 600)
+        case .studio, .live: CGSize(width: 940, height: 600)
         case .settings: CGSize(width: 800, height: 580)
         case .recordings: CGSize(width: 780, height: 500)
         case .routing: CGSize(width: 760, height: 420)
@@ -121,7 +129,7 @@ enum AppWindow: String {
     }
     var defaultSize: CGSize {
         switch self {
-        case .studio: CGSize(width: 1060, height: 700)
+        case .studio, .live: CGSize(width: 1120, height: 780)
         case .settings: CGSize(width: 840, height: 700)
         case .recordings: CGSize(width: 960, height: 680)
         case .routing: CGSize(width: 1120, height: 500)

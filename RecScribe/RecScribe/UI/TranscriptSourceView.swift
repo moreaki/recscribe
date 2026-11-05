@@ -14,6 +14,8 @@ struct TranscriptSourceView: View {
     @State private var wavDuration: Double?
     @State private var sourceAvailable = false
     private let sourceAvailabilityChanged: (Bool) -> Void
+    private let playbackAvailabilityChanged: (Bool) -> Void
+    private let focusLayout: Bool
 
     private var entry: SessionEntry? {
         library.entries.first(where: { $0.id == source }) ?? loadedEntry
@@ -26,7 +28,9 @@ struct TranscriptSourceView: View {
         recording: Bool,
         playback: SessionPlayback,
         pendingSeekSeconds: Binding<Double?> = .constant(nil),
-        sourceAvailabilityChanged: @escaping (Bool) -> Void = { _ in }
+        sourceAvailabilityChanged: @escaping (Bool) -> Void = { _ in },
+        playbackAvailabilityChanged: @escaping (Bool) -> Void = { _ in },
+        focusLayout: Bool = false
     ) {
         self.source = source
         self.duration = duration
@@ -35,6 +39,8 @@ struct TranscriptSourceView: View {
         self.playback = playback
         self._pendingSeekSeconds = pendingSeekSeconds
         self.sourceAvailabilityChanged = sourceAvailabilityChanged
+        self.playbackAvailabilityChanged = playbackAvailabilityChanged
+        self.focusLayout = focusLayout
     }
 
     private var name: String {
@@ -51,35 +57,46 @@ struct TranscriptSourceView: View {
         }
     }
 
+    private var canPlay: Bool {
+        !library.isDeleting(source) && sourceAvailable && !recording && (source.pathExtension.lowercased() == "wav"
+            || (entry?.session.parts.isEmpty == false && entry?.session.parts.allSatisfy { $0.status == .verified } == true))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: StudioSpacing.s) {
             HStack {
-                Image(systemName: "waveform").foregroundStyle(WorkspaceStyle.mint)
+                if !focusLayout { Image(systemName: "waveform").foregroundStyle(WorkspaceStyle.mint) }
                 VStack(alignment: .leading, spacing: StudioSpacing.xxs) {
                     if let entry {
-                        SessionTitleView(entry: entry, library: library, allowsEditing: !recording) { updated in
+                        SessionTitleView(entry: entry, library: library, allowsEditing: !recording,
+                            titleFont: focusLayout ? .title2.weight(.semibold) : .headline) { updated in
                             if self.entry?.id == updated.id { self.loadedEntry = updated }
                         }
-                        Text(name).font(.caption).foregroundStyle(.secondary).help(source.path)
+                        if !focusLayout { Text(name).font(.caption).foregroundStyle(.secondary).help(source.path) }
                     } else {
-                        Text(name).font(.callout.weight(.semibold)).lineLimit(1).truncationMode(.middle).help(source.path)
+                        Text(name).font(focusLayout ? .title2.weight(.semibold) : .callout.weight(.semibold)).lineLimit(1).truncationMode(.middle).help(source.path)
                     }
                     let seconds = duration ?? entry?.session.duration ?? wavDuration
-                    Text([seconds.map { "\($0.formatted(.number.precision(.fractionLength(1)))) s" }, detail.isEmpty ? nil : detail].compactMap { $0 }.joined(separator: " · "))
+                    Text([focusLayout ? entry?.session.startedAt.formatted(date: .abbreviated, time: .shortened) : nil,
+                        seconds.map { Duration.seconds($0).formatted(.time(pattern: .minuteSecond)) },
+                        focusLayout ? entry.map { "\($0.session.channels) \($0.session.channels == 1 ? "channel" : "channels")" } : nil,
+                        detail.isEmpty ? nil : detail].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                if !focusLayout {
                 Spacer()
                 Button("Play", systemImage: "play.fill") {
                     startPlayback()
-                }.disabled(library.isDeleting(source) || !sourceAvailable || recording || (source.pathExtension.lowercased() != "wav"
-                    && (entry?.session.parts.isEmpty != false || entry?.session.parts.allSatisfy { $0.status == .verified } != true)))
+                }.disabled(!canPlay)
                 Button("Reveal", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([source]) }.disabled(!sourceAvailable)
+                }
             }
-            if playback.hasPresentation {
+            if !focusLayout && playback.hasPresentation {
                 SessionPlaybackView(playback: playback, showsSourceIdentity: false)
             }
             if let message = error { Text(message).font(.caption).foregroundStyle(.orange) }
         }
+        .onChange(of: canPlay, initial: true) { _, value in playbackAvailabilityChanged(value) }
         .task(id: "\(source.path):\(recording)") {
             playback.stop(); loadedEntry = nil; error = nil; wavDuration = nil
             sourceAvailable = false

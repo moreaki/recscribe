@@ -264,6 +264,7 @@ private struct RecordingDeletionSheet: View {
     var completed: (RecordingDeletionResult) -> Void
     @Environment(SessionLibrary.self) private var library
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.studioTheme) private var theme
     @State private var plan: RecordingDeletionPlan?
     @State private var includeJobs = false
     @State private var checking = true
@@ -280,13 +281,13 @@ private struct RecordingDeletionSheet: View {
                 HStack { Spacer(); Button("Stop after current recording") { library.stopDeletionAfterCurrent() } }
             } else {
                 Text("Choose what moves to Trash. Nothing is permanently erased.").font(.callout).foregroundStyle(.secondary)
-                Picker("Deletion scope", selection: $includeJobs) {
-                    Text("Recordings only").tag(false)
-                    Text("Recordings + linked transcription data").tag(true)
-                }.pickerStyle(.radioGroup).labelsHidden().disabled(checking)
-                Text(includeJobs ? "Also move all verified finished job folders: transcripts, summaries, edits, reports and generated files."
-                     : "Move audio, source tracks and recording files. Keep all transcription data.")
-                    .font(.caption).foregroundStyle(.secondary)
+                VStack(spacing: 10) {
+                    scopeCard(title: "Recordings only", description: "Move audio, source tracks and recording files.\nKeep all transcription data.", includesJobs: false)
+                    scopeCard(title: "Recordings + linked transcription data", description: linkedDataDescription, includesJobs: true)
+                }
+                .disabled(checking)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Deletion scope")
                 if checking {
                     HStack { ProgressView().controlSize(.small); Text("Checking linked data…") }
                 } else if let plan {
@@ -295,7 +296,6 @@ private struct RecordingDeletionSheet: View {
                         Button("Check linked data") { Task { await prepare() } }
                     }
                     if includeJobs, plan.checkedJobs {
-                        Text("\(plan.jobCount) verified transcript jobs will move with these recordings.").font(.callout)
                         if !plan.retained.isEmpty {
                             Text("Some transcription data will be kept. \(plan.retained.count) active or unverified jobs in the library could not be safely included; some may be unrelated. This does not remove all transcription data.")
                                 .font(.caption).foregroundStyle(.orange)
@@ -328,23 +328,76 @@ private struct RecordingDeletionSheet: View {
                         Button("Keep transcripts and check recordings only") { Task { includeJobs = false; await prepare(inspectJobs: false) } }
                     }
                 }
-                Text("Recoverable in macOS Trash. Each recording stays together with its selected files. Raw Live drafts and external copies are kept.")
-                    .font(.caption).foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "arrow.uturn.backward").foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Recoverable in macOS Trash.").font(.caption.weight(.medium))
+                        Text("Each recording stays together with its selected files. Raw Live drafts and external copies are kept.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
                 if let reason = library.deletionBlockedReason, !checking { Text(reason).font(.caption).foregroundStyle(.orange) }
                 Divider()
                 HStack {
                     Spacer()
                     Button("Cancel", role: .cancel) { library.closeDeletionPreview(); dismiss() }
                         .keyboardShortcut(.cancelAction).focused($cancelFocused)
-                    Button("Move \(entries.count) to Trash", role: .destructive) { execute() }
-                        .disabled(checking || plan == nil || library.deletionBlockedReason != nil || (includeJobs && plan?.checkedJobs != true))
+                    Button(role: .destructive) { execute() } label: {
+                        Text("Move \(entries.count) to Trash")
+                            .font(.callout.weight(.medium)).foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 7)
+                            .background(theme.colors.statusDanger, in: RoundedRectangle(cornerRadius: 7))
+                            .contentShape(RoundedRectangle(cornerRadius: 7))
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(canMoveToTrash ? 1 : 0.45)
+                    .disabled(!canMoveToTrash)
                 }
             }
-        }.padding(28).frame(width: 520).fixedSize(horizontal: false, vertical: true)
+        }.padding(28).frame(width: 534).fixedSize(horizontal: false, vertical: true)
         .interactiveDismissDisabled(running)
         .task { cancelFocused = true; await prepare() }
         .onDisappear { library.closeDeletionPreview() }
     }
+    private var canMoveToTrash: Bool {
+        !checking && plan != nil && library.deletionBlockedReason == nil && (!includeJobs || plan?.checkedJobs == true)
+    }
+
+    private var linkedDataDescription: String {
+        if let plan, plan.checkedJobs {
+            "Also move \(plan.jobCount) verified \(plan.jobCount == 1 ? "job" : "jobs"), including transcripts, summaries, edits and generated job files."
+        } else {
+            "Also move verified finished jobs, including transcripts, summaries, edits and generated job files."
+        }
+    }
+
+    private func scopeCard(title: String, description: String, includesJobs: Bool) -> some View {
+        let selected = includeJobs == includesJobs
+        return Button { includeJobs = includesJobs } label: {
+            HStack(alignment: .top, spacing: 11) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 17)).foregroundStyle(selected ? WorkspaceStyle.blue : Color.secondary)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.callout.weight(.semibold)).foregroundStyle(.primary)
+                    Text(description).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+            .background(selected ? WorkspaceStyle.blue.opacity(0.13) : Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected ? WorkspaceStyle.blue : Color.primary.opacity(0.17), lineWidth: 1) }
+            .contentShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(title).accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityHint(description)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
     private func prepare(inspectJobs: Bool = true) async {
         checking = true; plan = nil
         plan = await library.prepareDeletion(entries, inspectJobs: inspectJobs)

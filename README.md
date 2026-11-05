@@ -143,13 +143,15 @@ Frozen synthetic reference fixtures now check canonical semantics and byte-ident
 exports in every Swift test run. Corpus benchmarks also use the native CLI;
 see [benchmark instructions](benchmarks/README.md).
 
-## Source replacement work
+## Source provenance
 
-The recording foundation is being replaced under #51. The
-[provenance inventory](docs/provenance/recording-foundation.md) records the
-replacement candidate and remaining inherited material. The work is incomplete;
-current notices still apply. Development uses this repository's own branches and
-CI, with no upstream merge workflow.
+The recording foundation, interface controls, test fixtures and development tools
+use the replacement implementations documented in the
+[component assessment](docs/provenance/recording-foundation.md). The assessment
+records compatibility contracts, validation, the final notice disposition and the
+limits of historical line matching. The boundary guard checks every tracked file
+and the built app without file exceptions. Development uses this repository's own
+branches, CI and preserved Git history.
 
 ## Project layout
 

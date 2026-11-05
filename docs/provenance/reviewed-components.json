@@ -10,9 +10,9 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "4f530cde4842386d5d26fc2629ca03676cf55cde10f9d97645761c1ff0f914d4",
+      "sha256": "477bb09cf8c5ec098ce8768d984e27eccf66465ace88a6abdb226c59c3d4c923",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored workflow, pinned compiler, source/bundle boundary scans, frozen core and functional/Release jobs. Adds RecScribe-owned PCM/evidence tools and a blocking sanitizer run with pipefail, complete raw-log artifact and summary/completeness gate. Shared shell/YAML/xcodebuild syntax is a standard build contract; no retired workflow implementation was restored."
+      "rationale": "Integration review of main PR #87 with PR #86: retains the independently authored workflow, pinned compiler, source/bundle boundary scans, frozen core and functional/Release jobs. Adds RecScribe-owned PCM/evidence tools and a blocking sanitizer run with pipefail, complete raw-log artifact and summary/completeness gate. Shared shell/YAML/xcodebuild syntax is a standard build contract; no retired workflow implementation was restored. Final notice-disposition review: full repository history is now checked out so the zero-exception guard can discover retired identities from the preserved baseline; all blocking functional/sanitizer/evidence/Release gates remain. Boundary regressions exercise all former exception paths and reject missing/shallow history."
     },
     {
       "path": ".gitignore",
@@ -22,27 +22,27 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "4bcb6dd9ea95bb0a33f339ce8c468892d696f58f3ba0dc1f2c21343b1f79de40",
+      "sha256": "df5fbdee14bcf41f410fda970c091e418e19d9a6d0c8bedd4f7be8ec8188826d",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text. Final completion review updates the migration status to the implemented source replacement and zero-exception guard; no baseline implementation or prose is restored."
     },
     {
       "path": "LICENSE",
-      "sha256": "d31a1582f0229db722a5e00094e9c68594a3481852cace52c15521fadc7a8712",
-      "decision": "retained-historical-notice",
-      "rationale": "Explicit exception documented in recording-foundation.md; attribution retained conservatively."
+      "sha256": "f5d6405418df940b62c71e32dc0a495b47d9a3fa9739ef9fafe33830d97359ac",
+      "decision": "reviewed-current-project-license",
+      "rationale": "Apache-2.0 terms preserved verbatim; current project copyright statement. Component review found no retained authored implementation or asset covered by the superseded owner statement. Notice exclusion follows Apache-2.0 section 4(c); historical versions retain their notices."
     },
     {
       "path": "NOTICE",
-      "sha256": "93d7590233f96ba85f7df11125c9342cfbab266864426880dadc680c0cfe613c",
-      "decision": "retained-historical-notice",
-      "rationale": "Explicit exception documented in recording-foundation.md; attribution retained conservatively."
+      "sha256": "f6dbfc2891d508ac4e6873d643fd8ae1b6ac153d197cb9f5dd6846d69b33e2cf",
+      "decision": "reviewed-current-project-notice",
+      "rationale": "Current project and Apple framework notices retained. Superseded product attribution removed after component review found no remaining covered implementation/test/media asset; Apache-2.0 section 4(d) excludes notices no longer pertaining to a remaining part. No historical release or Git notice changed."
     },
     {
       "path": "README.md",
-      "sha256": "3ce3278f48069112aa66430ae20ef1bffaf5d7c2096509c271274426ffc0cfbd",
+      "sha256": "f1389ff49699afb3f118643365f19aa879e056555ff63b7a6312176a7db53eba",
       "decision": "reviewed-current-document-or-tool",
-      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text. Final completion review updates the migration status to the implemented source replacement and zero-exception guard; no baseline implementation or prose is restored."
     },
     {
       "path": "RecScribe/RecScribe.entitlements",

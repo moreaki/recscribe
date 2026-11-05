@@ -4,10 +4,9 @@ RecScribe records local audio into recoverable sessions and transforms finalized
 recordings into versioned transcripts and derived text. The SwiftUI application
 and native command-line tool share the Swift processing implementation in `core/`.
 
-The recording foundation is being replaced under #51. See the
-[provenance inventory](provenance/recording-foundation.md) for the current candidate,
-remaining inherited components, and limitations of the history audit. This document
-describes responsibilities and contracts, not a completed independence claim.
+The recording foundation uses RecScribe's replacement implementations. The
+[component assessment](provenance/recording-foundation.md) records their behavior
+contracts, provenance review, notice disposition and historical-audit limitations.
 
 ## Recording
 

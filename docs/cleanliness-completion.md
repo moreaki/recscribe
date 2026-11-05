@@ -14,7 +14,7 @@ preferences and the pre-existing signing stash were preserved.
 | #2 — Dependencies/states | Explicit app composition and injected recording coordination; typed wire states; pending verification journal before cancellable work; repaired inode ownership persisted before hashing; archive cancellation/restart/failure and damaged-archive review tests without real subprocesses. |
 | #6 — Manifest I/O | Bounded reads/decoding in a background actor; typed version/progress validation; visible read failures; owned polling with injectable scheduler; generation checks on success and error; 300-session, missing/corrupt/future-schema, concurrent-refresh and cancellation tests. |
 | #7 — Processes | Separate runner; operation/process IDs, start/end and monotonic duration; bounded prefix/tail and post-exit drain; durable private launch/exit/timeout evidence; log-storage failures remain explicit without masking the process outcome; unrelated-process and inherited-pipe tests. |
-| #9 — Settings | No checkout-derived defaults; explicit paths retained; independently validated nested migration with visible warnings; shared codec/size bounds; explainable discovery separate from persistence; Glass components; installer filesystem work moved to utility workers. |
+| #9 — Settings | No checkout-derived defaults; explicit paths retained; independently validated nested migration with visible warnings; shared codec/size bounds; explainable discovery separate from persistence; native Studio components (replacement completed in #51); installer filesystem work moved to utility workers. |
 
 #5 (owned export) and #8 (shared pipeline completion) were completed previously.
 Contract constants live with their responsible types; technical format invariants

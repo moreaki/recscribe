@@ -59,13 +59,30 @@ import Testing
         try AudioFixture.wav(source)
         let output = root.appendingPathComponent("job")
         let args = try RecScribeTextCLI.Arguments(arguments(source,output,binary,model))
-        let task = Task { try await RecScribeTextCLI.run(args) }
-        try await expectEventually { FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-0.json").path) }
-        task.cancel()
-        await #expect(throws: CancellationError.self) { try await task.value }
-        #expect(try AudioFixture.read(output,"manifest.json")["state"] == "cancelled")
-        #expect(FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-0.log").path))
-        #expect(!FileManager.default.fileExists(atPath: output.appendingPathComponent("working-channel-0.wav").path))
+        let task = Task.detached(priority: .utility) { try await RecScribeTextCLI.run(args) }
+        do {
+            // Process startup can contend with the other subprocess contracts.
+            // Wait for this recognizer's output before exercising cancellation,
+            // with the same bounded startup allowance as the OS-signal tests.
+            let ready = output.appendingPathComponent("asr-channel-0.json")
+            let deadline = ContinuousClock.now + .seconds(15)
+            while !FileManager.default.fileExists(atPath: ready.path), ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            try #require(FileManager.default.fileExists(atPath: ready.path),
+                         "Synthetic recognizer did not publish readiness within 15 seconds")
+            task.cancel()
+            await #expect(throws: CancellationError.self) { try await task.value }
+            #expect(try AudioFixture.read(output,"manifest.json")["state"] == "cancelled")
+            #expect(FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-0.log").path))
+            #expect(!FileManager.default.fileExists(atPath: output.appendingPathComponent("working-channel-0.wav").path))
+        } catch {
+            // Reap owned work before fixture cleanup even when startup or an
+            // assertion throws; never leave the synthetic process behind.
+            task.cancel()
+            _ = try? await task.value
+            throw error
+        }
     }
 
     @Test func nativeCLIRejectsCloudAudioFlagsAndInvalidVerificationOrThreads() throws {

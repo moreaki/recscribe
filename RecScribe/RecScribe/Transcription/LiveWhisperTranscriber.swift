@@ -51,30 +51,29 @@ nonisolated enum LiveWhisperTranscriber {
         }
         guard let slice = try LiveAudioReader.copy(manifest: manifest, cursor: cursor,
             seconds: settings.liveChunkSeconds, overlapSeconds: LiveTranscriptionPolicy.overlapSeconds,
-            finished: finished, to: source, cancel: cancel) else { return nil }
+            finished: finished, to: source, mixToMono: true, cancel: cancel) else { return nil }
         keepEvidence = true
         var segments: [LiveSegment] = []
         var asrRuns = 0
-        let channels = slice.identicalChannels ? [0] : Array(0..<slice.channels)
-        for channel in channels {
-            try cancel.check()
-            let audio = attempt.appendingPathComponent("channel-\(channel).wav")
-            defer { try? manager.removeItem(at: audio) }
-            guard try convert(source, channel: channel, to: audio, cancel: cancel) else {
-                try Data("Digital silence; no ASR run.\n".utf8).write(to: attempt.appendingPathComponent("channel-\(channel).silence.txt"))
-                continue
-            }
+        let channel = 0 // One derived mono preview; final jobs retain independent channels.
+        try cancel.check()
+        let audio = attempt.appendingPathComponent("channel-\(channel).wav")
+        defer { try? manager.removeItem(at: audio) }
+        if try convert(source, channel: channel, to: audio, cancel: cancel) {
             let output = attempt.appendingPathComponent("channel-\(channel).raw")
             let arguments = arguments(audio: audio, output: output, settings: settings)
             _ = try LocalProcessRunner.run(URL(fileURLWithPath: settings.whisperPath), arguments,
                                           in: attempt, cancel: cancel, timeout: LiveTranscriptionPolicy.timeout)
             asrRuns += 1
             segments += try parse(output.appendingPathExtension("json"), slice: slice, cursor: cursor, channel: channel)
+        } else {
+            try Data("Digital silence; no ASR run.\n".utf8).write(to: attempt.appendingPathComponent("channel-\(channel).silence.txt"))
         }
         try cancel.check()
         let elapsed = clock.duration(to: .now).components
         let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
         let result = LiveChunkResult(sourceManifest: manifest, model: settings.modelPath, asrRuns: asrRuns,
+                                    mixedSourceChannels: slice.mixedSourceChannels, mixFallbackChannel: slice.mixFallbackChannel,
                                     startFrame: cursor, endFrame: slice.endFrame, availableFrames: slice.availableFrames,
                                     sampleRate: slice.sampleRate, durationSeconds: seconds,
                                     segments: segments.sorted { $0.startSeconds < $1.startSeconds }, directory: attempt)
@@ -82,12 +81,12 @@ nonisolated enum LiveWhisperTranscriber {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(result).write(to: attempt.appendingPathComponent("chunk.json"), options: .atomic)
         try encoder.encode(result).write(to: directory.appendingPathComponent("latest.json"), options: .atomic)
-        logger.notice("Live chunk operation=\(cancel.id) start_frame=\(cursor) end_frame=\(slice.endFrame) channels=\(channels.count) asr_runs=\(asrRuns) elapsed_s=\(seconds) audio_s=\(Double(slice.endFrame - cursor) / Double(slice.sampleRate))")
+        logger.notice("Live chunk operation=\(cancel.id) start_frame=\(cursor) end_frame=\(slice.endFrame) channels=1 source_channels=\(slice.mixedSourceChannels ?? slice.channels) asr_runs=\(asrRuns) elapsed_s=\(seconds) audio_s=\(Double(slice.endFrame - cursor) / Double(slice.sampleRate))")
         return result
     }
 
     /// Regional language choices use whisper.cpp's base language code. `auto`
-    /// stays explicit and is re-evaluated for every chunk and independent channel.
+    /// stays explicit and is re-evaluated for every mixed live window.
     static func arguments(audio: URL, output: URL, settings: AppSettings.Values) -> [String] {
         let configured = settings.sourceLanguage.trimmingCharacters(in: .whitespacesAndNewlines)
         let language = configured.split(separator: "-", maxSplits: 1).first.map { $0.lowercased() } ?? "auto"
@@ -155,7 +154,8 @@ nonisolated enum LiveWhisperTranscriber {
                 // context and the window's end. With no duration we cannot safely
                 // assign ownership or deduplicate against a neighbouring segment.
                 segments.append(LiveSegment(id: UUID(), startSeconds: start, endSeconds: start,
-                    channel: channel, language: raw.result?.language, text: text, timingIssue: .missingDuration))
+                    channel: channel, language: raw.result?.language, text: text, timingIssue: .missingDuration,
+                    mixedSourceChannels: slice.mixedSourceChannels))
                 untimedSpeech += 1
                 continue
             }
@@ -165,7 +165,8 @@ nonisolated enum LiveWhisperTranscriber {
             // clipped in time, not guessed word-by-word: the draft needs review.
             guard stop > boundary else { continue }
             segments.append(LiveSegment(id: UUID(), startSeconds: max(boundary, start), endSeconds: stop,
-                                        channel: channel, language: raw.result?.language, text: text))
+                                        channel: channel, language: raw.result?.language, text: text,
+                                        mixedSourceChannels: slice.mixedSourceChannels))
         }
         if skippedMarkers > 0 {
             logger.notice("Ignored non-speech markers cursor_frame=\(cursor) channel=\(channel) count=\(skippedMarkers)")

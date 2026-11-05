@@ -41,9 +41,13 @@ nonisolated struct LiveSegment: Codable, Identifiable, Sendable, Equatable {
     /// Optional for older checkpoints. Equal times retain the recognizer's point,
     /// not a measured speech interval; never infer a duration from nearby words.
     var timingIssue: TimingIssue? = nil
+    /// The local live preview is one derived mix, not a physical source channel.
+    /// Absent on older and channel-preserving cloud evidence.
+    var mixedSourceChannels: Int? = nil
 }
 
 nonisolated extension LiveSegment {
+    var channelLabel: String { mixedSourceChannels == nil ? "channel \(channel + 1)" : "Live mix" }
     func seekTarget(recording: Bool, sourceAvailable: Bool) -> Double? {
         guard !recording, sourceAvailable, startSeconds.isFinite, endSeconds.isFinite,
               startSeconds >= 0, endSeconds >= startSeconds else { return nil }
@@ -65,6 +69,8 @@ nonisolated struct LiveChunkResult: Codable, Sendable {
     /// Absent in older evidence. Zero means every channel was digital silence,
     /// not merely that the recognizer returned no words.
     var asrRuns: Int? = nil
+    var mixedSourceChannels: Int? = nil
+    var mixFallbackChannel: Int? = nil
     let startFrame: Int64
     let endFrame: Int64
     let availableFrames: Int64

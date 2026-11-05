@@ -47,6 +47,26 @@ transcripts are read-only diagnostic inputs, not test fixtures or repository dat
 
 ## Read-only historical evidence
 
+### Local live preview: one derived mix (2026-11-05)
+
+The local live worker now averages the recorded channels into one bounded,
+disposable mono window before the existing 16 kHz conversion. Each non-silent
+window launches whisper.cpp once, even when left/right differ by only one sample.
+The preview is labelled **Live mix**; it does not claim a physical channel or
+speaker identity. Text is not deduplicated by similarity. Final transcription and
+cloud channel handling retain their independent-channel paths.
+
+Only the working copy is mixed. Capture/source WAVs, manifests and older raw
+transcripts remain read-only. Original-frame cursor, overlap ownership, bounded
+copy/conversion buffers, serial utility work, cancellation, one malformed-output
+retry and retained raw ASR/checkpoint evidence are unchanged. Optional
+`mixedSourceChannels` metadata distinguishes new mixed checkpoints from older
+channel evidence. `mixFallbackChannel` records the strongest-channel fallback
+when averaging non-silent but opposing channels would produce exact digital
+silence; this only replaces the disposable window. Normal digital silence still
+skips ASR. A mixed draft cannot attribute overlapping speakers; the preserved
+original tracks remain available for review and final transcription.
+
 The original reported failure's saved outputs contain two zero-duration
 `[BLANK_AUDIO]` markers and no zero-duration speech. Language labels across those raw files are
 50 German, 14 English, 2 Japanese and 2 Korean. Those are recognizer guesses,
@@ -56,15 +76,17 @@ Streaming analysis of that recording (25 min 41.6 s, 48 kHz stereo PCM16) found
 23.72% sample-exact equality and whole-file Pearson correlation of 0.96515. Of
 155 ten-second windows (including the final partial window), only 5 are exactly
 identical. Strong correlation does **not** prove interchangeable channels or
-distinguish shared content from crosstalk. No approximate channel merge is added;
-the existing sample-exact optimization stays conservative. Equal transcript text
-does not cause channel deletion.
+distinguish shared content from crosstalk. This remains the reason for preserving
+independent channels in final jobs. The local live mix described above is a
+derived preview, not evidence that original channels are interchangeable. Equal
+transcript text does not cause channel deletion.
 
 ## Language and model decisions
 
 Explicit selection is forwarded as a base language code to whisper.cpp. `auto`
-continues detecting separately for each chunk/channel, preserving potential
-language switches. Settings clarify where an explicit source language is chosen.
+continues detecting separately for each mixed local live window (and each
+independent channel in final jobs), preserving potential language switches.
+Settings clarify where an explicit source language is chosen.
 No majority-vote lock or quality guarantee is introduced without language-labelled
 evaluation audio. The saved Tiny results motivate investigation, not a filename-
 or byte-count-based prohibition of a model family.
@@ -82,6 +104,14 @@ files are unchanged. Completion of processing does not imply timing or word
 accuracy has been verified.
 
 ## Regression coverage
+
+Local live-mix regressions cover mono/stereo/four-channel levels and isolated
+input intervals, multipart windows and overlap cursors, exact opposite-phase
+fallback, unchanged original/manifest/older-raw hashes after success and ASR
+failure, one subprocess for almost-identical non-silent stereo, retained new raw
+evidence and removal of working audio, plus old/new checkpoint decoding. The
+availability-gated real Whisper smoke test uses synthetic, nonidentical stereo
+speech and checks one live ASR pass before the independent final pipeline.
 
 Synthetic tests cover valid speech plus the exact terminal marker shape, marker-
 only results, empty text, malformed JSON, negative/reversed/out-of-window

@@ -25,10 +25,14 @@ struct LiveWhisperSmokeTests {
         let input = try AVAudioFile(forReading: speech)
         let buffer = try #require(AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: AVAudioFrameCount(input.length)))
         try input.read(into: buffer)
+        let stereo = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: Int(buffer.frameLength),
+            sampleRate: input.processingFormat.sampleRate, interleaved: false) { channel, frame in
+                buffer.floatChannelData![0][frame] * (channel == 0 ? 1 : 0.97)
+            }
         let writer = SessionWAVWriter()
         try writer.createFile(at: directory.appendingPathComponent("synthetic.wav"), sampleRate: input.processingFormat.sampleRate,
-                              channels: Int(input.processingFormat.channelCount))
-        try writer.writeBuffer(buffer)
+                              channels: 2)
+        try writer.writeBuffer(stereo)
         let manifest = try #require(writer.manifestURL)
         var settings = AppSettings.Values()
         settings.whisperPath = try #require(LocalToolDiscovery.executable("whisper-cli"))
@@ -41,6 +45,8 @@ struct LiveWhisperSmokeTests {
                                             settings: configured, cancel: WorkCancellation())
         }.value
         let live = try #require(first)
+        #expect(live.asrRuns == 1 && live.mixedSourceChannels == 2)
+        #expect(live.segments.allSatisfy { $0.channelLabel == "Live mix" })
         #expect(!live.segments.isEmpty)
         #expect(live.segments.contains { $0.text.lowercased().contains("local") })
         #expect(live.segments.allSatisfy { $0.language == "en" })

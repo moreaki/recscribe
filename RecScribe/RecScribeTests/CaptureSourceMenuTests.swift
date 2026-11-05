@@ -35,7 +35,7 @@ struct CaptureSourceMenuTests {
             apps: apps, inputDevices: devices)
         #expect(definition.captureSourceEntries(locked).isEmpty)
         #expect(!definition.actions(locked).contains { $0.isSourceRow })
-        #expect(Set(definition.actions(locked).map(\.id)).isSuperset(of: ["showWindow", "about", "recoverRecordings", "quit"]))
+        #expect(Set(definition.actions(locked).map(\.id)).isSuperset(of: ["showWindow", "about", "recordings", "quit"]))
     }
 
     @Test func permissionAndDiscoveryStatesHaveDistinctRecoveryPaths() throws {

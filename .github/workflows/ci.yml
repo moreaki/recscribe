@@ -11,7 +11,9 @@ jobs:
   unit-tests:
     name: Unit tests
     runs-on: xcode-27
-    timeout-minutes: 20
+    # Complete functional + sanitizer evidence took 19m 37s in run 170.
+    # Leave headroom for the added coverage cases and result-artifact upload.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:

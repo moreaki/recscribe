@@ -18,6 +18,13 @@ sources, clipping and end skew still require review. The final mix derives from
 the preserved PCM16 samples; unity-gain comparisons with the direct float mix
 allow up to two PCM16 integer units of quantization difference.
 
+Normal Stop records a common host-clock coverage boundary before shutting down
+any backend. Coverage is checked through that request, not through the latest
+backend's asynchronous drain tail. All admitted tail samples still enter both
+the source files and saved mix. The optional root `captureStopFrame` records the
+boundary; a source ending more than the existing allowance before it still
+requires review, even when every source stalls at the same time.
+
 New manifests carry optional `sourceBasedMix` and source `mixStartFrame` fields;
 older recordings remain readable and are not automatically rewritten. Explicit
 recovery verifies/leases sources and atomically publishes a mix continuation.

@@ -96,6 +96,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     /// New captures commit the file mix only from the durable source prefixes.
     /// Absent on legacy recordings, whose existing mixes are never rewritten.
     var sourceBasedMix: Bool?
+    /// Coverage is required through the stop request. Backend drain can retain
+    /// additional audio after this position without implying an earlier stall.
+    var captureStopFrame: Int64?
     struct SourceTrack: Codable, Sendable {
         var role: CaptureTrack
         var name: String
@@ -180,6 +183,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         }
         guard schemaVersion < 2 || sourceTracks != nil else { throw SessionError.invalid("Version 2 requires a source track group") }
         if let epoch = captureEpoch, !epoch.isFinite || epoch < 0 { throw SessionError.invalid("Invalid capture clock") }
+        if let stop = captureStopFrame, stop < 0 || sourceTracks == nil {
+            throw SessionError.invalid("Invalid capture stop boundary")
+        }
         if sourceBasedMix == true {
             guard sourceTracks != nil, gainAutomation != nil, channels == 2, sampleRate == 48000 else {
                 throw SessionError.invalid("Invalid source-based mix")
@@ -364,6 +370,10 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
         session?.gainAutomation = automation
         session?.gainScope = "derived_mix"
         try setSourceTracks(tracks, epoch: epoch)
+    }
+    func setCaptureStopFrame(_ frame: Int64) throws {
+        session?.captureStopFrame = frame
+        if let manifestURL { try session?.save(manifestURL) }
     }
     func setSourceTracks(_ tracks: [RecordingSession.SourceTrack], epoch: Double) throws {
         session?.schemaVersion = tracks.count == 2 && tracks.allSatisfy({ CaptureTrack.legacyPair.contains($0.role) }) ? 2 : RecordingSession.currentSchemaVersion

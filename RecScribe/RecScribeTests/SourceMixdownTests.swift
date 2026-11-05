@@ -463,6 +463,48 @@ struct SourceMixdownTests {
         #expect(session.issues.contains(SourceMixdown.clippingIssue))
     }
 
+    @Test(arguments: [10, 8, 6])
+    func normalStopCoverageUsesRequestInsteadOfBackendDrainTail(inputPackets: Int) throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let mix = SessionWAVWriter()
+        try mix.createFile(at: root.appendingPathComponent("stop.wav"), sampleRate: 48000, channels: 2)
+        let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: tracks, epoch: 100, options: .init())
+        for index in 0..<16 { try writer.accept(packet(.playback, index: index)) }
+        for index in 0..<inputPackets { try writer.accept(packet(.microphone, index: index)) }
+        try writer.finish(expectedEndTime: 101) // Playback drains another 600 ms.
+        let manifest = try #require(mix.manifestURL)
+        let session = try RecordingSession.read(manifest)
+        #expect(session.captureStopFrame == 48000 && session.totalFrames == 76800)
+        #expect(session.issues.isEmpty == (inputPackets >= 8))
+        #expect((session.status == .needsReview) == (inputPackets < 8))
+        let pcm = try decode(session, manifest: manifest)
+        for channel in 0..<2 {
+            #expect(pcm[channel].enumerated().allSatisfy { frame, value in
+                let expected: Float = (channel == 0 ? 0.2 : 0.3) + (frame < inputPackets * 4800 ? 0.1 : 0)
+                return abs(value - expected) < 0.0001
+            })
+        }
+    }
+
+    @Test func allSourcesEndingBeforeTheStopRequestStillRequireReview() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let mix = SessionWAVWriter()
+        try mix.createFile(at: root.appendingPathComponent("stalled.wav"), sampleRate: 48000, channels: 2)
+        let writer = try SynchronizedCaptureWriter(mix: mix, descriptors: tracks, epoch: 100, options: .init())
+        for index in 0..<5 {
+            try writer.accept(packet(.playback, index: index))
+            try writer.accept(packet(.microphone, index: index))
+        }
+        try writer.finish(expectedEndTime: 101)
+        let manifest = try #require(mix.manifestURL)
+        let session = try RecordingSession.read(manifest)
+        #expect(session.captureStopFrame == 48000 && session.totalFrames == 24000)
+        #expect(session.status == .needsReview)
+        #expect(session.issues.contains { $0.contains("stopped delivering") })
+        var invalid = session; invalid.captureStopFrame = -1
+        #expect(throws: SessionError.self) { try invalid.validated(beside: manifest) }
+    }
+
     @Test func variablePacketsPreserveSampleIdentityAcrossBacklogAndPartBoundaries() throws {
         let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
         let options = RecordingStorageOptions(maximumPartBytes: 48044)

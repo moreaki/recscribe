@@ -105,4 +105,33 @@ struct MultiSourceLifecycleTests {
         #expect(permissions.requestedPermissionKinds.contains(.microphone))
         #expect(capture.startCount == 0)
     }
+
+    @Test func controllerRecordsStopBoundaryBeforeBackendDrainWithoutDroppingItsTail() async throws {
+        let directory = try folder(); defer { try? FileManager.default.removeItem(at: directory) }
+        let capture = MockAudioCapturing()
+        let controller = RecordingController(captureManager: capture,
+            saveLocation: MockSaveLocationProviding(directory: directory),
+            audioSource: MockAudioSourceProviding(selectedSource: .mixed(appBundleID: nil, deviceUID: "test.mic")))
+        let audio = try await controller.startRecording()
+        let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+        for index in 0..<10 {
+            capture.emit(packet(.playback, at: now + Double(index) / 100))
+            capture.emit(packet(.microphone, at: now + Double(index) / 100))
+        }
+        var backendEntered = Double.nan
+        capture.onStop = {
+            backendEntered = CMClockGetTime(CMClockGetHostTimeClock()).seconds
+            for index in 10..<70 {
+                capture.emit(self.packet(.playback, at: now + Double(index) / 100))
+            }
+        }
+        try await controller.stopRecording()
+        let session = try RecordingSession.read(RecordingSession.manifestURL(for: audio))
+        let epoch = try #require(session.captureEpoch), stop = try #require(session.captureStopFrame)
+        #expect(stop <= Int64(((backendEntered - epoch) * 48000).rounded()) + 1)
+        #expect(session.totalFrames == Int64(((now - epoch) * 48000).rounded()) + 33600)
+        #expect(session.issues.isEmpty && controller.stopReviewMessage == nil)
+        #expect(session.sourceTracks?.first?.receivedFrames == 33600)
+        #expect(session.sourceTracks?.last?.receivedFrames == 4800)
+    }
 }

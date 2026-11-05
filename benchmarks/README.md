@@ -1,16 +1,19 @@
 # Local engine benchmarks
 
 The checked-in corpus manifest is a preparation template, not measured accuracy.
-It covers Swiss German, Standard German, English, noise-only audio and multiple
-speakers. Fill a private copy with local WAV paths, reference TXT paths, audio
-SHA-256, license/consent evidence and speaker count. Paths resolve relative to the
+It covers Swiss German, German, French, Italian, English, Arabic, Chinese, Spanish
+and Portuguese, plus pending adverse-condition/non-speech cases. Swiss dialect
+transcription and Standard German rendering are separate tasks. Fill a private
+copy with local WAV/reference paths, both SHA-256s, reviewed license/consent and
+coverage/grouping metadata. Paths resolve relative to the
 manifest. Nothing is downloaded. Keep actual recordings, references and results
 outside the checkout, for example under `~/Library/Application Support/RecScribe/Benchmarks/`.
 These are preserved evaluation evidence, not disposable developer output.
 Synthetic unit tests need no licensed audio download and are not an ASR benchmark.
 
 ```sh
-swift build --package-path core -c release
+python3 scripts/work-artifacts.py run --label corpus-build test -- \
+  swift build --package-path core -c release
 core/.build/release/recscribe-text benchmark \
   benchmarks/manifests/corpus.template.json --dry-run \
   --output "$HOME/Library/Application Support/RecScribe/Benchmarks/readiness"
@@ -28,7 +31,7 @@ Unified GPU memory and model-load phase require separate instrumentation later.
 Wall time includes inspection, model load, inference, validation and rendering.
 Engine-pass duration is also recorded. Run each case in a fresh subprocess.
 
-WER/CER normalization is explicitly versioned in results as
+Legacy WER/CER normalization remains versioned in results as
 `swift-nfc-casefold-alphanumeric-v1`: Unicode NFC, Foundation case folding with
 POSIX locale, non-alphanumeric characters (except underscore) converted to spaces,
 repeated whitespace collapsed. CER counts Unicode scalars and omits spaces.
@@ -78,3 +81,13 @@ recorder baselines remain useful and unchanged. The separate optional
 `scripts/verify-mic-rate.sh` uses FFmpeg/ffprobe and standard-library Python for
 reference-tone diagnostics; it does not depend on the retired pipeline and is
 not part of app runtime, core tests or corpus benchmarks.
+
+## Nine-language quality work
+
+The v2 preparation manifest extends coverage to nine priority languages with
+explicit varieties, output tasks, development/held-out grouping and reference
+hashes. All checked-in recordings remain pending. See the versioned
+[corpus/scoring contract](corpus-contract.md) and the
+[serial matrix, immutable control and freeze contract](experiment-contract.md).
+Legacy corpus schema/scoring v1 remains readable for compatibility. Use v2 for
+new quality comparisons; do not pool it with historical normalization scores.

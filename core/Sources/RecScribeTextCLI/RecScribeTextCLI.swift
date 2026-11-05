@@ -29,11 +29,17 @@ import RecScribeCore
         let source = URL(fileURLWithPath: arguments.source)
         if arguments.command == "benchmark" {
             guard let output = arguments.output else { throw CoreFailure("benchmark requires --output") }
+            if arguments.whisperProfile != nil { _ = try loadWhisperProfile(arguments.whisperProfile) }
             guard let cli = Bundle.main.executableURL else { throw CoreFailure("Cannot locate the native CLI executable") }
             let work = Task.detached(priority: .utility) {
-                try CorpusBenchmark.run(manifest: source, output: URL(fileURLWithPath: output), cli: cli,
+                if let experiment = arguments.experiment {
+                    return try BenchmarkExperiment.run(manifest: source, configuration: URL(fileURLWithPath: experiment),
+                        output: URL(fileURLWithPath: output), cli: cli, dryRun: arguments.dryRun)
+                }
+                return try CorpusBenchmark.run(manifest: source, output: URL(fileURLWithPath: output), cli: cli,
                     whisper: arguments.whisper.map { URL(fileURLWithPath: $0) },
-                    model: arguments.model.map { URL(fileURLWithPath: $0) }, threads: arguments.threads, dryRun: arguments.dryRun)
+                    model: arguments.model.map { URL(fileURLWithPath: $0) }, threads: arguments.threads, dryRun: arguments.dryRun,
+                    whisperProfile: arguments.whisperProfile.map { URL(fileURLWithPath: $0) })
             }
             _ = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
             print("Local benchmark saved in \(output)")
@@ -44,11 +50,12 @@ import RecScribeCore
                 throw CoreFailure("transcribe requires --output, --whisper-cli and --model")
             }
             let work = Task.detached(priority: .utility) {
+                let decoding = try loadWhisperProfile(arguments.whisperProfile)
                 let engine = try NativeWhisperEngine(binary: URL(fileURLWithPath: binary), model: URL(fileURLWithPath: model),
-                    vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads)
+                    vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads, profile: decoding)
                 let verifier = try arguments.verificationModel.map {
                     try NativeWhisperEngine(binary: URL(fileURLWithPath: binary), model: URL(fileURLWithPath: $0),
-                        vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads)
+                        vad: arguments.vad.map { URL(fileURLWithPath: $0) }, threads: arguments.threads, profile: decoding)
                 }
                 if let verifier, engine.metadata["model_sha256"] == verifier.metadata["model_sha256"] {
                     throw CoreFailure("Verification requires two distinct model checksums")
@@ -91,11 +98,20 @@ import RecScribeCore
         print("Text derivative complete; source evidence retained. Review generated text before use.")
     }
 
+    static func loadWhisperProfile(_ path: String?) throws -> WhisperDecodingProfile {
+        guard let path else { return .baseline }
+        let file = try FileHandle(forReadingFrom: URL(fileURLWithPath: path))
+        defer { try? file.close() }
+        let bytes = try file.read(upToCount: 16_385) ?? Data()
+        guard bytes.count <= 16_384 else { throw CoreFailure("Whisper experiment profile exceeds 16 KiB") }
+        return try WhisperDecodingProfile(json: JSONDecoder().decode(JSONValue.self, from: bytes))
+    }
+
     struct Arguments: Sendable {
         let command: String
         let source: String
         var output: String?, model: String?, target: String?
-        var whisper: String?, verificationModel: String?, vad: String?
+        var whisper: String?, verificationModel: String?, vad: String?, experiment: String?, whisperProfile: String?
         var language = "auto", profile = "fast"
         var threads = NativeWhisperEngine.Policy.defaultThreads
         var diarize = false
@@ -118,6 +134,8 @@ import RecScribeCore
                     guard index < args.count else { throw CoreFailure("Missing option value") }
                     let value = args[index]; index += 1
                     switch flag {
+                    case "--whisper-profile": whisperProfile = value
+                    case "--experiment": experiment = value
                     case "--output": output = value
                     case "--model": model = value
                     case "--whisper-cli": whisper = value
@@ -147,6 +165,11 @@ import RecScribeCore
                 }
             }
             guard provider != .ollama || !cloudConsent && !keyStdin else { throw CoreFailure("Local jobs do not accept cloud consent or credentials") }
+            guard ["transcribe", "benchmark"].contains(command) || whisperProfile == nil else { throw CoreFailure("--whisper-profile is only for local recognition") }
+            if experiment != nil && (whisperProfile != nil || whisper != nil || model != nil || threads != NativeWhisperEngine.Policy.defaultThreads) {
+                throw CoreFailure("An experiment supplies its own binaries, models, threads and profiles")
+            }
+            guard command == "benchmark" || experiment == nil else { throw CoreFailure("--experiment is only for benchmark") }
             guard command == "benchmark" || !dryRun else { throw CoreFailure("--dry-run is only for benchmark") }
             if command == "benchmark" {
                 guard provider == nil, !cloudConsent, !keyStdin, !summary, verificationModel == nil, vad == nil,
@@ -163,11 +186,13 @@ import RecScribeCore
     static let usage = """
     recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]
       [--whisper-cli /path/to/whisper-cli --model /path/to/model.bin --threads 1..4]
+      [--experiment /path/to/experiment.json] [--whisper-profile /path/to/profile.json]
     recscribe-text transcribe recording.wav|session.recscribe.json --output NEW_JOB
       --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin
       [--source-language auto|de-CH|en] [--threads 1..4] [--local-only]
       [--profile fast|accurate|verified] [--verify-model /path/to/second-model.bin]
       [--vad-model /path/to/silero.bin] [--diarize off|auto]
+      [--whisper-profile /path/to/private-experiment-profile.json]
       [--mode verbatim|normalize|translate] [--target-language LANGUAGE]
       [--formats json,md,txt,srt,vtt]
     recscribe-text render transcript.json --output NEW_DIRECTORY

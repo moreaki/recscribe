@@ -21,6 +21,7 @@ enum SampleBufferFixtures {
         frames: Int,
         sampleRate: Double = 48000,
         interleaved: Bool,
+        onDeallocate: (@Sendable () -> Void)? = nil,
         fill: (_ channel: Int, _ frame: Int) -> Float
     ) -> AVAudioPCMBuffer {
         let format: AVAudioFormat
@@ -32,7 +33,26 @@ enum SampleBufferFixtures {
             format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
                                   channels: AVAudioChannelCount(channels), interleaved: interleaved)!
         }
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(max(frames, 1)))!
+        // Own the fixture samples explicitly so allocation and deallocation
+        // remain visible to sanitizers across the producer/writer hand-off.
+        // The no-copy buffer still exercises the same AVAudioPCMBuffer readers.
+        let capacity = max(frames, 1)
+        let samples = UnsafeMutablePointer<Float>.allocate(capacity: capacity * channels)
+        samples.initialize(repeating: 0, count: capacity * channels)
+        let list = AudioBufferList.allocate(maximumBuffers: interleaved ? 1 : channels)
+        list.count = interleaved ? 1 : channels
+        for index in 0..<list.count {
+            list[index] = AudioBuffer(
+                mNumberChannels: AVAudioChannelCount(interleaved ? channels : 1),
+                mDataByteSize: UInt32(capacity * (interleaved ? channels : 1) * MemoryLayout<Float>.size),
+                mData: UnsafeMutableRawPointer(samples.advanced(by: interleaved ? 0 : index * capacity)))
+        }
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: list.unsafePointer) { _ in
+            samples.deinitialize(count: capacity * channels)
+            samples.deallocate()
+            list.unsafeMutablePointer.deallocate()
+            onDeallocate?()
+        }!
         buffer.frameLength = AVAudioFrameCount(frames)
 
         if frames > 0 {

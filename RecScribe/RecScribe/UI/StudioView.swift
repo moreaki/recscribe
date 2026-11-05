@@ -58,8 +58,8 @@ struct StudioView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: GlassSpacing.md) {
-                GlassBrandLockup(size: .compact)
+            HStack(spacing: StudioSpacing.md) {
+                StudioBrandLockup(size: .compact)
                 WorkspaceTabs(title: "Workspace", selection: Binding(get: { workspaceMode }, set: { workspaceMode = $0 }))
                 .frame(maxWidth: 560)
                 Spacer()
@@ -70,7 +70,7 @@ struct StudioView: View {
             Divider()
             HStack(alignment: .top, spacing: 0) {
                 ScrollView {
-                    VStack(spacing: GlassSpacing.xl) {
+                    VStack(spacing: StudioSpacing.xl) {
                         RecorderView()
                         Divider()
                         LiveTranscriptionControl(live: live, showsPreview: false)
@@ -99,6 +99,6 @@ struct StudioView: View {
             }
         }
         .frame(minWidth: AppWindow.studio.minimumSize.width, minHeight: AppWindow.studio.minimumSize.height)
-        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
+        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast()
     }
 }

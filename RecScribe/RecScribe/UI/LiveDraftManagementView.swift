@@ -5,7 +5,7 @@ struct LiveDraftManagementView: View {
     @State private var selected: LiveDraftInventory.Entry?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.md) {
+        VStack(alignment: .leading, spacing: StudioSpacing.md) {
             Label("Saved live drafts", systemImage: "externaldrive").font(.headline)
             Text("Raw recognizer evidence is kept until you move a draft to Trash. At 1 GiB or 100 drafts, new optional live transcription pauses; audio recording continues. Storage is checked between processed windows, so the last window may exceed the limit slightly.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -33,7 +33,7 @@ struct LiveDraftManagementView: View {
                         Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([entry.url]) }
                         Button("Move to Trash…", role: .destructive) { selected = entry }
                             .disabled(store.busy || !store.canManage() || store.isProtected(entry))
-                    }.padding(.vertical, GlassSpacing.xs)
+                    }.padding(.vertical, StudioSpacing.xs)
                 }
             }
         }

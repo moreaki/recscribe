@@ -1,66 +1,56 @@
 import AppKit
 import Observation
 
-@MainActor
-@Observable final class RecorderPreferences {
+@MainActor @Observable final class RecorderPreferences {
     let saveLocation: SaveLocationProviding
-    private let defaults: UserDefaults
-    private let onboardingCompletedKey = "hasCompletedOnboarding"
-    private(set) var saveLocationName = "Desktop"
-    private(set) var hasCustomSaveLocation = false
+    private let storage: UserDefaults
+    private(set) var saveLocationName: String
+    private(set) var hasCustomSaveLocation: Bool
     var showOnboarding: Bool
     var saveLocationPath: String { saveLocation.resolvedDirectory.path }
 
     init(saveLocation: SaveLocationProviding, defaults: UserDefaults) {
         self.saveLocation = saveLocation
-        self.defaults = defaults
-        showOnboarding = !defaults.bool(forKey: onboardingCompletedKey)
-        refreshSaveLocationDisplay()
-    }
-    func chooseSaveLocation() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = true
-        panel.directoryURL = saveLocation.resolvedDirectory
-        panel.prompt = "Choose"
-        panel.message = "Choose where RecScribe saves recordings"
-
-        NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK, let url = panel.url {
-            saveLocation.setSaveDirectory(url)
-            refreshSaveLocationDisplay()
-        }
-    }
-
-    func resetSaveLocation() {
-        saveLocation.reset()
-        refreshSaveLocationDisplay()
-    }
-
-    func completeOnboarding() {
-        defaults.set(true, forKey: onboardingCompletedKey)
-        showOnboarding = false
-    }
-
-    private func refreshSaveLocationDisplay() {
+        storage = defaults
+        showOnboarding = !defaults.bool(forKey: "hasCompletedOnboarding")
         saveLocationName = saveLocation.configuredDirectory?.lastPathComponent ?? "Desktop"
         hasCustomSaveLocation = saveLocation.configuredDirectory != nil
     }
+    func chooseSaveLocation() {
+        let chooser = NSOpenPanel()
+        chooser.canChooseDirectories = true
+        chooser.canChooseFiles = false
+        chooser.canCreateDirectories = true
+        chooser.allowsMultipleSelection = false
+        chooser.directoryURL = saveLocation.resolvedDirectory
+        chooser.prompt = "Choose"
+        chooser.message = "Choose where RecScribe saves recordings"
+        NSApp.activate(ignoringOtherApps: true)
+        guard chooser.runModal() == .OK, let selected = chooser.url else { return }
+        saveLocation.setSaveDirectory(selected)
+        refresh()
+    }
+    func resetSaveLocation() { saveLocation.reset(); refresh() }
+    private func refresh() {
+        let selected = saveLocation.configuredDirectory
+        saveLocationName = selected?.lastPathComponent ?? "Desktop"
+        hasCustomSaveLocation = selected != nil
+    }
+    func completeOnboarding() {
+        storage.set(true, forKey: "hasCompletedOnboarding")
+        showOnboarding = false
+    }
 }
 
-@MainActor
-@Observable final class RecorderAlerts {
-    var errorMessage: String?
+@MainActor @Observable final class RecorderAlerts {
+    var errorMessage: String? = nil
     var showError = false
-    var reviewMessage: String?
-    var recoverySuggestion: RecoverySuggestion?
+    var reviewMessage: String? = nil
+    var recoverySuggestion: RecoverySuggestion? = nil
     var showLongRecordingWarning = false
-
     func present(_ message: String, recovery: RecoverySuggestion?) {
-        errorMessage = message
         recoverySuggestion = recovery
+        errorMessage = message
         showError = true
     }
 }

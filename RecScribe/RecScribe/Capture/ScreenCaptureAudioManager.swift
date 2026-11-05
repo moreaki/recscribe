@@ -1,72 +1,47 @@
-//
-//  ScreenCaptureAudioManager.swift
-//  RecScribe
-//
-//  Manages system audio capture using ScreenCaptureKit
-//
 
 import Foundation
 import ScreenCaptureKit
 import AVFoundation
 import os
 
-/// Errors for ScreenCaptureKit audio capture
 enum ScreenCaptureAudioError: Error, LocalizedError {
     case notAuthorized
     case noDisplaysAvailable
     case streamCreationFailed
     case startCaptureFailed(Error)
     case interruptedBySleep
-    /// The `.app` source's bundle ID has no matching running `SCRunningApplication` (BL-100).
     case appNotRunning(String)
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:
-            return "Screen Recording permission not granted"
-        case .noDisplaysAvailable:
-            return "No displays available for capture"
-        case .streamCreationFailed:
-            return "Failed to create capture stream"
-        case .startCaptureFailed(let error):
-            return "Failed to start audio capture: \(error.localizedDescription)"
-        case .interruptedBySleep:
-            return "The Mac or display entered sleep while starting capture. Wake it and start a new recording."
-        case .appNotRunning(let bundleID):
-            return "The selected app (\(bundleID)) is not currently running."
+        case .notAuthorized: "RecScribe needs access to Screen Recording before capturing playback."
+        case .noDisplaysAvailable: "No display is available to host the playback capture session."
+        case .streamCreationFailed: "The playback capture session is not configured."
+        case .startCaptureFailed(let cause): "Playback capture could not begin: \(cause.localizedDescription)"
+        case .interruptedBySleep: "Capture startup was interrupted when the Mac went to sleep."
+        case .appNotRunning(let identifier): "The capture target \(identifier) is no longer open."
         }
     }
-
     var recoverySuggestion: String? {
         switch self {
-        case .notAuthorized:
-            return "Grant Screen Recording permission in System Settings > Privacy & Security"
-        case .noDisplaysAvailable:
-            return "Ensure your Mac has at least one display connected"
-        case .streamCreationFailed:
-            return "Try restarting the application"
-        case .startCaptureFailed:
-            return "Check if another app is already capturing system audio"
-        case .interruptedBySleep:
-            return "Keep the Mac open and awake while recording."
-        case .appNotRunning:
-            return "Open the app, or choose a different capture source."
+        case .notAuthorized: "Enable RecScribe in Privacy & Security → Screen Recording."
+        case .noDisplaysAvailable: "Connect or wake a display, then start another recording."
+        case .streamCreationFailed: "Choose a capture source and retry."
+        case .startCaptureFailed: "Review the capture source and its access in System Settings."
+        case .interruptedBySleep: "Wake the Mac before starting another take."
+        case .appNotRunning: "Launch the selected application or select another playback source."
         }
     }
 }
 
-/// Manages system audio capture using ScreenCaptureKit
 class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
-    // MARK: - Properties
 
     private var stream: SCStream?
     private var isCapturing = false
     private var output: AudioCaptureOutput?
     private var deviceInputs: [CaptureTrack: any InputCaptureSession] = [:]
     private var pendingInputs: [InputSelection] = []
-    // Engine teardown can itself refresh the global inventory (default-I/O
-    // helpers). Retry only after this UID's properties/presence actually change.
     private var failedInputDevices: [CaptureTrack: InputDeviceInfo] = [:]
     private var useLegacyMicrophoneTrack = false
     private(set) var singleInputNormalizer: SingleInputAudioNormalizer?
@@ -85,7 +60,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     var onSourceFailure: (@MainActor (CaptureTrack, String) -> Void)?
     private var stopTask: Task<Void, Error>?
 
-    /// Called when the stream stops unexpectedly. See `AudioCapturing`.
     var onStreamError: (@MainActor (String) -> Void)?
 
     init(hardwareObserver: AudioHardwareObserver = .shared,
@@ -100,11 +74,7 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         super.init()
     }
 
-    // MARK: - Public Methods
 
-    /// Set up capture for `source` (BL-100 / #40).
-    /// When `source.playback == .none`, captures input directly via `DeviceInputCapture`
-    /// without creating an `SCStream` or requiring Screen Recording permission.
     func setupCapture(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void) async throws {
         guard source.valid else { throw SessionError.invalid("Invalid capture source selection") }
         if !source.requiresScreenCapture {
@@ -146,8 +116,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         }
     }
 
-    /// Filters all running `SCRunningApplication` instances matching `bundleID` (#16),
-    /// throwing `ScreenCaptureAudioError.appNotRunning(bundleID)` only when none match.
     static func matchingApplications<App>(
         in applications: [App],
         bundleID: String,
@@ -162,83 +130,42 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
 
     private func configure(source: AudioSource, audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
                            sampleCallback: (@Sendable (CapturedAudioSample) -> Void)?) async throws {
-        let id = UUID()
-        let output = AudioCaptureOutput(id: id, audioCallback: audioCallback, sampleCallback: sampleCallback) { [weak self] message in
-            guard let self, self.output?.id == id else { return }
-            self.onStreamError?(message)
+        guard source.requiresScreenCapture else {
+            throw SessionError.invalid("Playback configuration needs a playback source")
         }
-        self.output = output
-
-        // Get available displays (and, for .app, running applications)
-        let content = try await SCShareableContent.excludingDesktopWindows(
-            false,
-            onScreenWindowsOnly: false
-        )
-
-        guard let display = content.displays.first else {
-            Log.capture.error("No displays available for audio capture")
-            throw ScreenCaptureAudioError.noDisplaysAvailable
+        let available = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        guard let display = available.displays.first else { throw ScreenCaptureAudioError.noDisplaysAvailable }
+        let selection: SCContentFilter
+        if let bundle = source.appBundleID {
+            let applications = try Self.matchingApplications(in: available.applications, bundleID: bundle,
+                                                            bundleIdentifier: \.bundleIdentifier)
+            selection = SCContentFilter(display: display, including: applications, exceptingWindows: [])
+        } else {
+            selection = SCContentFilter(display: display, excludingWindows: [])
         }
-
-        // Configure stream for playback audio capture (#40: microphone inputs use DeviceInputCapture)
-        let config = SCStreamConfiguration()
-        config.capturesAudio = true
-        config.excludesCurrentProcessAudio = true  // Don't record our own app
-        config.sampleRate = 48000  // 48kHz
-        config.channelCount = 2    // Stereo
-
-        // Minimal video configuration (required by SCStream alongside audio)
-        config.width = 100
-        config.height = 100
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
-        config.pixelFormat = kCVPixelFormatType_32BGRA
-        config.showsCursor = false
-        config.scalesToFit = false
-
-        // Content filter: all display audio, or all matching instances of the selected app (#16).
-        let filter: SCContentFilter
-        switch source.playback {
-        case .none:
-            throw SessionError.invalid("Playback stream configuration requires an active playback source")
-        case .systemAll:
-            filter = SCContentFilter(display: display, excludingWindows: [])
-        case .app(let bundleID):
-            let apps: [SCRunningApplication]
-            do {
-                apps = try Self.matchingApplications(
-                    in: content.applications,
-                    bundleID: bundleID,
-                    bundleIdentifier: \.bundleIdentifier
-                )
-            } catch {
-                Log.capture.error("Selected app not running for per-app capture")
-                throw error
-            }
-            filter = SCContentFilter(display: display, including: apps, exceptingWindows: [])
+        let settings = SCStreamConfiguration()
+        settings.capturesAudio = true
+        settings.sampleRate = 48_000
+        settings.channelCount = 2
+        settings.excludesCurrentProcessAudio = true
+        settings.width = 100
+        settings.height = 100
+        settings.minimumFrameInterval = CMTime(seconds: 1, preferredTimescale: 1)
+        settings.showsCursor = false
+        settings.scalesToFit = false
+        settings.pixelFormat = kCVPixelFormatType_32BGRA
+        let identity = UUID()
+        let receiver = AudioCaptureOutput(id: identity, audioCallback: audioCallback, sampleCallback: sampleCallback) { [weak self] failure in
+            guard self?.output?.id == identity else { return }
+            self?.onStreamError?(failure)
         }
-
-        // Create stream
-        stream = SCStream(filter: filter, configuration: config, delegate: self)
-
-        // Add output handlers
-        guard let stream = stream else {
-            throw ScreenCaptureAudioError.streamCreationFailed
-        }
-
-        // Add screen output (required even though we only want audio)
-        try stream.addStreamOutput(
-            output,
-            type: .screen,
-            sampleHandlerQueue: output.queue
-        )
-
-        try stream.addStreamOutput(output, type: .audio, sampleHandlerQueue: output.queue)
-
-        Log.capture.debug("Capture stream configured (screen + audio handlers added)")
+        let configured = SCStream(filter: selection, configuration: settings, delegate: self)
+        try configured.addStreamOutput(receiver, type: .screen, sampleHandlerQueue: receiver.queue)
+        try configured.addStreamOutput(receiver, type: .audio, sampleHandlerQueue: receiver.queue)
+        output = receiver
+        stream = configured
     }
 
-    /// Start audio capture
-    /// - Throws: ScreenCaptureAudioError if start fails
     func startCapture() async throws {
         guard stream != nil || !pendingInputs.isEmpty else {
             throw ScreenCaptureAudioError.streamCreationFailed
@@ -382,7 +309,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         if attemptRecovery { reconcileAvailableInputs() }
     }
 
-    /// Stop audio capture
     func stopCapture() async throws {
         if let stopTask { return try await stopTask.value }
         guard stream != nil || !deviceInputs.isEmpty || isCapturing else { return }
@@ -403,8 +329,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
                 do { try await activeStream.stopCapture() }
                 catch { Log.recordFailure(error, operation: "stop_stream"); failure = error }
             }
-            // Even a stream stopped by macOS may still have queued callbacks.
-            // Cleanup joins this drain; it must not call stopCapture twice.
             await output?.finish()
             await normalizer?.finish()
             if let failure { throw failure }
@@ -414,7 +338,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
         try await task.value
     }
 
-    /// Clean up resources
     func cleanup() async {
         try? await stopCapture()
         stream = nil
@@ -432,7 +355,6 @@ class ScreenCaptureAudioManager: NSObject, AudioCapturing {
     }
 }
 
-// MARK: - SCStreamDelegate
 
 extension ScreenCaptureAudioManager: SCStreamDelegate {
 
@@ -451,11 +373,7 @@ extension ScreenCaptureAudioManager: SCStreamDelegate {
     }
 }
 
-// MARK: - SCStreamOutput
 
-/// One output per session. Mutable converter state and callbacks are confined
-/// to this queue, not implicitly MainActor like the capture lifecycle manager.
-/// @unchecked Sendable is limited to the queue-owned storage below.
 nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked Sendable {
     let id: UUID
     let queue = DispatchQueue(label: "com.moreaki.recscribe.audio.capture", qos: .userInitiated)
@@ -479,8 +397,6 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         self.onError = onError
     }
 
-    /// After stopCapture, wait for all already-delivered samples before sealing
-    /// this session. Late callbacks cannot enter a subsequent recording.
     func finish() async {
         await withCheckedContinuation { continuation in
             queue.async {
@@ -502,92 +418,60 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
     }
 
     func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType) {
-        // Ignore video samples (we only need audio). No logging here: this
-        // fires per audio buffer on the capture queue — the hot path.
-        //
-        // Single-source callbacks use the legacy canonical converter. Combined
-        // callbacks transfer native PCM and timestamps to separate source state.
         dispatchPrecondition(condition: .onQueue(queue))
-        guard accepting, type == .audio || type == .microphone else { return }
-        guard CMSampleBufferGetNumSamples(sampleBuffer) > 0 else { return }
-        let start = ContinuousClock.now
+        let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
+        guard accepting, frameCount > 0, type == .audio || type == .microphone else { return }
+        let began = ContinuousClock.now
         defer {
-            let elapsed = start.duration(to: .now)
-            let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1e15
-            callbackMS += ms
-            maxCallbackMS = max(maxCallbackMS, ms)
+            let elapsed = began.duration(to: .now).components
+            let milliseconds = Double(elapsed.seconds) * 1_000 + Double(elapsed.attoseconds) / 1e15
+            callbackMS += milliseconds
+            maxCallbackMS = max(milliseconds, maxCallbackMS)
             buffers += 1
         }
-
-        // Convert at the delegate boundary so every AudioCapturing implementation
-        // hands AudioRecorder the same canonical AVAudioPCMBuffer type (BL-099),
-        // then normalise so it is the same *format* too (BL-112). For system
-        // audio the normaliser is a pass-through — the SCK config already pins
-        // 48 kHz stereo — so the existing path stays byte-identical.
-        // ⚠️ Never drop a buffer here in silence (BL-150). These two guards used
-        // to be one `else { return }`, so when a Scarlett 2i2's integer-format
-        // microphone buffers were rejected, every one vanished without a trace
-        // and the only symptom was "No audio was captured for this recording"
-        // at the end. The format is logged once per session — this is the hot
-        // path, so it must not log per buffer.
         if sampleCallback != nil {
-            let frames = CMSampleBufferGetNumSamples(sampleBuffer)
-            let description = CMSampleBufferGetFormatDescription(sampleBuffer)
-                .flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-            guard let description, description.mSampleRate.isFinite,
-                  (1...384_000).contains(description.mSampleRate),
-                  (1...32).contains(description.mChannelsPerFrame),
-                  Double(frames) <= description.mSampleRate * 0.25,
-                  UInt64(frames) * UInt64(description.mChannelsPerFrame) * 4 <= 4 * 1_024 * 1_024 else {
-                if !hasLoggedConversionFailure {
-                    hasLoggedConversionFailure = true
-                    Task { @MainActor [onError] in onError("Capture packet exceeded the format or memory budget; partial audio is preserved") }
-                }
+            guard let description = CMSampleBufferGetFormatDescription(sampleBuffer),
+                  let format = CMAudioFormatDescriptionGetStreamBasicDescription(description)?.pointee,
+                  format.mSampleRate.isFinite, (1...384_000).contains(format.mSampleRate),
+                  (1...32).contains(format.mChannelsPerFrame),
+                  Double(frameCount) <= format.mSampleRate / 4,
+                  UInt64(frameCount) * UInt64(format.mChannelsPerFrame) * 4 <= 4_194_304 else {
+                rejectPacket("Capture packet exceeded its PCM budget; partial audio is preserved", conversion: true)
                 return
             }
         }
-        guard let pcmBuffer = AudioSampleConverter.makePCMBuffer(from: sampleBuffer) else {
-            if !hasLoggedConversionFailure {
-                hasLoggedConversionFailure = true
-                let desc = CMSampleBufferGetFormatDescription(sampleBuffer)
-                    .flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
-                    .map { "\($0.mChannelsPerFrame)ch \($0.mSampleRate)Hz \($0.mBitsPerChannel)-bit flags=\($0.mFormatFlags)" }
-                    ?? "unknown format"
-                Log.capture.error("Dropping buffers: unsupported capture format — \(desc, privacy: .public)")
-                Task { @MainActor [onError] in onError("Capture audio could not be converted; the partial recording is preserved") }
-            }
+        guard let owned = AudioSampleConverter.makePCMBuffer(from: sampleBuffer) else {
+            rejectPacket("Capture audio could not be converted; the partial recording is preserved", conversion: true)
             return
         }
-        if let sampleCallback {
-            let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-            guard time.isNumeric, time.seconds.isFinite else {
-                if !hasLoggedNormalizeFailure {
-                    hasLoggedNormalizeFailure = true
-                    Task { @MainActor [onError] in onError("Capture timestamps are invalid; source tracks are preserved") }
-                }
+        if let callback = sampleCallback {
+            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            guard timestamp.isNumeric, timestamp.seconds.isFinite else {
+                rejectPacket("Capture timestamps are invalid; source tracks are preserved", conversion: false)
                 return
             }
-            sampleCallback(.init(track: type == .microphone ? .microphone : .playback,
-                                 presentationTime: time.seconds, buffer: pcmBuffer))
-            return
+            let track = type == .audio ? CaptureTrack.playback : .microphone
+            callback(CapturedAudioSample(track: track, presentationTime: timestamp.seconds, buffer: owned))
+        } else if let canonical = audioNormalizer.normalize(owned) {
+            audioCallback(canonical)
+        } else {
+            rejectPacket("Capture audio could not be normalized; the partial recording is preserved", conversion: false)
         }
-        guard let normalized = audioNormalizer.normalize(pcmBuffer) else {
-            if !hasLoggedNormalizeFailure {
-                hasLoggedNormalizeFailure = true
-                let f = pcmBuffer.format
-                Log.capture.error("Dropping buffers: normalizer rejected \(f.channelCount, privacy: .public)ch \(f.sampleRate, privacy: .public)Hz")
-                Task { @MainActor [onError] in onError("Capture audio could not be normalized; the partial recording is preserved") }
-            }
-            return
+    }
+
+    private func rejectPacket(_ explanation: String, conversion: Bool) {
+        if conversion {
+            if hasLoggedConversionFailure { return }
+            hasLoggedConversionFailure = true
+        } else {
+            if hasLoggedNormalizeFailure { return }
+            hasLoggedNormalizeFailure = true
         }
-        audioCallback(normalized)
+        Log.capture.error("Capture packet rejected: \(explanation, privacy: .public)")
+        Task { @MainActor [onError] in onError(explanation) }
     }
 }
 
-/// Queue-confined normalizer bridging `DeviceInputCapture` native PCM buffers
-/// into the single-source canonical 48 kHz stereo `audioCallback` path (#40).
-/// Admission is bounded by `maxBuffers` and `maxBytes` (including in-flight work),
-/// surfaces overflow once via `onError`, and drains accepted work before `finish()` completes.
 nonisolated final class SingleInputAudioNormalizer: @unchecked Sendable {
     private struct State: Sendable {
         var accepting = true

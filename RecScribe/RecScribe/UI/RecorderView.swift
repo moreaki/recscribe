@@ -1,4 +1,3 @@
-// Based on Home Rec's capture UI; see NOTICE. RecScribe studio redesign (2026).
 import SwiftUI
 
 /// Capture controls observe the waveform; transcript and chrome are siblings
@@ -16,10 +15,10 @@ struct RecorderView: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
-        VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
+        VStack(alignment: .leading, spacing: StudioSpacing.xxl) {
             HStack {
                 WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.mint)
-                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     Text("Capture").font(.headline)
                     Text("Lossless PCM · WAV").font(.caption).foregroundStyle(.secondary)
                 }
@@ -43,14 +42,14 @@ struct RecorderView: View {
                 HStack(alignment: .top) {
                     Text(notice).font(.caption).foregroundStyle(.secondary)
                     if viewModel.installLocation.noticeIsDismissible {
-                        GlassIconButton(systemImage: "xmark", accessibilityLabel: "Dismiss") { viewModel.dismissInstallLocationNotice() }
+                        StudioIconButton(systemImage: "xmark", accessibilityLabel: "Dismiss") { viewModel.dismissInstallLocationNotice() }
                     }
                 }
             }
             if !viewModel.installLocationBlocksRecording && !viewModel.canRecord {
                 Text(PermissionKind.screenCapture.navigationHint).font(.caption).foregroundStyle(.secondary)
             }
-            GlassPillButton(mainButtonTitle,
+            StudioPillButton(mainButtonTitle,
                 systemImage: viewModel.canRecord ? (viewModel.isRecording ? "stop.circle.fill" : "record.circle") : nil,
                 emphasis: viewModel.canRecord ? .primary : .primaryNeutral, size: .large, isFullWidth: true) {
                     if viewModel.installLocationBlocksRecording { viewModel.revealAppInFinder() }
@@ -89,7 +88,7 @@ struct StatusBar: View {
     let duration: String
     let statusText: String
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.md) {
+        VStack(alignment: .leading, spacing: StudioSpacing.md) {
             Text(state.heading(duration: duration))
                 .font(.system(.title, design: .rounded, weight: .semibold)).monospacedDigit()
             Label(statusText, systemImage: symbol)
@@ -126,15 +125,15 @@ struct RecorderWaveformSection: View {
     @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
-        GlassLiveWaveform(
+        StudioLiveWaveform(
             samples: RecorderWaveformAdapter.magnitudes(
                 telemetry.waveformSamples,
                 bucketedTo: RecorderWaveformAdapter.popoverBarCount
             )
         )
         .frame(height: WorkspaceStyle.waveformHeight)
-        .padding(GlassSpacing.md)
-        .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: GlassRadius.card))
+        .padding(StudioSpacing.md)
+        .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: StudioRadius.card))
     }
 }
 
@@ -145,7 +144,7 @@ struct RecordingReviewNotice: View {
     @Environment(\.studioNavigation) private var navigation
     var body: some View {
         if let message = recorder.alerts.reviewMessage {
-            VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+            VStack(alignment: .leading, spacing: StudioSpacing.sm) {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
                 Button("Review saved recordings") {

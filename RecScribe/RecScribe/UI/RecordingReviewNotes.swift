@@ -68,13 +68,13 @@ nonisolated struct RecordingReviewNotes {
 
 struct RecordingReviewNotesView: View {
     let notes: RecordingReviewNotes
-    @Environment(\.glassTheme) private var theme
+    @Environment(\.studioTheme) private var theme
     @State private var expanded = false
     @State private var technicalExpanded = false
 
     var body: some View {
         if !notes.originalMessages.isEmpty {
-            VStack(alignment: .leading, spacing: GlassSpacing.m) {
+            VStack(alignment: .leading, spacing: StudioSpacing.m) {
                 Button {
                     expanded.toggle()
                     if !expanded { technicalExpanded = false }
@@ -102,7 +102,7 @@ struct RecordingReviewNotesView: View {
                     .accessibilityIdentifier("recording-review-technical")
                     .accessibilityValue(technicalExpanded ? "Expanded" : "Collapsed")
                     if technicalExpanded {
-                        VStack(alignment: .leading, spacing: GlassSpacing.s) {
+                        VStack(alignment: .leading, spacing: StudioSpacing.s) {
                             ForEach(Array(notes.originalMessages.enumerated()), id: \.offset) { _, message in
                                 Text(message).textSelection(.enabled)
                             }

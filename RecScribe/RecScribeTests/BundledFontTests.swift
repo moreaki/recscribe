@@ -23,9 +23,9 @@ struct BundledFontTests {
         #expect(otf.isEmpty)
     }
 
-    @Test("GlassTypography.standard uses native San Francisco and SF Mono families")
+    @Test("StudioTypography.standard uses native San Francisco and SF Mono families")
     func designSystemUsesNativeSystemTypography() {
-        let typography = GlassTypography.standard
+        let typography = StudioTypography.standard
         #expect(!typography.usesCustomUIFamily)
         #expect(typography.uiFamily.name == nil)
         #expect(typography.displayFamily.name == nil)
@@ -33,9 +33,9 @@ struct BundledFontTests {
         #expect(typography.monoFamily.design == .monospaced)
     }
 
-    @Test("GlassTypography honors Dynamic Type scaling and role maxScale caps")
+    @Test("StudioTypography honors Dynamic Type scaling and role maxScale caps")
     func dynamicTypeScalingHonorsRoleCaps() {
-        let typography = GlassTypography.standard
+        let typography = StudioTypography.standard
         #expect(typography.size(.body, for: .large) == 13)
         #expect(typography.size(.body, for: .accessibility5) == 26)
         // Hero timer is capped at 1.4x (30 * 1.4 = 42), timecodeChip at 1.0x (10).

@@ -21,7 +21,7 @@ struct WorkspaceTabs<Section: WorkspaceTab>: View {
     }
 
     private var tabs: some View {
-        HStack(spacing: GlassSpacing.sm) {
+        HStack(spacing: StudioSpacing.sm) {
             ForEach(Array(Section.allCases), id: \.self) { section in
                 Button { selection = section } label: {
                     Label(section.rawValue, systemImage: section.symbol)
@@ -44,13 +44,13 @@ private struct WorkspaceTabStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(selected ? WorkspaceStyle.blue : .secondary)
-            .padding(.horizontal, GlassSpacing.md)
+            .padding(.horizontal, StudioSpacing.md)
             .frame(minHeight: WorkspaceStyle.navigationHeight)
             .background(hovering || configuration.isPressed ? WorkspaceStyle.panel : .clear,
-                        in: RoundedRectangle(cornerRadius: GlassRadius.control))
+                        in: RoundedRectangle(cornerRadius: StudioRadius.control))
             .overlay(alignment: .bottom) {
                 Capsule().fill(selected ? WorkspaceStyle.blue : .clear)
-                    .frame(height: GlassSpacing.xxs).padding(.horizontal, GlassSpacing.md)
+                    .frame(height: StudioSpacing.xxs).padding(.horizontal, StudioSpacing.md)
             }
             .contentShape(Rectangle())
             .onHover { hovering = $0 }
@@ -59,5 +59,5 @@ private struct WorkspaceTabStyle: ButtonStyle {
 
 #Preview {
     WorkspaceTabs(title: "Text view", selection: .constant(TranscriptWorkspace.Section.transcript))
-        .padding(GlassSpacing.xl).background(WorkspaceStyle.background).preferredColorScheme(.dark)
+        .padding(StudioSpacing.xl).background(WorkspaceStyle.background).preferredColorScheme(.dark)
 }

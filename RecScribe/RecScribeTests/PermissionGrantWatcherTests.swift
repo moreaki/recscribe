@@ -1,254 +1,89 @@
-//
-//  PermissionGrantWatcherTests.swift
-//  RecScribeTests
-//
-//  BL-088: the grant watcher's loop lifetime and budget, plus the view-model
-//  probe races it inherits from BL-081. The watcher is the retry mechanism that
-//  used to live behind the guide panel: a single probe on returning to the app
-//  can race the TCC write, and without the loop a missed race strands the app
-//  at "Almost ready" until relaunch — observed live, 2026-07-28.
-//
-//  The permission *copy* tests survive from BL-081 — the navigation hint is
-//  still the feature, it just lives only in the main window and popover now.
-//
-
-import Testing
 import Foundation
+import Testing
 @testable import RecScribe
 
-@MainActor
-struct PermissionGrantWatcherTests {
+@MainActor private final class WeakPermissionWatcher {
+    weak var value: PermissionGrantWatcher?
+    init(_ object: PermissionGrantWatcher) { value = object }
+}
 
-    private func makeWatcher(
-        _ permissions: MockPermissionProviding,
-        maxProbes: Int = 600
-    ) -> PermissionGrantWatcher {
-        PermissionGrantWatcher(
-            permissions: permissions,
-            clock: ImmediatePollClock(),
-            interval: 0,
-            maxProbes: maxProbes
-        )
-    }
-
-    // MARK: - Copy (BL-081's surviving fix)
-
-    /// The navigation copy is the whole feature — if it stops naming the section
-    /// that actually holds RecScribe, the app sends people somewhere useless.
-    @Test("Navigation hint names the real section and disambiguates the confusable one")
-    func navigationHintNamesBothSections() {
-        let hint = PermissionKind.screenCapture.navigationHint
-        #expect(hint.contains("Screen & System Audio Recording"))
-        #expect(hint.contains("System Audio Recording Only"))
-    }
-
-    @Test("Section names come from PermissionKind, not from view code")
-    func sectionNamesLiveInOnePlace() {
-        #expect(PermissionKind.screenCapture.settingsSectionName == "Screen & System Audio Recording")
-        #expect(PermissionKind.screenCapture.confusableSectionName == "System Audio Recording Only")
-    }
-
-    @Test("Deep-link anchor is the screen-capture pane")
-    func anchorIsScreenCapture() {
-        #expect(PermissionKind.screenCapture.settingsAnchor == "Privacy_ScreenCapture")
-    }
-
-    // MARK: - Grant detection
-
-    @Test("A probe that finds permission granted fires onGranted exactly once")
-    func grantDetectedOnce() async {
+@MainActor struct PermissionGrantWatcherTests {
+    @Test func directObservationUsesProviderStateAndAnnouncesTheFirstGrantOnly() async {
         let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions)
-        var grantedCallbacks = 0
-        watcher.onGranted = { grantedCallbacks += 1 }
-
-        await watcher.probeOnce()
-        #expect(grantedCallbacks == 0)
-
+        permissions.preflightStatus = .denied
+        let observer = PermissionGrantWatcher(permissions: permissions)
+        var announced = 0
+        observer.onGranted = { announced += 1 }
+        await observer.probeOnce()
         permissions.status = .granted
-        await watcher.probeOnce()
-        #expect(grantedCallbacks == 1)
-
-        // A late probe must not re-announce a grant the app already acted on.
-        await watcher.probeOnce()
-        #expect(grantedCallbacks == 1)
+        await observer.probeOnce()
+        await observer.probeOnce()
+        #expect(announced == 1 && observer.probeCount == 3)
+        #expect(permissions.preflightCount == 0)
+        #expect(!observer.isPolling && !observer.holdsActivityAssertion)
     }
-
-    // MARK: - Loop lifetime
-
-    /// The leaked-loop guard: a watcher that reached the grant looks identical
-    /// from outside whether or not it is still probing forever.
-    @Test("Polling stops once permission is granted")
-    func pollingStopsOnGrant() async {
-        let permissions = MockPermissionProviding(.granted)
-        let watcher = makeWatcher(permissions)
-
-        watcher.startPolling()
-        await waitUntil("the loop to stop on the grant") { !watcher.isPolling }
-
-        let settled = permissions.checkCount
+    @Test(arguments: [1, 3, 5])
+    func boundedPollingHasOneLoopAndReleasesItsActivityBudget(limit: Int) async {
+        let provider = MockPermissionProviding(.denied)
+        let observer = PermissionGrantWatcher(permissions: provider, clock: ImmediatePollClock(), interval: 0, maxProbes: limit)
+        observer.startPolling()
+        #expect(observer.isPolling && observer.holdsActivityAssertion)
+        observer.startPolling()
+        await waitUntil("finite permission budget") { !observer.isPolling }
+        #expect(provider.checkCount == limit && observer.probeCount == limit)
+        #expect(!observer.holdsActivityAssertion)
         await settle()
-        #expect(permissions.checkCount == settled)
+        #expect(provider.checkCount == limit)
     }
-
-    @Test("Polling stops when told to, while still denied")
-    func pollingStopsOnDemand() async {
-        let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions)
-
-        watcher.startPolling()
-        await waitUntil("the watcher's third probe") { permissions.checkCount >= 3 }
-        watcher.stopPolling()
-
-        await settle()
-        let settled = permissions.checkCount
-        await settle()
-        #expect(permissions.checkCount == settled)
-    }
-
-    @Test("Starting twice does not run two loops")
-    func startIsIdempotent() async {
-        let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions)
-
-        watcher.startPolling()
-        watcher.startPolling()
-        await waitUntil("the watcher's fifth probe") { permissions.checkCount >= 5 }
-        watcher.stopPolling()
-        await settle()
-
-        let first = permissions.checkCount
-        await settle()
-        #expect(permissions.checkCount == first)
-    }
-
-    @Test("Releasing the watcher cancels its poll loop")
-    func deinitCancelsPolling() async {
-        let permissions = MockPermissionProviding(.denied)
-        do {
-            let watcher = makeWatcher(permissions)
-            watcher.startPolling()
-            await waitUntil("the watcher's second probe") { permissions.checkCount >= 2 }
+    @Test func grantAndExplicitStopBothReleaseTheObservationSession() async {
+        for allowed in [false, true] {
+            let provider = MockPermissionProviding(allowed ? .granted : .denied)
+            let observer = PermissionGrantWatcher(permissions: provider, clock: NeverPollClock())
+            observer.startPolling()
+            await waitUntil("the first observation") { provider.checkCount == 1 }
+            if !allowed { observer.stopPolling() }
+            await waitUntil("observation stopped") { !observer.isPolling }
+            #expect(!observer.holdsActivityAssertion)
+            await settle()
+            #expect(provider.checkCount == 1)
         }
+    }
+    @Test func destroyingTheOwnerCancelsItsSleepWithoutAnImmortalLoop() async {
+        let provider = MockPermissionProviding(.denied)
+        var owner: PermissionGrantWatcher? = PermissionGrantWatcher(permissions: provider, clock: NeverPollClock())
+        let weak = WeakPermissionWatcher(owner!)
+        owner?.startPolling()
+        await waitUntil("one probe before owner release") { provider.checkCount == 1 }
+        owner = nil
+        await waitUntil("permission observer deallocation") { weak.value == nil }
         await settle()
-        let settled = permissions.checkCount
-        await settle()
-        #expect(permissions.checkCount == settled)
+        #expect(provider.checkCount == 1)
     }
-
-    /// On budget exhaustion the loop just stops — no "gave up" UI. The activation
-    /// re-probe and the Open System Settings button remain as natural retries.
-    @Test("Polling stops at its budget")
-    func pollingStopsAtBudget() async {
-        let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions, maxProbes: 5)
-
-        watcher.startPolling()
-        await waitUntil("the loop to stop at its budget") { !watcher.isPolling }
-
-        #expect(permissions.checkCount == 5)
-        await settle()
-        #expect(permissions.checkCount == 5, "Exhausting the budget must actually stop the loop")
+    @Test func cancelledRunCannotAnnounceItsOldGrantIntoTheNextRun() async {
+        let provider = MockPermissionProviding(.granted)
+        provider.holdsChecks = true
+        provider.answersWithStatusAtIssue = true
+        let observer = PermissionGrantWatcher(permissions: provider, clock: ImmediatePollClock(), maxProbes: 1)
+        var grants = 0
+        observer.onGranted = { grants += 1 }
+        observer.startPolling()
+        await waitUntil("old permission run") { provider.checkCount == 1 }
+        observer.stopPolling()
+        provider.status = .denied
+        observer.startPolling()
+        await waitUntil("new permission run") { provider.checkCount == 2 }
+        provider.holdsChecks = false
+        provider.resumePendingChecks()
+        await waitUntil("new run completion") { !observer.isPolling }
+        #expect(grants == 0 && !observer.holdsActivityAssertion)
     }
-
-    // MARK: - App Nap opt-out
-
-    /// The bug that made BL-088's first cut fail in the real app: with System
-    /// Settings covering the window, macOS App Napped the process and the poll
-    /// stopped firing, so a grant went unnoticed until the user switched back.
-    /// The assertion must be held for exactly as long as the poll runs — held
-    /// too long and a background app is quietly holding power state.
-    @Test("The App Nap opt-out is held while polling and released when it stops")
-    func activityAssertionMatchesPollLifetime() async {
-        let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions)
-        #expect(watcher.holdsActivityAssertion == false)
-
-        watcher.startPolling()
-        #expect(watcher.holdsActivityAssertion)
-
-        watcher.stopPolling()
-        #expect(watcher.holdsActivityAssertion == false)
-    }
-
-    @Test("The opt-out is released when the grant lands")
-    func activityAssertionReleasedOnGrant() async {
-        let permissions = MockPermissionProviding(.granted)
-        let watcher = makeWatcher(permissions)
-
-        watcher.startPolling()
-        await waitUntil("the loop to stop on the grant") { !watcher.isPolling }
-
-        #expect(watcher.holdsActivityAssertion == false)
-    }
-
-    @Test("The opt-out is released when the budget runs out")
-    func activityAssertionReleasedOnBudget() async {
-        let permissions = MockPermissionProviding(.denied)
-        let watcher = makeWatcher(permissions, maxProbes: 3)
-
-        watcher.startPolling()
-        await waitUntil("the loop to stop at its budget") { !watcher.isPolling }
-
-        #expect(watcher.holdsActivityAssertion == false)
-    }
-
-    // MARK: - The overlapping-probe race (view model, unchanged from BL-081)
-
-    /// The failure the single-flight prevents: the user grants, and a slower
-    /// in-flight probe writes a stale `.denied` afterwards.
-    @Test("A slow stale probe cannot overwrite a fresh granted result")
-    func staleProbeCannotOverwriteGrant() async {
-        let permissions = MockPermissionProviding(.denied)
-        permissions.holdsChecks = true
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permissions,
-            clock: ManualClock(),
-            notificationCenter: NotificationCenter()
-        )
-
-        let first = Task { await viewModel.checkPermission() }
-        await waitUntil("the first probe to be in flight") { permissions.checkCount >= 1 }
-
-        permissions.status = .granted
-        let second = Task { await viewModel.checkPermission() }
-        // No positive edge to wait on: the point is that the second caller does
-        // *not* issue its own probe, so give it every chance to and check it did not.
-        await settle()
-
-        permissions.holdsChecks = false
-        permissions.resumePendingChecks()
-        _ = await first.value
-        _ = await second.value
-
-        #expect(viewModel.permissionStatus == .granted)
-    }
-
-    @Test("Overlapping callers share one probe rather than each issuing their own")
-    func overlappingCallersSingleFlight() async {
-        let permissions = MockPermissionProviding(.denied)
-        permissions.holdsChecks = true
-        let viewModel = RecorderViewModel(
-            controller: MockRecordingControlling(),
-            permissions: permissions,
-            clock: ManualClock(),
-            notificationCenter: NotificationCenter()
-        )
-        #expect(permissions.checkCount == 0)
-
-        let a = Task { await viewModel.checkPermission() }
-        let b = Task { await viewModel.checkPermission() }
-        // Wait for the shared probe to start, then settle: a second probe, if
-        // the single-flight regressed, would be issued in that window.
-        await waitUntil("the shared probe to be in flight") { permissions.checkCount >= 1 }
-        await settle()
-
-        permissions.holdsChecks = false
-        permissions.resumePendingChecks()
-        _ = await a.value
-        _ = await b.value
-
-        #expect(permissions.checkCount == 1)
+    @Test func settingsMetadataSeparatesScreenAndMicrophoneAccess() {
+        let screen = PermissionKind.screenCapture
+        #expect(screen.settingsAnchor == "Privacy_ScreenCapture")
+        #expect(screen.settingsSectionName == "Screen & System Audio Recording")
+        #expect(screen.navigationHint.contains(screen.settingsSectionName))
+        #expect(screen.navigationHint.contains("System Audio Recording Only"))
+        #expect(PermissionKind.microphone.settingsAnchor == "Privacy_Microphone")
+        #expect(PermissionKind.microphone.confusableSectionName == nil)
     }
 }

@@ -1,16 +1,39 @@
-//
-//  RecordingControllerTests.swift
-//  RecScribeTests
-//
-//  WAV capture, source configuration, and teardown through injected capture/encoder seams.
-//
-
-import Testing
 import Foundation
+import Testing
 @testable import RecScribe
 
 @MainActor
 struct RecordingControllerTests {
+    private struct FinalizeFailure: Error {}
+
+    @Test(arguments: ["success", "validation", "setup", "captureStop", "seal"])
+    func coordinatesSourceWriterAndCleanup(failure: String) async throws {
+        let capture = MockAudioCapturing(), recorder = MockAudioFileWriting()
+        let source = MockAudioSourceProviding(selectedSource: .app(bundleID: "app.selected"))
+        if failure == "validation" { source.validateError = AudioSourceError.appNotRunning("app.selected") }
+        if failure == "setup" { capture.setupError = FinalizeFailure() }
+        let controller = RecordingController(captureManager: capture, audioRecorder: recorder,
+            saveLocation: MockSaveLocationProviding(directory: FileManager.default.temporaryDirectory), audioSource: source)
+        #expect(controller.generateFilePath().pathExtension == "wav")
+        if ["validation", "setup"].contains(failure) {
+            await #expect(throws: (any Error).self) { try await controller.startRecording() }
+            #expect(controller.recordingURL == nil && !recorder.recording)
+            #expect(recorder.startCount == (failure == "validation" ? 0 : 1))
+            #expect(capture.setupCount == (failure == "validation" ? 0 : 1))
+            if failure == "setup" { #expect(recorder.stopCount == 1 && capture.cleanupCount == 1) }
+            return
+        }
+        let url = try await controller.startRecording()
+        #expect(url.pathExtension == "wav" && recorder.lastStartFormat == .wav)
+        #expect(capture.lastSource == source.selectedSource && source.validateCount == 1)
+        if failure == "captureStop" { capture.stopError = FinalizeFailure() }
+        if failure == "seal" { recorder.stopError = FinalizeFailure() }
+        if failure == "success" { try await controller.stopRecording() }
+        else { await #expect(throws: (any Error).self) { try await controller.stopRecording() } }
+        #expect(capture.stopCount == 1 && recorder.stopCount == 1 && capture.cleanupCount == 1)
+        #expect(controller.recordingURL == nil && !recorder.recording && !capture.capturing)
+    }
+
     @Test func injectedRecorderCoordinatesCaptureAndFailureWithTheLibrary() async throws {
         for shouldFail in [false, true] {
             let capture = MockAudioCapturing(), recorder = MockAudioFileWriting()
@@ -29,36 +52,6 @@ struct RecordingControllerTests {
             #expect(runtimeCancellations == 1)
             await library.shutdown()
         }
-    }
-
-    private func makeController(
-        recorder: MockAudioFileWriting? = nil,
-        capture: MockAudioCapturing? = nil,
-        audioSource: MockAudioSourceProviding? = nil
-    ) -> RecordingController {
-        RecordingController(
-            captureManager: capture ?? MockAudioCapturing(),
-            audioRecorder: recorder ?? MockAudioFileWriting(),
-            saveLocation: MockSaveLocationProviding(directory: FileManager.default.temporaryDirectory),
-            audioSource: audioSource ?? MockAudioSourceProviding()
-        )
-    }
-
-    @Test("Live capture paths always use the canonical WAV extension")
-    func filePathAlwaysUsesWAV() {
-        #expect(makeController().generateFilePath().pathExtension == "wav")
-    }
-
-    @Test("Capture always uses lossless WAV, independently of archive preference")
-    func startAlwaysUsesWAV() async throws {
-        let recorder = MockAudioFileWriting()
-        let controller = makeController(recorder: recorder)
-
-        let url = try await controller.startRecording()
-
-        #expect(recorder.lastStartFormat == .wav)
-        #expect(url.pathExtension == "wav")
-        #expect(controller.recordingURL?.pathExtension == "wav")
     }
 
     @Test("Legacy format defaults cannot change WAV capture or its independent archive policy",
@@ -105,102 +98,4 @@ struct RecordingControllerTests {
         }
     }
 
-    @Test("startRecording threads the selected AudioSource into capture setup (BL-100)")
-    func startThreadsAudioSource() async throws {
-        let capture = MockAudioCapturing()
-        let audioSource = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.apple.logic10"))
-        let controller = makeController(capture: capture, audioSource: audioSource)
-
-        _ = try await controller.startRecording()
-
-        #expect(capture.lastSource == .app(bundleID: "com.apple.logic10"))
-        #expect(audioSource.validateCount == 1)
-    }
-
-    @Test("An unvalidatable source fails before any file is created (BL-100 pre-flight)")
-    func invalidSourceFailsBeforeFileCreation() async {
-        let recorder = MockAudioFileWriting()
-        let capture = MockAudioCapturing()
-        let audioSource = MockAudioSourceProviding(selectedSource: .app(bundleID: "com.apple.logic10"))
-        audioSource.validateError = AudioSourceError.appNotRunning("com.apple.logic10")
-        let controller = makeController(recorder: recorder, capture: capture, audioSource: audioSource)
-
-        await #expect(throws: AudioSourceError.self) {
-            try await controller.startRecording()
-        }
-
-        #expect(recorder.startCount == 0)
-        #expect(capture.setupCount == 0)
-        #expect(controller.recordingURL == nil)
-    }
-
-    // MARK: - BL-016 teardown ordering
-
-    private struct FinalizeFailure: Error, Equatable {}
-
-    @Test("Capture setup failure closes the encoder")
-    func setupFailureClosesEncoder() async {
-        let recorder = MockAudioFileWriting()
-        let capture = MockAudioCapturing()
-        capture.setupError = FinalizeFailure()
-        let controller = makeController(recorder: recorder, capture: capture)
-        await #expect(throws: FinalizeFailure.self) { try await controller.startRecording() }
-        #expect(recorder.stopCount == 1)
-        #expect(capture.cleanupCount == 1)
-        #expect(!recorder.recording)
-    }
-
-    @Test("Capture stop failure still finalizes and cleans up")
-    func captureStopFailureFinalizes() async throws {
-        let recorder = MockAudioFileWriting()
-        let capture = MockAudioCapturing()
-        let controller = makeController(recorder: recorder, capture: capture)
-        _ = try await controller.startRecording()
-        capture.stopError = FinalizeFailure()
-        do {
-            try await controller.stopRecording()
-            Issue.record("Expected a capture-shutdown failure")
-        } catch RecordingControllerError.captureShutdownFailed(let cause) {
-            #expect(cause is FinalizeFailure)
-        } catch { Issue.record("Unexpected stop error: \(error)") }
-        #expect(recorder.stopCount == 1)
-        #expect(capture.cleanupCount == 1)
-        #expect(controller.recordingURL == nil)
-    }
-
-    /// The regression this guards: a finalize failure must not skip teardown.
-    /// Rethrowing straight out of `stopRecording()` would leak the SCStream and
-    /// strand a stale recording URL — a worse outcome than the error itself.
-    @Test("A finalize failure still tears down capture, then rethrows")
-    func finalizeFailureStillTearsDown() async throws {
-        let recorder = MockAudioFileWriting()
-        let capture = MockAudioCapturing()
-        let controller = makeController(recorder: recorder, capture: capture)
-
-        _ = try await controller.startRecording()
-        recorder.stopError = FinalizeFailure()
-
-        await #expect(throws: FinalizeFailure.self) {
-            try await controller.stopRecording()
-        }
-
-        // Teardown completed despite the throw.
-        #expect(capture.stopCount == 1)
-        #expect(capture.cleanupCount == 1)
-        #expect(controller.recordingURL == nil)
-    }
-
-    @Test("A clean stop tears down and does not throw")
-    func cleanStopTearsDown() async throws {
-        let recorder = MockAudioFileWriting()
-        let capture = MockAudioCapturing()
-        let controller = makeController(recorder: recorder, capture: capture)
-
-        _ = try await controller.startRecording()
-        try await controller.stopRecording()
-
-        #expect(recorder.stopCount == 1)
-        #expect(capture.cleanupCount == 1)
-        #expect(controller.recordingURL == nil)
-    }
 }

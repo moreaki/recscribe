@@ -5,7 +5,7 @@ struct ConfigurationView: View {
     @Environment(RecorderViewModel.self) private var recorder
     @Environment(AppSettings.self) private var settings
     private var settingsBinding: Bindable<AppSettings> { Bindable(settings) }
-    @Environment(\.glassTheme) private var theme
+    @Environment(\.studioTheme) private var theme
     @Environment(RuntimeManager.self) private var runtime
     @Environment(SessionLibrary.self) private var library
     private let liveDrafts: LiveDraftStore?
@@ -31,10 +31,10 @@ struct ConfigurationView: View {
     private var runtimeActionsDisabled: Bool { runtime.busy || library.recordingActive || library.liveWorkActive }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.xxl) {
-            HStack(spacing: GlassSpacing.md) {
+        VStack(alignment: .leading, spacing: StudioSpacing.xxl) {
+            HStack(spacing: StudioSpacing.md) {
                 WorkspaceIcon(symbol: "gearshape.fill", tint: WorkspaceStyle.violet)
-                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     Text("Settings").font(.title3.weight(.semibold))
                     Text("Recording, local models and intelligence. Configured your way.").font(.caption).foregroundStyle(.secondary)
                 }
@@ -43,7 +43,7 @@ struct ConfigurationView: View {
             }
             WorkspaceTabs(title: "Settings", selection: $section)
             ScrollView {
-                VStack(alignment: .leading, spacing: GlassSpacing.xl) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xl) {
                     switch section {
                     case .storage: storage
                     case .transcription: transcription
@@ -51,7 +51,7 @@ struct ConfigurationView: View {
                     case .ai: intelligence
                     case .diagnostics: diagnostics
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(GlassSpacing.xxs)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(StudioSpacing.xxs)
             }.scrollIndicators(.never)
             Divider()
             ForEach(settings.values.migrationWarnings, id: \.self) { warning in
@@ -65,11 +65,11 @@ struct ConfigurationView: View {
                 if runtime.busy { ProgressView(value: runtime.progress).frame(width: Layout.progressWidth); Button("Cancel") { runtime.cancel() } }
             }
         }
-        .padding(GlassSpacing.xxl).frame(minWidth: embeddedInStudio ? 0 : AppWindow.settings.minimumSize.width,
+        .padding(StudioSpacing.xxl).frame(minWidth: embeddedInStudio ? 0 : AppWindow.settings.minimumSize.width,
             idealWidth: embeddedInStudio ? nil : AppWindow.settings.defaultSize.width,
             minHeight: embeddedInStudio ? 0 : AppWindow.settings.minimumSize.height,
             idealHeight: embeddedInStudio ? nil : AppWindow.settings.defaultSize.height)
-        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast()
+        .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast()
         .onChange(of: library.recordingActive) { _, active in if active { runtime.cancel() } }
         .task(id: availabilityKey) {
             guard !runtime.busy else { return }
@@ -126,7 +126,7 @@ struct ConfigurationView: View {
 
     private func card<Content: View>(_ title: String, detail: String, @ViewBuilder content: () -> Content) -> some View {
         WorkspaceCard {
-            VStack(alignment: .leading, spacing: GlassSpacing.l) {
+            VStack(alignment: .leading, spacing: StudioSpacing.l) {
                 Label(title, systemImage: section.symbol).font(.headline).foregroundStyle(section.tint)
                 Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 content()
@@ -134,7 +134,7 @@ struct ConfigurationView: View {
         }
     }
     private func file(_ title: String, value: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+        VStack(alignment: .leading, spacing: StudioSpacing.sm) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField(title, text: value).textFieldStyle(.roundedBorder)
@@ -146,7 +146,7 @@ struct ConfigurationView: View {
         }
     }
     private var storage: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.xl) {
+        VStack(alignment: .leading, spacing: StudioSpacing.xl) {
         Group {
             card("Capture sources", detail: recorder.captureSourceHint) {
                 Text(recorder.captureSourceName ?? "All system audio").font(.headline)

@@ -48,10 +48,10 @@ struct TranscriptSourceView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.s) {
+        VStack(alignment: .leading, spacing: StudioSpacing.s) {
             HStack {
                 Image(systemName: "waveform").foregroundStyle(WorkspaceStyle.mint)
-                VStack(alignment: .leading, spacing: GlassSpacing.xxs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xxs) {
                     if let entry {
                         SessionTitleView(entry: entry, library: library, allowsEditing: !recording) { updated in
                             if self.entry?.id == updated.id { self.entry = updated }

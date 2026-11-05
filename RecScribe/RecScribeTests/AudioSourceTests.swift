@@ -1,40 +1,16 @@
-//
-//  AudioSourceTests.swift
-//  RecScribeTests
-//
-//  BL-100 / #40: AudioSource is the persisted, composable Codable value type
-//  threaded through AudioSourceManager and the AudioCapturing seam.
-//
-
-import Testing
 import Foundation
+import Testing
 @testable import RecScribe
 
 struct AudioSourceTests {
-
-    @Test("systemAll round-trips through JSON")
-    func systemAllRoundTrips() throws {
-        let data = try JSONEncoder().encode(AudioSource.systemAll)
-        let decoded = try JSONDecoder().decode(AudioSource.self, from: data)
-        #expect(decoded == .systemAll)
-    }
-
-    @Test("app(bundleID:) round-trips through JSON, preserving the bundle ID")
-    func appRoundTrips() throws {
-        let source = AudioSource.app(bundleID: "com.apple.logic10")
-        let data = try JSONEncoder().encode(source)
-        let decoded = try JSONDecoder().decode(AudioSource.self, from: data)
-        #expect(decoded == source)
-    }
-
-    @Test("Different bundle IDs are not equal")
-    func appEqualityIsBundleIDSensitive() {
-        #expect(AudioSource.app(bundleID: "com.apple.logic10") != .app(bundleID: "com.spotify.client"))
-    }
-
-    @Test("systemAll and app are never equal")
-    func systemAllNotEqualToApp() {
-        #expect(AudioSource.systemAll != .app(bundleID: "com.apple.logic10"))
+    @Test func persistedSelectionsPreserveTheirIdentity() throws {
+        let values: [AudioSource] = [.systemAll, .app(bundleID: "app.a"), .app(bundleID: "app.b"),
+            .mic(deviceUID: "input.a"), .mixed(appBundleID: nil, deviceUID: "input.a")]
+        for (index, source) in values.enumerated() {
+            let serialized = try JSONEncoder().encode(source)
+            #expect(try JSONDecoder().decode(AudioSource.self, from: serialized) == source)
+            for other in values.indices where other != index { #expect(source != values[other]) }
+        }
     }
 
     @Test("Legacy 5-case enum JSON payloads migrate losslessly into composable AudioSource (#40)")

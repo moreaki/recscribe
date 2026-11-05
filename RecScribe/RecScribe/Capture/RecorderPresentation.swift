@@ -63,7 +63,7 @@ extension RecorderViewModel {
     func requestPermission() async {
         if !(await permissionCoordinator.requestScreenCapturePermission()) {
             presentError(
-                "RecScribe needs Screen Recording permission to capture audio (it never records your screen). You can turn it on in System Settings.",
+                "Allow RecScribe under Screen Recording in System Settings to capture playback audio. Screen frames are discarded.",
                 recovery: .openSettings)
         }
     }
@@ -158,25 +158,13 @@ extension RecorderViewModel {
     }
 
     var statusText: String {
-        switch state {
-        case .recording:
-            if let name = captureSourceName { return "Recording \(name)" }
-            return "Recording"
-        case .starting:
-            return "Starting…"
-        case .stopping:
-            return "Stopping…"
-        case .recovering:
-            return "Recovering…"
-        case .error(let error):
-            return error.message
-        case .idle:
-            if installLocation.blocksRecording { return "Move to Applications" }
-            if selectedSource.requiresScreenCapture {
-                guard permissionStatus == .granted else { return "Almost ready" }
-            }
-            if let name = captureSourceName { return "Ready to record \(name)" }
-            return "Play something, then hit record"
-        }
+        if case .error(let failure) = state { return failure.message }
+        if state == .starting { return "Starting…" }
+        if state == .stopping { return "Stopping…" }
+        if state == .recovering { return "Recovering…" }
+        if state == .recording { return ["Recording", captureSourceName].compactMap { $0 }.joined(separator: " ") }
+        if installLocationBlocksRecording { return "Move to Applications" }
+        if requiresScreenCapturePermission, permissionStatus != .granted { return "Almost ready" }
+        return captureSourceName.map { "Ready to record " + $0 } ?? "Play something, then hit record"
     }
 }

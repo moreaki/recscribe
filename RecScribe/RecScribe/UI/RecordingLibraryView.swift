@@ -4,7 +4,7 @@ import SwiftUI
 struct RecordingLibraryView: View {
     @Environment(RecorderViewModel.self) private var recorder
     @Environment(SessionLibrary.self) private var library
-    @Environment(\.glassTheme) private var theme
+    @Environment(\.studioTheme) private var theme
     @Environment(\.openWindow) private var openWindow
     @Environment(\.studioNavigation) private var navigation
     @Environment(\.dismissWindow) private var dismissWindow
@@ -30,7 +30,7 @@ struct RecordingLibraryView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.xl) {
+        VStack(alignment: .leading, spacing: StudioSpacing.xl) {
             HStack {
                 WorkspaceIcon(symbol: "rectangle.stack.fill", tint: WorkspaceStyle.mint)
                 VStack(alignment: .leading) {
@@ -49,7 +49,7 @@ struct RecordingLibraryView: View {
             }
             SessionPlaybackView(playback: playback)
             List(library.entries) { entry in
-                VStack(alignment: .leading, spacing: GlassSpacing.m) {
+                VStack(alignment: .leading, spacing: StudioSpacing.m) {
                     HStack(alignment: .top) {
                         WorkspaceIcon(symbol: "waveform", tint: WorkspaceStyle.blue)
                         VStack(alignment: .leading, spacing: 6) {
@@ -114,7 +114,7 @@ struct RecordingLibraryView: View {
                             .disabled(!library.canDeleteRecording)
                     }.buttonStyle(.borderless).disabled(library.recordingActive || library.liveWorkActive)
                     RecordingReviewNotesView(notes: RecordingReviewNotes(session: entry.session))
-                }.padding(.vertical, GlassSpacing.s)
+                }.padding(.vertical, StudioSpacing.s)
             }.listStyle(.inset).scrollContentBackground(.hidden).overlay {
                 if library.entries.isEmpty { ContentUnavailableView("No sessions yet", systemImage: "waveform", description: Text("New recordings appear here. Existing WAV files can be imported for optional transcription.")) }
             }
@@ -138,11 +138,11 @@ struct RecordingLibraryView: View {
                 }
             }
             if let error = library.errorMessage { Text(error).foregroundStyle(theme.colors.statusWarning).font(.caption).textSelection(.enabled) }
-        }.padding(GlassSpacing.xxl).frame(
+        }.padding(StudioSpacing.xxl).frame(
             minWidth: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.width,
             minHeight: embeddedInStudio ? 0 : AppWindow.recordings.minimumSize.height
         )
-            .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).glassThemeAdaptingToContrast().onAppear {
+            .background(WorkspaceStyle.background).tint(WorkspaceStyle.blue).studioThemeAdaptingToContrast().onAppear {
                 playback.setRecording(library.recordingActive)
                 reload()
             }

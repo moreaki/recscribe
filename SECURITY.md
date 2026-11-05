@@ -22,7 +22,7 @@ latest commit on `main`.
 
 - Audio capture and storage are local by default.
 - The application contains no telemetry or analytics.
-- The inherited Home Rec automatic-update channel has been removed.
+- No automatic-update channel is configured.
 - Signing keys, notarization credentials, and transcription service credentials must
   never be committed to the repository.
 - Future remote transcription providers must be opt-in and disclose what data leaves

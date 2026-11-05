@@ -2,9 +2,8 @@
 
 Local-first audio recording and multilingual transcription for macOS.
 
-RecScribe starts from the proven SwiftUI and ScreenCaptureKit recording foundation of
-[Home Rec](https://github.com/melissa-pereira-deel/home-rec) and develops it into an
-independent application for precise, private, high-performance transcription.
+RecScribe combines native macOS audio capture with local transcription,
+source-linked text processing and reviewable recording sessions.
 
 ## Status
 
@@ -24,7 +23,7 @@ Diarization remains pending. See the [Swift migration](docs/swift-first-migratio
 [architecture](docs/transcription-architecture.md).
 
 No RecScribe release or automatic update channel exists yet. Development builds do not
-contact the Home Rec update service.
+contact an automatic update service.
 
 ## Principles
 
@@ -144,20 +143,13 @@ Frozen synthetic reference fixtures now check canonical semantics and byte-ident
 exports in every Swift test run. Corpus benchmarks also use the native CLI;
 see [benchmark instructions](benchmarks/README.md).
 
-## Upstream workflow
+## Source replacement work
 
-RecScribe is an independent repository, not a GitHub fork. `origin` belongs to
-RecScribe; Home Rec is an optional `upstream` remote used only for deliberate manual
-synchronization.
-
-```bash
-git remote add upstream https://github.com/melissa-pereira-deel/home-rec.git
-git fetch upstream
-git merge upstream/main
-```
-
-Review every upstream merge carefully: RecScribe owns its application identity,
-signing, release process, update channel, and product direction.
+The recording foundation is being replaced under #51. The
+[provenance inventory](docs/provenance/recording-foundation.md) records the
+replacement candidate and remaining inherited material. The work is incomplete;
+current notices still apply. Development uses this repository's own branches and
+CI, with no upstream merge workflow.
 
 ## Project layout
 
@@ -169,7 +161,6 @@ schemas/transcript.schema.json      Canonical transcript contract
 benchmarks/                        Local corpus protocol and readiness manifest
 skills/recscribe/                  Thin Codex wrapper for the CLI
 docs/transcription-architecture.md Processing architecture and delivery plan
-docs/upstream-home-rec-changelog.md Historical changelog inherited from Home Rec
 scripts/                           Development and packaging helpers
 ```
 
@@ -181,8 +172,8 @@ to the user before audio leaves the Mac.
 
 ## License and attribution
 
-RecScribe currently remains under the Apache License 2.0. It includes software derived
-from Home Rec, Copyright 2026 Melissa de Britto. See [`LICENSE`](LICENSE),
+RecScribe uses the Apache License 2.0. Source attribution and the current
+replacement status are recorded in [`LICENSE`](LICENSE),
 [`NOTICE`](NOTICE), and [`docs/licensing.md`](docs/licensing.md).
 
 

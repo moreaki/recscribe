@@ -10,7 +10,7 @@ struct IntelligenceSettingsView: View {
     @State private var apiKey = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.l) {
+        VStack(alignment: .leading, spacing: StudioSpacing.l) {
             Toggle("Enable AI post-processing", isOn: settingsBinding.values.aiEnabled)
             if settings.values.processingLocation == .local {
                 Text("Local mode permits Ollama text processing only. Configure an OpenAI key here if needed, then choose Hybrid or Cloud in Transcription before approving any upload.")

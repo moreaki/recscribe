@@ -1,186 +1,87 @@
-//
-//  MenuBarController.swift
-//  RecScribe
-//
-//  Manages the NSStatusItem (menu bar icon) and NSPopover for the compact UI.
-//
-
 import AppKit
 import SwiftUI
 
-@MainActor
-class MenuBarController: NSObject {
-
-    private var statusItem: NSStatusItem
+@MainActor final class MenuBarController: NSObject {
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
     private let layout = PopoverLayout()
-    private var cancellable: ObservationSubscription?
-    /// Held so the overflow menu can be rebuilt from live state on every open.
     private let viewModel: RecorderViewModel
     private let actions: OverflowMenu
-    /// Warmed only by a deliberate Per-App submenu open — never at launch.
-    private let appListCache = PerAppListCache()
-    /// Retained for the lifetime of the controller: `NSMenu.delegate` is weak.
-    private var perAppDelegate: PerAppMenuDelegate?
+    private let cache = PerAppListCache()
+    private var appMenu: PerAppMenuDelegate?
+    private var recordingObservation: ObservationSubscription?
+
     init(viewModel: RecorderViewModel, live: LiveTranscription? = nil, actions: OverflowMenu) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.viewModel = viewModel
         self.actions = actions
         super.init()
-
-        // Configure popover
-        let popoverView = MenuBarPopoverView(live: live, layout: layout)
-            .environment(viewModel)
+        let content = MenuBarPopoverView(live: live, layout: layout).environment(viewModel)
             .environment(\.makeOverflowMenu, { [weak self] in self?.makeOverflowMenu() ?? actions.makeNSMenu() })
-        let host = NSHostingController(rootView: popoverView)
-        host.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = host
+        let controller = NSHostingController(rootView: content)
+        controller.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = controller
         popover.behavior = .transient
-        // The popover draws its own chrome and arrow, neither of which SwiftUI can
-        // reach. Without this the arrow stays light while the content it points at
-        // is dark.
-        popover.appearance = NSAppearance(named: .darkAqua)
-
-        // Configure status bar button
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "RecScribe")
-            button.image?.isTemplate = true
-            button.action = #selector(handleStatusItemClick(_:))
-            button.target = self
-            // Right-clicks reach the action only if explicitly opted into; the
-            // default is left-click alone (BL-110).
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        }
-
-        updateRecordingIcon(viewModel.isRecording)
-        cancellable = ObservationSubscription(read: { viewModel.isRecording }) { [weak self] in
-            self?.updateRecordingIcon($0)
+        popover.appearance = .init(named: .darkAqua)
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(activateStatusItem(_:))
+        statusItem.button?.sendAction(on: [.rightMouseUp, .leftMouseUp])
+        updateIcon(recording: viewModel.isRecording)
+        recordingObservation = ObservationSubscription(read: { viewModel.isRecording }) { [weak self] value in
+            self?.updateIcon(recording: value)
         }
     }
-
-    private func updateRecordingIcon(_ isRecording: Bool) {
-        guard let button = statusItem.button else { return }
-        let image = NSImage(systemSymbolName: isRecording ? "record.circle.fill" : "waveform",
-                            accessibilityDescription: isRecording ? "Recording" : "RecScribe")
-        image?.isTemplate = !isRecording
-        button.image = image
-        button.contentTintColor = isRecording ? .red : nil
+    private func updateIcon(recording: Bool) {
+        let symbol = recording ? "record.circle.fill" : "waveform"
+        let picture = NSImage(systemSymbolName: symbol, accessibilityDescription: recording ? "Recording" : "RecScribe")
+        picture?.isTemplate = !recording
+        statusItem.button?.image = picture
+        statusItem.button?.contentTintColor = recording ? .red : nil
     }
-
-    /// Route a status-item click: the overflow menu on right/control-click, the
-    /// popover otherwise (BL-110).
-    @objc private func handleStatusItemClick(_ sender: AnyObject?) {
+    static func shouldShowOverflowMenu(type: NSEvent.EventType, modifiers: NSEvent.ModifierFlags) -> Bool {
+        switch type {
+        case .rightMouseUp: true
+        case .leftMouseUp: !modifiers.intersection(.control).isEmpty
+        default: false
+        }
+    }
+    @objc private func activateStatusItem(_ sender: Any?) {
         let event = NSApp.currentEvent
-        let showsMenu = Self.shouldShowOverflowMenu(
-            type: event?.type ?? .leftMouseUp,
-            modifiers: event?.modifierFlags ?? []
-        )
-        if showsMenu {
-            showOverflowMenu()
-        } else {
-            togglePopover(sender)
-        }
-    }
-
-    /// Whether a status-item click should open the overflow menu instead of the
-    /// popover. Control-click counts as a right-click, per macOS convention.
-    ///
-    /// Static and pure so the routing rule can be tested without synthesising a
-    /// real `NSEvent` or standing up a live status item.
-    static func shouldShowOverflowMenu(
-        type: NSEvent.EventType,
-        modifiers: NSEvent.ModifierFlags
-    ) -> Bool {
-        if type == .rightMouseUp { return true }
-        return type == .leftMouseUp && modifiers.contains(.control)
-    }
-
-    /// Snapshot of everything the menu renders from, read fresh on every open.
-    ///
-    /// Nothing here touches ScreenCaptureKit: `apps` comes from the in-memory
-    /// cache, which only a deliberate Per-App submenu open ever fills. That is
-    /// what keeps a plain right-click free of permission prompts.
-    private func currentContext() -> OverflowContext {
-        let selected = viewModel.selectedSource
-        var selectedAppName: String?
-        if let bundleID = selected.appBundleID {
-            selectedAppName = viewModel.audioSource.knownAppName(forBundleID: bundleID)
-        }
-        // Devices are enumerated eagerly, unlike apps: it is synchronous, cheap,
-        // and raises no permission dialog, so there is nothing to defer.
-        let devices = viewModel.audioSource.availableInputDevices()
-        var selectedMicName: String?
-        if let uid = selected.microphoneUID {
-            selectedMicName = devices.first { $0.uid == uid }?.name
-        }
-
-        return OverflowContext(
-            selectedSource: selected,
-            allowsCaptureSourceChange: viewModel.allowsCaptureSourceChange,
-            permissionGranted: viewModel.permissionStatus == .granted,
-            apps: appListCache.apps,
-            selectedAppName: selectedAppName,
-            inputDevices: devices,
-            selectedMicName: selectedMicName
-        )
-    }
-
-    /// Build the menu for right now, and attach the delegate that fills the
-    /// Per-App submenu lazily when (and only when) it is opened.
-    func makeOverflowMenu() -> NSMenu {
-        let context = currentContext()
-        let menu = actions.makeNSMenu(context)
-
-        let delegate = PerAppMenuDelegate(
-            cache: appListCache,
-            source: viewModel.audioSource,
-            actions: actions,
-            makeContext: { [weak self] in self?.currentContext() ?? OverflowContext() }
-        )
-        // Retained here because `NSMenu.delegate` is weak.
-        perAppDelegate = delegate
-        // Attached to the *submenu only*, so opening the root menu enumerates
-        // nothing. The capture-source section is absent entirely while recording,
-        // in which case there is no submenu to find.
-        menu.items
-            .first { $0.identifier?.rawValue == OverflowMenu.perAppItemIdentifier }?
-            .submenu?.delegate = delegate
-
-        return menu
-    }
-
-    private func showOverflowMenu() {
-        // The popover and the menu would otherwise overlap on screen.
-        if popover.isShown {
+        if Self.shouldShowOverflowMenu(type: event?.type ?? .leftMouseUp, modifiers: event?.modifierFlags ?? []) {
             popover.performClose(nil)
-        }
-
-        // Attaching the menu is what gives the status item its standard
-        // highlighted-while-open appearance. It has to come straight back off:
-        // while a menu is attached AppKit routes every click to it and never
-        // fires the button's action, which would strand the left-click popover.
-        statusItem.menu = makeOverflowMenu()
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
-    }
-
-    func close() {
-        popover.performClose(nil)
-        popover.contentViewController = nil
-        cancellable?.cancel()
-        perAppDelegate = nil
-        NSStatusBar.system.removeStatusItem(statusItem)
-    }
-
-    private func togglePopover(_ sender: AnyObject?) {
-        if popover.isShown {
-            popover.performClose(sender)
-        } else if let button = statusItem.button {
+            statusItem.menu = makeOverflowMenu()
+            defer { statusItem.menu = nil }
+            statusItem.button?.performClick(nil)
+        } else if popover.isShown { popover.performClose(sender) }
+        else if let button = statusItem.button {
             layout.update(screen: button.window?.screen)
             popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            // Make the popover window key so it can receive input
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+    private func snapshot() -> OverflowContext {
+        let selection = viewModel.selectedSource
+        let devices = viewModel.audioSource.availableInputDevices()
+        return .init(selectedSource: selection, allowsCaptureSourceChange: viewModel.allowsCaptureSourceChange,
+                     permissionGranted: viewModel.permissionStatus == .granted, apps: cache.apps,
+                     selectedAppName: selection.appBundleID.flatMap(viewModel.audioSource.knownAppName(forBundleID:)),
+                     inputDevices: devices, selectedMicName: devices.first { $0.uid == selection.microphoneUID }?.name)
+    }
+    func makeOverflowMenu() -> NSMenu {
+        let result = actions.makeNSMenu(snapshot())
+        let delegate = PerAppMenuDelegate(cache: cache, source: viewModel.audioSource, actions: actions,
+                                         makeContext: { [weak self] in self?.snapshot() ?? .init() })
+        appMenu = delegate
+        let row = result.items.first { $0.identifier?.rawValue == OverflowMenu.perAppItemIdentifier }
+        row?.submenu?.delegate = delegate
+        return result
+    }
+    func close() {
+        recordingObservation?.cancel()
+        recordingObservation = nil
+        popover.performClose(nil)
+        popover.contentViewController = nil
+        appMenu = nil
+        NSStatusBar.system.removeStatusItem(statusItem)
     }
 }

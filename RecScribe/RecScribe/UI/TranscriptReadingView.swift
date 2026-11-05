@@ -56,7 +56,7 @@ struct TranscriptReadingView: View {
             positionSeconds: effectivePositionSeconds
         )
         let showFollowControl = playbackPosition != nil || (hasPlayback && (playback.player != nil || playback.isPlaying || playback.position > 0))
-        VStack(alignment: .leading, spacing: GlassSpacing.md) {
+        VStack(alignment: .leading, spacing: StudioSpacing.md) {
             HStack {
                 WorkspaceTabs(title: "Transcript presentation", selection: $mode)
                 if showFollowControl {
@@ -71,10 +71,10 @@ struct TranscriptReadingView: View {
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: GlassSpacing.xl) {
+                    LazyVStack(alignment: .leading, spacing: StudioSpacing.xl) {
                         ForEach(groups) { group in
                             let isActive = currentActiveGroupID == group.id
-                            VStack(alignment: .leading, spacing: GlassSpacing.sm) {
+                            VStack(alignment: .leading, spacing: StudioSpacing.sm) {
                                 HStack {
                                     if let startSeconds = group.startSeconds, (onSeek != nil || hasPlayback) {
                                         Button {
@@ -106,7 +106,7 @@ struct TranscriptReadingView: View {
                                     }.font(.callout).tint(WorkspaceStyle.blue)
                                 }
                             }
-                            .padding(isActive ? GlassSpacing.s : 0)
+                            .padding(isActive ? StudioSpacing.s : 0)
                             .background(
                                 isActive
                                     ? RoundedRectangle(cornerRadius: 8).fill(WorkspaceStyle.mint.opacity(0.1))
@@ -116,7 +116,7 @@ struct TranscriptReadingView: View {
                         }
                     }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, GlassSpacing.s)
+                        .padding(.vertical, StudioSpacing.s)
                 }
                 .onChange(of: currentActiveGroupID) { _, nextID in
                     if followPlayback, let nextID {
@@ -139,9 +139,9 @@ struct TranscriptReadingView: View {
     }
 
     private func sources(_ group: TranscriptReading.Group) -> some View {
-        VStack(alignment: .leading, spacing: GlassSpacing.md) {
+        VStack(alignment: .leading, spacing: StudioSpacing.md) {
             ForEach(group.segments) { segment in
-                VStack(alignment: .leading, spacing: GlassSpacing.xs) {
+                VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                     let single = TranscriptReading.Group(segments: [segment])
                     Text("\(single.channels) · \(single.timing) · \(segment.id)").font(.caption).foregroundStyle(.secondary)
                     MarkdownReadingText(text: document.displayedText(segment))
@@ -154,6 +154,6 @@ struct TranscriptReadingView: View {
                     }
                 }
             }
-        }.padding(.top, GlassSpacing.s)
+        }.padding(.top, StudioSpacing.s)
     }
 }

@@ -16,6 +16,6 @@ Before the first external release, the project needs its own:
 - optional Sparkle key pair and HTTPS appcast, if automatic updates are restored;
 - privacy policy and release acceptance checklist.
 
-Never reuse Home Rec's signing identity, Sparkle key, appcast, download URLs, or
+Use project-owned signing identities, update keys, release endpoints and
 notarization credentials. Secrets belong in the local Keychain or the CI secret store,
 not in the repository.

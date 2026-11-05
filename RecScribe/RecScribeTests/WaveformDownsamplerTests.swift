@@ -1,59 +1,23 @@
-//
-//  WaveformDownsamplerTests.swift
-//  RecScribeTests
-//
-//  BL-007: waveform downsampling, in isolation.
-//
-
-import Testing
-import Foundation
 import AVFoundation
+import Testing
 @testable import RecScribe
 
-@MainActor
 struct WaveformDownsamplerTests {
-
-    private func buffer(channels: Int, frames: Int, fill: @escaping (Int, Int) -> Float) -> AVAudioPCMBuffer {
-        SampleBufferFixtures.makePCMBuffer(channels: channels, frames: frames, interleaved: false, fill: fill)
+    @Test(arguments: [1, 10, 50, 4_800], [1, 2])
+    func samplePositionsAndChannelMeanAreStable(frames: Int, channels: Int) {
+        for interleaved in [false, true] {
+        let buffer = SampleBufferFixtures.makePCMBuffer(channels: channels, frames: frames, interleaved: interleaved) {
+            channel, frame in Float(frame) + Float(channel) * 4
+        }
+        let actual = WaveformDownsampler.downsample(buffer)
+        let interval = max(1, frames / 200)
+        let expected = stride(from: 0, to: frames, by: interval).map { Float($0) + (channels == 2 ? 2 : 0) }
+        #expect(actual == expected)
     }
-
-    @Test("Strides by max(1, frameCount/target) and averages channels")
-    func strideAndAverage() {
-        // 4800 frames, target 200 → step 24. Both channels = frame index → avg == frame index.
-        let buf = buffer(channels: 2, frames: 4800) { _, frame in Float(frame) }
-        let samples = WaveformDownsampler.downsample(buf, targetSamples: 200)
-
-        #expect(samples.count == 200)
-        #expect(samples[0] == 0)
-        #expect(samples[1] == 24)
-        #expect(samples[199] == 199 * 24)
-    }
-
-    @Test("Channel averaging collapses to mono")
-    func channelAveraging() {
-        // ch0 = +0.5, ch1 = -0.5 → every averaged sample is 0.
-        let buf = buffer(channels: 2, frames: 10) { ch, _ in ch == 0 ? 0.5 : -0.5 }
-        let samples = WaveformDownsampler.downsample(buf, targetSamples: 200)
-
-        #expect(samples.count == 10)            // fewer frames than target → step 1
-        #expect(samples.allSatisfy { $0 == 0 })
-    }
-
-    @Test("Fewer frames than target yields one value per frame (step 1)")
-    func fewerFramesThanTarget() {
-        let buf = buffer(channels: 1, frames: 50) { _, frame in Float(frame) }
-        let samples = WaveformDownsampler.downsample(buf, targetSamples: 200)
-
-        #expect(samples.count == 50)
-        #expect(samples[0] == 0)
-        #expect(samples[49] == 49)
-    }
-
-    @Test("Single-frame buffer yields a single value")
-    func singleFrame() {
-        let buf = buffer(channels: 1, frames: 1) { _, _ in 0.42 }
-        let samples = WaveformDownsampler.downsample(buf, targetSamples: 200)
-
-        #expect(samples == [0.42])
+        }
+    @Test func oppositePolarityCancelsInTheDisplayMean() {
+        let buffer = SampleBufferFixtures.makePCMBuffer(channels: 2, frames: 11, interleaved: false) { c, _ in c == 0 ? -0.5 : 0.5 }
+        #expect(WaveformDownsampler.downsample(buffer) == [Float](repeating: 0, count: 11))
+        #expect(WaveformDownsampler.downsample(buffer, targetSamples: 0).isEmpty)
     }
 }

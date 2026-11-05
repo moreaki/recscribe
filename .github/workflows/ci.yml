@@ -34,6 +34,11 @@ jobs:
       - name: Run native audio/text, frozen reference and CLI tests
         run: xcrun swift test --package-path core
 
+      - name: Verify PCM storage ownership and sanitizer evidence checks
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'
+          python3 scripts/check-pcm-storage.py
+
       - name: Run unit tests (functional)
         # BLOCKING gate: full unit-test suite WITHOUT Thread Sanitizer. Covers all
         # correctness, including the AVAssetWriter-based encoder tests. No
@@ -52,17 +57,10 @@ jobs:
             -resultBundlePath TestResults-functional.xcresult \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run unit tests (Thread Sanitizer, advisory)
-        # ADVISORY (continue-on-error): TSan reliably aborts the test host with
-        # SIGABRT on this CI runner during the audio tests — a CoreMedia/AVFoundation
-        # instrumentation issue exercised by the buffer fixtures (since BL-007), NOT
-        # a race in our code, and not reproducible locally (the full suite + TSan
-        # passes locally, repeatedly). We can't fix Apple's frameworks, so this step
-        # does not block: it still runs and uploads results to surface real races
-        # when it completes, but a system-framework abort won't fail the PR. The
-        # authoritative TSan run for the BL-024 serial-queue guard is the local dev
-        # loop (targeted `-enableThreadSanitizer YES` runs, which are reliable).
-        continue-on-error: true
+      - name: Run unit tests (Thread Sanitizer)
+        # Blocking after #83: fixture sample storage has an explicit, observable
+        # lifetime. A green xcodebuild exit alone can hide a diagnostic/restart;
+        # verify both the result bundle and complete captured log below.
         run: |
           set -o pipefail
           xcodebuild test \
@@ -76,7 +74,7 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 300 \
             -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee TestResults-tsan.log
 
       - name: Export test diagnostics
         if: always()
@@ -91,6 +89,10 @@ jobs:
             fi
           done
 
+      - name: Reject sanitizer diagnostics and incomplete runs
+        if: always()
+        run: python3 scripts/check-sanitizer-results.py TestResults.json TestResults-functional.json TestResults-tsan.log
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -100,6 +102,7 @@ jobs:
             TestResults.xcresult
             TestResults-functional.xcresult
             TestResults*.json
+            TestResults-tsan.log
             TestResults*-diagnostics/
           if-no-files-found: ignore
 

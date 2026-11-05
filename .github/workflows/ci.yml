@@ -39,6 +39,8 @@ jobs:
           python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
+      - name: Offline Whisper quality tooling
+        run: python3 -m unittest discover -s scripts/tests -p 'test_quality_*.py'
       - name: Verify PCM storage ownership and sanitizer evidence checks
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'

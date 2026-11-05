@@ -242,6 +242,9 @@ nonisolated final class SynchronizedCaptureWriter {
             }
             aligned = result
         }
+        // Resampling can allocate a new owner. Keep it alive through the raw
+        // channel-pointer reads below, including optimized Release builds.
+        defer { withExtendedLifetime(aligned) {} }
         try input.writer?.writeBuffer(aligned)
         input.end = start + Int64(frames)
         end = max(end, input.end)

@@ -9,7 +9,8 @@ base through the tested merge checkout) or the complete push diff (`before` to
 HEAD), not just the latest commit. No label or filename alone can opt out of TSan.
 
 The **focused** path is deliberately narrow: at most five modified files and 80
-added/removed lines, containing only Markdown documentation or Swift UI edits
+added/removed lines, containing only Markdown documentation in `docs/`, `README.md` or `AGENTS.md`,
+or Swift UI edits
 recognized as literal label/icon/help changes or simple numeric spacing, frame,
 font, foreground and line-limit modifiers. Literal changes preserve all callback
 code. Each zero-context hunk is checked independently so moving executable code

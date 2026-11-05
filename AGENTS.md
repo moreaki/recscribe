@@ -40,7 +40,7 @@ Do not opt out of full validation using a PR label or a UI filename alone.
 - Only recognized literal labels, icons, help/accessibility text or simple
   spacing, frame, font, foreground, corner-radius and line-limit modifiers in
   `RecScribe/RecScribe/UI/*.swift` (including subdirectories), or Markdown in
-  `docs/` and `README.md`.
+  `docs/`, `README.md` and `AGENTS.md`.
 - No change to callbacks, state, lifecycle, async work, disabled/safety gates or
   other behavior. Unrecognized visual syntax conservatively requires full CI.
 
@@ -55,7 +55,8 @@ cancellation, sessions/storage/deletion, transcription, permissions,
 models/schemas, dependencies, tests, build or CI-policy changes. This also applies
 to behavior changes inside UI files, mixed UI/backend changes, broad changes,
 new/deleted/renamed/type-changed files, missing baselines and classification errors.
-`AGENTS.md` is outside the focused allowlist and therefore uses full CI as well.
+Documentation-only edits to `AGENTS.md` may use focused CI; changes to the
+classifier or workflow itself still require full validation.
 When in doubt, keep the full path; do not reclassify risky work as presentation.
 
 On every path, keep the required `Unit tests` and `Release build` check names,
@@ -68,6 +69,15 @@ enclosing job is not evidence of a clean sanitizer pass.
 Before merging, all applicable checks must be green on the current PR head.
 Neither focused CI nor full CI replaces the manual UI review workflow above;
 long-running checks must not delay availability of the local UI candidate.
+
+## Return control while CI is pending
+
+Do not keep the chat active waiting for or repeatedly polling CI unless the user
+explicitly asks you to wait. Complete the work that can be done immediately,
+report passed, failed and pending checks separately, and link the PR or CI run
+when available. Then return control so the user can work in other chats.
+If required checks block a merge, report that blocker and return control;
+pending checks remain required and must never be reported as passed.
 
 ## Preserve the installed app and recording data
 

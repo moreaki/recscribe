@@ -306,9 +306,9 @@ struct AudioRoutingView: View {
 
     private var footer: some View {
         HStack(alignment: .top, spacing: 16) {
-            Text(recorder.audioTest?.state == .testing ? "Preview only · no files saved. Stop the test before changing sources or channel connections." : source.isMixed ? "Connections and faders affect the mix. Original source tracks stay at unity gain. Device levels are system-wide." : "Gain and mute affect saved audio in this single-source mode. Device levels are system-wide.")
+            Text(recorder.audioTest?.state == .testing ? "Preview only · no files saved · stop test to edit connections." : source.isMixed ? "Mix controls retain original tracks. Device levels are system-wide." : "Gain and mute affect saved audio. Device levels are system-wide.")
             Spacer(minLength: 0)
-            Text("Monitor: \(monitorState) · Audio stays on your Mac")
+            Text("Monitor: \(monitorState)")
         }.font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 12)
     }
 

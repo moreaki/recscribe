@@ -269,6 +269,7 @@ nonisolated final class SynchronizedCaptureWriter {
         let rightCount = max(1, routes.filter { $0.placement != .left }.count)
         var postPeak: Float = 0
         var channelPeaks = [Float](repeating: 0, count: Int(aligned.format.channelCount))
+        let fixedTopology = descriptors.allSatisfy { ($0.mixStartFrame ?? 0) == 0 }
         for offset in 0..<frames {
             let absolute = start + Int64(offset)
             guard absolute >= head else { continue }
@@ -283,7 +284,7 @@ nonisolated final class SynchronizedCaptureWriter {
                 if route.placement != .left { r += value / Float(rightCount) }
             }
             // Average contributions for per-channel and per-source headroom.
-            let divisor = Float(max(1, descriptors.reduce(0) { $0 + (($1.mixStartFrame ?? 0) <= absolute ? 1 : 0) }))
+            let divisor = Float(fixedTopology ? descriptors.count : max(1, descriptors.reduce(0) { $0 + (($1.mixStartFrame ?? 0) <= absolute ? 1 : 0) }))
             left[index] += l / divisor
             right[index] += r / divisor
         }

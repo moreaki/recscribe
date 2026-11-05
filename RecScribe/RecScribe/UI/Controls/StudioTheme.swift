@@ -36,39 +36,41 @@ enum StudioColorRole: String, CaseIterable, Hashable, Sendable {
 }
 
 struct StudioColors {
-    var ground = Color(studioHex: 0x0D1119)
-    var groundRaised = Color(studioHex: 0x21243F)
-    var surfacePanel = Color(studioHex: 0x1A1C22).opacity(0.55)
-    var surfaceCard = Color(studioHex: 0x1C1C1E)
-    var surfaceInset = Color.white.opacity(0.06)
-    var surfaceScrim = Color.black.opacity(0.45)
-    var line = Color.white.opacity(0.08)
-    var lineStrong = Color.white.opacity(0.16)
-    var textPrimary = Color.white.opacity(0.92)
-    var textSecondary = Color.white.opacity(0.65)
-    var textTertiary = Color(studioHex: 0x8E8E93)
+    // Native semantic colors follow the app's dark appearance. The recording
+    // accent matches the RecScribe icon rather than an imported control palette.
+    var ground = Color(nsColor: .windowBackgroundColor)
+    var groundRaised = Color(nsColor: .underPageBackgroundColor)
+    var surfacePanel = Color(nsColor: .controlBackgroundColor)
+    var surfaceCard = Color(nsColor: .textBackgroundColor)
+    var surfaceInset = Color(nsColor: .quaternaryLabelColor)
+    var surfaceScrim = Color.black.opacity(0.5)
+    var line = Color(nsColor: .separatorColor)
+    var lineStrong = Color(nsColor: .gridColor)
+    var textPrimary = Color(nsColor: .labelColor)
+    var textSecondary = Color(nsColor: .secondaryLabelColor)
+    var textTertiary = Color(nsColor: .tertiaryLabelColor)
     var textOnAccent = Color.white
-    var textAccent = Color(studioHex: 0xFF6B6B)
-    var accent = Color(studioHex: 0xF23A3A)
-    var accentStrong = Color(studioHex: 0xC72121)
-    var accentMuted = Color(studioHex: 0xF23A3A).opacity(0.45)
-    var statusDanger = Color(studioHex: 0xF23A3A)
-    var statusWarning = Color(studioHex: 0xEBA82E)
-    var statusSuccess = Color(studioHex: 0x30D158)
-    var statusNeutral = Color.white.opacity(0.25)
-    var controlPrimaryNeutral = Color(studioHex: 0xF2F2F5)
-    var controlSecondary = Color(studioHex: 0xC2C2CA)
-    var textOnNeutralControl = Color(studioHex: 0x0D0D0F)
+    var textAccent = Color(nsColor: .systemRed)
+    var accent = Color(studioHex: 0xFF3E3E)
+    var accentStrong = Color(studioHex: 0xB82020)
+    var accentMuted = Color(nsColor: .disabledControlTextColor)
+    var statusDanger = Color(nsColor: .systemRed)
+    var statusWarning = Color(nsColor: .systemOrange)
+    var statusSuccess = Color(nsColor: .systemGreen)
+    var statusNeutral = Color(nsColor: .secondaryLabelColor)
+    var controlPrimaryNeutral = Color(nsColor: .labelColor)
+    var controlSecondary = Color(nsColor: .secondaryLabelColor)
+    var textOnNeutralControl = Color(nsColor: .windowBackgroundColor)
     static let standard = Self()
 
     static var highContrast: Self {
-        var palette = Self()
-        palette.accent = palette.accentStrong
-        palette.textSecondary = .white.opacity(0.78)
-        palette.textTertiary = Color(studioHex: 0xAEAEB2)
-        palette.line = .white.opacity(0.16)
-        palette.lineStrong = .white.opacity(0.30)
-        return palette
+        var colors = Self()
+        colors.accent = colors.accentStrong
+        colors.textSecondary = colors.textPrimary
+        colors.textTertiary = colors.textPrimary
+        colors.line = colors.textPrimary
+        colors.lineStrong = colors.textPrimary
+        return colors
     }
 
     subscript(role: StudioColorRole) -> Color {

@@ -18,6 +18,10 @@ jobs:
         run: |
           sudo xcode-select -s "/Applications/Xcode_$(cat .xcode-version).app/Contents/Developer"
           ./scripts/check-toolchain.sh
+      - name: Retired-reference boundary
+        run: |
+          python3 scripts/check-source-boundary.py --self-test
+          python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
         run: xcrun swift test --package-path core
       - name: Functional app contracts
@@ -71,4 +75,5 @@ jobs:
       - name: Compile optimized application
         run: |
           xcodebuild build -project RecScribe/RecScribe.xcodeproj -scheme RecScribe \
-            -configuration Release -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
+            -configuration Release -destination 'platform=macOS' -derivedDataPath Build/DerivedData CODE_SIGNING_ALLOWED=NO
+          python3 scripts/check-source-boundary.py --bundle Build/DerivedData/Build/Products/Release/RecScribe.app

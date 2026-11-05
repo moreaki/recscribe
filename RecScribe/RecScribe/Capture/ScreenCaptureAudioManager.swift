@@ -14,35 +14,22 @@ enum ScreenCaptureAudioError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthorized:
-            return "Screen Recording permission not granted"
-        case .noDisplaysAvailable:
-            return "No displays available for capture"
-        case .streamCreationFailed:
-            return "Failed to create capture stream"
-        case .startCaptureFailed(let error):
-            return "Failed to start audio capture: \(error.localizedDescription)"
-        case .interruptedBySleep:
-            return "The Mac or display entered sleep while starting capture. Wake it and start a new recording."
-        case .appNotRunning(let bundleID):
-            return "The selected app (\(bundleID)) is not currently running."
+        case .notAuthorized: "RecScribe needs access to Screen Recording before capturing playback."
+        case .noDisplaysAvailable: "No display is available to host the playback capture session."
+        case .streamCreationFailed: "The playback capture session is not configured."
+        case .startCaptureFailed(let cause): "Playback capture could not begin: \(cause.localizedDescription)"
+        case .interruptedBySleep: "Capture startup was interrupted when the Mac went to sleep."
+        case .appNotRunning(let identifier): "The capture target \(identifier) is no longer open."
         }
     }
-
     var recoverySuggestion: String? {
         switch self {
-        case .notAuthorized:
-            return "Grant Screen Recording permission in System Settings > Privacy & Security"
-        case .noDisplaysAvailable:
-            return "Ensure your Mac has at least one display connected"
-        case .streamCreationFailed:
-            return "Try restarting the application"
-        case .startCaptureFailed:
-            return "Check if another app is already capturing system audio"
-        case .interruptedBySleep:
-            return "Keep the Mac open and awake while recording."
-        case .appNotRunning:
-            return "Open the app, or choose a different capture source."
+        case .notAuthorized: "Enable RecScribe in Privacy & Security → Screen Recording."
+        case .noDisplaysAvailable: "Connect or wake a display, then start another recording."
+        case .streamCreationFailed: "Choose a capture source and retry."
+        case .startCaptureFailed: "Review the capture source and its access in System Settings."
+        case .interruptedBySleep: "Wake the Mac before starting another take."
+        case .appNotRunning: "Launch the selected application or select another playback source."
         }
     }
 }

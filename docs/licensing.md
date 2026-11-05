@@ -1,13 +1,13 @@
 # Source notices and licensing
 
-The repository is distributed with the Apache License 2.0 in `LICENSE`.
-`NOTICE` records existing source attributions. Dependency notices apply separately.
+RecScribe remains distributed under Apache License 2.0 in `LICENSE`.
+`NOTICE` retains historical source attribution conservatively. Replacement work
+in #51 does not itself establish that a copyright notice can be deleted, and no
+literal-zero-reference or clean-room certification is asserted.
 
-The replacement work in #51 does not change the project license. Existing notices
-remain while inherited implementations, tests or other covered material remain.
-Review the [provenance inventory](provenance/recording-foundation.md) before changing
-notices; a successful build or an empty name search does not establish independence.
+The [replacement assessment](provenance/recording-foundation.md) describes the
+implemented changes, compatibility contracts, asset review and explicit reference
+exceptions. The identifier guard permits only the named historical notice/audit
+files; production sources and the application bundle have no such exception.
 
-The current candidate is incomplete. Its new implementation files retain the
-established API and recording behavior for compatibility, while other components
-and inherited test implementations still require replacement and review.
+Unrelated dependency and vendor notices retain their own scope and remain intact.

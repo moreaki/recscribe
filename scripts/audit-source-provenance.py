@@ -13,13 +13,8 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
 UPSTREAM = "2f9c42dd92dad72cb7e1d29ce555c2ee48967e53"
-REPLACEMENTS = {
-    "RecScribe/RecScribe/Capture/AudioSampleConverter.swift",
-    "RecScribe/RecScribe/Capture/AudioFormatNormalizer.swift",
-    "RecScribe/RecScribe/Capture/WAVWriter.swift",
-    "RecScribe/RecScribe/App/PermissionManager.swift",
-    "RecScribe/RecScribe/App/PermissionGrantWatcher.swift",
-}
+REVIEW = ROOT / "docs/provenance/reviewed-components.json"
+
 
 
 def git(*args):
@@ -27,6 +22,7 @@ def git(*args):
 
 
 def audit():
+    reviewed = {item["path"]: item for item in json.loads(REVIEW.read_text())["files"]} if REVIEW.exists() else {}
     upstream = git("rev-parse", UPSTREAM).decode().strip()
     ancestors = set(git("rev-list", upstream).decode().splitlines())
     contributor_commits = []
@@ -77,12 +73,16 @@ def audit():
                     if source:
                         origins.add(source)
         # Absence of unchanged lines is not proof that a file wasn't adapted.
-        if path in REPLACEMENTS:
-            status = "replacement-for-review"
+        fingerprint = hashlib.sha256(content).hexdigest()
+        decision = reviewed.get(path)
+        if decision and decision["sha256"] == fingerprint:
+            status = decision["decision"]
+        elif decision:
+            status = "changed-after-review"
         elif exact or inherited_lines:
-            status = "retained-ancestry"
+            status = "ancestry-review-required"
         else:
-            status = "no-direct-ancestry-found-review-needed"
+            status = "no-direct-ancestry-found"
         files.append({"path": path, "status": status, "sha256": hashlib.sha256(content).hexdigest(),
                       "unchanged_ancestral_lines": inherited_lines,
                       "original_paths": sorted(set(exact) | origins)})

@@ -1,211 +1,84 @@
-# Recording foundation replacement status
+# Recording foundation replacement — issue #51
 
-Issue: #51. This is an **in-progress inventory**, not a declaration of source independence.
-The required end state includes all legacy material from `melissa-pereira-deel` and
-`Claude` (implementations, tests/fixtures, assets, tooling, and obsolete references).
+The review baseline is commit `2f9c42dd92dad72cb7e1d29ce555c2ee48967e53`.
+The replacement branch starts at `5dda6302efc3a06490f19769004ef72949b16b25`.
+The initial audit identified 105 tracked files with matching historical material;
+52 were production source/asset metadata entries. Another 239 files had no direct
+matching ancestry. These are starting observations, not independence certificates.
 
-## Evidence and limits
+## Implementations and behavior contracts
 
-The original comparison snapshot is `2f9c42dd92dad72cb7e1d29ce555c2ee48967e53`.
-The starting RecScribe snapshot is `5dda6302efc3a06490f19769004ef72949b16b25`.
-A log scan finds 94 commits with Claude/Anthropic author or message references;
-all are ancestors of the comparison snapshot. Commit names and unchanged lines
-are evidence for review, not proof of authorship or independence. Modified or
-copied material can have no surviving original lines.
+| Area | Replacement and evidence |
+| --- | --- |
+| PCM decoding | Explicit endian/container decoding and packet bounds validation. Planar owned Float32 output; integer formats, truncated input and channel-distinct values are tested. |
+| Normalization | Converter sessions follow the incoming format; explicit channel selection prevents interface loopback channels entering microphone audio. Native-rate/channel matrices exercise the complete path. |
+| WAV writing | Exclusive descriptor creation, positional writes, bounded RIFF payload, partial-write retry and descriptor-bound finalization. Literal quantization/header vectors and an independent AVAudioFile decoder preserve the file contract. |
+| Capture and recording lifecycle | Replaced inherited configuration/output processing and controller/view-model flows. RecScribe's later device-input recovery, queued-buffer ownership, multi-source synchronization and session preservation remain. Capture stops before writers drain and seal. |
+| Permissions and timers | Single-flight request state, user-intent gating, finite cancellable grant observation and stale-response protection. Independent tests cover shared requests, timeout, cancellation, owner release and grant ordering. |
+| Monitoring and discovery | New monitoring service and typed Core Audio property reader; RecScribe's later device-control/routing system remains. Menu discovery uses a cache and requires permission before app enumeration. |
+| Menus, support and preferences | New menu renderer/callback ownership, native status-item lifecycle, panel host, folder resolution, installation classification, disk checks, diagnostics and preferences implementation. |
+| Native controls | Removed the imported DesignSystem directory. Studio controls use native focus/button behavior, Canvas waveform rendering, native typography and semantic macOS colors. Compatibility measurements and role names remain where existing RecScribe screens depend on them. |
+| Tests and fixtures | Re-expressed inherited behavioral cases as independent contracts and parameter matrices. Removed empty generated test scaffolds. PCM ownership and allocation-churn regressions added by RecScribe remain; optional visual-artifact rendering has a new implementation and environment variable. |
+| Development tooling | Staged-blob secret hook, microphone-rate tool and CI definitions reauthored. Existing blocking CI job names retained. Reference guard checks the tracked tree and built app. |
+| Assets and dependencies | All current icon PNGs and the SVG derive from RecScribe's branding commit `dfaa501`; none matches a baseline asset blob. Earlier bundled fonts were removed in #39. Swift core, transcription/runtime and current vendor notices retain their separate provenance. |
+| Build metadata | Xcode-generated workspace/catalog schemas, standard compiler settings, SDK method signatures, imports/braces, file-format constants and existing saved-data/API contracts can match the baseline. These are not concealed by arbitrary renaming. Signing identity, identifiers and entitlement values deliberately remain unchanged. |
 
-Run `python3 scripts/audit-source-provenance.py --output /tmp/recscribe-provenance.json`
-for a per-file inventory of the tracked tree, including exact binary matches,
-source origins and content hashes. This is developer tooling only; the app and
-native CLI do not acquire a Python runtime dependency.
+`reviewed-components.json` records the reviewed matching paths, decision and content
+hash at this stage. `scripts/audit-source-provenance.py` compares exact Git blobs
+and line ancestry; modifications after review are reported as requiring review.
+A hash or lack of matching lines cannot prove that an implementation was never
+adapted. Review the actual replacement commits as well as the inventory.
 
-## First replacement candidate
+## Scope and notice decision
 
-The public contracts and established test cases are retained for compatibility.
-The following implementations have been replaced and require review:
+The current implementation tree no longer integrates the original control library,
+upstream workflow or assistant-specific developer configuration. The local upstream
+remote was removed; an older clone can remove its own obsolete remote with
+`git remote remove upstream`. Builds use this repository and its pinned local core.
 
-- PCM decoder: explicit byte-level integer/float decoding, container/sign/endian
-  handling, source-plane validation and payload bounds before reading samples.
-- Normalizer: one converter session per source format, canonical pass-through,
-  first-pair channel selection, and retained resampling history across callbacks.
-- WAV sink: descriptor-owned positional writes, bounded payload arithmetic,
-  checkpoint writes independent of payload offsets, and final sync without
-  reopening a potentially replaced pathname. Established PCM quantization stays
-  unchanged to preserve golden-file and session compatibility.
-- Permission manager: explicit idle/pending/completed request state, shared
-  in-flight screen probe, cached passive reads, and separate microphone requests.
-- Permission watcher: finite observation runs with generation identities,
-  cancellation, one grant callback and activity-assertion teardown.
+The original repository was Home Rec, with historical contributions associated
+with Melissa de Britto (`melissa-pereira-deel`) and Claude/Anthropic. All 94 history
+entries mentioning Claude/Anthropic are ancestors of the baseline. Historical Git
+commits, releases and discussions are intentionally preserved and outside #51.
 
-Existing inherited test implementations remain as behavioral acceptance contracts
-for this first candidate; retaining them does **not** satisfy the final removal
-requirement. Original/raw data, schemas, stored session formats, signing identity,
-entitlements and privacy permissions are not migrated by this candidate.
+**Literal zero references is not claimed.** LICENSE and NOTICE retain the original
+copyright/source attribution conservatively for this repository's source history
+and distribution. This implementation review is not a clean-room or legal
+certification and does not establish that every historical notice is inapplicable.
+The Apache license and unrelated dependency notices are unchanged. Deleting a
+copyright notice is not treated as evidence of replacement.
 
-## Initial ancestry candidates
+The reference guard's only reviewed exceptions are LICENSE, NOTICE, this assessment,
+the history-audit script and the guard's own identifier definitions. No application,
+test, asset, CI configuration or built-bundle exception is allowed. The built-app
+scan passed with no exceptions. The guard is a regression check, not a provenance
+or license determination.
 
-Before the documentation cleanup, the initial scan found 105 tracked files with direct original ancestry or exact
-original content, including 52 entries under the production app directory. Some
-are standard metadata, declarations, or trivial lines; each still needs review.
-The 239 files without direct matches also need provenance review before closure.
-These are starting-point counts; the table is historical audit evidence, not the
-current remaining-file count. The scan excludes the five replacement implementation
-files from these counts. Regenerate the JSON inventory for current file status.
+## Validation and manual review
 
-| Current path | Unchanged ancestral lines | Original path(s) |
-| --- | ---: | --- |
-| `.githooks/pre-commit` | 50 | `.githooks/pre-commit` |
-| `.github/workflows/ci.yml` | 101 | `.github/workflows/ci.yml` |
-| `.gitignore` | 83 | `.gitignore` |
-| `CHANGELOG.md` | 2 | `CHANGELOG.md` |
-| `LICENSE` | 160 | `LICENSE` |
-| `NOTICE` | 12 | `NOTICE` |
-| `README.md` | 8 | `README.md` |
-| `RecScribe/.gitignore` | 22 | `HomeRec/.gitignore` |
-| `RecScribe/RecScribe.entitlements` | 19 | `HomeRec/HomeRec.entitlements` |
-| `RecScribe/RecScribe.xcodeproj/project.pbxproj` | 473 | `HomeRec/HomeRec.xcodeproj/project.pbxproj` |
-| `RecScribe/RecScribe.xcodeproj/project.xcworkspace/contents.xcworkspacedata` | 7 | `HomeRec/HomeRec.xcodeproj/project.xcworkspace/contents.xcworkspacedata` |
-| `RecScribe/RecScribe.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` | 5 | `HomeRec/HomeRec.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings` |
-| `RecScribe/RecScribe/App/AppDelegate.swift` | 6 | `HomeRec/HomeRec/AppDelegate.swift` |
-| `RecScribe/RecScribe/App/Clock.swift` | 45 | `HomeRec/HomeRec/Clock.swift`, `HomeRec/HomeRec/PollClock.swift` |
-| `RecScribe/RecScribe/App/Diagnostics.swift` | 84 | `HomeRec/HomeRec/Diagnostics.swift` |
-| `RecScribe/RecScribe/App/DiskSpace.swift` | 19 | `HomeRec/HomeRec/DiskSpace.swift` |
-| `RecScribe/RecScribe/App/InstallLocation.swift` | 139 | `HomeRec/HomeRec/InstallLocation.swift` |
-| `RecScribe/RecScribe/App/Log.swift` | 18 | `HomeRec/HomeRec/Log.swift` |
-| `RecScribe/RecScribe/App/MenuBarController.swift` | 126 | `HomeRec/HomeRec/MenuBarController.swift` |
-| `RecScribe/RecScribe/App/OverflowContext.swift` | 62 | `HomeRec/HomeRec/OverflowContext.swift` |
-| `RecScribe/RecScribe/App/OverflowMenu.swift` | 441 | `HomeRec/HomeRec/OverflowMenu.swift` |
-| `RecScribe/RecScribe/App/PerAppMenuDelegate.swift` | 81 | `HomeRec/HomeRec/PerAppMenuDelegate.swift` |
-| `RecScribe/RecScribe/App/PermissionKind.swift` | 61 | `HomeRec/HomeRec/PermissionKind.swift` |
-| `RecScribe/RecScribe/App/PermissionProviding.swift` | 51 | `HomeRec/HomeRec/PermissionManager.swift`, `HomeRec/HomeRec/PermissionProviding.swift` |
-| `RecScribe/RecScribe/App/RecScribeApp.swift` | 13 | `HomeRec/HomeRec/HomeRecApp.swift` |
-| `RecScribe/RecScribe/App/SaveLocationProviding.swift` | 65 | `HomeRec/HomeRec/SaveLocationProviding.swift` |
-| `RecScribe/RecScribe/Assets.xcassets/AccentColor.colorset/Contents.json` | 11 | `HomeRec/HomeRec/Assets.xcassets/AccentColor.colorset/Contents.json` |
-| `RecScribe/RecScribe/Assets.xcassets/AppIcon.appiconset/Contents.json` | 68 | `HomeRec/HomeRec/Assets.xcassets/AppIcon.appiconset/Contents.json` |
-| `RecScribe/RecScribe/Assets.xcassets/Contents.json` | 6 | `HomeRec/HomeRec/Assets.xcassets/Contents.json` |
-| `RecScribe/RecScribe/Capture/AudioCapableProcesses.swift` | 78 | `HomeRec/HomeRec/AudioCapableProcesses.swift` |
-| `RecScribe/RecScribe/Capture/AudioCapturing.swift` | 22 | `HomeRec/HomeRec/AudioCapturing.swift` |
-| `RecScribe/RecScribe/Capture/AudioFormat.swift` | 64 | `HomeRec/HomeRec/AudioFormat.swift` |
-| `RecScribe/RecScribe/Capture/AudioRecorder.swift` | 48 | `HomeRec/HomeRec/AudioFileWriting.swift`, `HomeRec/HomeRec/AudioRecorder.swift`, `HomeRec/HomeRec/WaveformDownsampler.swift` |
-| `RecScribe/RecScribe/Capture/AudioSource.swift` | 23 | `HomeRec/HomeRec/AudioSource.swift` |
-| `RecScribe/RecScribe/Capture/AudioSourceManager.swift` | 181 | `HomeRec/HomeRec/AudioSourceManager.swift` |
-| `RecScribe/RecScribe/Capture/AudioTestController.swift` | 1 | `HomeRec/HomeRec/RecorderViewModel.swift` |
-| `RecScribe/RecScribe/Capture/InputDeviceEnumerator.swift` | 31 | `HomeRec/HomeRec/InputDeviceEnumerator.swift` |
-| `RecScribe/RecScribe/Capture/MonitorController.swift` | 217 | `HomeRec/HomeRec/MonitorController.swift` |
-| `RecScribe/RecScribe/Capture/MultiSourceRecorder.swift` | 1 | `HomeRec/HomeRec/AudioRecorder.swift` |
-| `RecScribe/RecScribe/Capture/RecorderCoordinators.swift` | 82 | `HomeRec/HomeRec/RecorderViewModel.swift` |
-| `RecScribe/RecScribe/Capture/RecorderPreferences.swift` | 33 | `HomeRec/HomeRec/RecorderViewModel.swift` |
-| `RecScribe/RecScribe/Capture/RecorderPresentation.swift` | 31 | `HomeRec/HomeRec/RecorderViewModel.swift` |
-| `RecScribe/RecScribe/Capture/RecorderViewModel.swift` | 141 | `HomeRec/HomeRec/RecorderViewModel.swift` |
-| `RecScribe/RecScribe/Capture/RecordingController.swift` | 140 | `HomeRec/HomeRec/RecordingController.swift`, `HomeRec/HomeRec/RecordingControlling.swift` |
-| `RecScribe/RecScribe/Capture/RecordingState.swift` | 152 | `HomeRec/HomeRec/RecordingState.swift` |
-| `RecScribe/RecScribe/Capture/ScreenCaptureAudioManager.swift` | 163 | `HomeRec/HomeRec/ScreenCaptureAudioManager.swift` |
-| `RecScribe/RecScribe/Capture/SynchronizedCaptureWriter.swift` | 2 | `HomeRec/HomeRec/AudioRecorder.swift` |
-| `RecScribe/RecScribe/DesignSystem/Adapters/RecorderWaveformAdapter.swift` | 83 | `HomeRec/HomeRec/DesignSystem/Adapters/RecorderWaveformAdapter.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Components/GlassWaveform.swift` | 71 | `HomeRec/HomeRec/DesignSystem/Vendor/Components/GlassWaveform.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Primitives/GlassBrandMark.swift` | 108 | `HomeRec/HomeRec/DesignSystem/Vendor/Primitives/GlassBrandMark.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Primitives/GlassHover.swift` | 39 | `HomeRec/HomeRec/DesignSystem/Vendor/Primitives/GlassHover.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Primitives/GlassIconButton.swift` | 65 | `HomeRec/HomeRec/DesignSystem/Vendor/Primitives/GlassIconButton.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Primitives/GlassPillButton.swift` | 415 | `HomeRec/HomeRec/DesignSystem/Vendor/Primitives/GlassPillButton.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Tokens/GlassColors.swift` | 262 | `HomeRec/HomeRec/DesignSystem/Vendor/Tokens/GlassColors.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Tokens/GlassMetrics.swift` | 96 | `HomeRec/HomeRec/DesignSystem/Vendor/Tokens/GlassMetrics.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Tokens/GlassMotion.swift` | 109 | `HomeRec/HomeRec/DesignSystem/Vendor/Tokens/GlassMotion.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Tokens/GlassTheme.swift` | 56 | `HomeRec/HomeRec/DesignSystem/Vendor/Tokens/GlassTheme.swift` |
-| `RecScribe/RecScribe/DesignSystem/Core/Tokens/GlassTypography.swift` | 264 | `HomeRec/HomeRec/DesignSystem/Vendor/Tokens/GlassTypography.swift` |
-| `RecScribe/RecScribe/Sessions/RecordingSession.swift` | 2 | `HomeRec/HomeRec/WAVWriter.swift` |
-| `RecScribe/RecScribe/UI/FloatingPanelHost.swift` | 78 | `HomeRec/HomeRec/FloatingPanelHost.swift`, `HomeRec/HomeRec/PermissionGuidePanel.swift` |
-| `RecScribe/RecScribe/UI/InstallLocationNoticeView.swift` | 31 | `HomeRec/HomeRec/InstallLocationNoticeView.swift` |
-| `RecScribe/RecScribe/UI/MenuBarPopoverView.swift` | 20 | `HomeRec/HomeRec/MenuBarPopoverView.swift` |
-| `RecScribe/RecScribe/UI/OnboardingView.swift` | 102 | `HomeRec/HomeRec/OnboardingView.swift` |
-| `RecScribe/RecScribe/UI/RecorderView.swift` | 29 | `HomeRec/HomeRec/RecorderView.swift` |
-| `RecScribe/RecScribeTests/AsyncWaiting.swift` | 84 | `HomeRec/HomeRecTests/AsyncWaiting.swift` |
-| `RecScribe/RecScribeTests/AudioFileEncoderTests.swift` | 89 | `HomeRec/HomeRecTests/AudioFileEncoderTests.swift`, `HomeRec/HomeRecTests/GoldenFileTests.swift` |
-| `RecScribe/RecScribeTests/AudioFormatNormalizerTests.swift` | 151 | `HomeRec/HomeRecTests/AudioFormatNormalizerTests.swift` |
-| `RecScribe/RecScribeTests/AudioFormatTests.swift` | 42 | `HomeRec/HomeRecTests/AudioFormatTests.swift` |
-| `RecScribe/RecScribeTests/AudioLevelsTests.swift` | 2 | `HomeRec/HomeRec/AudioRecorder.swift` |
-| `RecScribe/RecScribeTests/AudioRecorderTests.swift` | 105 | `HomeRec/HomeRecTests/AudioRecorderTests.swift` |
-| `RecScribe/RecScribeTests/AudioSampleConverterTests.swift` | 69 | `HomeRec/HomeRecTests/AudioSampleConverterTests.swift` |
-| `RecScribe/RecScribeTests/AudioSourceManagerTests.swift` | 40 | `HomeRec/HomeRecTests/AudioSourceManagerTests.swift` |
-| `RecScribe/RecScribeTests/AudioSourceTests.swift` | 29 | `HomeRec/HomeRecTests/AudioSourceTests.swift` |
-| `RecScribe/RecScribeTests/BundledFontTests.swift` | 11 | `HomeRec/HomeRecTests/BundledFontTests.swift` |
-| `RecScribe/RecScribeTests/CaptureSourceMenuTests.swift` | 486 | `HomeRec/HomeRecTests/CaptureSourceMenuTests.swift`, `HomeRec/HomeRecTests/Mocks.swift` |
-| `RecScribe/RecScribeTests/DiagnosticsTests.swift` | 27 | `HomeRec/HomeRecTests/DiagnosticsTests.swift` |
-| `RecScribe/RecScribeTests/EncoderFormatGuardTests.swift` | 68 | `HomeRec/HomeRecTests/EncoderFormatGuardTests.swift` |
-| `RecScribe/RecScribeTests/GoldenFileTests.swift` | 86 | `HomeRec/HomeRecTests/GoldenFileTests.swift` |
-| `RecScribe/RecScribeTests/InfoPlistTests.swift` | 158 | `HomeRec/HomeRecTests/InfoPlistTests.swift` |
-| `RecScribe/RecScribeTests/InstallLocationTests.swift` | 287 | `HomeRec/HomeRecTests/InstallLocationTests.swift` |
-| `RecScribe/RecScribeTests/MicrophoneFormatTests.swift` | 204 | `HomeRec/HomeRecTests/MicrophoneFormatTests.swift` |
-| `RecScribe/RecScribeTests/Mocks.swift` | 277 | `HomeRec/HomeRecTests/Mocks.swift` |
-| `RecScribe/RecScribeTests/MonitorControllerTests.swift` | 121 | `HomeRec/HomeRecTests/MonitorControllerTests.swift` |
-| `RecScribe/RecScribeTests/OverflowMenuTests.swift` | 91 | `HomeRec/HomeRecTests/OverflowMenuTests.swift` |
-| `RecScribe/RecScribeTests/PermissionGrantWatcherTests.swift` | 205 | `HomeRec/HomeRecTests/PermissionGrantWatcherTests.swift`, `HomeRec/HomeRecTests/PermissionGuideTests.swift` |
-| `RecScribe/RecScribeTests/PermissionProbeTests.swift` | 283 | `HomeRec/HomeRecTests/PermissionGuideTests.swift`, `HomeRec/HomeRecTests/PermissionProbeTests.swift` |
-| `RecScribe/RecScribeTests/RecorderViewModelTests.swift` | 539 | `HomeRec/HomeRecTests/RecorderViewModelTests.swift`, `HomeRec/HomeRecTests/SaveLocationTests.swift` |
-| `RecScribe/RecScribeTests/RecorderWaveformAdapterTests.swift` | 119 | `HomeRec/HomeRecTests/RecorderWaveformAdapterTests.swift` |
-| `RecScribe/RecScribeTests/RecordingControllerTests.swift` | 89 | `HomeRec/HomeRecTests/RecordingControllerTests.swift` |
-| `RecScribe/RecScribeTests/RecordingInterruptionTests.swift` | 3 | `HomeRec/HomeRecTests/RecorderViewModelTests.swift`, `HomeRec/HomeRecTests/RecordingStateTests.swift` |
-| `RecScribe/RecScribeTests/RecordingSessionTests.swift` | 4 | `HomeRec/HomeRecTests/M4AEncoderTests.swift` |
-| `RecScribe/RecScribeTests/RecordingStateTests.swift` | 72 | `HomeRec/HomeRecTests/RecordingStateTests.swift` |
-| `RecScribe/RecScribeTests/ReskinSnapshots.swift` | 269 | `HomeRec/HomeRecTests/ReskinSnapshots.swift` |
-| `RecScribe/RecScribeTests/SampleBufferFixtures.swift` | 275 | `HomeRec/HomeRecTests/SampleBufferFixtures.swift` |
-| `RecScribe/RecScribeTests/SaveLocationTests.swift` | 121 | `HomeRec/HomeRecTests/SaveLocationTests.swift` |
-| `RecScribe/RecScribeTests/StreamFailureTests.swift` | 68 | `HomeRec/HomeRecTests/StreamFailureTests.swift` |
-| `RecScribe/RecScribeTests/SynchronizedCaptureTests.swift` | 2 | `HomeRec/HomeRec/AudioRecorder.swift` |
-| `RecScribe/RecScribeTests/SystemAudioRecorderTests.swift` | 25 | `HomeRec/HomeRecTests/SystemAudioRecorderTests.swift` |
-| `RecScribe/RecScribeTests/WAVWriterTests.swift` | 220 | `HomeRec/HomeRecTests/WAVWriterTests.swift` |
-| `RecScribe/RecScribeTests/WaveformDownsamplerTests.swift` | 46 | `HomeRec/HomeRecTests/WaveformDownsamplerTests.swift` |
-| `RecScribe/RecScribeUITests/SystemAudioRecorderUITests.swift` | 29 | `HomeRec/HomeRecUITests/SystemAudioRecorderUITests.swift` |
-| `RecScribe/RecScribeUITests/SystemAudioRecorderUITestsLaunchTests.swift` | 23 | `HomeRec/HomeRecUITests/SystemAudioRecorderUITestsLaunchTests.swift` |
-| `docs/design-system.md` | 1 | `docs/design-system.md` |
-| `docs/upstream-home-rec-changelog.md` | 366 | `CHANGELOG.md` |
-| `scripts/verify-mic-rate.sh` | 115 | `scripts/verify-mic-rate.sh` |
+- Before replacing the test implementations, the broad existing behavioral suite
+  passed: 562 Swift Testing cases. This records compatibility with the original
+  acceptance contracts before the independent test-source migration.
+- Focused new PCM, writer, controller, menu and permission contracts passed.
+- The final native core run passed 51 tests in 9 suites. Mandatory frozen references
+  were not changed or rebaselined.
+- The final app suite passed 393 tests in 82 suites; inherited one-case tests
+  are consolidated into parameter matrices, so test-function counts differ from
+  the earlier suite. Focused Thread Sanitizer validation passed 49 tests in 10
+  suites without a reported race. Required remote CI is reported separately.
+- Signed Release candidate installed at `/Applications/RecScribe.app`; previous
+  installed app is recoverable at `Build/InstalledBackups/RecScribe-before-51-final.app`.
+  Bundle identifier, designated signing requirement, team and entitlement values
+  matched before replacement. Normal startup and the actual UI were inspected.
+- The owner confirmed recording, stopping and playback on the first candidate and
+  reported that the expanded candidate's basic functions work without new issues.
+  This does not imply a manual test of every device/permission combination.
 
-## Repository cleanup in this candidate
+One earlier short combined-source take reported incomplete end coverage. Both
+individual source tracks completed with zero registered timestamp gaps, no mix
+clipping and no reported PCM conversion failure. The warning comes from the
+unchanged multi-source review calculation; a causal relationship to replacement
+was not established. The finding remains documented and the preservation warning
+was not suppressed.
 
-The optional upstream Git remote has been removed from the development checkout.
-Existing clones can run `git remote remove upstream` if they still have it; the
-command affects local Git configuration rather than source history. README no
-longer instructs developers to merge another application's branches. The archived
-upstream changelog and stale assistant-tool exclusions/comments are retired.
-Current architecture, interface, security and distribution documentation no longer
-presents an upstream merge workflow. LICENSE, NOTICE and source attributions remain
-because active inherited code and tests still exist.
-
-## Closure gates
-
-- Replace every inherited implementation and independently review modified/copied
-  files even when no unchanged lines survive. Interfaces and standard file-format
-  constants may coincide; document that distinction rather than renaming alone.
-- Replace inherited test/fixture/tool implementations while preserving their
-  behavioral coverage and all mandatory frozen reference checks.
-- Review assets and non-source metadata, including exact-match files above.
-- Remove the obsolete upstream integration, developer remnants and historical
-  upstream document from the current tree; update current architecture docs.
-- Resolve applicable source notices against the final inventory. Existing notices
-  remain while inherited material is present. Other dependency notices remain.
-- Add a final reference guard with documented, reviewed notice exceptions.
-- Validate functional/Release/appropriate concurrency checks and the owner's
-  manual test before marking the PR ready. Do not auto-close #51 from a partial PR.
-
-Git history and existing releases/discussions are outside the current-tree rewrite.
-
-## Second implementation batch
-
-The inherited control library has been removed. New native Studio controls,
-waveform rendering, typography and theme adapters now live in `UI/Controls/`.
-Timer, folder resolution, installation checks, diagnostics, source discovery,
-input monitoring, menu construction, permission coordination, transport state
-transitions, the recording controller and view-model lifecycle have replacement
-implementations. Existing preference keys and saved-session contracts are retained.
-
-The broad existing behavioral batch passed with 562 tests before the test-source
-replacement. Focused controller/menu/permission and helper batches also passed.
-Inherited test helpers and cases are now being re-expressed independently; this
-phase is incomplete. Mandatory native-core frozen reference files are unchanged.
-The staged-content hook and microphone-rate measurement tool have replacement
-implementations; synthetic positive/negative tool checks passed.
-
-The owner confirmed recording, stopping and playback on the first installed
-candidate. One short combined-source take reported incomplete end coverage;
-its individual tracks completed, with zero registered timestamp gaps, no clipping
-and no reported PCM conversion failure. That timing finding remains open and is
-not evidence that the final replacement candidate has been manually accepted.
+Keep #51 open and PR #86 in draft until final review and required CI are complete.

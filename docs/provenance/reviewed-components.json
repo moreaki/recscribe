@@ -1,0 +1,576 @@
+{
+  "baseline": "2f9c42dd92dad72cb7e1d29ce555c2ee48967e53",
+  "method": "Content-reviewed matching paths. Hashes bind this review to content; they do not certify clean-room authorship or copyright independence. Unmatched files remain visible in the full audit.",
+  "files": [
+    {
+      "path": ".githooks/pre-commit",
+      "sha256": "d21e5a34b8839989d45d08dc69ac44e32703503f2e547a3746ec5e447aeb73a1",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "2341f80ce4db5dea486063640c4d4120052d5964257680e3870de2ea9cf1d559",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "55797487c489586f8dfa127dd28f3efd351d1a80eeecc4eecb86cc488a3f4072",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "4bcb6dd9ea95bb0a33f339ce8c468892d696f58f3ba0dc1f2c21343b1f79de40",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "d31a1582f0229db722a5e00094e9c68594a3481852cace52c15521fadc7a8712",
+      "decision": "retained-historical-notice",
+      "rationale": "Explicit exception documented in recording-foundation.md; attribution retained conservatively."
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "93d7590233f96ba85f7df11125c9342cfbab266864426880dadc680c0cfe613c",
+      "decision": "retained-historical-notice",
+      "rationale": "Explicit exception documented in recording-foundation.md; attribution retained conservatively."
+    },
+    {
+      "path": "README.md",
+      "sha256": "3ce3278f48069112aa66430ae20ef1bffaf5d7c2096509c271274426ffc0cfbd",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    },
+    {
+      "path": "RecScribe/RecScribe.entitlements",
+      "sha256": "a5030e8f8ff6cdd056b3b30e68fbbb00445878d568aa01862073948a74c13944",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe.xcodeproj/project.pbxproj",
+      "sha256": "b8fb9cad4e94d1d735cc18b17bd113c21b5e62b77969711f37912f86f68887ca",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+      "sha256": "7f3b00b5c3fdb45242d7b87e1e5c4e25d1fa8129a16c94295ecc4e8ea2235c5f",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "sha256": "97704a8960b4facceef54397a08fb5d0a456247c3627359215aa2a27df22656c",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/AppDelegate.swift",
+      "sha256": "1d3621f5338e23eddfa5d43fd5e371ea03b7c7bef288e9acd45c95aae574f939",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/Clock.swift",
+      "sha256": "dabc94469bf85524180a9322dbdfc5ac1c084bba1f73a2facd4ebf0565fa9bc9",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/Diagnostics.swift",
+      "sha256": "68d488ca93ac262ac91d7ba5f6d10d48e17e3d87de06a465cc8b5435069ccf7e",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/DiskSpace.swift",
+      "sha256": "902fb0117143e3da7624b9b953edb4b82704750b11f80a99c0395aa4d427e7df",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/InstallLocation.swift",
+      "sha256": "7ae16ffb7512163d73faffe99f71e4e46d22eff11a6c4cbcc6fff07ff91de90a",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/Log.swift",
+      "sha256": "283a2ad055942e58da476b289a3ad018ddf967c5fa545f3d6c16aa686e25b9e6",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/MenuBarController.swift",
+      "sha256": "24b1506fda08f5332854e099abf4f4987e132317bc24ff6aa394ee079ec4d83f",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/OverflowContext.swift",
+      "sha256": "5baddc9f41262cd39d99dc1f2f16fdd67ea71fb1aba5a565f561d8f58a91668a",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/OverflowMenu.swift",
+      "sha256": "aae739bf0a3e9e8c8682456b531640e1cea02b97cee07e0dfbc9d95aaebf405e",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/PerAppMenuDelegate.swift",
+      "sha256": "6214d2bc465511e4fc7f6f144097ff683c0b2ec66d80d5e9285f08b79fd2882c",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/PermissionGrantWatcher.swift",
+      "sha256": "ec5e5cc23bf1b823c2ed73650222aa787a9c939b3fa08a6534685075aeacb5dc",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/PermissionKind.swift",
+      "sha256": "0ee39aeb98042925b21bd952cd5e9619b2794ec69f1a5e7457b4be4c851eb470",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/PermissionManager.swift",
+      "sha256": "8b90d6b63a7751669bac69556cc781def97059ec9ab7d6d27a928a661b3ee2e5",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/PermissionProviding.swift",
+      "sha256": "9dfb81e14a3cd115153caf7e5473fdfa71c23837b1185f6dbbb6ec6b5e15b77e",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/RecScribeApp.swift",
+      "sha256": "7416b72fd5fdd8732a3902a6d2583e1015ba1a37ba3b2e330fcb1f50c5e287dc",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/App/SaveLocationProviding.swift",
+      "sha256": "6aef1571ded9a738624f61a512ea52234e105e9331d392d5847e3ac530f71fad",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Assets.xcassets/AccentColor.colorset/Contents.json",
+      "sha256": "9af65086fa30b49252fae1a1225731691de794f7775af74d71befeb507d12b7c",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "sha256": "fd62c72482a200be31beefeacd22582182828322e523947c8d778ac34d4f1c1b",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe/Assets.xcassets/Contents.json",
+      "sha256": "0fd49ba3c3585c709678e0046a821c3c60685ec7063720d30d3a3448be3a208b",
+      "decision": "reviewed-standard-metadata",
+      "rationale": "Native Xcode schema/compiler configuration or current application entitlement contract; no inherited operational implementation."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioCapableProcesses.swift",
+      "sha256": "f0701590ef682901c0719ec077b9d55888c451bb789ab02137511cf522e46661",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioCapturing.swift",
+      "sha256": "73a215c549cb1d5539e31ad776e7853b7a651701e632751a4654ca7a0b143b0b",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioFormat.swift",
+      "sha256": "bca458e29a3eeade5a6357aa8eedd57d50f28566e0ee4c9fe8623fd168436c1f",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioFormatNormalizer.swift",
+      "sha256": "b9845e19c6ebfed52b06375e8d9182b2d9823159a3d3424c084a758f8e341407",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioRecorder.swift",
+      "sha256": "fb5832db7d8b4bd30cdf4bebfc8941324bc3934662d628de8864cc6e8b453a03",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioSampleConverter.swift",
+      "sha256": "4ccc1d250aba8bd6ab045afa4ac609757f3f9d823c86b03d66abf0abbb6c33b3",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioSource.swift",
+      "sha256": "d531540698bfb3e1ca28d6080adac6e980a0adad56a42c919ef98374cdbb7177",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioSourceManager.swift",
+      "sha256": "bbb62e75fd646c191387a8907edc5a3212ab8e341997497832b6d539d50b829c",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/AudioTestController.swift",
+      "sha256": "edf56695598b435dfa11a0b9c0b0c28fa72851edf3bc21fdc30e175973daa1f5",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/InputDeviceEnumerator.swift",
+      "sha256": "822c425458ac703e8e7ca9c688dc3920b0cfe0d9c64c2d0a4b7a2d5f6f8b2b72",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/MonitorController.swift",
+      "sha256": "0baca098a96f05e2e43b08fd2cef61862ad13cadc03eb7ba5f941f209abc675e",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/MultiSourceRecorder.swift",
+      "sha256": "f524f25a074171d462b6ce3f2f7e8b9b35139d79bb95ef52d9c71d36a2750e29",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecorderCoordinators.swift",
+      "sha256": "30d512b07fb62eb0823f9e3b961930df703b4a141426eb097d074e3d494b8ff2",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecorderPreferences.swift",
+      "sha256": "e3496a00fb2ac7495f455750b1ab064d08df6fce82302a0ccae7b9273dd5ce37",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecorderPresentation.swift",
+      "sha256": "b72928ccbd990d72afcdcd6f4e6f85e028286accca55b33d41881d450d4f4b47",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecorderViewModel.swift",
+      "sha256": "b57290ab832f1a7c4bfe12714e0202fe1eacb9e44bd049746f5087fc85e57f71",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecordingController.swift",
+      "sha256": "3ffdf7921df28ec75de997fe45aeef99f97590ffa876951ed5a72aead6b338ca",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/RecordingState.swift",
+      "sha256": "2e30873d2586f1f66f1dbdd1b3156d1c2b488e237af523c45c8e7be398124ac0",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/ScreenCaptureAudioManager.swift",
+      "sha256": "beef58cf0401d5eec02bd1354275a5d0af88f704a1828f235a330274b477939c",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/SynchronizedCaptureWriter.swift",
+      "sha256": "6fc38ca2f365ab9762c17d2bd3e36f91cabe0793fb0f315457d9175786221612",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribe/Capture/WAVWriter.swift",
+      "sha256": "5e55d71c4e2cd132c97ce4d956fda41d524f927a36d618ae09448e89f30c1dff",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/Sessions/RecordingSession.swift",
+      "sha256": "8287fcb2e656129f82881df574abe9e9492bb2d3e5b6e367c40a9da18d8dc86c",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/Controls/StudioControls.swift",
+      "sha256": "e318d54fc01ef07bbaeaa69c40c2ba5cc57065f802e3d4fb45217cf27c569ce3",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/Controls/StudioWaveform.swift",
+      "sha256": "fc4444bfe672c1520a34855150e95d72ee6c7dd304adc02a3dbabfefd0a809fe",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/FloatingPanelHost.swift",
+      "sha256": "279845e10bfd2c6987cbe96dc27c17446c145caa076773e0b5a0913696df1619",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/InstallLocationNoticeView.swift",
+      "sha256": "4c2d539e6fe461ab1b729f8f7bfcca3ab915208f21eabe98ed45090d50c63650",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/MenuBarPopoverView.swift",
+      "sha256": "445e14d4d352d64f7aea41851327cb304031fd9b963c43de25f1aea10b215162",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/OnboardingView.swift",
+      "sha256": "0b6a4d65ddb0a5beed26b9314f20d1a011a40fe675001589dbfaf7535fb9d53a",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribe/UI/RecorderView.swift",
+      "sha256": "6483b2f8580f22f139bf8ea5dfae92be5e900a4a79ab5e88cf5686ed524c18fe",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AsyncWaiting.swift",
+      "sha256": "649ea15a5655790f8442b6bd60bbf993cddc388acaf9d59b8fcac06ccbd043ba",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioFileEncoderTests.swift",
+      "sha256": "1fdefa4d3e7536e4abb5a070c583ce1e1e3b4feaf165e57ea84b7255981ed3e6",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioFormatNormalizerTests.swift",
+      "sha256": "69efc98e12a9757f49fe3ee40ddd5983adf0541c56cb76c742667da2bd5aa693",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioFormatTests.swift",
+      "sha256": "cf7a63738ffe01cffa5d5338caf0659dff79d0f52245d9af7bd321f5c2049b7b",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioLevelsTests.swift",
+      "sha256": "17f611941ac17ff93a8fed7653930342f87853e6db1b1ba9ddb45bd4871fa56b",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioRecorderTests.swift",
+      "sha256": "866546c30f8f13b172ece920ff7b98463af8624f3e51245ad5c7da2102526cca",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioSampleConverterTests.swift",
+      "sha256": "ed9376035200586607f3eb368a9130594fba2aec445a5ca9d35012c4689ee6de",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioSourceManagerTests.swift",
+      "sha256": "241b3f6423ea7223c99e49cfc08941a91f0059191266d904c60265360788c2ec",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/AudioSourceTests.swift",
+      "sha256": "37481379b643bae884638088e705fbac1fc7d78e165ed937373574b7579f8218",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/BundledFontTests.swift",
+      "sha256": "abe90ed38ad563aea4b98e38ac4affe995b01a6be871d86d84609296c9a4304d",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/CaptureSourceMenuTests.swift",
+      "sha256": "b291b47be2086104476e145df27dd26428da58df9804445eb18ac65a0a9f58e1",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/DiagnosticsTests.swift",
+      "sha256": "1167b43d641849c3f39d3a0ea4cc0c07dc92c3056672c50400121195ca37242a",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/EncoderFormatGuardTests.swift",
+      "sha256": "cea6e34421818adfbaebfce7e4d8a7dd5858afd3dc164b381c199a1d515ec212",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/GoldenFileTests.swift",
+      "sha256": "c3a8bcb1cef6f923db7069a4af1672483cc50b1e4fedb4adce9133b57aaa1f0b",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/InfoPlistTests.swift",
+      "sha256": "cd5785105f86becb829bc5e68eeee7dc0da337cd1db20906bab89991cce3dfa6",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/InstallLocationTests.swift",
+      "sha256": "c55bae19eded200fd6f87dab77fbd5cda59f9693ed1dcaab431e09ad47d676c9",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/MicrophoneFormatTests.swift",
+      "sha256": "797056974f8cf4b25a822e3d6ef4a23a3eb6be343d6a43d38b38fbdfe4a12a04",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/Mocks.swift",
+      "sha256": "73d46d84a6c590f323d51603b161c54267d46c1321390609af743160f816b634",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/MonitorControllerTests.swift",
+      "sha256": "e076279d6c1c58c43abb718c0648eea769061157e536a5bd0c7bcc4abccd6bca",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/OverflowMenuTests.swift",
+      "sha256": "06219c452c52f6f30c0deb3da118466e879705b9adf4ea17912fcb938c90efde",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/PermissionGrantWatcherTests.swift",
+      "sha256": "0cf7762b821c17925ca2b2693cdd75dd90893c25d6ed75c9dff4f49d0212c6f7",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/PermissionProbeTests.swift",
+      "sha256": "af478d69ccb50f52d19499a1faf4607341ae6200e1d6596f65561c8020ec8ac1",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecorderViewModelTests.swift",
+      "sha256": "c0deb6c58f06b358d3398f371382f9d469d49635d6167646a9305934d5423b26",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecorderWaveformAdapterTests.swift",
+      "sha256": "23bb07bd116302459c665d3c1c292827d70cd608852a323c967c194d7d146900",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecordingControllerTests.swift",
+      "sha256": "9802030eec292c0d27d9da83c4a88b2227baa9af4ad93e20dde9edc54c9cc6d7",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecordingInterruptionTests.swift",
+      "sha256": "e3b406c7a0d2ef1816c0cbf4ce37aea497566b8012b98ed991e696bb70fc2ce8",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecordingSessionTests.swift",
+      "sha256": "4dfcf478071a23690b3a604a559b81fc9395c75dfdfe630960a19717c5d8d911",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/RecordingStateTests.swift",
+      "sha256": "104047265b468e2a5889190c501a731fd1f7df43deb5da0e576103288c447d57",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/ReskinSnapshots.swift",
+      "sha256": "50a30a03964a62e3beec976421bfde591d2ca5701ed26a391e149abda29c1a34",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/SampleBufferFixtures.swift",
+      "sha256": "d3eb2fae49d0ed3a7fd297e000e73d190e7e96719bc37c927227153a6fb5d354",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/SaveLocationTests.swift",
+      "sha256": "c3e55aed3acc02185063aba883b058d16709f566649923ff65db5ca6fe9e75a1",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/StreamFailureTests.swift",
+      "sha256": "3d78b06c122536227429f891ea14477bbd75d3e15050033ca50b78bf1fa375d1",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/SynchronizedCaptureTests.swift",
+      "sha256": "0f02731be756f952069696a59e251c5486ff0a9858d79490376116e9a01c6c14",
+      "decision": "reviewed-recscribe-implementation",
+      "rationale": "Later RecScribe implementation retained; matching baseline lines are imports, syntax, SDK/API contracts or common bounded-wait/assertion expressions."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/WAVWriterTests.swift",
+      "sha256": "6ab8cb488b493d27efb147b613c6c580adab31047fcfaf05c03ee72ebe09fb36",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "RecScribe/RecScribeTests/WaveformDownsamplerTests.swift",
+      "sha256": "8b2d5b061edca787bdca9c68df393d2edacf1e68e0ac4b433e834ae82dae0bb7",
+      "decision": "reviewed-replacement",
+      "rationale": "Inherited implementation/test replaced in issue #51 commits; shared API signatures, state/file-format contracts and common Swift/SDK statements remain. See component assessment and compatibility test evidence."
+    },
+    {
+      "path": "scripts/verify-mic-rate.sh",
+      "sha256": "e63f59b966e472a12c037f2eaea5bf2f8bfe1959c7a7f316118eae0be6eaff6e",
+      "decision": "reviewed-current-document-or-tool",
+      "rationale": "Current project prose/tooling reauthored; retained matches are common Markdown/build commands, ignore patterns, shell/YAML syntax or standard license text."
+    }
+  ]
+}

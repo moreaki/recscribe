@@ -1,4 +1,5 @@
-# Xcode
+# Local build, signing, private working material and recording/runtime artifacts.
+# Package.resolved remains tracked for reproducibility.
 **/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
@@ -7,8 +8,6 @@ DerivedData/
 *.hmap
 *.ipa
 *.xcuserstate
-
-# Build artifacts
 build/
 Build/
 dist/
@@ -18,64 +17,35 @@ dist/
 *.xcresult
 *.dmg
 *.xcarchive
-
-# Swift Package Manager
 .build/
 Packages/
 Package.pins
-# Package.resolved is deliberately NOT ignored. RecScribe is an application,
-# so dependency versions must stay reproducible once packages are added.
-
-# Code signing
 *.mobileprovision
 *.provisionprofile
-
-
-# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 **/.DS_Store
-
-# Temporary files
 *.tmp
 *~
 *.swp
 *.swo
-
-# Audio test files
 test_recordings/
-
-# ─── Product management / internal (NEVER publish) ───
-# All internal docs live under private/. The folder is the structural
-# guarantee: anything here physically cannot be committed.
 /private/
 BACKLOG.md
 docs/product-strategy/
 *.private.md
-
-# ─── Marketing artifacts (keep local, publish via website host) ───
 recscribe-website.html
 privacy.html
 terms.html
 favicon.svg
 favicon.ico
 apple-touch-icon.png
-
-# A future website belongs in its own repository and deploys from there.
-# A local copy here would be a second, silently-diverging source of truth.
 recscribe-site-main/
-
-# Vercel deploy config — describes how the website is deployed, not how the
-# app is built. Kept local alongside the website HTML files.
 vercel.json
 .vercelignore
 .vercel/
-
-# Distribution logs can contain local paths and notarization submission IDs.
 dist-build.log
-
-# ─── Environment & secrets (NEVER publish) ───
 .env
 .env.*
 *.pem
@@ -98,8 +68,6 @@ notariz*.txt
 .vercel
 .env*
 *.profraw
-
-# Local transcription jobs, dependencies and model files
 /jobs/
 /benchmarks/results/
 /benchmarks/audio/

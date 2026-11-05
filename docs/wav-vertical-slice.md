@@ -20,7 +20,7 @@ core/.build/release/recscribe-text transcribe recording.wav \
   --model /absolute/path/to/ggml-model.bin \
   --source-language de-CH --target-language de --mode normalize \
   --profile fast --diarize auto --formats json,md,txt,srt,vtt \
-  --local-only --output jobs/example
+  --local-only --output "$HOME/Library/Application Support/RecScribe/Jobs/example"
 ```
 
 The output directory must be new. Its mode is 0700; CLI-created files are private

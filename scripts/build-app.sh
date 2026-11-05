@@ -53,6 +53,19 @@ fi
 
 cd "$project_root"
 
+# Prune only explicitly disposable runs; current caches/products/backups are outside
+# its managed root. Housekeeping failures must not block a local preview build.
+prune_artifacts() {
+    if command -v python3 >/dev/null 2>&1; then
+        python3 "$script_dir/work-artifacts.py" prune --apply --quiet >&2 \
+            || echo "Artifact housekeeping skipped; retained output is safe." >&2
+    else
+        echo "Artifact housekeeping unavailable: python3 is not installed." >&2
+    fi
+}
+prune_artifacts
+trap prune_artifacts EXIT
+
 case "$mode" in
     --signed)
         xcodebuild "${common_arguments[@]}" -allowProvisioningUpdates "${build_actions[@]}"

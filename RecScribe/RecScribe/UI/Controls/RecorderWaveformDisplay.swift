@@ -5,6 +5,7 @@ import SwiftUI
 /// packet made the window remeasure its layout at the capture callback rate.
 struct RecorderWaveformDisplay: NSViewRepresentable {
     let telemetry: RecorderTelemetry
+    var barCount = RecorderWaveformAdapter.popoverBarCount
     @Environment(\.studioTheme) private var theme
 
     func makeNSView(context: Context) -> RecorderWaveformDrawingView {
@@ -12,7 +13,7 @@ struct RecorderWaveformDisplay: NSViewRepresentable {
     }
     func updateNSView(_ view: RecorderWaveformDrawingView, context: Context) {
         view.configure(color: NSColor(theme.colors[.accent]), width: theme.metrics.waveformBarWidth,
-                       spacing: theme.metrics.waveformBarSpacing)
+                       spacing: theme.metrics.waveformBarSpacing, count: barCount)
     }
     static func dismantleNSView(_ view: RecorderWaveformDrawingView, coordinator: ()) {
         view.stopObserving()
@@ -25,6 +26,7 @@ final class RecorderWaveformDrawingView: NSView {
     private var color: NSColor = .systemRed
     private var barWidth: CGFloat = 2
     private var spacing: CGFloat = 1
+    private var barCount = RecorderWaveformAdapter.popoverBarCount
 
     init(telemetry: RecorderTelemetry) {
         samples = telemetry.waveformSamples
@@ -36,16 +38,17 @@ final class RecorderWaveformDrawingView: NSView {
         }
     }
     required init?(coder: NSCoder) { nil }
-    func configure(color: NSColor, width: CGFloat, spacing: CGFloat) {
+    func configure(color: NSColor, width: CGFloat, spacing: CGFloat, count: Int) {
         self.color = color; barWidth = width; self.spacing = spacing
+        barCount = min(RecorderWaveformAdapter.mainWindowBarCount, max(1, count))
         needsDisplay = true
     }
     func stopObserving() { observation?.cancel(); observation = nil }
 
     override func draw(_ dirtyRect: NSRect) {
-        let pitch = barWidth + spacing
-        guard pitch.isFinite, pitch > 0, barWidth > 0, bounds.width > 0 else { return }
-        let bars = RecorderWaveformAdapter.magnitudes(samples, bucketedTo: RecorderWaveformAdapter.popoverBarCount)
+        guard barWidth.isFinite, spacing.isFinite, barWidth > 0, spacing >= 0, bounds.width > 0 else { return }
+        let bars = RecorderWaveformAdapter.magnitudes(samples, bucketedTo: barCount)
+        let pitch = max(barWidth + spacing, bounds.width / CGFloat(max(1, bars.count)))
         let capacity = max(1, Int(bounds.width / pitch))
         let visible = bars.suffix(capacity)
         let start = CGFloat(capacity - visible.count) * pitch

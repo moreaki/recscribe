@@ -29,6 +29,75 @@ enum ReadingFixtures {
 }
 
 struct TranscriptReadingTests {
+    @Test func summaryCitationsResolveExactOriginalSourcesAndFailClosedForAmbiguousIDs() throws {
+        let segments = [ReadingFixtures.segment("s1", "Monday"),
+                        ReadingFixtures.segment("s2", "Tuesday", channel: 1, start: 20, end: 2020),
+                        ReadingFixtures.segment("ambiguous", "One", start: 5000, end: 6000),
+                        ReadingFixtures.segment("ambiguous", "Two", start: 8000, end: 9000)]
+        let data = try JSONSerialization.data(withJSONObject: ["schema_version": "1.0",
+            "processing": ["mode": "verbatim"], "segments": segments, "review_reasons": [],
+            "summary": ["notes": [["text": "A date needs checking.",
+                                     "segment_ids": ["s2", "s1", "s2", "missing", "ambiguous"]],
+                                    ["text": "No references provided.", "segment_ids": []]]]])
+        let decoder = JSONDecoder(); decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let document = try decoder.decode(TranscriptPreview.self, from: data)
+        let before = document.exportText(for: .summary, markdown: true)
+        let sources = TranscriptReading.summarySources(in: document)
+        #expect(sources.count == 2)
+        #expect(sources[0].map(\.id) == ["s2", "s1", "missing", "ambiguous"])
+        #expect(sources[0][0].groupID == "s1")
+        #expect(sources[0][0].channels == "Channel 2")
+        #expect(sources[0][0].timing == "00:00:00.020 – 00:00:02.020")
+        #expect(sources[0][1].timing == "00:00:00.000 – 00:00:02.000")
+        #expect(sources[0][2].groupID == nil)
+        #expect(sources[0][3].groupID == nil)
+        #expect(sources[1].isEmpty)
+        #expect(document.exportText(for: .summary, markdown: true) == before)
+        #expect(document.summary?.notes[0].segmentIds == ["s2", "s1", "s2", "missing", "ambiguous"])
+        #expect(TranscriptReading.reviewLabel("unknown_engine_message") == "Additional processing note. See technical details for the original message.")
+    }
+
+    @Test func reviewInspectorIncludesGlobalPassageFlagsAndOverlapWithoutChangingEvidence() throws {
+        var first = ReadingFixtures.segment("s1", "Monday")
+        first["review_reasons"] = ["confidence_unavailable", "confidence_unavailable"]
+        var second = ReadingFixtures.segment("s2", "Tuesday", channel: 1)
+        second["needs_review"] = false
+        second["review_reasons"] = []
+        var flagged = ReadingFixtures.segment("s3", "Check this", start: 3000, end: 5000)
+        flagged["review_reasons"] = [] // Legacy flag without reasons must remain visible.
+        let data = try JSONSerialization.data(withJSONObject: ["schema_version": "1.0",
+            "processing": ["mode": "verbatim"], "segments": [first, second, flagged],
+            "review_reasons": ["confidence_unavailable", "confidence_unavailable"]])
+        let decoder = JSONDecoder(); decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let document = try decoder.decode(TranscriptPreview.self, from: data)
+        let before = document.exportText(for: .transcript, markdown: true)
+        let items = TranscriptReading.reviewItems(in: document)
+        #expect(items.count == 3)
+        #expect(items[0].groupID == nil)
+        #expect(items[0].reasons == ["confidence_unavailable"])
+        #expect(items[1].groupID == "s1")
+        #expect(items[1].reasons == ["confidence_unavailable", "overlapping_channel_variants"])
+        #expect(items[2].groupID == "s3")
+        #expect(items[2].reasons == ["verify_against_audio"])
+        #expect(Set(items.map(\.id)).count == items.count)
+        #expect(document.segments[0].reviewReasons?.count == 2)
+        #expect(document.exportText(for: .transcript, markdown: true) == before)
+    }
+
+    @Test func overlapWithoutAnyExplicitReviewFlagStillAppearsInInspector() throws {
+        var first = ReadingFixtures.segment("s1", "Monday")
+        var second = ReadingFixtures.segment("s2", "Tuesday", channel: 1)
+        first["needs_review"] = false; first["review_reasons"] = []
+        second["needs_review"] = false; second["review_reasons"] = []
+        let document = try ReadingFixtures.document([first, second])
+        #expect(TranscriptReading.reviewItems(in: document).first?.reasons == ["overlapping_channel_variants"])
+        let primaryGroup = TranscriptReading.reviewGroupID(for: "s1", in: document)
+        let alternateGroup = TranscriptReading.reviewGroupID(for: "s2", in: document)
+        #expect(primaryGroup == "s1" && alternateGroup == primaryGroup)
+        #expect(TranscriptReading.reviewItems(in: document).first?.groupID == alternateGroup)
+        #expect(TranscriptReading.reviewGroupID(for: "missing", in: document) == nil)
+    }
+
     @Test func exactCrossChannelDuplicatesShareOneReadingAndKeepEverySource() throws {
         let document = try ReadingFixtures.preview
         let groups = TranscriptReading.groups(document.segments)

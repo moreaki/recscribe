@@ -215,6 +215,15 @@ struct SessionLibraryWorkStatusTests {
         #expect(calls.withLock { $0 } == 1)
         #expect(library.errorMessage != nil)
         #expect(library.activity == "Needs attention")
+        library.setRecording(true)
+        #expect(!library.retryVerification(snapshot.entries[0]))
+        library.setRecording(false)
+        library.setLiveWork(true)
+        #expect(!library.retryVerification(snapshot.entries[0]))
+        library.setLiveWork(false)
+        #expect(library.retryVerification(snapshot.entries[0]))
+        await waitUntil("explicit verification retry finishes") { library.canDeleteRecording }
+        #expect(calls.withLock { $0 } == 2)
         await library.shutdown()
     }
 }

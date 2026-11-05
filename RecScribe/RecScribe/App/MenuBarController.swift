@@ -15,13 +15,16 @@ import SwiftUI
         self.viewModel = viewModel
         self.actions = actions
         super.init()
-        let content = MenuBarPopoverView(live: live, layout: layout).environment(viewModel)
+        let content = MenuBarPopoverView(live: live, layout: layout, onStartRecording: { [weak self] in
+            self?.popover.performClose(nil)
+            AppWindow.openFromMenu(.live)
+        }).environment(viewModel)
             .environment(\.makeOverflowMenu, { [weak self] in self?.makeOverflowMenu() ?? actions.makeNSMenu() })
         let controller = NSHostingController(rootView: content)
         controller.sizingOptions = [.preferredContentSize]
         popover.contentViewController = controller
         popover.behavior = .transient
-        popover.appearance = .init(named: .darkAqua)
+        popover.appearance = nil
         statusItem.button?.target = self
         statusItem.button?.action = #selector(activateStatusItem(_:))
         statusItem.button?.sendAction(on: [.rightMouseUp, .leftMouseUp])

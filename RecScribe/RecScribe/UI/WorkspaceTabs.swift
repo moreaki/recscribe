@@ -8,10 +8,12 @@ protocol WorkspaceTab: Hashable, CaseIterable, RawRepresentable where RawValue =
 struct WorkspaceTabs<Section: WorkspaceTab>: View {
     let title: LocalizedStringKey
     @Binding var selection: Section
+    var sections: [Section]? = nil
+    var showsIcons = true
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            tabs.labelStyle(.titleAndIcon).fixedSize(horizontal: true, vertical: false)
+            wideTabs.fixedSize(horizontal: true, vertical: false)
             tabs.labelStyle(.titleOnly).fixedSize(horizontal: true, vertical: false)
             tabs.labelStyle(.iconOnly)
         }
@@ -20,9 +22,14 @@ struct WorkspaceTabs<Section: WorkspaceTab>: View {
         .accessibilityLabel(title)
     }
 
+    @ViewBuilder private var wideTabs: some View {
+        if showsIcons { tabs.labelStyle(.titleAndIcon) }
+        else { tabs.labelStyle(.titleOnly) }
+    }
+
     private var tabs: some View {
         HStack(spacing: StudioSpacing.sm) {
-            ForEach(Array(Section.allCases), id: \.self) { section in
+            ForEach(sections ?? Array(Section.allCases), id: \.self) { section in
                 Button { selection = section } label: {
                     Label(section.rawValue, systemImage: section.symbol)
                         .font(.callout.weight(.medium))

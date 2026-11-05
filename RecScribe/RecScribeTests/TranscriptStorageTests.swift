@@ -23,6 +23,75 @@ struct TranscriptStorageTests {
         return (root, jobs, job, source)
     }
 
+    @Test func recordingIndexUsesVerifiedIdentityAndNewestCompletedJobWithoutChangingEvidence() throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let entry = SessionEntry(id: f.source, session: try RecordingSession.read(f.source))
+        let identity = try JSONSerialization.data(withJSONObject: ["id": entry.session.id.uuidString])
+        try identity.write(to: f.job.appendingPathComponent("source-session.snapshot.json"))
+        let newer = f.jobs.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.copyItem(at: f.job, to: newer)
+        try JSONSerialization.data(withJSONObject: ["schema_version": "1.0", "state": "completed_with_review", "progress": 1])
+            .write(to: newer.appendingPathComponent("manifest.json"))
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 100)], ofItemAtPath: f.job.appendingPathComponent("manifest.json").path)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 200)], ofItemAtPath: newer.appendingPathComponent("manifest.json").path)
+        try Data("summary".utf8).write(to: newer.appendingPathComponent("summary.txt"))
+        let links = try TranscriptStorage.recordingLinks([entry], in: f.jobs, cancel: WorkCancellation())
+        #expect(links.count == 1)
+        #expect(links[entry.id]?.job == newer)
+        #expect(links[entry.id]?.needsReview == true)
+        #expect(links[entry.id]?.hasSummary == true)
+        #expect(try Data(contentsOf: f.root.appendingPathComponent("recording.wav")) == Data("original audio".utf8))
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.raw.json")) == Data("raw evidence".utf8))
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("source-session.snapshot.json")) == identity)
+    }
+
+    @Test(arguments: ["missing-identity", "conflicting-identities", "duplicate-identity", "failed", "active", "empty-transcript", "symlink-transcript", "invalid-progress"])
+    func recordingIndexDoesNotAssociateAmbiguousOrIncompleteJobs(scenario: String) throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let entry = SessionEntry(id: f.source, session: try RecordingSession.read(f.source))
+        var entries = [entry]
+        if scenario != "missing-identity" {
+            try JSONSerialization.data(withJSONObject: ["id": entry.session.id.uuidString])
+                .write(to: f.job.appendingPathComponent("source-session.snapshot.json"))
+        }
+        switch scenario {
+        case "conflicting-identities":
+            try JSONSerialization.data(withJSONObject: ["session_id": UUID().uuidString])
+                .write(to: f.job.appendingPathComponent("audio-report.json"))
+        case "duplicate-identity": entries.append(.init(id: f.root.appendingPathComponent("duplicate.recscribe.json"), session: entry.session))
+        case "failed", "active", "invalid-progress":
+            try JSONSerialization.data(withJSONObject: ["schema_version": "1.0", "state": scenario == "failed" ? "failed" : scenario == "active" ? "transcribing" : "completed", "progress": 0.5])
+                .write(to: f.job.appendingPathComponent("manifest.json"))
+        case "empty-transcript": try Data().write(to: f.job.appendingPathComponent("transcript.json"))
+        case "symlink-transcript":
+            let canonical = f.job.appendingPathComponent("transcript.json")
+            let elsewhere = f.root.appendingPathComponent("other-transcript.json")
+            try FileManager.default.moveItem(at: canonical, to: elsewhere)
+            try FileManager.default.createSymbolicLink(at: canonical, withDestinationURL: elsewhere)
+        default: break
+        }
+        #expect(try TranscriptStorage.recordingLinks(entries, in: f.jobs, cancel: WorkCancellation()).isEmpty)
+        #expect(try Data(contentsOf: f.root.appendingPathComponent("recording.wav")) == Data("original audio".utf8))
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.raw.json")) == Data("raw evidence".utf8))
+    }
+
+    @Test func recordingIndexHonorsCancellationAndCaptureGates() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        let token = WorkCancellation(); token.cancel()
+        #expect(throws: CancellationError.self) { try TranscriptStorage.recordingLinks([], in: f.jobs, cancel: token) }
+        let library = SessionLibrary(jobsDirectory: f.jobs)
+        library.setRecording(true)
+        do { _ = try await library.transcriptLinks(for: []); Issue.record("Capture must gate the index") }
+        catch { #expect(error is CancellationError) }
+        library.setRecording(false); library.setLiveWork(true)
+        do { _ = try await library.transcriptLinks(for: []); Issue.record("Live work must gate the index") }
+        catch { #expect(error is CancellationError) }
+        await library.shutdown()
+    }
+
     @Test(arguments: ["valid", "missing-source", "missing-part", "missing-job", "corrupt-transcript"])
     func startupOnlyRestoresUsableRecordings(scenario: String) async throws {
         let f = try fixture()
@@ -68,11 +137,30 @@ struct TranscriptStorageTests {
         let f = try fixture()
         defer { try? FileManager.default.removeItem(at: f.root) }
         let library = SessionLibrary(initialJob: f.job, initialSource: f.source)
-        library.setRecording(true)
+        library.cancelRestoration()
         await settle()
         #expect(!library.restoringTranscript)
         #expect(library.latestJob == nil)
         #expect(library.latestSource == nil)
+        await library.shutdown()
+    }
+
+    @Test func startupStudioRestoreSurvivesNewCaptureAndLateCloudCompletion() async throws {
+        let f = try fixture()
+        defer { try? FileManager.default.removeItem(at: f.root) }
+        var persisted: [(URL?, URL?)] = []
+        let library = SessionLibrary(initialJob: f.job, initialSource: f.source,
+            rememberJob: { persisted.append(($0, $1)) }, jobsDirectory: f.jobs)
+        let newJob = f.jobs.appendingPathComponent("live-job")
+        let newSource = f.root.appendingPathComponent("new-recording.recscribe.json")
+        library.setRecording(true)
+        library.setLiveWork(true)
+        library.acceptCloudTranscript(newJob, source: newSource)
+        await waitUntil("independent Studio restoration") { !library.restoringTranscript }
+        #expect(library.studioJob == f.job && library.studioSource == f.source)
+        #expect(library.latestJob == newJob && library.latestSource == newSource)
+        #expect(persisted.isEmpty)
+        #expect(try Data(contentsOf: f.root.appendingPathComponent("recording.wav")) == Data("original audio".utf8))
         await library.shutdown()
     }
 

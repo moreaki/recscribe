@@ -130,3 +130,26 @@ Bundled-default selection remains pending representative long-form/adverse/
 regional coverage, critical-content review, supported export/runtime, actual
 package measurements, redistribution review and current-head validation. Keep
 existing model selection/downloads and installed app unchanged during research.
+
+## Execution-policy amendment before edited-model outcomes
+
+On 2026-11-05, the initial guard stopped after six unchanged-Tiny cells when a
+Firefox process reached 89.2% raw `ps` CPU (about 0.89 of this host's 24 cores).
+No edited model had run. The partial matrix, raw evidence and guard observation
+remain preserved. That cancellation also exposed a CLI signal-handler executor
+crash; the fresh paired run must use the corrected CLI for every parent and
+derived artifact.
+
+The replacement diagnostic is explicitly **quality-only** under ordinary desktop
+load. Its per-process CPU stop threshold is 300% raw (three cores, 12.5% of host
+capacity); this is not an aggregate CPU budget or evidence of an idle GPU.
+Recording, uncertain capture state, foreign ASR/build/test work and VM guests
+still cancel the owned experiment. Exact guard policy and runner identities are
+locked before the first edited-model outcome. Recipes, source IDs, scoring,
+decoding settings and quality-screening thresholds remain fixed.
+
+Retain timing and process-RSS observations, but mark the earlier 10% runtime/RSS
+gate **not evaluated** for this diagnostic. Shared desktop-load measurements
+cannot establish a speed/memory pass. Native critical-content review and all
+product-promotion gates remain unresolved. A later controlled resource comparison
+requires a fresh matching parent/candidate experiment, with this history retained.

@@ -94,7 +94,10 @@ struct CompactRoutingSourceCard<Accessory: View, CaptureAction: View>: View {
                 TextField("dB", value: Binding(get: { value.decibels }, set: { proposed in
                     if proposed.isFinite { change { $0.decibels = min(24, max(-60, proposed)) } }
                 }), format: .number.precision(.fractionLength(1)))
-                    .textFieldStyle(.roundedBorder).frame(width: 46)
+                    .textFieldStyle(.plain).focusEffectDisabled()
+                    .padding(.horizontal, 5).padding(.vertical, 2)
+                    .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
+                    .frame(width: 46)
                     .accessibilityLabel("\(title) mix gain in decibels")
                 Text("dB").foregroundStyle(.secondary)
             }.font(.caption).frame(height: 20)
@@ -153,7 +156,10 @@ struct CompactRoutingSourceCard<Accessory: View, CaptureAction: View>: View {
             TextField("Trim", value: Binding(get: { value.channelTrims[channel] ?? 0 }, set: { proposed in
                 if proposed.isFinite { change { $0.channelTrims[channel] = min(24, max(-60, proposed)) } }
             }), format: .number.precision(.fractionLength(1)))
-                .textFieldStyle(.roundedBorder).font(.caption2).frame(height: 18)
+                .textFieldStyle(.plain).focusEffectDisabled()
+                .padding(.horizontal, 5).padding(.vertical, 2)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
+                .font(.caption2).frame(height: 18)
                 .focused($channelFocus, equals: .trim(channel))
                 .accessibilityLabel("\(title) \(name) trim in decibels")
                 .disabled(!captured)

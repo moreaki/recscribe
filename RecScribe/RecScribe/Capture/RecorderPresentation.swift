@@ -112,9 +112,9 @@ extension RecorderViewModel {
                 let playback =
                     source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 }
                     ?? "System audio"
-                return "\(playback) + \(source.inputs.count) inputs"
+                return "\(playback) + \(source.inputs.count) \(source.inputs.count == 1 ? "input" : "inputs")"
             }
-            return "\(source.inputs.count) inputs"
+            return "\(source.inputs.count) \(source.inputs.count == 1 ? "input" : "inputs")"
         case .mixed:
             let playback =
                 source.appBundleID.map { audioSource.knownAppName(forBundleID: $0) ?? $0 }

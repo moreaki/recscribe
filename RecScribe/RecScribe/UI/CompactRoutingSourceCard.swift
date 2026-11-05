@@ -277,7 +277,7 @@ private struct PreviewCompactPeaks: View {
     let channel: Int
     var body: some View { CompactPeakPair(meters: test.meters[track] ?? .init(), now: test.now, channel: channel) }
 }
-private struct RecordingCompactPeaks: View {
+struct RecordingCompactPeaks: View {
     @Bindable var telemetry: RecorderTelemetry
     let track: CaptureTrack
     let channel: Int
@@ -286,7 +286,7 @@ private struct RecordingCompactPeaks: View {
             fallback: telemetry.sourceHealth.first { $0.id == track.rawValue || $0.id == "capture" }?.health)
     }
 }
-private struct CompactPeakPair: View {
+struct CompactPeakPair: View {
     let meters: CaptureSourceMeters
     let now: TimeInterval
     let channel: Int
@@ -324,7 +324,7 @@ private struct CompactPeakPair: View {
     private func fraction(_ v: Float) -> Double { max(0, min(1, (20 * log10(Double(max(0.000001, v))) + 60) / 60)) }
 }
 
-private struct CompactRoutingStatus: View {
+struct CompactRoutingStatus: View {
     @Environment(RecorderViewModel.self) private var recorder
     let track: CaptureTrack
     let muted: Bool

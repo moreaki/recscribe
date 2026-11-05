@@ -6,12 +6,13 @@ import SwiftUI
 struct CaptureHealthReadout: View {
     let telemetry: RecorderTelemetry
     let source: SourceRecordingHealth
+    var compact = false
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         let size = 10 * typeSize.studioScale
-        CaptureHealthNativeReadout(telemetry: telemetry, sourceID: source.id, fontSize: size)
-            .frame(height: CaptureHealthDrawingView.height(for: source, fontSize: size))
+        CaptureHealthNativeReadout(telemetry: telemetry, sourceID: source.id, fontSize: size, compact: compact)
+            .frame(height: CaptureHealthDrawingView.height(for: source, fontSize: size, compact: compact))
     }
 }
 
@@ -19,10 +20,11 @@ private struct CaptureHealthNativeReadout: NSViewRepresentable {
     let telemetry: RecorderTelemetry
     let sourceID: String
     let fontSize: CGFloat
+    let compact: Bool
     func makeNSView(context: Context) -> CaptureHealthDrawingView {
         CaptureHealthDrawingView(telemetry: telemetry, sourceID: sourceID)
     }
-    func updateNSView(_ view: CaptureHealthDrawingView, context: Context) { view.configure(fontSize: fontSize) }
+    func updateNSView(_ view: CaptureHealthDrawingView, context: Context) { view.configure(fontSize: fontSize, compact: compact) }
     static func dismantleNSView(_ view: CaptureHealthDrawingView, coordinator: ()) { view.stopObserving() }
 }
 
@@ -38,11 +40,15 @@ final class CaptureHealthDrawingView: NSView {
     private var font = NSFont.systemFont(ofSize: 10)
     private var lines: [(String, Int, NSColor)] = []
     private var meterRect = NSRect.zero
+    private var compact = false
     private static let gap: CGFloat = 4
     override var isFlipped: Bool { true }
 
-    static func height(for source: SourceRecordingHealth, fontSize: CGFloat) -> CGFloat {
+    static func height(for source: SourceRecordingHealth, fontSize: CGFloat, compact: Bool = false) -> CGFloat {
         let line = ceil(fontSize * 1.3)
+        if compact {
+            return CGFloat(2 + (source.health.failureMessage == nil ? 0 : 2) + (source.health.clipped ? 1 : 0)) * line + 22
+        }
         let hasFormat = source.health.channels != nil && source.health.sampleRate != nil
         let slots = 4 + (source.health.failureMessage == nil ? 0 : 2)
             + (hasFormat ? 3 + (source.health.clipped ? 1 : 0) : 0)
@@ -64,14 +70,15 @@ final class CaptureHealthDrawingView: NSView {
     }
     required init?(coder: NSCoder) { nil }
     func stopObserving() { observation?.cancel(); observation = nil }
-    func configure(fontSize: CGFloat) {
-        guard font.pointSize != fontSize else { return }
+    func configure(fontSize: CGFloat, compact: Bool = false) {
+        guard font.pointSize != fontSize || self.compact != compact else { return }
         font = .systemFont(ofSize: fontSize)
-        needsDisplay = true
+        self.compact = compact
+        update(value, force: true)
     }
 
-    private func update(_ next: CaptureReadoutValue) {
-        let detailsChanged = value.source != next.source || value.time != next.time
+    private func update(_ next: CaptureReadoutValue, force: Bool = false) {
+        let detailsChanged = force || value.source != next.source || value.time != next.time
         value = next
         guard detailsChanged else { setNeedsDisplay(meterRect); return }
         guard let source = value.source else { lines = []; needsDisplay = true; return }
@@ -79,14 +86,14 @@ final class CaptureHealthDrawingView: NSView {
         let warning: [RecordingHealth.Status] = [.noData, .stalled, .writeStalled, .failed]
         lines = [("\(source.name): \(status.label)", 2, warning.contains(status) ? .systemOrange : .secondaryLabelColor)]
         if let message = h.failureMessage { lines.append((message, 2, .systemOrange)) }
-        if let rate = h.sampleRate, let channels = h.channels {
+        if !compact, let rate = h.sampleRate, let channels = h.channels {
             let peak = h.peak >= 1 ? "clipping" : String(format: "peak %.1f dBFS", 20 * log10(max(0.000_001, h.peak)))
             lines.append(("\(channels) input channels · \(rate.formatted(.number.precision(.fractionLength(0)))) Hz · \(peak)", 1, .secondaryLabelColor))
             let post = h.postPeak ?? h.peak
             lines.append((String(format: "After fader: %.1f dBFS · saved mix: %.1f dBFS", 20 * log10(max(0.000_001, post)), 20 * log10(max(0.000_001, h.mixPeak ?? post))), 2, h.clipped ? .systemOrange : .secondaryLabelColor))
-            if h.clipped { lines.append(("Clipping detected · reduce recording gain", 1, .systemOrange)) }
         }
-        lines.append(("\(h.receivedFrames.formatted()) frames received · \(h.writtenFrames.formatted()) written", 2, .secondaryLabelColor))
+        if h.clipped { lines.append(("Clipping detected · reduce recording gain", 1, .systemOrange)) }
+        if !compact { lines.append(("\(h.receivedFrames.formatted()) frames received · \(h.writtenFrames.formatted()) written", 2, .secondaryLabelColor)) }
         setAccessibilityLabel("\(source.name) level")
         setAccessibilityValue(lines.map(\.0).joined(separator: "\n"))
         toolTip = source.detail ?? source.name
@@ -97,13 +104,8 @@ final class CaptureHealthDrawingView: NSView {
         let lineHeight = ceil(font.pointSize * 1.3)
         var y: CGFloat = 0
         for (index, line) in lines.enumerated() {
-            if index == lines.count - 1, value.source?.health.channels != nil {
-                meterRect = NSRect(x: 0, y: y, width: bounds.width, height: 6)
-                NSColor.quaternaryLabelColor.setFill()
-                NSBezierPath(roundedRect: meterRect, xRadius: 3, yRadius: 3).fill()
-                let peak = value.peak.isFinite ? max(0, min(1, value.peak)) : 0
-                NSColor(WorkspaceStyle.blue).setFill()
-                NSBezierPath(roundedRect: NSRect(x: 0, y: y, width: bounds.width * CGFloat(peak), height: 6), xRadius: 3, yRadius: 3).fill()
+            if !compact, index == lines.count - 1, value.source?.health.channels != nil {
+                drawMeter(at: y)
                 y += 10 + Self.gap
             }
             let rect = NSRect(x: 0, y: y, width: bounds.width, height: CGFloat(line.1) * lineHeight)
@@ -114,16 +116,27 @@ final class CaptureHealthDrawingView: NSView {
             }
             y += rect.height + Self.gap
         }
+        if compact { drawMeter(at: y) }
+    }
+
+    private func drawMeter(at y: CGFloat) {
+        meterRect = NSRect(x: 0, y: y, width: bounds.width, height: 6)
+        NSColor.quaternaryLabelColor.setFill()
+        NSBezierPath(roundedRect: meterRect, xRadius: 3, yRadius: 3).fill()
+        let peak = value.peak.isFinite ? max(0, min(1, value.peak)) : 0
+        NSColor(WorkspaceStyle.blue).setFill()
+        NSBezierPath(roundedRect: NSRect(x: 0, y: y, width: bounds.width * CGFloat(peak), height: 6), xRadius: 3, yRadius: 3).fill()
     }
 }
 
 struct RecorderElapsedDisplay: NSViewRepresentable {
     let telemetry: RecorderTelemetry
+    var fontSize: CGFloat = 22
     @Environment(\.dynamicTypeSize) private var typeSize
     func makeNSView(context: Context) -> RecorderElapsedDrawingView { .init(telemetry: telemetry) }
-    func updateNSView(_ view: RecorderElapsedDrawingView, context: Context) { view.configure(size: 22 * typeSize.studioScale) }
+    func updateNSView(_ view: RecorderElapsedDrawingView, context: Context) { view.configure(size: fontSize * typeSize.studioScale) }
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: RecorderElapsedDrawingView, context: Context) -> CGSize? {
-        .init(width: proposal.width ?? 100, height: ceil(29 * typeSize.studioScale))
+        .init(width: proposal.width ?? 100, height: ceil((fontSize + 7) * typeSize.studioScale))
     }
     static func dismantleNSView(_ view: RecorderElapsedDrawingView, coordinator: ()) { view.stopObserving() }
 }

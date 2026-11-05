@@ -218,7 +218,7 @@ struct SessionPlaybackAcceptanceTests {
                                   styleMask: .titled, backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false; window.contentView = host
             window.setFrameOrigin(NSPoint(x: -10000, y: -10000))
-            window.makeKeyAndOrderFront(nil)
+            window.orderFront(nil)
             defer { window.contentView = nil; window.close() }
             for _ in 0..<6 { host.layoutSubtreeIfNeeded(); try await Task.sleep(for: .milliseconds(20)) }
             #expect(host.fittingSize.width > 0 && host.fittingSize.width <= width + 1)
@@ -233,18 +233,9 @@ struct SessionPlaybackAcceptanceTests {
                 characters: String(UnicodeScalar(NSRightArrowFunctionKey)!),
                 charactersIgnoringModifiers: String(UnicodeScalar(NSRightArrowFunctionKey)!), isARepeat: false, keyCode: 124))
             let before = playback.position, requestsBefore = gate.targets.count
-            // A local test host can remain inactive on an interactive desktop;
-            // cooperative activate() alone may be refused. This keyboard fixture
-            // explicitly claims focus, then waits for the real event destination.
-            NSApp.activate(ignoringOtherApps: true)
-            window.makeKeyAndOrderFront(nil)
-            let focusDeadline = ContinuousClock.now + .seconds(2)
-            while NSApp.keyWindow !== window, ContinuousClock.now < focusDeadline {
-                try await Task.sleep(for: .milliseconds(10))
-                window.makeKeyAndOrderFront(nil)
-            }
-            try #require(NSApp.keyWindow === window, "Keyboard fixture must own the key window: width=\(width) active=\(NSApp.isActive) hidden=\(NSApp.isHidden) visible=\(window.isVisible) key=\(window.isKeyWindow) canKey=\(window.canBecomeKey) policy=\(NSApp.activationPolicy().rawValue)")
-            NSApp.sendEvent(event)
+            // Exercise the real window's key-equivalent routing without taking
+            // focus from the user testing the installed app on this desktop.
+            #expect(window.performKeyEquivalent(with: event))
             #expect(gate.targets.count == requestsBefore + 1, "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")
             #expect(playback.position == min(playback.duration, before + PlaybackPolicy.skipSeconds), "width=\(width), targets=\(gate.targets), phase=\(playback.phase)")
             if let completion = gate.completions.last { completion(true); await settle() }

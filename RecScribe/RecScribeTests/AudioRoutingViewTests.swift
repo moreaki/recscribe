@@ -31,19 +31,17 @@ struct AudioRoutingViewTests {
         let savedLevels = levels.snapshot(for: source)
         let savedPlayback = playback.value
         let savedMonitor = monitor.levels.value
-        let panels: [(String, AudioRoutingPanel?)] = [
-            ("compact-overview", nil),
-            ("mix-expanded", .mix), ("monitor-expanded", .monitor), ("output-expanded", .recordingPlayback)
+        let appearances: [(String, ColorScheme, NSAppearance.Name)] = [
+            ("focus-light", .light, .aqua), ("focus-dark", .dark, .darkAqua)
         ]
-
-        for (name, panel) in panels {
-            let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback, expandedPanel: panel, embeddedInStudio: true)
-                .environment(recorder).preferredColorScheme(.dark)
+        for (name, scheme, appearance) in appearances {
+            let root = AudioRoutingView(levels: levels, monitor: monitor, playbackLevels: playback, embeddedInStudio: true)
+                .environment(recorder).preferredColorScheme(scheme)
             let hosting = NSHostingView(rootView: root)
-            hosting.frame = CGRect(origin: .zero, size: CGSize(width: 1120, height: panel == nil ? 500 : 700))
+            hosting.frame = CGRect(origin: .zero, size: CGSize(width: 1120, height: 700))
             let window = NSWindow(contentRect: hosting.frame, styleMask: .borderless, backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
-            window.appearance = NSAppearance(named: .darkAqua)
+            window.appearance = NSAppearance(named: appearance)
             window.contentView = hosting
             defer { window.contentView = nil; window.close() }
 
@@ -77,25 +75,11 @@ struct AudioRoutingViewTests {
     }
 
     @Test(arguments: [250.0, 450.0, 720.0])
-    func muteKeepsCollapsedHeadersAndExpandedFadersTheSameSize(_ width: Double) async throws {
+    func muteKeepsRecordingFadersTheSameSize(_ width: Double) async throws {
         let suite = "routing-mute-layout-\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let levels = AudioLevels(defaults: defaults)
-        for title in ["System audio", "MacBook Air Microphone", "Microsoft Teams Audio"] {
-            var sizes: [CGSize] = []
-            for muted in [false, true, false] {
-                levels.set("input:mic", .init(muted: muted))
-                let header = AudioRoutingCardHeader(title: title, symbol: "mic.fill",
-                    subtitle: "Hardware input · 1 channel → L + R", value: "+0.0 dB",
-                    expanded: false, muted: muted, warning: nil, muteTitle: "Muted in mix", toggle: {}) {
-                    AudioRoutingMuteButton(title: title, muted: muted, action: {})
-                    Image(systemName: "ellipsis")
-                }
-                sizes.append(try await measuredSize(header, width: width))
-            }
-            #expect(sizes[0] == sizes[1] && sizes[1] == sizes[2], "Mute must not move this or the following cards")
-        }
         levels.set("input:mic", .init())
         let fader = SourceFader(id: "input:mic", title: "Input gain", levels: levels, channels: 1, preservesSources: true, showsMuteToggle: false)
         let before = try await measuredSize(fader, width: width)

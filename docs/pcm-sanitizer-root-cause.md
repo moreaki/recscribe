@@ -15,6 +15,12 @@ every sample, including partially overlapping pool allocations, before reuse.
 History retains no PCM owners, is bounded to 512 generations / 65,536 sample
 addresses, and exceeds the 64-reader admission bound.
 
+The fixture's observational callback publishes retirement **before** freeing
+samples. A callback after `deallocate()` could lag a new allocation of that same
+address and falsely label a completed destruction as a still-live owner. This
+test-only marker ordering is corrected here; allocation and reader behavior are
+unchanged. Observational flags remain relaxed in the `framework`/`owned` modes.
+
 The program validates every read sample against its submitted generation and
 checks the aggregate checksum. It asserts that storage is never assigned to a
 new buffer while the previous owner or reader is alive.

@@ -97,15 +97,11 @@ extension RecorderViewModel {
     }
 
     var hasInterruptedSource: Bool {
-        isRecording && sourceHealth.contains(where: { $0.health.failed })
+        isRecording && telemetry.interruptedSourceSummary != nil
     }
 
     var interruptedSourceSummary: String? {
-        guard isRecording else { return nil }
-        let failed = sourceHealth.filter { $0.health.failed }
-        guard !failed.isEmpty else { return nil }
-        let names = failed.map(\.name).joined(separator: ", ")
-        return "\(names) interrupted; unaffected sources continue recording."
+        isRecording ? telemetry.interruptedSourceSummary : nil
     }
 
     var captureSourceName: String? {

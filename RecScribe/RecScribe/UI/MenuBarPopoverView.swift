@@ -168,12 +168,7 @@ private struct PopoverWaveformSection: View {
     @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
-        StudioLiveWaveform(
-            samples: RecorderWaveformAdapter.magnitudes(
-                telemetry.waveformSamples,
-                bucketedTo: RecorderWaveformAdapter.popoverBarCount
-            )
-        )
+        RecorderWaveformDisplay(telemetry: telemetry)
         .frame(height: 36)
     }
 }

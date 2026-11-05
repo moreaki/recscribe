@@ -125,12 +125,7 @@ struct RecorderWaveformSection: View {
     @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
-        StudioLiveWaveform(
-            samples: RecorderWaveformAdapter.magnitudes(
-                telemetry.waveformSamples,
-                bucketedTo: RecorderWaveformAdapter.popoverBarCount
-            )
-        )
+        RecorderWaveformDisplay(telemetry: telemetry)
         .frame(height: WorkspaceStyle.waveformHeight)
         .padding(StudioSpacing.md)
         .background(WorkspaceStyle.panel, in: RoundedRectangle(cornerRadius: StudioRadius.card))

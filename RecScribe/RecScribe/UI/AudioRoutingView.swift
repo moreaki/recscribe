@@ -597,8 +597,8 @@ struct CaptureHealthView: View {
                         .controlSize(.small)
                     }
                 }
-                ForEach(telemetry.sourceHealth) { source in
-                    let status = source.health.status(at: telemetry.healthTime)
+                ForEach(telemetry.detailSources) { source in
+                    let status = source.health.status(at: telemetry.detailTime)
                     VStack(alignment: .leading, spacing: StudioSpacing.xs) {
                         Text("\(source.name): \(status.label)")
                             .foregroundStyle([.noData, .stalled, .writeStalled, .failed].contains(status) ? Color.orange : Color.secondary)

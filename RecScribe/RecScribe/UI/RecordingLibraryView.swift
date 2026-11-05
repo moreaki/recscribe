@@ -14,8 +14,7 @@ struct RecordingLibraryView: View {
     @State private var deletionRequest: RecordingDeletionRequest?
     @State private var result: RecordingDeletionResult?
     @State private var details = Set<URL>()
-    @State private var renameEntry: SessionEntry?
-    @State private var title = ""
+    @State private var renamingID: URL?
     var embeddedInStudio = false
     var onOpenStudio: (() -> Void)? = nil
 
@@ -93,14 +92,7 @@ struct RecordingLibraryView: View {
                 selectionAnchor = nil
             }
         }
-        .alert("Rename recording", isPresented: Binding(get: { renameEntry != nil }, set: { if !$0 { renameEntry = nil } })) {
-            TextField("Recording title", text: $title)
-            Button("Cancel", role: .cancel) { renameEntry = nil }
-            Button("Save") {
-                if let entry = renameEntry { Task { await library.rename(entry, title: title) } }
-                renameEntry = nil
-            }
-        }
+
     }
 
     private var header: some View {
@@ -152,7 +144,11 @@ struct RecordingLibraryView: View {
             .toggleStyle(.checkbox).labelsHidden().frame(width: 20)
             .accessibilityLabel("Select \(entry.displayTitle)")
             VStack(alignment: .leading, spacing: 5) {
-                Text(entry.displayTitle).font(.headline).lineLimit(2).help(entry.displayTitle)
+                SessionTitleView(entry: entry, library: library, titleLineLimit: 2,
+                    renameRequested: Binding(get: { renamingID == entry.id }, set: { requested in
+                        if requested { renamingID = entry.id }
+                        else if renamingID == entry.id { renamingID = nil }
+                    }))
                 ViewThatFits(in: .horizontal) {
                     HStack { timestamp(entry); status(entry) }
                     VStack(alignment: .leading, spacing: 2) { timestamp(entry); status(entry) }
@@ -189,7 +185,7 @@ struct RecordingLibraryView: View {
 
     private func rowMenu(_ entry: SessionEntry) -> some View {
         Menu {
-            Button("Rename…", systemImage: "pencil") { title = entry.session.title ?? entry.filenameStem; renameEntry = entry }
+            Button("Rename…", systemImage: "pencil") { renamingID = entry.id }
             if entry.session.title != nil {
                 Button("Reset title", systemImage: "arrow.counterclockwise") { Task { await library.rename(entry, title: "") } }
             }
@@ -417,6 +413,9 @@ struct SessionTitleView: View {
     @Bindable var library: SessionLibrary
     var allowsEditing = true
     var onRenamed: (SessionEntry) -> Void = { _ in }
+    var titleLineLimit = 1
+    var renameRequested: Binding<Bool>? = nil
+    @FocusState private var titleFocused: Bool
     @State private var editing = false
     @State private var saving = false
     @State private var title = ""
@@ -425,19 +424,36 @@ struct SessionTitleView: View {
         HStack {
             if editing {
                 TextField("Recording title", text: $title).textFieldStyle(.roundedBorder).onSubmit(save)
+                    .focused($titleFocused).defaultFocus($titleFocused, true)
+                    .task { await Task.yield(); titleFocused = true }
+                    .onExitCommand { finishEditing() }
                     .disabled(!allowsEditing)
                 Button("Save", action: save).disabled(!allowsEditing || !library.canDeleteRecording)
-                Button("Cancel") { editing = false }
+                Button("Cancel", action: finishEditing)
             } else {
-                Text(entry.displayTitle).font(.headline).lineLimit(1).truncationMode(.middle).help(entry.displayTitle)
-                Button {
-                    title = entry.session.title ?? entry.filenameStem
-                    editing = true
-                } label: { Image(systemName: "pencil") }
-                .buttonStyle(.plain).accessibilityLabel("Rename recording")
+                Text(entry.displayTitle).font(.headline).lineLimit(titleLineLimit).truncationMode(.middle).help(entry.displayTitle)
+                Button(action: beginEditing) { Image(systemName: "pencil") }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .help("Rename recording").accessibilityLabel("Rename recording")
                 .disabled(!allowsEditing || !library.canDeleteRecording)
             }
         }.controlSize(.small).disabled(saving)
+        .onChange(of: renameRequested?.wrappedValue) { _, requested in
+            if requested == true, !editing { beginEditing() }
+        }
+    }
+
+    private func beginEditing() {
+        guard allowsEditing, library.canDeleteRecording, !saving else { return }
+        title = entry.displayTitle
+        editing = true
+        renameRequested?.wrappedValue = true
+    }
+
+    private func finishEditing() {
+        editing = false
+        titleFocused = false
+        renameRequested?.wrappedValue = false
     }
 
     private func save() {
@@ -447,7 +463,7 @@ struct SessionTitleView: View {
             defer { saving = false }
             if let updated = await library.rename(entry, title: title) {
                 onRenamed(updated)
-                editing = false
+                finishEditing()
             }
         }
     }

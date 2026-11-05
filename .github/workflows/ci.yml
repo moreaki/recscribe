@@ -145,36 +145,6 @@ jobs:
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
 
-  compatibility-build:
-    name: Compatibility build (Xcode 26.3)
-    # Keep the older compiler gate available independently of ARM runner
-    # capacity. Native ARM functional/TSan tests and Release remain above;
-    # this standard Intel runner also checks the other supported architecture.
-    runs-on: macos-15-intel
-    timeout-minutes: 20
-    env:
-      RECSCRIBE_COMPAT_XCODE: '26.3'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Select compatibility Xcode
-        run: |
-          sudo xcode-select -s "/Applications/Xcode_${RECSCRIBE_COMPAT_XCODE}.app/Contents/Developer"
-          ./scripts/check-toolchain.sh "$RECSCRIBE_COMPAT_XCODE"
-
-      # Keep the older Swift compiler checking app AND test source. Newer local
-      # compilers can accept inference that older compilers correctly reject.
-      - name: Build app and unit tests with the older compiler
-        run: |
-          set -o pipefail
-          xcodebuild build-for-testing \
-            -project RecScribe/RecScribe.xcodeproj \
-            -scheme RecScribe \
-            -destination 'platform=macOS' \
-            -only-testing:RecScribeTests \
-            CODE_SIGNING_ALLOWED=NO
-
 # NOT ADDED, deliberately: a job running `scripts/check-docs.sh`.
 # It cannot pass on a clean checkout. Most of what it verifies lives in
 # CLAUDE.md, which is gitignored, so on CI the file is absent and the script

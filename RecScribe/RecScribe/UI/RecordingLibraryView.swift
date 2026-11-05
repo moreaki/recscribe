@@ -99,7 +99,7 @@ struct RecordingLibraryView: View {
         HStack {
             WorkspaceIcon(symbol: "rectangle.stack.fill", tint: WorkspaceStyle.mint)
             VStack(alignment: .leading) {
-                Text("Your recordings").font(.title2.bold())
+                Text("Your recordings ").font(.title2.bold())
                 Text("Listen, transcribe and make sense of your recordings.").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()

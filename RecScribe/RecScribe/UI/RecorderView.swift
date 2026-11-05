@@ -117,7 +117,16 @@ struct RecorderStatusBar: View {
     @Bindable var telemetry: RecorderTelemetry
 
     var body: some View {
-        StatusBar(state: state, duration: telemetry.formattedDuration, statusText: statusText)
+        if state == .recording {
+            VStack(alignment: .leading, spacing: StudioSpacing.md) {
+                RecorderElapsedDisplay(telemetry: telemetry)
+                Label(statusText, systemImage: "record.circle")
+                    .font(.callout).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            StatusBar(state: state, duration: telemetry.formattedDuration, statusText: statusText)
+        }
     }
 }
 

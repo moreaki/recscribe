@@ -12,6 +12,9 @@ import SwiftUI
     }
     private(set) var interruptedSourceSummary: String?
     private(set) var detailSources: [SourceRecordingHealth] = []
+    /// Only topology/health transitions affect SwiftUI geometry. Numeric detail
+    /// and meter changes repaint native readouts without relaying out the rail.
+    private(set) var layoutSources: [SourceRecordingHealth] = []
     private(set) var detailTime: TimeInterval = 0
     /// Detailed text is diagnostic, not a meter. Keep its expensive text layout
     /// out of the 10 Hz meter/health loop, but publish status changes immediately.
@@ -26,6 +29,7 @@ import SwiftUI
                 || next.health.status(at: healthTime) != old.health.status(at: detailTime)
         }
         guard structuralChange || healthTime < detailTime || healthTime - detailTime >= Self.detailInterval else { return }
+        if structuralChange { layoutSources = sourceHealth }
         detailSources = sourceHealth
         detailTime = healthTime
     }

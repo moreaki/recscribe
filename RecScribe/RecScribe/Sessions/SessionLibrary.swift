@@ -23,6 +23,9 @@ import RecScribeCore
     private(set) var liveWorkActive = false
     private(set) var latestJob: URL?
     private(set) var latestSource: URL?
+    // Studio selection is independent of results arriving from a Live session.
+    private(set) var studioJob: URL?
+    private(set) var studioSource: URL?
     private(set) var previousJob: URL?
     private(set) var busy = false
     var pendingTextRequest: TextProcessingRequest?
@@ -107,9 +110,13 @@ import RecScribeCore
                     }.value
                     try Task.checkCancellation()
                     guard let self else { return }
-                    self.latestSource = source
-                    self.progress = 1
-                    self.latestJob = initialJob
+                    if self.latestJob == nil {
+                        self.latestSource = source
+                        self.progress = 1
+                        self.latestJob = initialJob
+                    }
+                    self.studioJob = initialJob
+                    self.studioSource = source
                 } catch is CancellationError {
                     return
                 } catch {
@@ -153,6 +160,15 @@ import RecScribeCore
 
     func recoverUnfinalizedSessions(in directory: URL) {
         refresh(directory, recoverUnfinalized: !recordingActive)
+    }
+
+    @discardableResult
+    func retryVerification(_ entry: Entry) -> Bool {
+        guard canDeleteRecording else { return false }
+        recoveryAttempts.remove(entry.id)
+        pending.append(.init(manifest: entry.id, recover: entry.needsRecovery, issue: nil))
+        startNext()
+        return true
     }
 
     private func refresh(_ directory: URL, recoverUnfinalized: Bool) {
@@ -264,13 +280,7 @@ import RecScribeCore
         }) else { return }
         pending.removeAll { $0.manifest == entry.id }
         entries.removeAll { $0.id == entry.id }
-        if let latestJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == latestJob.standardizedFileURL.path }) {
-            self.latestJob = nil
-            latestSource = nil
-            progress = 0
-            persistJob(nil, nil)
-        }
-        if let previousJob, trashedJobs.contains(where: { $0.standardizedFileURL.path == previousJob.standardizedFileURL.path }) { self.previousJob = nil }
+        for job in trashedJobs { forgetTranscript(job) }
         operationActivity = trashedJobs.isEmpty ? "Recording moved to Trash; transcripts retained" : "Recording and \(trashedJobs.count) verified transcript jobs moved to Trash"
     }
     func prepareDeletion(_ selected: [Entry], inspectJobs: Bool = true) async -> RecordingDeletionPlan? {
@@ -350,7 +360,6 @@ import RecScribeCore
     func setRecording(_ active: Bool) {
         recordingActive = active
         if active {
-            cancelRestoration()
             pendingRecoveryDirectory = nil
             if activeManifest != nil, cancellation?.isCancelled == false {
                 resumeInterruptedSession = true
@@ -367,7 +376,6 @@ import RecScribeCore
     func setLiveWork(_ active: Bool) {
         liveWorkActive = active
         if active {
-            cancelRestoration()
             // Live ASR preempts optional jobs, never finalized-audio verification.
             if activeManifest == nil {
                 cancellation?.cancel()
@@ -410,7 +418,24 @@ import RecScribeCore
 
     func rememberOpenedTranscript(_ job: URL, source: URL?) {
         cancelRestoration()
+        studioJob = job
+        studioSource = source
         persistJob(job, source)
+    }
+
+    func openRecordingInStudio(_ source: URL) {
+        cancelRestoration()
+        studioJob = latestSource == source && progress == 1 ? latestJob : nil
+        studioSource = source
+        persistJob(studioJob, source)
+    }
+
+    func transcriptLinks(for entries: [Entry]) async throws -> [URL: RecordingTranscriptLink] {
+        guard !recordingActive, !liveWorkActive, !shuttingDown else { throw CancellationError() }
+        let root = jobsDirectory, cancel = WorkCancellation()
+        let worker = Task.detached(priority: .utility) { try TranscriptStorage.recordingLinks(entries, in: root, cancel: cancel) }
+        return try await withTaskCancellationHandler { try await worker.value }
+            onCancel: { cancel.cancel(); worker.cancel() }
     }
 
     func canDeleteTranscript(_ job: URL) -> Bool {
@@ -447,15 +472,18 @@ import RecScribeCore
             progress = 0
         }
         if matches(previousJob) { previousJob = nil }
+        if matches(studioJob) { studioJob = nil; studioSource = nil }
         if matches(rememberedJob) { persistJob(nil, nil) }
         if matches(pendingTextRequest?.transcript.deletingLastPathComponent()) { pendingTextRequest = nil }
     }
     func acceptCloudTranscript(_ job: URL, source: URL) {
-        cancelRestoration()
         previousJob = latestJob; latestJob = job; latestSource = source
         progress = 1
         operationActivity = "Cloud transcript ready · estimated timing, review required"
-        persistJob(job, source)
+        if studioSource == source && studioJob == nil {
+            studioJob = job
+            persistJob(job, source)
+        } else if !restoringTranscript && studioJob == nil && studioSource == nil { persistJob(job, source) }
     }
     func shutdown() async {
         shuttingDown = true
@@ -473,7 +501,7 @@ import RecScribeCore
         guard !shuttingDown, !recordingActive, task == nil, deletionPreviewID == nil else { return }
         guard !pending.isEmpty else {
             if !liveWorkActive, !pendingTranscriptions.isEmpty {
-                transcribe(pendingTranscriptions.removeFirst())
+                transcribe(pendingTranscriptions.removeFirst(), openInStudio: false)
             }
             return
         }
@@ -509,7 +537,7 @@ import RecScribeCore
         }
     }
 
-    func transcribe(_ source: URL, summarize: Bool = false) {
+    func transcribe(_ source: URL, summarize: Bool = false, openInStudio: Bool = true) {
         guard !shuttingDown, !recordingActive, !liveWorkActive, task == nil, deletionPreviewID == nil else { errorMessage = "Wait for capture/background work to finish"; return }
         var settings = settings()
         guard settings.processingLocation != .cloud else {
@@ -527,7 +555,7 @@ import RecScribeCore
         cancellation = token
         errorMessage = nil
         task = Task(priority: .utility) {
-            do { try await runTranscription(source, settings: settings, cancel: token) }
+            do { try await runTranscription(source, settings: settings, cancel: token, openInStudio: openInStudio) }
             catch is CancellationError { operationActivity = "Transcription cancelled; partial job retained" }
             catch { errorMessage = error.localizedDescription; operationActivity = "Transcription failed" }
             task = nil
@@ -536,8 +564,8 @@ import RecScribeCore
         }
     }
 
-    private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation) async throws {
-        cancelRestoration()
+    private func runTranscription(_ source: URL, settings: AppSettings.Values, cancel: WorkCancellation, openInStudio: Bool) async throws {
+        if openInStudio { cancelRestoration() }
         if let issue = settings.verificationIssue {
             Self.logger.error("Transcription preflight rejected model configuration operation=\(cancel.id)")
             throw SessionError.invalid(issue)
@@ -550,6 +578,10 @@ import RecScribeCore
         let job = jobs.appendingPathComponent(cancel.id.uuidString)
         previousJob = latestJob
         latestJob = job
+        if openInStudio || (studioSource == source && studioJob == nil) {
+            studioJob = job
+            studioSource = source
+        }
         operationActivity = "Starting local transcription…"
         progress = 0
         progressMonitor.start(job.appendingPathComponent("manifest.json"), update: { [weak self] value in
@@ -565,13 +597,14 @@ import RecScribeCore
         guard [.completed, .completedWithReview].contains(info.state) else { throw SessionError.invalid("Pipeline exited without a completed transcript") }
         operationActivity = info.state.label
         progress = info.progress
-        persistJob(job, source)
+        if studioJob == job || (!restoringTranscript && studioJob == nil && studioSource == nil) { persistJob(job, source) }
         if settings.aiEnabled && settings.aiProvider == .ollama && (settings.mode != .verbatim || settings.summarize) {
             try cancel.check()
             try await deriveText(from: job.appendingPathComponent("transcript.json"), source: source,
                 output: jobs.appendingPathComponent(UUID().uuidString),
                 options: .init(provider: .ollama, model: settings.ollamaModel, mode: settings.mode.textMode,
-                    targetLanguage: settings.targetLanguage, summarize: settings.summarize), key: nil)
+                    targetLanguage: settings.targetLanguage, summarize: settings.summarize), key: nil,
+                openInStudio: studioJob == job)
         }
     }
 
@@ -610,18 +643,23 @@ import RecScribeCore
                 let jobs = jobsDirectory
                 let job = jobs.appendingPathComponent(token.id.uuidString)
                 try await deriveText(from: request.transcript, source: preview.sourceURL, output: job,
-                                     options: request.options(cloudConsent: cloudConsent), key: key)
+                                     options: request.options(cloudConsent: cloudConsent), key: key,
+                                     openInStudio: studioJob == request.transcript.deletingLastPathComponent())
                 operationActivity = request.isCloud ? "OpenAI text derivative ready · review required" : "Local text derivative ready · review required"
             } catch is CancellationError { operationActivity = "Text processing cancelled; previous transcript retained" }
             catch { errorMessage = error.localizedDescription; operationActivity = "Text processing failed; previous transcript retained" }
         }
     }
 
-    private func deriveText(from transcript: URL, source: URL?, output: URL, options: TextDerivationOptions, key: Data?) async throws {
-        cancelRestoration()
+    private func deriveText(from transcript: URL, source: URL?, output: URL, options: TextDerivationOptions, key: Data?, openInStudio: Bool) async throws {
+        if openInStudio { cancelRestoration() }
         latestSource = source
         previousJob = latestJob
         latestJob = output
+        if openInStudio {
+            studioJob = output
+            studioSource = source
+        }
         progress = 0
         progressMonitor.start(output.appendingPathComponent("manifest.json"), update: { [weak self] snapshot in
             self?.operationActivity = snapshot.displayLabel; self?.progress = snapshot.progress
@@ -633,7 +671,7 @@ import RecScribeCore
         guard [.completed, .completedWithReview].contains(result.state) else { throw SessionError.invalid("Text processing did not complete") }
         progress = result.progress
         operationActivity = result.state.label
-        if let source { persistJob(output, source) }
+        if studioJob == output || (!restoringTranscript && studioJob == nil && studioSource == nil), let source { persistJob(output, source) }
     }
 
     func export(_ manifest: URL, to directory: URL) async throws -> URL {

@@ -1,0 +1,254 @@
+<div id="recscribe-studio-proposal" class="viz-carousel" aria-label="Studio layout proposals">
+  <section data-variant="Focus" aria-label="Focus layout"></section>
+  <section data-variant="Canvas" aria-label="Canvas layout" hidden></section>
+</div>
+<style>
+#recscribe-studio-proposal { color-scheme:light dark; width:100%; }
+#recscribe-studio-proposal .rs-app {
+ --rs-bg:light-dark(#fcfcfb,#151719); --rs-rail:light-dark(#f2f3f1,#1b1e20);
+ --rs-panel:light-dark(#f7f8f6,#1c1f21); --rs-text:light-dark(#252c2b,#e7eae8);
+ --rs-muted:light-dark(#626c68,#a2aca6); --rs-line:light-dark(#e0e5e1,#343b37);
+ --rs-accent:light-dark(#286a56,#9bd2bb); --rs-soft:light-dark(#e6f0e9,#283c33);
+ --rs-warn:light-dark(#85521b,#e6ba81); --rs-wash:light-dark(#f8efdf,#3b3124);
+ --rs-rec:light-dark(#b83e46,#f39196); --rs-inverse:light-dark(#fff,#14271f);
+ --rs-body-size:16px; --rs-measure:660px;
+ background:var(--rs-bg); color:var(--rs-text); border:1px solid var(--rs-line); border-radius:12px;
+ font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; overflow:clip; min-height:770px;
+}
+#recscribe-studio-proposal .rs-app * { box-sizing:border-box; }
+#recscribe-studio-proposal .rs-app [hidden] { display:none!important; }
+#recscribe-studio-proposal .rs-app button,#recscribe-studio-proposal .rs-app input,#recscribe-studio-proposal .rs-app select { font:inherit; color:inherit; }
+#recscribe-studio-proposal .rs-app button { display:inline-flex; align-items:center; justify-content:center; gap:7px; border:1px solid transparent; background:transparent; border-radius:6px; min-height:32px; padding:5px 10px; white-space:normal; text-align:left; }
+#recscribe-studio-proposal .rs-app button:hover { background:var(--rs-rail); }
+#recscribe-studio-proposal .rs-app button:disabled { opacity:.5; }
+#recscribe-studio-proposal .rs-app button:focus-visible,#recscribe-studio-proposal .rs-app input:focus-visible,#recscribe-studio-proposal .rs-app select:focus-visible { outline:2px solid var(--rs-accent); outline-offset:3px; }
+#recscribe-studio-proposal .rs-app .rs-primary { background:var(--rs-accent); color:var(--rs-inverse); border-color:var(--rs-accent); }
+#recscribe-studio-proposal .rs-app .rs-primary:hover { filter:brightness(1.08); }
+#recscribe-studio-proposal .rs-app .rs-secondary { background:var(--rs-bg); border-color:var(--rs-line); }
+#recscribe-studio-proposal .rs-app .rs-rec-button { background:var(--rs-rec); color:light-dark(#fff,#301014); }
+#recscribe-studio-proposal .rs-app .rs-small { font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-muted { color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-eyebrow { font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-between { justify-content:space-between; }
+#recscribe-studio-proposal .rs-app .rs-stack { display:flex; flex-direction:column; gap:14px; }
+#recscribe-studio-proposal .rs-app .rs-strong { font-weight:600; }
+#recscribe-studio-proposal .rs-app h1,#recscribe-studio-proposal .rs-app h2,#recscribe-studio-proposal .rs-app h3,#recscribe-studio-proposal .rs-app p { margin:0; }
+#recscribe-studio-proposal .rs-app h1 { font-size:23px; line-height:1.25; letter-spacing:-.025em; font-weight:600; }
+#recscribe-studio-proposal .rs-app h2 { font-size:20px; line-height:1.3; font-weight:600; letter-spacing:-.02em; }
+#recscribe-studio-proposal .rs-app h3 { font-size:14px; font-weight:600; }
+#recscribe-studio-proposal .rs-app .rs-chrome { min-height:47px; display:flex; align-items:center; gap:18px; padding:8px 16px; border-bottom:1px solid var(--rs-line); background:var(--rs-rail); }
+#recscribe-studio-proposal .rs-app .rs-lights { display:flex; gap:6px; }
+#recscribe-studio-proposal .rs-app .rs-lights span { width:10px; height:10px; border-radius:50%; background:var(--rs-line); }
+#recscribe-studio-proposal .rs-app .rs-brand { font-weight:600; letter-spacing:-.02em; }
+#recscribe-studio-proposal .rs-app .rs-proposal { margin-left:auto; color:var(--rs-muted); font-size:11px; }
+#recscribe-studio-proposal .rs-app .rs-shell { display:grid; grid-template-columns:165px minmax(0,1fr); min-height:721px; }
+#recscribe-studio-proposal .rs-app .rs-nav { padding:24px 10px 16px; background:var(--rs-rail); border-right:1px solid var(--rs-line); display:flex; flex-direction:column; gap:5px; }
+#recscribe-studio-proposal .rs-app .rs-nav .rs-eyebrow { margin:0 10px 8px; }
+#recscribe-studio-proposal .rs-app .rs-nav button { justify-content:flex-start; padding:8px 10px; }
+#recscribe-studio-proposal .rs-app .rs-nav button[aria-current=page] { background:var(--rs-soft); color:var(--rs-accent); }
+#recscribe-studio-proposal .rs-app .rs-nav .rs-nav-icon { width:18px; display:inline-flex; justify-content:center; }
+#recscribe-studio-proposal .rs-app .rs-nav .rs-nav-copy { display:flex; flex-direction:column; }
+#recscribe-studio-proposal .rs-app .rs-nav small { font-size:11px; color:var(--rs-muted); font-weight:400; }
+#recscribe-studio-proposal .rs-app .rs-nav-gap { height:19px; }
+#recscribe-studio-proposal .rs-app .rs-nav-bottom { margin-top:auto; padding-top:60px; display:flex; flex-direction:column; }
+#recscribe-studio-proposal .rs-app .rs-main { min-width:0; display:flex; flex-direction:column; }
+#recscribe-studio-proposal .rs-app .rs-context { padding:13px 24px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; border-bottom:1px solid var(--rs-line); color:var(--rs-muted); font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-header { padding:24px 28px 0; }
+#recscribe-studio-proposal .rs-app .rs-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-header .rs-subtitle { margin-top:6px; color:var(--rs-muted); font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-actions { display:flex; gap:5px; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-review-button { border-color:var(--rs-line); }
+#recscribe-studio-proposal .rs-app .rs-count { min-width:19px; height:19px; border-radius:5px; background:var(--rs-wash); color:var(--rs-warn); text-align:center; font-size:11px; line-height:19px; }
+#recscribe-studio-proposal .rs-app .rs-tabs { display:flex; gap:22px; border-bottom:1px solid var(--rs-line); margin-top:20px; }
+#recscribe-studio-proposal .rs-app .rs-tabs button { border-radius:0; padding:8px 0 12px; color:var(--rs-muted); border-bottom:2px solid transparent; }
+#recscribe-studio-proposal .rs-app .rs-tabs button[aria-selected=true] { border-bottom-color:var(--rs-accent); color:var(--rs-text); font-weight:600; }
+#recscribe-studio-proposal .rs-app .rs-doc-layout { display:grid; grid-template-columns:minmax(0,1fr); flex:1; }
+#recscribe-studio-proposal .rs-app.rs-has-inspector:not(.rs-canvas) .rs-doc-layout { grid-template-columns:minmax(0,1fr) 280px; }
+#recscribe-studio-proposal .rs-app .rs-document { min-width:0; padding:16px 28px 30px; }
+#recscribe-studio-proposal .rs-app .rs-view-tools { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:24px; font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-view-tools button { padding:4px 0; color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-copy { max-width:var(--rs-measure); margin:auto; }
+#recscribe-studio-proposal .rs-app .rs-paragraph { display:grid; grid-template-columns:43px minmax(0,1fr); column-gap:16px; padding:10px 0 16px; }
+#recscribe-studio-proposal .rs-app .rs-time { color:var(--rs-muted); font-size:11px; font-variant-numeric:tabular-nums; align-self:start; padding:3px 0; min-height:26px; }
+#recscribe-studio-proposal .rs-app .rs-words { font-size:var(--rs-body-size); line-height:1.75; letter-spacing:-.012em; }
+#recscribe-studio-proposal .rs-app .rs-source-cue { margin-top:6px; color:var(--rs-warn); padding:0 5px; min-height:25px; font-size:11px; background:var(--rs-wash); }
+#recscribe-studio-proposal .rs-app .rs-selected-words { background:var(--rs-soft); border-radius:5px; padding:5px 9px; margin:-5px -9px; }
+#recscribe-studio-proposal .rs-app .rs-inspector { min-width:0; background:var(--rs-panel); border-left:1px solid var(--rs-line); padding:18px; }
+#recscribe-studio-proposal .rs-app .rs-inspector p { overflow-wrap:anywhere; }
+#recscribe-studio-proposal .rs-app .rs-inspector-head { margin-bottom:20px; }
+#recscribe-studio-proposal .rs-app .rs-issue-nav { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:16px 0; }
+#recscribe-studio-proposal .rs-app .rs-issue-nav button { border-color:var(--rs-line); min-height:28px; padding:3px 8px; }
+#recscribe-studio-proposal .rs-app .rs-source { padding:12px; background:var(--rs-bg); border:1px solid var(--rs-line); border-radius:7px; margin-top:10px; }
+#recscribe-studio-proposal .rs-app .rs-source p { margin-top:5px; font-size:13px; line-height:1.6; }
+#recscribe-studio-proposal .rs-app .rs-note { margin-top:17px; font-size:12px; color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-warning { padding:12px; background:var(--rs-wash); color:var(--rs-warn); border-radius:7px; }
+#recscribe-studio-proposal .rs-app .rs-rule { border:0; border-top:1px solid var(--rs-line); margin:18px 0; }
+#recscribe-studio-proposal .rs-app dl { display:grid; grid-template-columns:1fr; gap:4px; margin:0; }
+#recscribe-studio-proposal .rs-app dt { color:var(--rs-muted); font-size:11px; margin-top:8px; }
+#recscribe-studio-proposal .rs-app dd { margin:0; font-size:12px; overflow-wrap:anywhere; }
+#recscribe-studio-proposal .rs-app details { font-size:12px; margin-top:15px; }
+#recscribe-studio-proposal .rs-app details pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; }
+#recscribe-studio-proposal .rs-app .rs-player { padding:14px 28px; border-top:1px solid var(--rs-line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:var(--rs-panel); }
+#recscribe-studio-proposal .rs-app .rs-player input { flex:1; min-width:80px; accent-color:var(--rs-accent); }
+#recscribe-studio-proposal .rs-app .rs-player button { border:1px solid var(--rs-line); }
+#recscribe-studio-proposal .rs-app .rs-footer { padding:9px 28px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-live-banner { background:var(--rs-wash); color:var(--rs-text); padding:8px 18px; display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-dot { display:inline-block; width:7px; height:7px; background:var(--rs-rec); border-radius:50%; margin-right:6px; }
+#recscribe-studio-proposal .rs-app .rs-live-body { padding:36px; flex:1; }
+#recscribe-studio-proposal .rs-app .rs-live-stage { max-width:620px; margin:10px auto; }
+#recscribe-studio-proposal .rs-app .rs-live-hero { padding:18px 0 28px; }
+#recscribe-studio-proposal .rs-app .rs-live-hero h1 { font-size:28px; margin:10px 0; }
+#recscribe-studio-proposal .rs-app .rs-live-hero p { max-width:450px; color:var(--rs-muted); }
+#recscribe-studio-proposal .rs-app .rs-setup { padding:18px 0; border-top:1px solid var(--rs-line); display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-setup p { color:var(--rs-muted); font-size:12px; margin-top:3px; }
+#recscribe-studio-proposal .rs-app .rs-live-timer { font-size:32px; font-variant-numeric:tabular-nums; font-weight:400; margin:12px 0; }
+#recscribe-studio-proposal .rs-app .rs-live-text { border-top:1px solid var(--rs-line); margin-top:24px; padding-top:22px; }
+#recscribe-studio-proposal .rs-app .rs-live-text .rs-words { margin-top:14px; }
+#recscribe-studio-proposal .rs-app .rs-toggle { display:flex; align-items:center; gap:9px; }
+#recscribe-studio-proposal .rs-app .rs-toggle input { width:17px; height:17px; accent-color:var(--rs-accent); }
+#recscribe-studio-proposal .rs-app .rs-summary { padding-top:15px; }
+#recscribe-studio-proposal .rs-app .rs-summary p { font-size:var(--rs-body-size); line-height:1.8; margin:12px 0; }
+#recscribe-studio-proposal .rs-app .rs-summary .rs-source-link { color:var(--rs-accent); padding:0; min-height:26px; font-size:12px; }
+#recscribe-studio-proposal .rs-app .rs-menu { padding:12px 28px; border-bottom:1px solid var(--rs-line); background:var(--rs-panel); display:flex; gap:8px; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-menu button { border-color:var(--rs-line); background:var(--rs-bg); }
+#recscribe-studio-proposal .rs-app .rs-status { font-size:12px; color:var(--rs-accent); padding:0 28px 10px; }
+#recscribe-studio-proposal .rs-app .rs-list { margin-top:24px; }
+#recscribe-studio-proposal .rs-app .rs-list-item { border-top:1px solid var(--rs-line); padding:16px 0; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+#recscribe-studio-proposal .rs-app .rs-app-input { background:var(--rs-bg); border:1px solid var(--rs-line); border-radius:5px; padding:6px 8px; max-width:100%; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-shell { display:flex; flex-direction:column; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav { flex-direction:row; flex-wrap:wrap; padding:8px 20px; border-right:0; border-bottom:1px solid var(--rs-line); gap:12px; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav .rs-eyebrow,#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav small,#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav-gap { display:none; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav-bottom { margin:0 0 0 auto; padding:0; flex-direction:row; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-main { flex:1; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-header { padding-left:40px; padding-right:40px; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-doc-layout { display:flex; flex-direction:column; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-inspector { border:1px solid var(--rs-line); margin:0 40px 22px; border-radius:8px; }
+#recscribe-studio-proposal .rs-app.rs-canvas .rs-inspector .rs-source-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:950px) {
+ #recscribe-studio-proposal .rs-app .rs-shell { grid-template-columns:140px minmax(0,1fr); }
+ #recscribe-studio-proposal .rs-app.rs-has-inspector:not(.rs-canvas) .rs-doc-layout { grid-template-columns:1fr; }
+ #recscribe-studio-proposal .rs-app:not(.rs-canvas) .rs-inspector { border-left:0; border-top:1px solid var(--rs-line); }
+ #recscribe-studio-proposal .rs-app .rs-inspector .rs-source-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+}
+@media(max-width:620px) {
+ #recscribe-studio-proposal .rs-app { min-height:900px; }
+ #recscribe-studio-proposal .rs-app .rs-shell { display:flex; flex-direction:column; }
+ #recscribe-studio-proposal .rs-app .rs-nav,#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav { flex-direction:row; flex-wrap:wrap; gap:2px; padding:8px; border-right:0; border-bottom:1px solid var(--rs-line); }
+ #recscribe-studio-proposal .rs-app .rs-nav .rs-eyebrow,#recscribe-studio-proposal .rs-app .rs-nav small,#recscribe-studio-proposal .rs-app .rs-nav-gap { display:none; }
+ #recscribe-studio-proposal .rs-app .rs-nav-bottom,#recscribe-studio-proposal .rs-app.rs-canvas .rs-nav-bottom { padding:0; margin:0; flex-direction:row; }
+ #recscribe-studio-proposal .rs-app .rs-nav button { padding:6px 8px; }
+ #recscribe-studio-proposal .rs-app .rs-context { padding:10px 15px; }
+ #recscribe-studio-proposal .rs-app .rs-header,#recscribe-studio-proposal .rs-app.rs-canvas .rs-header { padding:20px 16px 0; }
+ #recscribe-studio-proposal .rs-app .rs-document { padding:16px; }
+ #recscribe-studio-proposal .rs-app .rs-paragraph { grid-template-columns:36px minmax(0,1fr); gap:10px; }
+ #recscribe-studio-proposal .rs-app .rs-player { padding:12px 16px; }
+ #recscribe-studio-proposal .rs-app .rs-footer { padding:10px 16px; }
+ #recscribe-studio-proposal .rs-app .rs-live-body { padding:24px 18px; }
+ #recscribe-studio-proposal .rs-app .rs-inspector .rs-source-grid,#recscribe-studio-proposal .rs-app.rs-canvas .rs-inspector .rs-source-grid { grid-template-columns:1fr; }
+ #recscribe-studio-proposal .rs-app.rs-canvas .rs-inspector { margin:0 16px 20px; }
+ #recscribe-studio-proposal .rs-app .rs-chrome { gap:12px; padding:10px 12px; }
+ #recscribe-studio-proposal .rs-app .rs-lights { display:none; }
+}
+@media(pointer:coarse) { #recscribe-studio-proposal .rs-app button { min-height:44px; } }
+</style>
+<script>
+(() => {
+ const root=document.getElementById('recscribe-studio-proposal');
+ const saved=globalThis.openai?.widgetState?.privateContent;
+ const demos=[];
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const text=[
+  [17,"Again, let’s talk about the priorities for the coming weeks."],
+  [22,"Hi, yes. Maya Chen from Northline."],
+  [24,"What changes can local communities expect from the new programme?"],
+  [31,"They can expect a team that continues to listen and work alongside them."],
+  [39,"We’ll share the next steps after the community meeting on Thursday."]
+ ];
+ const clock=v=>`${Math.floor(v/60).toString().padStart(2,'0')}:${Math.floor(v%60).toString().padStart(2,'0')}`;
+ function persist(){if(globalThis.openai?.setWidgetState)globalThis.openai.setWidgetState({modelContent:{layouts:['Focus','Canvas'],recommendation:'Focus',workspaces:['Studio','Live']},privateContent:Object.fromEntries(demos.map(d=>[d.name,d.state]))}).catch(()=>{});}
+ for (const [index,section] of [...root.children].entries()) {
+  const name=section.dataset.variant;
+  const state={mode:'studio',tab:'transcript',inspector:null,issue:0,checked:[],showChecked:false,channels:false,position:22,playing:false,follow:false,session:'ready',liveText:true,menu:null,notice:'',title:'Community interview',rename:false,newStudio:false,...(saved?.[name]||{})};
+  const app=document.createElement('div');app.className='rs-app '+(index?'rs-canvas':'');app.setAttribute('aria-label',name+' RecScribe proposal');section.append(app);
+  const design={readingSize:16,readingWidth:660};
+  const d={name,state,app,design,render:null};demos.push(d);
+  const b=(label,action,cls='',attrs='')=>`<button type="button" class="cursor-interaction ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
+  function nav(){return `<nav class="rs-nav" aria-label="Workspaces"><div class="rs-eyebrow">Workspace</div>${[['studio','▤','Studio','Saved recordings'],['live','≋','Live','New session']].map(([id,icon,title,sub])=>b(`<span class="rs-nav-icon" aria-hidden="true">${icon}</span><span class="rs-nav-copy">${title}<small>${sub}</small></span>`,id,'',state.mode===id?'aria-current="page"':'')).join('')}<div class="rs-nav-gap"></div>${b('<span class="rs-nav-icon" aria-hidden="true">▱</span>Recordings','recordings','',state.mode==='recordings'?'aria-current="page"':'')}<div class="rs-nav-bottom">${b('Audio routing','routing')}${b('Settings','settings')}<span class="rs-small rs-muted" style="padding:12px 10px 0">Design proposal</span></div></nav>`;}
+  function inspector(){
+   if(!state.inspector)return '';
+   const head=(title,sub)=>`<div class="rs-inspector-head"><div class="rs-row rs-between"><h3>${title}</h3>${b('Close','close','rs-small','aria-label="Close inspector"')}</div><p class="rs-muted rs-small">${sub}</p></div>`;
+   if(state.inspector==='details')return `<aside class="rs-inspector" aria-label="Recording details">${head('Recording details','Source and processing history')}<dl><dt>Recording</dt><dd>5 November 2026 · 04:58</dd><dt>Duration · channels</dt><dd>1 min 3 sec · 2 channels</dd><dt>File</dt><dd>community-interview.wav</dd><dt>Transcription</dt><dd>Whisper large-v3-turbo · English</dd><dt>Processing history</dt><dd>Audio transcribed on this Mac</dd><dt>Text processing</dt><dd>Translation requested · not run</dd></dl><hr class="rs-rule">${b('Show source file','reveal','rs-secondary')}${b('Processing settings','settings','rs-small')}<details><summary>Technical details</summary><pre>Channel 1 · seg-000012\nChannel 2 · seg-000011\nconfidence_unavailable\ntranslate_processor_not_configured</pre></details><p class="rs-note">Original audio and recognition results are preserved.</p></aside>`;
+   const count=2-state.checked.length;
+   const checked=state.checked.includes(state.issue);
+   const content=state.issue===0?`<div class="rs-row rs-between"><span class="rs-eyebrow">Source comparison</span><span class="rs-small rs-muted">00:22–00:24</span></div><h3 style="margin-top:8px">Matching words, different timing</h3><p class="rs-small rs-muted" style="margin-top:7px">Two channels contain this passage. Listen to compare; both original segments remain available.</p>${b('▷ Listen to passage','listen','rs-secondary','style="margin-top:12px" '+(state.session==='recording'?'disabled':''))}<div class="rs-source-grid"><div class="rs-source"><div class="rs-row rs-between"><span class="rs-strong rs-small">Channel 1</span><span class="rs-small rs-muted">22.180–24.320</span></div><p>Hi, yes. Maya Chen from Northline.</p></div><div class="rs-source"><div class="rs-row rs-between"><span class="rs-strong rs-small">Channel 2</span><span class="rs-small rs-muted">22.160–24.320</span></div><p>Hi, yes. Maya Chen from Northline.</p></div></div><p class="rs-note">Confidence scores weren’t provided by this recognizer. This does not mean the words are incorrect.</p>`:`<span class="rs-eyebrow">Processing note · whole recording</span><h3 style="margin-top:8px">Translation was not run</h3><p class="rs-small rs-muted" style="margin-top:9px">No translation processor was configured. The original recognized text is available.</p><div style="margin-top:16px">${b('Set up translation…','settings','rs-secondary')}</div><p class="rs-note">Choose a provider before retrying. Any cloud transfer still requires its own approval.</p>`;
+   return `<aside class="rs-inspector" aria-label="Review inspector">${head('Review',`${count} ${count===1?'item':'items'} to check · originals preserved`)}<div class="rs-issue-nav">${b('‹','previous','','aria-label="Previous review item"')}<span class="rs-small">${state.issue+1} of 2</span>${b('›','next','','aria-label="Next review item"')}</div>${content}<hr class="rs-rule"><div class="rs-row">${b(checked?'Reopen item':'Mark checked',checked?'reopen':'check',checked?'rs-secondary':'rs-primary')}${b('Show all items','all-items','rs-small')}</div><p class="rs-note">“Checked” records your review. It does not change source text or certify accuracy.</p>${state.showChecked?`<div class="rs-list">${[0,1].map((id)=>b(`${state.checked.includes(id)?'✓ Checked':'○ To check'} · ${id===0?'Source comparison':'Translation not run'}`,'item-'+id,'rs-small')).join('')}</div>`:''}</aside>`;
+  }
+  function paragraphs(){return text.map(([t,words],i)=>`<div class="rs-paragraph" data-passage="${i}">${b(clock(t),'seek-'+t,'rs-time',`aria-label="Seek to ${clock(t)}"`)}<div><p class="rs-words ${state.inspector==='review'&&state.issue===0&&i===1?'rs-selected-words':''}">${words}</p>${i===1?b(`${state.checked.includes(0)?'✓ Checked':'ⓘ Check sources'} · 2 channels`,'review-source','rs-source-cue'):''}${state.channels?`<div class="rs-source-grid"><div class="rs-source"><span class="rs-small rs-muted">Channel 1 · original</span><p>${words}</p></div><div class="rs-source"><span class="rs-small rs-muted">Channel 2 · original</span><p>${words}</p></div></div>`:''}</div></div>`).join('');}
+  function studio(){
+   if(state.newStudio)return `<div class="rs-context"><span>Studio / Saved recording</span>${b('Change recording…','recordings','rs-small')}</div><header class="rs-header"><h1>${esc(state.title)}</h1><p class="rs-subtitle">Today · 0:42 · Saved locally</p></header><div class="rs-live-body"><div class="rs-live-stage"><h2>Create a final transcript</h2><p class="rs-note">The live draft is provisional. Process the complete saved recording to work with a final transcript and source-linked summaries.</p><div class="rs-row" style="margin-top:24px">${b('Create final transcript','create-final','rs-primary',state.session==='recording'?'disabled':'')}${b('Processing settings…','settings','rs-secondary')}</div><p class="rs-note">Original audio and the live draft are preserved. Any cloud processing requires approval.</p></div></div><footer class="rs-footer">Saved recording · Final transcription has not run</footer>`;
+   const count=2-state.checked.length;
+   return `<div class="rs-context"><span>Studio <span aria-hidden="true">/</span> Saved recording</span>${b('Change recording…','recordings','rs-small')}</div><header class="rs-header"><div class="rs-title-row"><div><div class="rs-row">${state.rename?`<label class="rs-small">Recording title <input class="rs-app-input" data-input="title" value="${esc(state.title)}"></label>${b('Save','save-title','rs-secondary')}`:`<h1>${esc(state.title)}</h1>${b('✎','rename','','aria-label="Rename recording"')}`}</div><p class="rs-subtitle">5 Nov 2026 · 1:03 · English · 2 channels</p></div><div class="rs-actions">${b(`Review <span class="rs-count">${count}</span>`,'review','rs-review-button',`aria-expanded="${state.inspector==='review'}"`)}${b('Details','details','',`aria-expanded="${state.inspector==='details'}"`)}${b('Export ▾','export','rs-secondary',`aria-expanded="${state.menu==='export'}"`)}</div></div><div class="rs-tabs" role="tablist" aria-label="Document">${b('Transcript','transcript','',`role="tab" id="rs-${index}-transcript" aria-controls="rs-${index}-document" aria-selected="${state.tab==='transcript'}"`)}${b('Summary','summary','',`role="tab" id="rs-${index}-summary" aria-controls="rs-${index}-document" aria-selected="${state.tab==='summary'}"`)}</div></header>${state.menu?`<div class="rs-menu" aria-label="${state.menu==='export'?'Export options':'Processing options'}">${state.menu==='export'?b('Copy plain text','copy-plain')+b('Copy Markdown','copy-markdown')+b('Share…','share'):b('Transcribe again…','retry','',state.session==='recording'?'disabled':'')+b('Improve text…','improve','',state.session==='recording'?'disabled':'')+b('Processing settings…','settings')} ${b('Close','close-menu')}</div>`:''}<div class="rs-doc-layout"><article class="rs-document" id="rs-${index}-document" role="tabpanel" aria-labelledby="rs-${index}-${state.tab}"><div class="rs-view-tools"><div>${state.tab==='transcript'?b(`${state.channels?'All channels':'Reading'} ▾`,'channels','',`aria-pressed="${state.channels}"`):'<span class="rs-muted">Draft summary · source linked</span>'}</div>${b('Process ▾','process','',`aria-expanded="${state.menu==='process'}"`)}</div>${state.session==='recording'?'<div class="rs-warning rs-small" style="margin-bottom:16px">Processing is unavailable while recording. You can continue reading.</div>':''}<div class="rs-copy">${state.tab==='transcript'?paragraphs():`<div class="rs-summary"><h2>Community priorities</h2><p>The interview focuses on upcoming priorities and how the new programme will support local communities.</p>${b('Source · 00:17–00:31','summary-source','rs-source-link')}<h3 style="margin-top:26px">Next steps</h3><p>The team will share an update after Thursday’s community meeting.</p>${b('Source · 00:39','summary-last-source','rs-source-link')}<p class="rs-note">A summary is a derived draft. Check its linked passages before sharing.</p></div>`}</div></article>${inspector()}</div><div class="rs-player" aria-label="Recording playback">${b(state.playing?'Ⅱ Pause':'▷ Play','play','rs-secondary',state.session==='recording'?'disabled':'')}<span class="rs-small" style="font-variant-numeric:tabular-nums">${clock(state.position)}</span><input aria-label="Playback position" data-input="position" type="range" min="0" max="63" value="${state.position}" ${state.session==='recording'?'disabled':''}><span class="rs-small rs-muted">01:03</span>${b(state.follow?'Following audio':'Follow audio','follow','rs-small',`aria-pressed="${state.follow}"`)}</div><footer class="rs-footer"><span>Transcribed locally · ${count?count+(count===1?' item to check':' items to check'):'All review items checked'}</span><span>Originals preserved</span></footer>`;
+  }
+  function live(){
+   const active=state.session==='recording',done=state.session==='saved';
+   return `<div class="rs-context"><span>Live <span aria-hidden="true">/</span> ${done?'Completed session':'New session'}</span><span>Separate from your Studio recording</span></div><div class="rs-live-body"><div class="rs-live-stage"><div class="rs-live-hero"><span class="rs-eyebrow">${active?'Recording in progress':done?'Saved to Recordings':'Your next conversation'}</span><h1>${active?'New session · Today':done?'Recording saved':'Start a new session'}</h1><p>${active?'Audio is being saved. Live text is a provisional draft.':done?'Your audio is safe. Open this recording in Studio to create its final transcript.':'Record a conversation and optionally follow its live text. Your current Studio recording stays where you left it.'}</p></div>${active||done?`<div class="rs-row rs-between"><div><div class="rs-live-timer">00:42</div><span class="rs-small rs-muted">${done?'Saved locally':'Recording · audio saved locally'}</span></div>${active?b('■ Stop recording','stop','rs-rec-button'):b('Open in Studio →','finish','rs-primary')}</div>`:`<div class="rs-setup"><div><h3>Audio sources</h3><p>Microphone + system audio</p></div>${b('Configure…','routing','rs-secondary')}</div>`}${!active&&!done?`<div class="rs-setup"><div><h3>Live transcription</h3><p>Provisional text while you record · Whisper on this Mac</p></div><label class="rs-toggle"><input type="checkbox" data-input="liveText" ${state.liveText?'checked':''}>${state.liveText?'On':'Off'}</label></div><div class="rs-setup"><span class="rs-small rs-muted">A new recording will be saved locally.</span>${b('● Start recording','start','rs-rec-button')}</div>`:''}${active?`<section class="rs-live-text"><div class="rs-row rs-between"><h3>${state.liveText?'Live draft':'Live transcription is off'}</h3><span class="rs-small rs-muted">${state.liveText?'May change · local processing':''}</span></div>${state.liveText?'<p class="rs-words">Let’s begin with the next steps for the launch. We’ll review the schedule together.</p><p class="rs-note">Listening… New text appears as chunks finish.</p>':'<p class="rs-note">Audio recording continues. You can create a transcript after stopping.</p>'}</section>`:''}${done?`<div class="rs-setup" style="margin-top:25px"><div><h3>Choose what comes next</h3><p>Continue in Studio, or begin another independent session.</p></div>${b('New session','new-session','rs-secondary')}</div>`:''}<p class="rs-note">${done?'The live draft stays provisional; final transcription is an explicit Studio action.':'Switching workspaces or closing Studio does not stop recording.'}</p></div></div>`;
+  }
+  function auxiliary(){
+   if(state.mode==='recordings')return `<div class="rs-context">Recordings / Choose a saved recording</div><div class="rs-live-body"><h1>Recordings</h1><p class="rs-note">Open a recording to work with its transcript in Studio.</p><div class="rs-list">${[state.title,'Team planning','Research notes'].map((title,i)=>`<div class="rs-list-item"><div><h3>${esc(title)}</h3><p class="rs-small rs-muted">${i?'4 Nov 2026 · 12:40':'5 Nov 2026 · 1:03'} · Saved locally</p></div>${b('Open in Studio','open-'+i,'rs-secondary')}</div>`).join('')}</div></div>`;
+   return `<div class="rs-context">${state.mode==='routing'?'Audio routing / Sources for new sessions':'Settings / Processing'}</div><div class="rs-live-body"><h1>${state.mode==='routing'?'Audio routing':'Processing settings'}</h1><p class="rs-note">${state.mode==='routing'?'Source setup is shared with Live. Existing capture guards still apply.':'Provider setup belongs here. Returning to Studio retains your recording and review position.'}</p><div class="rs-list">${state.mode==='routing'?'<div class="rs-list-item"><div><h3>Microphone + system audio</h3><p class="rs-small rs-muted">Synthetic sources · no devices accessed by this proposal</p></div></div>':'<div class="rs-list-item"><div><h3>Translation processor</h3><p class="rs-small rs-muted">Not configured · original text remains available</p></div><label class="rs-small">Provider <select class="rs-app-input" data-input="provider"><option>Choose a provider…</option><option>Local Ollama</option><option>OpenAI · approval required</option></select></label></div>'}</div><p class="rs-note">This screen only demonstrates the navigation handoff.</p><div style="margin-top:24px">${b('← Return to '+(state.returnMode==='live'?'Live':'Studio'),'return','rs-secondary')}</div></div>`;
+  }
+  d.render=function(){app.classList.toggle('rs-has-inspector',!!state.inspector&&state.mode==='studio');app.style.setProperty('--rs-body-size',design.readingSize+'px');app.style.setProperty('--rs-measure',design.readingWidth+'px');app.innerHTML=`<div class="rs-chrome"><div class="rs-lights" aria-hidden="true"><span></span><span></span><span></span></div><span class="rs-brand">RecScribe</span><span class="rs-proposal">${name} · ${index?'document first':'recommended'} · Interactive proposal</span></div><div class="rs-shell">${nav()}<main class="rs-main">${state.session==='recording'&&state.mode!=='live'?`<div class="rs-live-banner"><span><span class="rs-dot"></span>Recording · New session · 00:42</span><div class="rs-row">${b('Stop','global-stop','rs-small')}${b('Show Live →','live','rs-small')}</div></div>`:''}${state.mode==='studio'?studio():state.mode==='live'?live():auxiliary()}<div class="rs-status" role="status" aria-live="polite">${esc(state.notice)}</div></main></div>`;};
+  app.addEventListener('click',event=>{
+   const trigger=event.target.closest('[data-action]');if(!trigger||trigger.disabled)return;
+   const a=trigger.dataset.action;state.notice='';
+   if(['studio','live','recordings'].includes(a)){state.mode=a;state.menu=null;}
+   else if(['settings','routing'].includes(a)){state.returnMode=state.mode;state.mode=a;}
+   else if(a==='return'){state.mode=state.returnMode||'studio';}
+   else if(a==='review'||a==='review-source'){state.inspector=state.inspector==='review'&&a==='review'?null:'review';state.inspectorTrigger=a;if(a==='review-source')state.issue=0;}
+   else if(a==='details'){state.inspector=state.inspector==='details'?null:'details';state.inspectorTrigger=a;}
+   else if(a==='close')state.inspector=null;
+   else if(a==='previous'||a==='next')state.issue=1-state.issue;
+   else if(a.startsWith('item-'))state.issue=Number(a.slice(5));
+   else if(a==='check'){if(!state.checked.includes(state.issue))state.checked.push(state.issue);state.notice='Review saved in this demo. Original source text is unchanged.';}
+   else if(a==='reopen')state.checked=state.checked.filter(id=>id!==state.issue);
+   else if(a==='all-items')state.showChecked=!state.showChecked;
+   else if(a==='summary'||a==='transcript')state.tab=a;
+   else if(a==='channels')state.channels=!state.channels;
+   else if(a==='play')state.playing=!state.playing;
+   else if(a==='follow')state.follow=!state.follow;
+   else if(a.startsWith('seek-')){state.position=Number(a.slice(5));state.notice='Playback positioned at '+clock(state.position)+' · simulated audio';}
+   else if(a==='listen'){state.position=22;state.playing=true;state.notice='Playing 00:22–00:24 · simulated audio';}
+   else if(a==='summary-source'||a==='summary-last-source'){state.tab='transcript';state.position=a==='summary-source'?17:39;state.notice='Showing linked transcript passage at '+clock(state.position);}
+   else if(a==='export'||a==='process')state.menu=state.menu===a?null:a;
+   else if(a==='close-menu')state.menu=null;
+   else if(a==='rename')state.rename=true;
+   else if(a==='save-title'){state.title=app.querySelector('[data-input=title]').value.trim()||'Untitled recording';state.rename=false;}
+   else if(a==='start'){state.session='recording';state.playing=false;}
+   else if(a==='stop')state.session='saved';
+   else if(a==='global-stop'){state.session='saved';state.notice='Live recording saved. Studio selection retained.';}
+   else if(a==='finish'){state.title='New session · Today';state.mode='studio';state.inspector=null;state.tab='transcript';state.newStudio=true;state.notice='Saved session opened. Final transcription has not run.';}
+   else if(a==='new-session')state.session='ready';
+   else if(a.startsWith('open-')){state.mode='studio';state.newStudio=false;state.title=['Community interview','Team planning','Research notes'][Number(a.slice(5))];state.notice='Sample recording opened in Studio.';}
+   else if(a==='create-final'){state.newStudio=false;state.checked=[];state.notice='Synthetic final transcript created for layout review. No audio was processed.';}
+   else if(a==='copy-plain'||a==='copy-markdown'){state.notice='Copy '+(a==='copy-plain'?'plain text':'Markdown')+' selected · simulated export';state.menu=null;}
+   else if(a==='share'){state.notice='Share current '+state.tab+' · simulated system share sheet';state.menu=null;}
+   else if(a==='retry'||a==='improve'){state.notice=(a==='retry'?'Transcription':'Text processing')+' setup opens here, with source/version and any cloud approval before running. Demo only.';state.menu=null;}
+   else if(a==='reveal')state.notice='Show source file in Finder · simulated; no local recording is opened.';
+   d.render();persist();
+   let focusTarget;
+   if(['review','review-source','details'].includes(a)&&state.inspector)focusTarget=app.querySelector('[data-action=close]');
+   if(a==='close')focusTarget=app.querySelector(`[data-action="${state.inspectorTrigger||'review'}"]`);
+   if(a==='rename')focusTarget=app.querySelector('[data-input=title]');
+   if(a==='check')focusTarget=app.querySelector('[data-action=reopen]');
+   if(a==='stop')focusTarget=app.querySelector('[data-action=finish]');
+   focusTarget?.focus({preventScroll:true});
+  });
+  app.addEventListener('change',event=>{const kind=event.target.dataset.input;if(kind==='position')state.position=Number(event.target.value);if(kind==='liveText')state.liveText=event.target.checked;if(kind==='provider')state.notice='Provider choice demonstrated. No settings saved and no cloud request sent.';if(kind!=='title'){d.render();persist();}});
+  app.addEventListener('keydown',event=>{if(event.key==='Escape'){state.menu=null;state.inspector=null;state.rename=false;d.render();app.querySelector(`[data-action="${state.inspectorTrigger||'review'}"]`)?.focus();persist();}if(['ArrowLeft','ArrowRight'].includes(event.key)&&event.target.getAttribute('role')==='tab'){event.preventDefault();state.tab=state.tab==='transcript'?'summary':'transcript';d.render();app.querySelector(`[data-action=${state.tab}]`)?.focus();persist();}});
+  d.render();
+  if(globalThis.Tweak){const tweak=new Tweak({container:app,onChange:()=>d.render()});tweak.addSlider(design,'readingSize',{label:'Reading size',min:15,max:20,step:1,unit:'px'});tweak.addSlider(design,'readingWidth',{label:'Reading width',min:500,max:740,step:20,unit:'px'});}
+ }
+ globalThis.addEventListener('openai:set_globals',event=>{const next=event.detail?.globals?.widgetState?.privateContent;if(!next)return;for(const d of demos)if(next[d.name]){Object.assign(d.state,next[d.name]);d.render();}});
+})();
+</script>

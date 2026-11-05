@@ -12,6 +12,8 @@ nonisolated enum LiveAudioReader {
         let sampleRate: Int
         let channels: Int
         let identicalChannels: Bool
+        var mixedSourceChannels: Int? = nil
+        var mixFallbackChannel: Int? = nil
     }
     private struct Part {
         let handle: FileHandle
@@ -20,14 +22,15 @@ nonisolated enum LiveAudioReader {
     }
 
     static func copy(manifest: URL, cursor: Int64, seconds: Int, overlapSeconds: Int,
-                     finished: Bool, to destination: URL, cancel: WorkCancellation) throws -> Slice? {
+                     finished: Bool, to destination: URL, mixToMono: Bool = false,
+                     cancel: WorkCancellation) throws -> Slice? {
         guard cursor >= 0, LiveTranscriptionPolicy.chunkChoices.contains(seconds),
               overlapSeconds >= 0, overlapSeconds < seconds else {
             throw SessionError.invalid("Invalid live audio window")
         }
         return try snapshot(manifest: manifest, finished: finished, cancel: cancel) { session, parts, available in
             try copy(session: session, parts: parts, available: available, cursor: cursor, seconds: seconds,
-                     overlapSeconds: overlapSeconds, finished: finished, to: destination, cancel: cancel)
+                     overlapSeconds: overlapSeconds, finished: finished, to: destination, mixToMono: mixToMono, cancel: cancel)
         }
     }
 
@@ -76,48 +79,86 @@ nonisolated enum LiveAudioReader {
 
     private static func copy(session: RecordingSession, parts: [Part], available: Int64, cursor: Int64,
                              seconds: Int, overlapSeconds: Int, finished: Bool, to destination: URL,
-                             cancel: WorkCancellation) throws -> Slice? {
+                             mixToMono: Bool, cancel: WorkCancellation) throws -> Slice? {
         let frameBytes = session.channels * PCM16WAV.sampleBytes
         let wanted = Int64(seconds * session.sampleRate)
         guard available > cursor, finished || available - cursor >= wanted else { return nil }
         let end = min(available, cursor + wanted)
         let start = max(0, cursor - Int64(overlapSeconds * session.sampleRate))
-        let header = try PCM16WAV(sampleRate: Double(session.sampleRate), channels: session.channels,
-                                 payloadBytes: UInt64(end - start) * UInt64(frameBytes))
+        let outputChannels = mixToMono ? 1 : session.channels
+        let header = try PCM16WAV(sampleRate: Double(session.sampleRate), channels: outputChannels,
+                                 payloadBytes: UInt64(end - start) * UInt64(outputChannels * PCM16WAV.sampleBytes))
         let fd = Darwin.open(destination.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
         guard fd >= 0 else { throw WAVWriterError.fileCreationFailed }
         let output = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? output.close() }
         try output.write(contentsOf: header.header)
         var identical = true
+        var energies = [Double](repeating: 0, count: session.channels)
+        var monoHasSignal = false
+        var fallback: Int?
         let blockBytes = PCM16WAV.copyBlockBytes / frameBytes * frameBytes
-        for part in parts {
-            let from = max(start, part.start), to = min(end, part.start + part.frames)
-            guard to > from else { continue }
-            try part.handle.seek(toOffset: UInt64(PCM16WAV.headerBytes) + UInt64(from - part.start) * UInt64(frameBytes))
-            var remaining = Int(to - from) * frameBytes
-            while remaining > 0 {
-                try cancel.check()
-                let count = min(remaining, blockBytes)
-                guard let bytes = try part.handle.read(upToCount: count), bytes.count == count else {
-                    throw SessionError.invalid("Live audio changed while preparing a chunk")
-                }
-                if identical && session.channels > 1 {
-                    identical = bytes.withUnsafeBytes { raw in
-                        let values = raw.bindMemory(to: Int16.self)
-                        for frame in stride(from: 0, to: values.count, by: session.channels) {
-                            for channel in 1..<session.channels where values[frame] != values[frame + channel] { return false }
-                        }
-                        return true
+        func writeWindow(selecting selected: Int? = nil) throws {
+            for part in parts {
+                let from = max(start, part.start), to = min(end, part.start + part.frames)
+                guard to > from else { continue }
+                try part.handle.seek(toOffset: UInt64(PCM16WAV.headerBytes) + UInt64(from - part.start) * UInt64(frameBytes))
+                var remaining = Int(to - from) * frameBytes
+                while remaining > 0 {
+                    try cancel.check()
+                    let count = min(remaining, blockBytes)
+                    guard let bytes = try part.handle.read(upToCount: count), bytes.count == count else {
+                        throw SessionError.invalid("Live audio changed while preparing a chunk")
                     }
+                    if !mixToMono && identical && session.channels > 1 {
+                        identical = bytes.withUnsafeBytes { raw in
+                            let values = raw.bindMemory(to: Int16.self)
+                            for frame in stride(from: 0, to: values.count, by: session.channels) {
+                                for channel in 1..<session.channels where values[frame] != values[frame + channel] { return false }
+                            }
+                            return true
+                        }
+                    }
+                    if mixToMono {
+                        var mono = Data(count: bytes.count / session.channels)
+                        mono.withUnsafeMutableBytes { target in
+                            bytes.withUnsafeBytes { raw in
+                                for frame in 0..<(bytes.count / frameBytes) {
+                                    var sum = 0
+                                    for channel in 0..<session.channels {
+                                        let sample = Int(Int16(littleEndian: raw.loadUnaligned(
+                                            fromByteOffset: frame * frameBytes + channel * 2, as: Int16.self)))
+                                        if selected == nil { energies[channel] += Double(sample) * Double(sample) }
+                                        if selected == nil || selected == channel { sum += sample }
+                                    }
+                                    let sample = Int16(selected == nil ? sum / session.channels : sum)
+                                    monoHasSignal = monoHasSignal || sample != 0
+                                    target.storeBytes(of: sample.littleEndian, toByteOffset: frame * 2, as: Int16.self)
+                                }
+                            }
+                        }
+                        try output.write(contentsOf: mono)
+                    } else { try output.write(contentsOf: bytes) }
+                    remaining -= bytes.count
                 }
-                try output.write(contentsOf: bytes)
-                remaining -= bytes.count
             }
+        }
+        try writeWindow()
+        // Exactly opposing channels must not turn recorded speech into digital
+        // silence. Re-read only this bounded window and replace our unpublished
+        // working payload with its strongest channel; originals stay read-only.
+        if mixToMono, !monoHasSignal, let strongest = energies.indices.reduce(nil as Int?, { best, index in
+            guard let best else { return index }
+            return energies[index] > energies[best] ? index : best
+        }), energies[strongest] > 0 {
+            fallback = strongest
+            try output.seek(toOffset: UInt64(PCM16WAV.headerBytes))
+            try writeWindow(selecting: strongest)
         }
         try output.close()
         try cancel.check()
         return Slice(file: destination, startFrame: start, endFrame: end, availableFrames: available,
-                     sampleRate: session.sampleRate, channels: session.channels, identicalChannels: identical)
+                     sampleRate: session.sampleRate, channels: outputChannels, identicalChannels: mixToMono || identical,
+                     mixedSourceChannels: mixToMono ? session.channels : nil, mixFallbackChannel: fallback)
     }
 }

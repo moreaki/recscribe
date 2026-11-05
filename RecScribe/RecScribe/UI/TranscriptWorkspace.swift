@@ -55,7 +55,7 @@ struct LiveTranscriptView: View {
                         ForEach(live.segments) { segment in
                             VStack(alignment: .leading, spacing: StudioSpacing.sm) {
                                 MarkdownReadingText(text: segment.text)
-                                let timing = "\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · channel \(segment.channel + 1) · \(segment.language ?? "undetected")"
+                                let timing = "\(live.isCloudDraft ? "≈ " : "")\(Duration.seconds(segment.startSeconds).formatted(.time(pattern: .hourMinuteSecond))) · \(segment.channelLabel) · \(segment.language ?? "undetected")"
                                 if let onSeek {
                                     Button(timing) {
                                         if let seconds = segment.seekTarget(recording: recording, sourceAvailable: sourceAvailable) { onSeek(seconds) }
@@ -93,7 +93,7 @@ struct LiveTranscriptView: View {
                 }.font(.caption).foregroundStyle(.secondary)
                 Text(live.isCloudDraft
                      ? "Cloud audio requires this activation’s approval. Raw events remain on this Mac. Times describe uploaded windows, not aligned words; speakers and languages are unverified. Transcript becomes available after recording stops."
-                     : "Bounded recent preview. Complete raw chunk results stay on this Mac. Word boundaries, silence and language switches need review; this is not the final transcript.")
+                     : "Live text uses one mix; original recording tracks stay separate. Complete raw chunk results stay on this Mac. Word boundaries, silence and language switches need review; this is not the final transcript.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }

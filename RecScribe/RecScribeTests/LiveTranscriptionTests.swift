@@ -71,6 +71,147 @@ struct LiveTranscriptionTests {
         }
     }
 
+    @Test func monoPreviewMixPreservesMultipartTimelineAndOriginalBytes() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let writer = try recording(root)
+        let manifest = try #require(writer.manifestURL)
+        let session = try RecordingSession.read(manifest)
+        let originals = [manifest] + session.parts.map { root.appendingPathComponent($0.path) }
+        let hashes = try originals.map { try RecordingSession.hash($0) }
+        let first = try #require(try LiveAudioReader.copy(manifest: manifest, cursor: 0, seconds: 20, overlapSeconds: 1,
+            finished: false, to: root.appendingPathComponent("mix.wav"), mixToMono: true, cancel: WorkCancellation()))
+        #expect(first.channels == 1 && first.mixedSourceChannels == 2 && first.mixFallbackChannel == nil)
+        #expect(first.startFrame == 0 && first.endFrame == 160_000 && first.availableFrames == 176_000)
+        #expect(try originals.map { try RecordingSession.hash($0) } == hashes)
+        #expect(try LiveAudioReader.copy(manifest: manifest, cursor: first.endFrame, seconds: 20, overlapSeconds: 1,
+            finished: false, to: root.appendingPathComponent("waiting.wav"), mixToMono: true, cancel: WorkCancellation()) == nil)
+        try writer.finalize()
+        let tail = try #require(try LiveAudioReader.copy(manifest: manifest, cursor: first.endFrame, seconds: 20, overlapSeconds: 1,
+            finished: true, to: root.appendingPathComponent("tail.wav"), mixToMono: true, cancel: WorkCancellation()))
+        #expect(tail.startFrame == 152_000 && tail.endFrame == 176_000)
+        let input = try session.parts.reduce(into: Data()) { bytes, part in
+            bytes.append(try Data(contentsOf: root.appendingPathComponent(part.path)).dropFirst(PCM16WAV.headerBytes))
+        }
+        // Independent integer oracle over the original interleaved payload.
+        var expected = Data()
+        for offset in stride(from: 0, to: input.count, by: 4) {
+            let left = Int(Int16(bitPattern: UInt16(input[offset]) | UInt16(input[offset + 1]) << 8))
+            let right = Int(Int16(bitPattern: UInt16(input[offset + 2]) | UInt16(input[offset + 3]) << 8))
+            let value = UInt16(bitPattern: Int16((left + right) / 2))
+            expected.append(UInt8(truncatingIfNeeded: value)); expected.append(UInt8(truncatingIfNeeded: value >> 8))
+        }
+        #expect(try Data(contentsOf: first.file).dropFirst(PCM16WAV.headerBytes) == expected.prefix(160_000 * 2))
+        #expect(try Data(contentsOf: tail.file).dropFirst(PCM16WAV.headerBytes) == expected.suffix(24_000 * 2))
+    }
+
+    @Test(arguments: [1, 2, 4])
+    func monoPreviewIncludesEveryInputWithoutClipping(channels: Int) throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let buffer = SampleBufferFixtures.makePCMBuffer(channels: channels, frames: 8_000, sampleRate: 8_000,
+                                                        interleaved: false) { channel, frame in
+            // Each input is the only speaker in its own interval, then all peak together.
+            frame >= 6_000 || frame * channels / 6_000 == channel ? 0.75 : 0
+        }
+        let writer = SessionWAVWriter()
+        try writer.createFile(at: root.appendingPathComponent("original.wav"), sampleRate: 8_000, channels: channels)
+        try writer.writeBuffer(buffer); try writer.finalize()
+        let manifest = try #require(writer.manifestURL)
+        let source = try #require(writer.audioURL)
+        let hash = try RecordingSession.hash(source)
+        let slice = try #require(try LiveAudioReader.copy(manifest: manifest, cursor: 0, seconds: 10, overlapSeconds: 1,
+            finished: true, to: root.appendingPathComponent("mono.wav"), mixToMono: true, cancel: WorkCancellation()))
+        let audio = try AVAudioFile(forReading: slice.file)
+        let actual = try #require(AVAudioPCMBuffer(pcmFormat: audio.processingFormat, frameCapacity: 8_000))
+        try audio.read(into: actual)
+        #expect(audio.fileFormat.channelCount == 1 && audio.length == 8_000)
+        #expect(slice.mixedSourceChannels == channels && slice.mixFallbackChannel == nil)
+        var maximumError: Float = 0
+        for frame in 0..<8_000 {
+            let expected: Float = frame >= 6_000 ? 0.75 : 0.75 / Float(channels)
+            maximumError = max(maximumError, abs(actual.floatChannelData![0][frame] - expected))
+        }
+        #expect(maximumError < 0.0001)
+        #expect(try RecordingSession.hash(source) == hash)
+    }
+
+    @Test func opposingStereoDoesNotBecomeSilentLiveText() throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 2))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 8_000))
+        buffer.frameLength = buffer.frameCapacity
+        for frame in 0..<8_000 {
+            let value: Float = frame % 2 == 0 ? 0.5 : -0.5
+            buffer.floatChannelData![0][frame] = value; buffer.floatChannelData![1][frame] = -value
+        }
+        let writer = SessionWAVWriter()
+        try writer.createFile(at: root.appendingPathComponent("opposing.wav"), sampleRate: 8_000, channels: 2)
+        try writer.writeBuffer(buffer); try writer.finalize()
+        let source = try #require(writer.audioURL), manifest = try #require(writer.manifestURL)
+        let before = try RecordingSession.hash(source)
+        let slice = try #require(try LiveAudioReader.copy(manifest: manifest, cursor: 0, seconds: 10, overlapSeconds: 1,
+            finished: true, to: root.appendingPathComponent("mono.wav"), mixToMono: true, cancel: WorkCancellation()))
+        #expect(slice.mixFallbackChannel == 0)
+        let original = Data(try Data(contentsOf: source).dropFirst(PCM16WAV.headerBytes))
+        let mixed = try Data(contentsOf: slice.file).dropFirst(PCM16WAV.headerBytes)
+        #expect(Array(mixed) == stride(from: 0, to: original.count, by: 4).flatMap { [original[$0], original[$0 + 1]] })
+        #expect(try RecordingSession.hash(source) == before)
+    }
+
+    @Test func distinctStereoLaunchesOnlyOneLiveASRAndRetainsEvidence() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let writer = try recording(root, seconds: 1, identical: true)
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 2))
+        let frame = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1))
+        frame.frameLength = 1
+        frame.floatChannelData![0][0] = 0; frame.floatChannelData![1][0] = 0.25
+        try writer.writeBuffer(frame)
+        try writer.finalize()
+        let manifest = try #require(writer.manifestURL), source = try #require(writer.audioURL)
+        let priorRaw = root.appendingPathComponent("old.raw.json")
+        try Data("previous raw transcript".utf8).write(to: priorRaw)
+        let protected = [source, manifest, priorRaw]
+        let hashes = try protected.map { try RecordingSession.hash($0) }
+        let binary = root.appendingPathComponent("whisper-cli")
+        let script = #"""
+        #!/bin/sh
+        while [ "$#" -gt 0 ]; do
+          if [ "$1" = "-of" ]; then shift; prefix="$1"; fi
+          shift
+        done
+        printf 'run\n' >> "$(dirname "$0")/calls.txt"
+        printf '%s\n' '{"result":{"language":"en"},"transcription":[{"offsets":{"from":0,"to":800},"text":"one live text"}]}' > "$prefix.json"
+        """#
+        try Data(script.utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: binary.path)
+        var settings = AppSettings.Values()
+        settings.whisperPath = binary.path; settings.modelPath = source.path
+        let configured = settings
+        let result = try await Task.detached(priority: .utility) {
+            try LiveWhisperTranscriber.step(manifest: manifest, directory: root.appendingPathComponent("draft"),
+                cursor: 0, finished: true, settings: configured, cancel: WorkCancellation())
+        }.value
+        let chunk = try #require(result)
+        #expect(chunk.asrRuns == 1 && chunk.mixedSourceChannels == 2 && chunk.mixFallbackChannel == nil)
+        #expect(chunk.segments.map(\.text) == ["one live text"])
+        #expect(chunk.segments.first?.channelLabel == "Live mix")
+        #expect(try String(contentsOf: root.appendingPathComponent("calls.txt"), encoding: .utf8) == "run\n")
+        let raw = chunk.directory.appendingPathComponent("channel-0.raw.json")
+        #expect(FileManager.default.fileExists(atPath: raw.path))
+        #expect(!FileManager.default.fileExists(atPath: chunk.directory.appendingPathComponent("working.wav").path))
+        #expect(!FileManager.default.fileExists(atPath: chunk.directory.appendingPathComponent("channel-0.wav").path))
+        let saved = try JSONDecoder().decode(LiveChunkResult.self, from: Data(contentsOf: chunk.directory.appendingPathComponent("chunk.json")))
+        #expect(saved.mixedSourceChannels == 2 && saved.segments == chunk.segments)
+        settings.whisperPath = "/usr/bin/false"
+        let failing = settings
+        await #expect(throws: (any Error).self) {
+            try await Task.detached(priority: .utility) {
+                try LiveWhisperTranscriber.step(manifest: manifest, directory: root.appendingPathComponent("failed"),
+                    cursor: 0, finished: true, settings: failing, cancel: WorkCancellation())
+            }.value
+        }
+        #expect(try protected.map { try RecordingSession.hash($0) } == hashes)
+    }
+
     @Test func missingReplacedAndGappedPartsFailClosed() throws {
         let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
         let writer = try recording(root, seconds: 1); try writer.finalize()
@@ -223,6 +364,7 @@ struct LiveTranscriptionTests {
         let bytes = Data(#"{"id":"00000000-0000-0000-0000-000000000001","startSeconds":1,"endSeconds":2,"channel":0,"text":"speech"}"#.utf8)
         let segment = try JSONDecoder().decode(LiveSegment.self, from: bytes)
         #expect(segment.timingIssue == nil)
+        #expect(segment.mixedSourceChannels == nil && segment.channelLabel == "channel 1")
         #expect(segment.text == "speech")
     }
 
@@ -473,6 +615,7 @@ struct LiveTranscriptionTests {
         let data = try JSONEncoder().encode(old)
         let decoded = try JSONDecoder().decode(LiveChunkResult.self, from: data)
         #expect(decoded.asrRuns == nil)
+        #expect(decoded.mixedSourceChannels == nil && decoded.mixFallbackChannel == nil)
         #expect(!LiveChunkTiming(wallSeconds: decoded.durationSeconds, audioSeconds: 20,
                                 asrRuns: decoded.asrRuns).label.contains("silence"))
     }

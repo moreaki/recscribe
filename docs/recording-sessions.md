@@ -160,7 +160,10 @@ Missing/corrupt parts produce review reasons and gaps, never fabricated segments
 Stereo channels are compared for exact bit identity during streaming inspection;
 identical windows can share recognition, while distinct regions retain their own
 channel and source times. There is **no automatic mono downmix or speaker identity
-inference**.
+inference** in final jobs. The optional local live preview uses one disposable
+mono mix and one recognition pass per window, labelled **Live mix**, while
+preserving every original track and previous raw transcript. See
+[live transcription reliability](live-transcription-reliability.md#local-live-preview-one-derived-mix-2026-11-05).
 
 The native CLI's separate `derive --provider ollama --model NAME` action enables
 local text processing. `verbatim` keeps
@@ -238,7 +241,7 @@ without a separately authorized local model.
   Swift-native normalization, WhisperKit and MLX adapters are not implemented by
   this slice. Auto language detection currently applies per part/channel ASR pass;
   it is not verified code-switch detection. Live auto detection remains per
-  chunk/channel, without locking subsequent chunks to an earlier guess. Explicit
+  mixed local window, without locking subsequent windows to an earlier guess. Explicit
   source-language choices also apply to live chunks (`de-CH` becomes `de`).
   Known non-speech markers do not disable live transcription; malformed local
   recognizer output is retried once at the same cursor before a visible stop.

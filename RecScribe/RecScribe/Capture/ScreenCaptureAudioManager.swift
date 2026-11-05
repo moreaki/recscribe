@@ -414,10 +414,18 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType
     ) {
-        process(sampleBuffer, type: type)
+        if sampleCallback != nil, type == .audio || type == .microphone {
+            guard let clock = stream.synchronizationClock else {
+                rejectPacket("Playback synchronization clock is unavailable; source tracks are preserved", conversion: false)
+                return
+            }
+            process(sampleBuffer, type: type, clock: clock)
+        } else {
+            process(sampleBuffer, type: type)
+        }
     }
 
-    func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType) {
+    func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType, clock: CMClockOrTimebase? = nil) {
         dispatchPrecondition(condition: .onQueue(queue))
         let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
         guard accepting, frameCount > 0, type == .audio || type == .microphone else { return }
@@ -445,7 +453,8 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
             return
         }
         if let callback = sampleCallback {
-            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let presentation = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let timestamp = clock.map { CMSyncConvertTime(presentation, from: $0, to: CMClockGetHostTimeClock()) } ?? presentation
             guard timestamp.isNumeric, timestamp.seconds.isFinite else {
                 rejectPacket("Capture timestamps are invalid; source tracks are preserved", conversion: false)
                 return

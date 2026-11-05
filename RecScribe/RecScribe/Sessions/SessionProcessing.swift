@@ -101,12 +101,20 @@ nonisolated enum SessionProcessing {
                 if !session.issues.contains(message) { session.issues.append(message) }
             }
         }
+        if recover, session.sourceBasedMix == true {
+            do { try SourceMixdown.recover(&session, at: manifest, cancel: cancel) }
+            catch is CancellationError { throw CancellationError() }
+            catch {
+                let message = "Saved mix completion requires review: " + error.localizedDescription
+                if !session.issues.contains(message) { session.issues.append(message) }
+            }
+        }
         session.endedAt = session.endedAt ?? Date()
         session.status = session.verifiedStatus(archiveComplete: false)
         try session.save(manifest)
         if session.options.archiveFormat != .wav, !session.parts.isEmpty, session.parts.allSatisfy({ $0.status == .verified }) {
             var exists = false
-            for artifact in session.artifacts where artifact.format == session.options.archiveFormat {
+            for artifact in session.artifacts where artifact.format == session.options.archiveFormat && artifact.superseded != true {
                 do {
                     let url = try RecordingSession.safeURL(artifact.path, beside: manifest)
                     guard try RecordingSession.hash(url, check: cancel.check) == artifact.sha256 else {

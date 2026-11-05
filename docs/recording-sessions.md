@@ -1,5 +1,51 @@
 # Recording sessions, settings and local processing
 
+## Complete file mixes with independently delivered sources (#89)
+
+Capture sources share a host-clock timeline. ScreenCaptureKit timestamps are
+converted through the stream's synchronization clock; device input retains its
+host timestamps and existing bounded startup/recovery and drift handling.
+Callbacks need not arrive together. No-PCM and silence remain distinct health
+states, and an actually later source retains leading silence.
+
+The one-second ring now serves monitoring/waveforms only. The file mix has an
+independent cursor, reading already-written PCM16 source parts up to their common
+complete prefix. Delayed or missing sources do not prevent healthy capture from
+spooling to disk or require an unbounded PCM backlog in RAM. Stop seals the source
+files and writes the remaining mix blocks. Routing, source/mute/master ramps and
+source-join positions apply at their recorded timeline positions. Gaps, missing
+sources, clipping and end skew still require review. The final mix derives from
+the preserved PCM16 samples; unity-gain comparisons with the direct float mix
+allow up to two PCM16 integer units of quantization difference.
+
+New manifests carry optional `sourceBasedMix` and source `mixStartFrame` fields;
+older recordings remain readable and are not automatically rewritten. Explicit
+recovery verifies/leases sources and atomically publishes a mix continuation.
+A damaged old mix is retained as a superseded WAV artifact while a replacement
+is rendered. Earlier archives are retained but cannot satisfy conversion of the
+completed mix. Cancellation/failed publication preserves original files and the
+primary manifest. Repeating successful recovery never appends the samples twice.
+A hard process kill before publication can leave an unreferenced derived
+continuation for inspection; it cannot replace an original or mark a partial
+primary mix complete.
+
+`SourceMixdown` uses 4096-frame blocks and one open part per source. Admission
+retains its 4-MiB/256-packet bound. File work stays off the main actor; explicit
+recovery uses the existing cancellable utility worker. Ordinary Stop drains
+admitted audio even if its caller is cancelled. A mix-only storage failure also
+drains accepted packets to healthy source files. Logs distinguish admission
+PTS/time, worker processing lag, monitor-only omissions and file-mix completion,
+without audio/transcript content.
+
+`SourceMixdownTests` covers the default-window regression, twenty synthetic
+production-recorder starts, actual later onset, mid-recording skew, multipart
+boundaries, historic automation, multichannel resampling, live joins, three-hour
+virtual clocks, cancellation, failed publication, damaged sources/mixes,
+idempotent recovery and mix-only write failure. Existing startup, no-data,
+disconnect, drift, admission-budget and finalization tests remain in force.
+Synthetic starts/virtual clocks do not establish twenty live hardware takes or
+a three-hour physical-device recording.
+
 ## Implemented boundaries
 
 Capture always writes native 64-bit-process PCM16 WAV, regardless of archival

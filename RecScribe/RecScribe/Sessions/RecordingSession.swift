@@ -93,6 +93,9 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
     var gainScope: String?
     var gainTracks: [CaptureTrack]?
     var sourceIdentity: SourceTrack?
+    /// New captures commit the file mix only from the durable source prefixes.
+    /// Absent on legacy recordings, whose existing mixes are never rewritten.
+    var sourceBasedMix: Bool?
     struct SourceTrack: Codable, Sendable {
         var role: CaptureTrack
         var name: String
@@ -107,6 +110,7 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         var channelRoutes: [InputChannelRoute]?
         var failure: String?
         var channelLabels: [String]?
+        var mixStartFrame: Int64?
     }
 
 
@@ -128,6 +132,8 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         var sizeBytes: Int64
         var verifiedAt = Date()
         var verification: String
+        /// A retained archive of an earlier partial mix cannot satisfy a new conversion.
+        var superseded: Bool?
     }
     var totalFrames: Int64 { parts.last.map { $0.startSample + $0.frames } ?? 0 }
     var duration: Double { Double(totalFrames) / Double(sampleRate) }
@@ -174,6 +180,11 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
         }
         guard schemaVersion < 2 || sourceTracks != nil else { throw SessionError.invalid("Version 2 requires a source track group") }
         if let epoch = captureEpoch, !epoch.isFinite || epoch < 0 { throw SessionError.invalid("Invalid capture clock") }
+        if sourceBasedMix == true {
+            guard sourceTracks != nil, gainAutomation != nil, channels == 2, sampleRate == 48000 else {
+                throw SessionError.invalid("Invalid source-based mix")
+            }
+        }
         if let tracks = sourceTracks {
             guard (2...Self.currentSchemaVersion).contains(schemaVersion), captureEpoch != nil,
                   (1...CaptureTrack.maximumSources).contains(tracks.count), schemaVersion != 2 || tracks.count == 2,
@@ -181,6 +192,7 @@ nonisolated struct RecordingSession: Codable, Identifiable, Sendable {
             var references = Set<String>()
             for track in tracks {
                 guard track.receivedFrames >= 0, track.gapFrames >= 0 else { throw SessionError.invalid("Invalid source frame counts") }
+                guard (track.mixStartFrame ?? 0) >= 0 else { throw SessionError.invalid("Invalid source mix start") }
                 if let channels = track.channels {
                     guard (1...32).contains(channels), track.mixChannels.allSatisfy({ (0..<channels).contains($0) }) else {
                         throw SessionError.invalid("Invalid source channel map")
@@ -336,6 +348,11 @@ nonisolated final class SessionWAVWriter: AudioFileEncoder {
     var startedAt: Date? { session?.startedAt }
     var hasIssues: Bool { session?.issues.isEmpty == false }
     var frameCount: Int64 { session?.totalFrames ?? 0 }
+    var snapshot: RecordingSession? { session }
+    func useSourceBasedMix() throws {
+        session?.sourceBasedMix = true
+        if let manifestURL { try session?.save(manifestURL) }
+    }
     func setGainAutomation(_ events: [GainEvent], scope: String, tracks: [CaptureTrack]? = nil) throws {
         session?.gainTracks = tracks
         session?.gainAutomation = events

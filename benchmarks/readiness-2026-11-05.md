@@ -1,5 +1,13 @@
 # Whisper quality readiness — 2026-11-05
 
+> Historical preparation snapshot: this records the initial dry run and local
+> checks before corpus acquisition. Later on 2026-11-05, a 27-utterance public
+> development pilot completed 810/810 measured cells across all five models.
+> See the [measured pilot baseline](pilot-baseline-2026-11-05.md) for results,
+> current provenance and limitations. The missing inputs, zero-score tables and
+> pending-check statements below describe the earlier snapshot, not the later
+> pilot. Representative v2 coverage and held-out acceptance remain pending.
+
 This is an implementation/readiness report for #103–#108, not a recognition
 quality result. No corpus audio was downloaded, approved or scored. No model
 weights were changed and no candidate was promoted.

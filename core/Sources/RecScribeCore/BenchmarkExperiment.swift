@@ -341,12 +341,8 @@ public enum BenchmarkExperiment {
             report["rows"] = .array(rows)
             report["repeat_summary"] = summarize(rows)
             report["paired_comparisons"] = paired(rows, specifications: plan.comparisons)
-            let scored: [JSONValue] = rows.compactMap { row in
-                guard completed(row), var measurement = row["measurement"].object else { return nil }
-                measurement["configuration_id"] = .string([row["model"].string!, row["profile"].string!, row["language_mode"].string!, row["path"].string!].joined(separator: "/"))
-                return .object(measurement)
-            }
-            report["quality_aggregation"] = TranscriptAccuracy.aggregate(scored)
+            report["quality_aggregation"] = quality(rows)
+            report["quality_aggregation_selection"] = "Successful repeat 1 only; no fallback to later repeats. Repeated inference is not independent corpus data."
             try TextJob.write(report.encoded(), named: "matrix.json", in: output)
             return report
         }
@@ -417,6 +413,15 @@ public enum BenchmarkExperiment {
         row["status"] == "completed" || row["status"] == "completed_with_review"
     }
 
+    static func quality(_ rows: [JSONValue]) -> JSONValue {
+        let scored: [JSONValue] = rows.compactMap { row in
+            guard row["repeat"] == 1, completed(row), var measurement = row["measurement"].object else { return nil }
+            measurement["configuration_id"] = .string([row["model"].string!, row["profile"].string!, row["language_mode"].string!, row["path"].string!].joined(separator: "/"))
+            return .object(measurement)
+        }
+        return TranscriptAccuracy.aggregate(scored)
+    }
+
     static func requireHash(_ url: URL, expected: String, label: String,
                             check: @Sendable () throws -> Void) throws {
         guard try WAVAudio.hash(url, check: check) == expected else {
@@ -483,7 +488,11 @@ public enum BenchmarkExperiment {
         func comparison(_ matches: [JSONValue]?, row: JSONValue, specification: JSONValue) -> JSONValue {
             let intervention = specification["intervention"].string ?? "runtime"
             var comparison: JSONValue = ["identity": .string(identity(row)), "candidate_profile": row["profile"],
+                "id": row["id"], "task": row["task"], "repeat": row["repeat"], "language_mode": row["language_mode"],
+                "path": row["path"], "source_channel": row["source_channel"],
                 "candidate_model": row["model"], "candidate_model_sha256": row["model_sha256"],
+                "baseline_model": specification["baseline_model_id"] == .null ? (row["baseline_model_id"] == .null ? row["model"] : row["baseline_model_id"]) : specification["baseline_model_id"],
+                "baseline_profile": specification["baseline_profile_id"],
                 "comparison_id": specification["id"], "intervention": .string(intervention), "intervention_id": row["intervention_id"],
                 "language": row["language"], "conditions": row["conditions"], "coverage_role": row["coverage_role"],
                 "pairing_contract_version": "model-lineage-v2", "status": "pending_pair"]

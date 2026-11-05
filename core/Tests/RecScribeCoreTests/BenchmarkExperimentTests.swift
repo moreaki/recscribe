@@ -51,6 +51,21 @@ import Testing
         #expect(summaries.first { $0["cell"].string?.contains("/large-v3/") == true }?["wall_seconds_median"] == .null)
     }
 
+    @Test func qualityUsesFirstRepeatWithoutInflatingSamplesOrReplacingFailures() throws {
+        var rows: [JSONValue] = []
+        for repeatIndex in 1...3 {
+            var measurement = TranscriptAccuracy.score(reference: "a b", hypothesis: repeatIndex == 1 ? "a" : "a b", policy: .unicodeV2)
+            measurement["language"] = "fr"; measurement["task"] = "transcription"
+            rows.append(["id": "case", "model": "tiny", "profile": "control", "language_mode": "known", "path": "final",
+                "repeat": .integer(Int64(repeatIndex)), "status": "completed", "measurement": measurement])
+        }
+        let quality = try #require(BenchmarkExperiment.quality(rows).array?.first)
+        #expect(quality["cases"] == 1 && quality["scored_cases"] == 1)
+        #expect(quality["corpus_weighted_wer"].double == 0.5 && quality["reference_words"] == 2)
+        rows[0]["status"] = "failed"
+        #expect(BenchmarkExperiment.quality(rows) == [])
+    }
+
     private func experiment(_ folder: URL, split: String = "development") -> JSONValue {
         ["schema_version": "1.0", "baseline_revision": .string(String(repeating: "a", count: 40)),
          "baseline_cli": nil, "baseline_cli_sha256": nil, "whisper_cli": nil, "split": .string(split),
@@ -293,6 +308,9 @@ import Testing
         changed[1]["measurement"]["reference_sha256"] = "different-observed-reference"
         #expect(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first?["status"] == "pending_pair")
         changed = rows; changed[0]["status"] = "failed"
-        #expect(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first?["status"] == "pending_pair")
+        let pending = try #require(BenchmarkExperiment.paired(changed, specifications: [artifactComparison]).array?.first)
+        #expect(pending["status"] == "pending_pair")
+        #expect(pending["baseline_model"] == rows[0]["model"] && pending["candidate_model"] == rows[1]["model"])
+        #expect(pending["id"] == rows[1]["id"] && pending["repeat"] == rows[1]["repeat"])
     }
 }

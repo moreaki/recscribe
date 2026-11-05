@@ -2,8 +2,9 @@
 
 The checked-in corpus manifest is a preparation template, not measured accuracy.
 It covers Swiss German, German, French, Italian, English, Arabic, Chinese, Spanish
-and Portuguese, plus pending adverse-condition/non-speech cases. Swiss dialect
-transcription and Standard German rendering are separate tasks. Fill a private
+and Portuguese, plus pending adverse-condition/non-speech cases. Swiss German
+speech targets faithful written Standard German; optional dialect spelling is a
+separate task. Fill a private
 copy with local WAV/reference paths, both SHA-256s, reviewed license/consent and
 coverage/grouping metadata. Paths resolve relative to the
 manifest. Nothing is downloaded. Keep actual recordings, references and results
@@ -27,7 +28,8 @@ Missing corpus entries are `pending_corpus`, never zero error. The runner produc
 canonical jobs and records WER, CER, wall time, real-time factor and peak RSS bytes
 using macOS `/usr/bin/time -l`. RSS is a maximum process high-water mark including
 child accounting, not the sum of simultaneous Swift/whisper.cpp/Metal allocations.
-Unified GPU memory and model-load phase require separate instrumentation later.
+Unified GPU memory and first-result latency remain unmeasured. Supported upstream
+model-load timers are reported separately with their scope and retained logs.
 Wall time includes inspection, model load, inference, validation and rendering.
 Engine-pass duration is also recorded. Run each case in a fresh subprocess.
 
@@ -91,3 +93,27 @@ hashes. All checked-in recordings remain pending. See the versioned
 [serial matrix, immutable control and freeze contract](experiment-contract.md).
 Legacy corpus schema/scoring v1 remains readable for compatibility. Use v2 for
 new quality comparisons; do not pool it with historical normalization scores.
+
+The [2026-11-05 measured pilot baseline](pilot-baseline-2026-11-05.md) records
+810 completed inference cells on 27 published-reference development utterances,
+including all five untouched models and all nine languages. It is exploratory
+legacy coverage, with reviewed v2 grouping/native/condition acceptance still
+pending. Accuracy uses repeat 1 only; inference repeats measure variability and
+do not multiply the number of independent speech samples. Chinese whitespace WER
+is not reported. No default model is selected by this pilot.
+
+Generate a text-free summary from a retained matrix into a new protected external
+directory:
+
+```sh
+python3 scripts/work-artifacts.py run --label quality-report logs -- \
+  python3 scripts/quality/report-pilot.py /path/to/retained/matrix \
+  --output "$HOME/Library/Application Support/RecScribe/Benchmarks/NEW-REPORT"
+```
+
+The reporter verifies retained corpus/configuration snapshot hashes and reads
+structured metrics only, without raw reference/hypothesis text, audio or model
+loading. It preserves incomplete/failed denominators and refuses held-out
+reporting by default. `--allow-held-out` requires a matching retained freeze,
+bound snapshots and the predeclared review/budget evidence after candidate
+selection is frozen. See the experiment contract before using that path.

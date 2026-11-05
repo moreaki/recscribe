@@ -103,6 +103,9 @@ pairs require the same model hash; model-edit pairs retain both distinct artifac
 hashes and verify the declared untouched parent plus identical runtime settings.
 Failure/pending cells remain unpaired.
 Three repeats assess variability; they do not establish independent corpus size.
+Quality aggregation uses successful repeat 1 only, with no replacement by a later
+successful repeat. Failed or missing first-repeat cells remain missing quality
+evidence. Timing/variation summaries retain all requested repeats separately.
 Critical-content and language-ID confusion require annotated human ground truth
 and remain unmeasured when unavailable. A `de` recognizer guess does not identify
 Swiss dialect or establish dialect wording fidelity.
@@ -118,6 +121,17 @@ summed/subtracted. End-to-end audio-seconds-per-second is labeled as pipeline
 throughput. First-token/result latency and total unified GPU allocation remain
 unobserved when unavailable. Actual file/download sizes are measured separately;
 incremental bundle bytes stay null until a candidate app bundle is assembled.
+
+Use `scripts/quality/report-pilot.py /protected/matrix --output /protected/NEW-report`
+to summarize retained metrics without recognition, rescoring or reading reference/
+hypothesis text. The reporter verifies the matrix's retained corpus/configuration
+snapshot hashes, preserves per-language/task/model/profile/mode/scorer cohorts,
+reports unique first-repeat denominators, suppresses Chinese whitespace WER, and
+leaves incomplete workload timing unaggregated. JSON retains measured sizes,
+upstream timer scope, process-RSS limits, repeat variation and evidence pointers.
+Old paired rows without complete identity fields are explicitly unavailable for
+aggregation. A held-out report additionally requires explicit `--allow-held-out`
+and verified retained freeze evidence. This does not replace human content review.
 
 ## Freeze and held-out evaluation
 

@@ -1,0 +1,19 @@
+<div id="palette-comparison">
+ <section class="palette-light"><h1>Light</h1><p>Soft surfaces · restrained forest accent</p><div class="palette-rows"></div></section>
+ <section class="palette-dark"><h1>Dark</h1><p>Charcoal surfaces · muted mint accent</p><div class="palette-rows"></div></section>
+</div>
+<style>
+#palette-comparison { display:grid; grid-template-columns:1fr 1fr; font:14px/1.5 -apple-system,BlinkMacSystemFont,sans-serif; }
+#palette-comparison section { padding:32px; }
+#palette-comparison .palette-light { background:#fcfcfb; color:#252c2b; }
+#palette-comparison .palette-dark { background:#151719; color:#e7eae8; }
+#palette-comparison h1 { font-size:24px; margin:0 0 5px; font-weight:600; }
+#palette-comparison p { font-size:12px; margin:0 0 26px; }
+#palette-comparison .palette-row { display:flex; align-items:center; gap:12px; margin-top:13px; }
+#palette-comparison .palette-swatch { height:32px; width:48px; border-radius:5px; }
+#palette-comparison .palette-value { margin-left:auto; font:12px ui-monospace,monospace; }
+</style>
+<script>
+const rows=[['App surface','#fcfcfb','#151719'],['Sidebar','#f2f3f1','#1b1e20'],['Inspector','#f7f8f6','#1c1f21'],['Primary text','#252c2b','#e7eae8'],['Secondary text','#626c68','#a2aca6'],['Accent','#286a56','#9bd2bb'],['Selected surface','#e6f0e9','#283c33'],['Attention text','#85521b','#e6ba81'],['Recording','#b83e46','#f39196']];
+document.querySelectorAll('#palette-comparison .palette-rows').forEach((el,i)=>el.innerHTML=rows.map(r=>`<div class="palette-row"><span class="palette-swatch" style="background:${r[i+1]}"></span><span>${r[0]}</span><span class="palette-value">${r[i+1]}</span></div>`).join(''));
+</script>

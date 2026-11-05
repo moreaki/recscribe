@@ -7,9 +7,17 @@ struct TranscriptReadingView: View {
     private let playbackPosition: Double?
     @Bindable private var playback: SessionPlayback
     var onSeek: ((Double) -> Void)? = nil
+    var onReview: ((String) -> Void)? = nil
+    var checkedReviewGroupIDs: Set<String>
+    @Binding private var selectedGroupID: String?
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
     @State private var followPlayback = true
+    private var externalFollow: Binding<Bool>?
+    private var followsAudio: Bool {
+        get { externalFollow?.wrappedValue ?? followPlayback }
+        nonmutating set { if let externalFollow { externalFollow.wrappedValue = newValue } else { followPlayback = newValue } }
+    }
     enum Mode: String, WorkspaceTab {
         case reading = "Reading", channels = "All channels"
         var symbol: String { self == .reading ? "text.alignleft" : "square.stack.3d.up" }
@@ -20,13 +28,21 @@ struct TranscriptReadingView: View {
         expandedGroups: Set<String> = [],
         playback: SessionPlayback? = nil,
         playbackPosition: Double? = nil,
-        onSeek: ((Double) -> Void)? = nil
+        onSeek: ((Double) -> Void)? = nil,
+        selectedGroupID: Binding<String?> = .constant(nil),
+        onReview: ((String) -> Void)? = nil,
+        followPlayback: Binding<Bool>? = nil,
+        checkedReviewGroupIDs: Set<String> = []
     ) {
         self.document = document
         self.hasPlayback = playback != nil
         self.playbackPosition = playbackPosition
         self._playback = Bindable(wrappedValue: playback ?? SessionPlayback())
         self.onSeek = onSeek
+        self.onReview = onReview
+        self.checkedReviewGroupIDs = checkedReviewGroupIDs
+        self.externalFollow = followPlayback
+        self._selectedGroupID = selectedGroupID
         _mode = State(initialValue: mode)
         _expandedGroups = State(initialValue: expandedGroups)
     }
@@ -58,72 +74,89 @@ struct TranscriptReadingView: View {
         let showFollowControl = playbackPosition != nil || (hasPlayback && (playback.player != nil || playback.isPlaying || playback.position > 0))
         VStack(alignment: .leading, spacing: StudioSpacing.md) {
             HStack {
-                WorkspaceTabs(title: "Transcript presentation", selection: $mode)
-                if showFollowControl {
-                    Spacer()
-                    Button(followPlayback ? "Following audio" : "Follow audio", systemImage: "arrow.down.to.line") {
-                        followPlayback.toggle()
+                Menu {
+                    Picker("Transcript presentation", selection: $mode) {
+                        ForEach(Mode.allCases, id: \.self) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
+                    }
+                } label: { Text(mode.rawValue) }
+                .menuStyle(.borderlessButton).fixedSize().foregroundStyle(.secondary)
+                if showFollowControl && externalFollow == nil {
+                    Button(followsAudio ? "Following audio" : "Follow audio", systemImage: "arrow.down.to.line") {
+                        followsAudio.toggle()
                     }
                     .buttonStyle(.borderless)
                     .font(.caption)
                     .tint(WorkspaceStyle.blue)
                 }
+                Spacer()
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: StudioSpacing.xl) {
+                    LazyVStack(alignment: .leading, spacing: 32) {
                         ForEach(groups) { group in
                             let isActive = currentActiveGroupID == group.id
-                            VStack(alignment: .leading, spacing: StudioSpacing.sm) {
-                                HStack {
-                                    if let startSeconds = group.startSeconds, (onSeek != nil || hasPlayback) {
-                                        Button {
-                                            if hasPlayback {
-                                                playback.seek(to: startSeconds)
-                                            }
-                                            onSeek?(startSeconds)
-                                        } label: {
-                                            Text(group.timing).monospacedDigit().underline()
-                                        }
-                                        .buttonStyle(.plain)
-                                        .foregroundStyle(isActive ? WorkspaceStyle.mint : .secondary)
-                                        .help("Seek audio to \(group.timing)")
-                                    } else {
-                                        Text(group.timing).monospacedDigit()
-                                    }
-                                    Text(group.channels)
-                                    if group.segments.contains(where: \.needsReview) {
-                                        Label("Review", systemImage: "exclamationmark.circle")
-                                    }
-                                }.font(.caption).foregroundStyle(isActive ? WorkspaceStyle.mint : .secondary)
-                                if group.isShared(in: document) {
-                                    MarkdownReadingText(text: document.displayedText(group.segments[0]))
-                                    DisclosureGroup("Sources & review", isExpanded: expansion(group.id)) { sources(group) }
-                                        .font(.caption).foregroundStyle(.secondary)
-                                } else {
-                                    DisclosureGroup("Overlapping channel texts · compare \(group.segments.count) variants", isExpanded: expansion(group.id)) {
-                                        sources(group)
-                                    }.font(.callout).tint(WorkspaceStyle.blue)
-                                }
+                            let isSelected = selectedGroupID == group.id
+                            let first = group.segments[0]
+                            let sameWords = group.segments.allSatisfy {
+                                $0.sourceText == first.sourceText && document.displayedText($0) == document.displayedText(first)
                             }
-                            .padding(isActive ? StudioSpacing.s : 0)
-                            .background(
-                                isActive
-                                    ? RoundedRectangle(cornerRadius: 8).fill(WorkspaceStyle.mint.opacity(0.1))
-                                    : nil
-                            )
+                            HStack(alignment: .top, spacing: 22) {
+                                Group {
+                                    if let start = group.startSeconds, onSeek != nil || hasPlayback {
+                                        Button {
+                                            if let onSeek { onSeek(start) }
+                                            else if hasPlayback { playback.seek(to: start) }
+                                        } label: { Text(Duration.seconds(start).formatted(.time(pattern: .minuteSecond))) }
+                                            .buttonStyle(.plain).help("Seek audio to \(group.timing)")
+                                    } else { Text(group.timing) }
+                                }.font(.caption.monospacedDigit()).foregroundStyle(isActive ? WorkspaceStyle.mint : .secondary)
+                                    .frame(width: 54, alignment: .trailing).padding(.top, 4)
+                                VStack(alignment: .leading, spacing: 10) {
+                                    if sameWords {
+                                        MarkdownReadingText(text: document.displayedText(first), font: .title3)
+                                    } else {
+                                        ForEach(group.segments) { segment in
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(TranscriptReading.Group(segments: [segment]).channels).font(.caption).foregroundStyle(.secondary)
+                                                MarkdownReadingText(text: document.displayedText(segment), font: .title3)
+                                            }
+                                        }
+                                    }
+                                    if group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document) {
+                                        if let onReview {
+                                            let checked = checkedReviewGroupIDs.contains(TranscriptReading.reviewGroupID(for: group.id, in: document) ?? group.id)
+                                            Button("\(checked ? "Sources checked" : "Check sources") · \(group.segments.count) \(group.segments.count == 1 ? "source" : "sources")",
+                                                systemImage: checked ? "checkmark.circle" : "info.circle") { onReview(group.id) }
+                                                .buttonStyle(.borderless).font(.caption).tint(WorkspaceStyle.blue)
+                                        } else { Label("Review", systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.secondary) }
+                                    }
+                                    if onReview == nil || !(group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document)) {
+                                        DisclosureGroup("Source details", isExpanded: expansion(group.id)) { sources(group) }
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(6)
+                            .background(isActive || isSelected ? WorkspaceStyle.selected : .clear, in: RoundedRectangle(cornerRadius: 8))
                             .id(group.id)
                         }
-                    }.frame(maxWidth: WorkspaceStyle.readingWidth, alignment: .leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, StudioSpacing.s)
+                    }.frame(maxWidth: 800, alignment: .leading)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+
                 }
                 .onChange(of: currentActiveGroupID) { _, nextID in
-                    if followPlayback, let nextID {
+                    if followsAudio, let nextID {
                         proxy.scrollTo(nextID, anchor: .center)
                     }
                 }
-                .onChange(of: followPlayback) { _, follow in
+                .onChange(of: selectedGroupID, initial: true) { _, id in
+                    if let id {
+                        expandedGroups.insert(id)
+                        proxy.scrollTo(id, anchor: .center)
+                    }
+                }
+                .onChange(of: followsAudio) { _, follow in
                     if follow, let currentActiveGroupID {
                         proxy.scrollTo(currentActiveGroupID, anchor: .center)
                     }
@@ -150,8 +183,11 @@ struct TranscriptReadingView: View {
                         MarkdownReadingText(text: segment.sourceText)
                     }
                     ForEach(segment.reviewReasons ?? [], id: \.self) { reason in
-                        Text(reason).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        Text(TranscriptReading.reviewLabel(reason)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }
+                    DisclosureGroup("Technical details") {
+                        Text((segment.reviewReasons ?? []).joined(separator: "\n")).font(.caption.monospaced()).textSelection(.enabled)
+                    }.font(.caption).foregroundStyle(.secondary)
                 }
             }
         }.padding(.top, StudioSpacing.s)

@@ -28,6 +28,47 @@ This workflow does not authorize disabling required CI checks, reporting pending
 checks as passed, or merging against an existing green-check requirement. CI and
 merge readiness must not delay availability of the local UI candidate.
 
+## Focused CI and full Thread Sanitizer requirements
+
+Use the scope selected by `scripts/ci-scope.py` for the complete PR or push diff,
+not just its latest commit. See [CI validation scope](docs/ci-validation.md).
+Do not opt out of full validation using a PR label or a UI filename alone.
+
+**Focused CI is sufficient** only when the classifier selects `focused`:
+
+- At most five existing modified files and 80 added/removed lines.
+- Only recognized literal labels, icons, help/accessibility text or simple
+  spacing, frame, font, foreground, corner-radius and line-limit modifiers in
+  `RecScribe/RecScribe/UI/*.swift` (including subdirectories), or Markdown in
+  `docs/` and `README.md`.
+- No change to callbacks, state, lifecycle, async work, disabled/safety gates or
+  other behavior. Unrecognized visual syntax conservatively requires full CI.
+
+For this path, direct native UI review plus justified focused local checks is
+sufficient for the iteration; do not repeat the full local sanitizer suite for
+presentation alone. Hosted CI runs the focused contract suites and rejects failed,
+missing or zero-test results. Report TSan as **skipped by policy**, never passed.
+
+**Full CI is required**, including the entire functional app suite and the entire
+Thread Sanitizer suite, for recording/capture, buffering, concurrency,
+cancellation, sessions/storage/deletion, transcription, permissions,
+models/schemas, dependencies, tests, build or CI-policy changes. This also applies
+to behavior changes inside UI files, mixed UI/backend changes, broad changes,
+new/deleted/renamed/type-changed files, missing baselines and classification errors.
+`AGENTS.md` is outside the focused allowlist and therefore uses full CI as well.
+When in doubt, keep the full path; do not reclassify risky work as presentation.
+
+On every path, keep the required `Unit tests` and `Release build` check names,
+Release compilation, source-boundary/PCM ownership checks, native core tests and
+frozen-reference contracts. Full runs must also pass the existing sanitizer
+evidence gate: complete matching functional/sanitizer counts, no failures or
+runtime diagnostics, and no unexpected test-host restart. A partial run or green
+enclosing job is not evidence of a clean sanitizer pass.
+
+Before merging, all applicable checks must be green on the current PR head.
+Neither focused CI nor full CI replaces the manual UI review workflow above;
+long-running checks must not delay availability of the local UI candidate.
+
 ## Preserve the installed app and recording data
 
 Before replacing the installed app, inspect the exact running app and confirm
@@ -39,10 +80,10 @@ Preserve the installed app's bundle identifier, designated signing requirement,
 team, and entitlements. Do not switch signing identities, reset/grant macOS privacy
 permissions, or change provisioning to make a local UI preview work.
 
-Changes to capture, buffering, concurrency, storage, schemas, or permissions need
-focused correctness validation appropriate to their risk; do not classify them
-as presentation-only to avoid that validation. Preserve original audio and raw
-transcripts, bounded background work, cancellation, and existing preservation
+Changes to capture, buffering, concurrency, storage, schemas, or permissions require
+full CI plus focused correctness validation appropriate to their risk; do not
+classify them as presentation-only to avoid that validation. Preserve original
+audio and raw transcripts, bounded background work, cancellation, and existing preservation
 contracts. Keep mandatory frozen-reference checks and run them at the appropriate
 validation stage; never rebaseline fixtures merely to obtain a pass.
 

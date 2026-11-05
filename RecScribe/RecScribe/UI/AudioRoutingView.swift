@@ -168,7 +168,7 @@ struct AudioRoutingView: View {
             if !unusedVirtual.isEmpty {
                 Divider().padding(.top, 8)
                 Text("Available virtual inputs").font(.caption).foregroundStyle(.secondary)
-                ForEach(unusedVirtual) { device in virtualCaptureToggle(device) }
+                ForEach(unusedVirtual) { device in virtualCaptureButton(device) }
             }
             if inputs.isEmpty {
                 Text("Playback only. Connect an input to include your microphone or audio interface.")
@@ -177,13 +177,16 @@ struct AudioRoutingView: View {
         }
     }
 
-    private func virtualCaptureToggle(_ device: InputDeviceInfo) -> some View {
-        Toggle("Record \(device.name)", isOn: Binding(
-            get: { inputs.contains { $0.deviceUID == device.uid } },
-            set: { recorder.setVirtualInputCapture(device, enabled: $0) }
-        ))
-        .disabled(!editable || (!inputs.contains { $0.deviceUID == device.uid } && inputs.count >= InputSelection.maximumDevices))
-        .help("Include this virtual device in capture and preserve its original source track.")
+    private func virtualCaptureButton(_ device: InputDeviceInfo, compact: Bool = false) -> some View {
+        let selected = inputs.contains { $0.deviceUID == device.uid }
+        return Button(selected ? "Don't record" : "Record \(device.name)") {
+            recorder.setVirtualInputCapture(device, enabled: !selected)
+        }
+        .font(.caption).controlSize(.small).tint(WorkspaceStyle.blue)
+        .fixedSize(horizontal: compact, vertical: false)
+        .accessibilityLabel("\(selected ? "Don't record" : "Record") \(device.name)")
+        .disabled(!editable || (!selected && inputs.count >= InputSelection.maximumDevices))
+        .help(selected ? "Exclude this virtual device from capture." : "Include this virtual device in capture and preserve its original source track.")
     }
 
     private var playbackName: String {
@@ -368,12 +371,6 @@ struct AudioRoutingView: View {
             } actions: {
                 cardActions(panel, title: title, muted: muted)
             }
-            if case .input(let uid) = panel,
-               let device = devices.first(where: { $0.uid == uid && $0.mayLoopBack }) {
-                virtualCaptureToggle(device)
-                    .font(.caption)
-                    .padding(.horizontal, 12).padding(.bottom, 10)
-            }
             if let track { sourceMeter(track).padding(.horizontal, 12) }
             if panel == .mix, let test = recorder.audioTest { AudioTestMixMeterView(test: test).padding(.horizontal, 12) }
             if expanded {
@@ -401,6 +398,10 @@ struct AudioRoutingView: View {
 
     @ViewBuilder private func cardActions(_ panel: AudioRoutingPanel, title: String, muted: Bool) -> some View {
         let listening = panel == .monitor ? monitorLevels : playbackLevels
+        if case .input(let uid) = panel,
+           let device = devices.first(where: { $0.uid == uid && $0.mayLoopBack }) {
+            virtualCaptureButton(device, compact: true)
+        }
         if let id = levelID(panel) {
             muteButton(title: title, muted: muted) {
                 var next = levels.level(id); next.muted.toggle(); levels.set(id, next)

@@ -13,9 +13,10 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 import statistics
 
-VERSION = "quality-pilot-report-1.0"
+VERSION = "quality-pilot-report-1.1"
 MAXIMUM_JSON_BYTES = 64 * 1024 * 1024
 COMPLETED = {"completed", "completed_with_review"}
 GROUP_FIELDS = ("language", "task", "model", "model_sha256", "profile", "language_mode", "path", "scoring_policy", "runtime_settings_sha256")
@@ -101,6 +102,106 @@ def load_observations(rows):
             "scope": "Upstream model-load timer per native invocation; not total process initialization or first-result latency"}
 
 
+def base_language(value):
+    """Validate a source/recognizer tag before deriving its coarse base label."""
+    if not isinstance(value, str) or re.fullmatch(r"[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*", value) is None:
+        return None
+    base = value.split("-", 1)[0]
+    return None if base in {"auto", "und", "mul", "zxx"} else base
+
+
+def expected_monolingual_language(row, corpus_case):
+    expected = base_language(row.get("language"))
+    if expected is None:
+        return None, "unknown_or_invalid_source_language"
+    if "language" in corpus_case and corpus_case["language"] != row.get("language"):
+        return None, "source_language_disagrees_with_snapshot"
+    for source in [row, corpus_case]:
+        if "code_switches" in source:
+            switches = source["code_switches"]
+            if not isinstance(switches, list):
+                return None, "unknown_code_switch_metadata"
+            if switches:
+                return None, "declared_code_switching"
+    if row.get("task") == "non_speech" or corpus_case.get("task") == "non_speech":
+        return None, "non_speech_source"
+    return expected, None
+
+
+def observed_automatic_language(row):
+    """Use only a direct native pass with the structured nonempty-speech label.
+
+    NativeWhisperEngine deliberately clears recognizer_language on empty output;
+    detected_language may still contain the runtime's initial label. Never use
+    that raw label, invocation arguments, prior passes or transcript text as ID.
+    Region provenance can copy the last invocation, so it cannot stand for one
+    unambiguous whole-source observation here.
+    """
+    passes = row["measurement"].get("engine_passes")
+    if not isinstance(passes, list) or not passes:
+        return None, "missing_native_pass"
+    if len(passes) != 1:
+        return None, "ambiguous_multiple_engine_passes"
+    native = passes[0]
+    if not isinstance(native, dict) or native.get("engine") != "whisper.cpp":
+        return None, "not_a_direct_native_pass"
+    if "channel_regions" in native:
+        return None, "ambiguous_region_invocations"
+    policy = native.get("language_policy")
+    if not isinstance(policy, dict):
+        return None, "missing_structured_language_policy"
+    if native.get("asr_language") != "auto" or policy.get("effective_argument") != "auto":
+        return None, "not_an_automatic_native_invocation"
+    recognized = base_language(policy.get("recognizer_language"))
+    if recognized is None:
+        return None, "no_structured_nonempty_speech_label"
+    return recognized, None
+
+
+def automatic_language_labels(rows, corpus_by_id):
+    """Count repeat-1 coarse labels without claiming human language-ID accuracy."""
+    cases = defaultdict(list)
+    for row in rows:
+        cases[case_identity(row)].append(row)
+    expected_counts, recognized_counts, confusion = Counter(), Counter(), Counter()
+    ineligible, unobserved = Counter(), Counter()
+    for case_rows in cases.values():
+        row = case_rows[0]
+        if row.get("language_mode") != "auto":
+            ineligible["explicit_language_control" if row.get("language_mode") == "known" else "unsupported_language_mode"] += 1
+            continue
+        expected, reason = expected_monolingual_language(row, corpus_by_id.get(row.get("id"), {}))
+        if reason:
+            ineligible[reason] += 1
+            continue
+        expected_counts[expected] += 1
+        first = next((value for value in case_rows if value.get("repeat") == 1), None)
+        if first is None or not completed(first):
+            unobserved["repeat_one_not_completed"] += 1
+            continue
+        recognized, reason = observed_automatic_language(first)
+        if reason:
+            unobserved[reason] += 1
+            continue
+        recognized_counts[recognized] += 1
+        confusion[(expected, recognized)] += 1
+    planned, observed = sum(expected_counts.values()), sum(recognized_counts.values())
+    matches = sum(count for (expected, recognized), count in confusion.items() if expected == recognized)
+    return {"selection": "Successful repeat 1 only; no fallback to later repeats; explicit known-language rows excluded",
+        "scope": "Coarse base-language agreement against published monolingual source labels; not independently adjudicated language-ID accuracy, Swiss dialect identity, or code-switch coverage",
+        "planned_unique_utterances": planned, "observed_unique_utterances": observed,
+        "unobserved_unique_utterances": planned - observed, "ineligible_unique_utterances": sum(ineligible.values()),
+        "ineligibility_counts": dict(sorted(ineligible.items())), "unobserved_reason_counts": dict(sorted(unobserved.items())),
+        "expected_base_language_counts": dict(sorted(expected_counts.items())),
+        "recognized_base_language_counts": dict(sorted(recognized_counts.items())),
+        "confusion_counts": [{"expected_base_language": expected, "recognized_base_language": recognized, "unique_utterances": count}
+            for (expected, recognized), count in sorted(confusion.items())],
+        "observed_label_matches": matches, "observed_label_mismatches": observed - matches,
+        "observed_base_label_agreement": matches / observed if observed else None,
+        "confidence": None, "confidence_status": "unavailable_in_whisper_cli_json",
+        "human_language_id_accuracy": None, "switch_boundary_gate": "UNMEASURED", "out_of_set_gate": "UNMEASURED"}
+
+
 def summarize_group(rows, corpus_by_id):
     identity = dict(zip(GROUP_FIELDS, group_identity(rows[0])))
     expected_cases = {case_identity(row) for row in rows}
@@ -119,6 +220,7 @@ def summarize_group(rows, corpus_by_id):
                "wer_status": "unreported; whitespace WER is misleading for this script" if suppress_wer else "counted lexical metric where measured",
                "critical_content_accuracy": None, "semantic_accuracy": None, "language_id_accuracy": None, "timestamp_accuracy": None,
                "human_review_status": "Unmeasured; published references have not been independently adjudicated for this pilot"}
+    quality["automatic_language_labels"] = automatic_language_labels(rows, corpus_by_id)
     false_speech = [row["measurement"].get("false_speech_characters") for row in first]
     false_speech = [value for value in false_speech if isinstance(value, int) and not isinstance(value, bool) and value >= 0]
     quality["empty_reference_cases_measured"] = len(false_speech)
@@ -254,6 +356,7 @@ def summarize(matrix, corpus=None, experiment=None, allow_held_out=False, freeze
             "Repeated inference is latency/variation evidence, not independent corpus samples; quality uses successful repeat 1 only",
             "Individual FLEURS speaker/session grouping, natural long-form/adverse conditions and independent native reference adjudication remain incomplete",
             "Swiss speech targets written Standard German; lexical scores alone do not establish preserved meaning or equivalent rendering variants",
+            "Automatic language labels are coarse agreement with published monolingual source tags, using one unambiguous nonempty native pass from repeat 1; human ID accuracy, confidence, switch boundaries and out-of-set behavior remain unmeasured",
             "Chinese whitespace WER is not reported; CER is reported under the exact retained normalization version",
             "Peak process RSS does not measure total unified CPU/GPU allocation; GPU memory and first-result latency remain unmeasured",
             "Upstream model-load timers are not complete process initialization; end-to-end throughput is not steady decoder throughput",
@@ -288,7 +391,18 @@ def markdown(report):
             text(str(cohort.get("language_mode")) + " / " + str(cohort.get("profile"))),
             f"{quality['completed_unique_utterances']} / {quality['planned_unique_utterances']}", rate(wer.get("corpus_weighted_rate")), rate(cer.get("corpus_weighted_rate")),
             text(wer.get("reference_units")) + " / " + text(cer.get("reference_units"))]) + " |")
-    lines += ["", "Chinese WER is intentionally unreported. JSON includes edit counts, denominators, per-utterance macro rates, status counts and grouping gaps. Critical-content, semantic, language-ID and timing accuracy remain unmeasured.", "",
+    lines += ["", "Chinese WER is intentionally unreported. JSON includes edit counts, denominators, per-utterance macro rates, status counts and grouping gaps. Critical-content, semantic, human language-ID and timing accuracy remain unmeasured.", "",
+        "## Coarse automatic language labels", "", "Successful repeat 1 only, compared with published monolingual source base-language tags (for example, de-CH → de). Explicit known-language controls are excluded. Only a single direct native ASR pass with structured nonempty-speech language evidence counts; missing, empty or ambiguous observations stay unobserved. JSON retains confusion counts and exclusion reasons.", "",
+        "| Language | Model | Profile | Planned eligible utterances | Observed / unobserved | Matching / mismatching labels | Observed base-label agreement |",
+        "| --- | --- | --- | --- | --- | --- | --- |"]
+    for cohort in report["cohorts"]:
+        if cohort.get("language_mode") != "auto":
+            continue
+        labels = cohort["quality"]["automatic_language_labels"]
+        lines.append("| " + " | ".join([text(cohort.get("language")), text(cohort.get("model")), text(cohort.get("profile")),
+            str(labels["planned_unique_utterances"]), f"{labels['observed_unique_utterances']} / {labels['unobserved_unique_utterances']}",
+            f"{labels['observed_label_matches']} / {labels['observed_label_mismatches']}", rate(labels["observed_base_label_agreement"])]) + " |")
+    lines += ["", "This is coarse published-source label agreement, not human language-ID accuracy or Swiss dialect identification. Confidence is unavailable. Switch-boundary and out-of-set gates remain **UNMEASURED**.", "",
         "## Latency and resources", "", "Each workload repeat contains all planned utterances in that cohort. Incomplete workloads have no aggregate timing. Values are median [minimum–maximum].", "",
         "| Language | Model | Mode / profile | Completed cells | Complete workload repeats | Workload wall seconds | Workload RTF | Peak process RSS MiB | Upstream load seconds / invocation |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]

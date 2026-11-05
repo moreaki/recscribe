@@ -3,7 +3,32 @@ import Observation
 import SwiftUI
 
 @MainActor @Observable final class RecorderTelemetry {
-    var sourceHealth: [SourceRecordingHealth] = []
+    var sourceHealth: [SourceRecordingHealth] = [] {
+        didSet {
+            let names = sourceHealth.filter { $0.health.failed }.map(\.name).joined(separator: ", ")
+            let summary = names.isEmpty ? nil : "\(names) interrupted; unaffected sources continue recording."
+            if interruptedSourceSummary != summary { interruptedSourceSummary = summary }
+        }
+    }
+    private(set) var interruptedSourceSummary: String?
+    private(set) var detailSources: [SourceRecordingHealth] = []
+    private(set) var detailTime: TimeInterval = 0
+    /// Detailed text is diagnostic, not a meter. Keep its expensive text layout
+    /// out of the 10 Hz meter/health loop, but publish status changes immediately.
+    static let detailInterval: TimeInterval = 1
+
+    func refreshDetails() {
+        let structuralChange = sourceHealth.count != detailSources.count || zip(sourceHealth, detailSources).contains { next, old in
+            next.id != old.id || next.name != old.name || next.detail != old.detail
+                || next.health.startedAt != old.health.startedAt
+                || next.health.channels != old.health.channels || next.health.sampleRate != old.health.sampleRate
+                || next.health.failureMessage != old.health.failureMessage || next.health.clipped != old.health.clipped
+                || next.health.status(at: healthTime) != old.health.status(at: detailTime)
+        }
+        guard structuralChange || healthTime < detailTime || healthTime - detailTime >= Self.detailInterval else { return }
+        detailSources = sourceHealth
+        detailTime = healthTime
+    }
     var sourceMeters: [CaptureTrack: CaptureSourceMeters] = [:]
     var healthTime = ProcessInfo.processInfo.systemUptime
     var duration: TimeInterval = 0

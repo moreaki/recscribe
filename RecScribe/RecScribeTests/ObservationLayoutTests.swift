@@ -9,6 +9,80 @@ import os
 @MainActor
 @Suite(.serialized)
 struct ObservationLayoutTests {
+    @Test func detailCountersCoalesceButStatusAndFailureChangesAreImmediate() {
+        let telemetry = RecorderTelemetry()
+        var health = RecordingHealth(startedAt: 0, lastReceivedAt: 0, lastWrittenAt: 0,
+                                     receivedFrames: 480, writtenFrames: 480, sampleRate: 48000, channels: 2, peak: 0.1)
+        func publish(at time: TimeInterval) {
+            telemetry.healthTime = time
+            telemetry.sourceHealth = [.init(id: "playback", name: "Playback", health: health)]
+            telemetry.refreshDetails()
+        }
+        publish(at: 0)
+        let initial = telemetry.detailSources
+        let changes = OSAllocatedUnfairLock(initialState: 0)
+        withObservationTracking { _ = telemetry.detailSources } onChange: { changes.withLock { $0 += 1 } }
+        for step in 1...9 {
+            health.receivedFrames += 480; health.writtenFrames += 480
+            health.lastReceivedAt = Double(step) / 10; health.lastWrittenAt = Double(step) / 10
+            health.peak = Float(step) / 10
+            publish(at: Double(step) / 10)
+            #expect(telemetry.detailSources == initial)
+        }
+        #expect(changes.withLock { $0 } == 0)
+        publish(at: 1)
+        #expect(changes.withLock { $0 } == 1)
+        #expect(telemetry.detailSources.first?.health == health)
+        health.failed = true; health.failureMessage = "Input disconnected"
+        publish(at: 1.1)
+        #expect(telemetry.detailSources.first?.health.failed == true)
+        #expect(telemetry.interruptedSourceSummary?.contains("Playback interrupted") == true)
+        health.failed = false; health.failureMessage = nil; health.peak = 0
+        publish(at: 1.2)
+        #expect(telemetry.detailSources.first?.health.peak == 0)
+        #expect(telemetry.interruptedSourceSummary == nil)
+        health.peak = 0.2
+        publish(at: 1.3)
+        // A new take must never display the previous take's counters, even
+        // when it starts within the diagnostic refresh interval.
+        health.startedAt = 1.4; health.receivedFrames = 1; health.writtenFrames = 1
+        health.lastReceivedAt = 1.4; health.lastWrittenAt = 1.4
+        publish(at: 1.4)
+        #expect(telemetry.detailSources.first?.health.receivedFrames == 1)
+    }
+
+    @Test func waveformRepaintsWithoutInvalidatingLayout() async throws {
+        let telemetry = RecorderTelemetry()
+        let host = WaveformLayoutHost(rootView: RecorderWaveformDisplay(telemetry: telemetry).frame(width: 248, height: 64))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 248, height: 64),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        defer { window.contentView = nil }
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(50))
+        // Settle the native view's first content update before measuring steady
+        // state. The bootstrap layout is not a per-packet layout regression.
+        telemetry.waveformSamples = Array(repeating: 0.1, count: 200)
+        for _ in 0..<4 {
+            try await Task.sleep(for: .milliseconds(20))
+            host.layoutSubtreeIfNeeded()
+        }
+        func pixels() throws -> Data {
+            let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            return try #require(bitmap.representation(using: .png, properties: [:]))
+        }
+        let silence = try pixels()
+        let layouts = host.layoutCount
+        for step in 1...12 {
+            telemetry.waveformSamples = Array(repeating: Float(step) / 12, count: 200)
+            try await Task.sleep(for: .milliseconds(10))
+            host.layoutSubtreeIfNeeded()
+        }
+        #expect(try pixels() != silence)
+        #expect(host.layoutCount == layouts)
+    }
+
     @Test func lockBackedFadersInvalidateUIReadsButNotCaptureSnapshots() {
         let defaults = UserDefaults(suiteName: "observation-levels-\(UUID())")!
         let levels = AudioLevels(defaults: defaults)
@@ -92,6 +166,11 @@ struct ObservationLayoutTests {
         #expect(abs(collapsedAgain - 226) < 2)
         #expect(abs(host.preferredContentSize.height - collapsedAgain) < 2)
     }
+}
+
+@MainActor private final class WaveformLayoutHost<Content: View>: NSHostingView<Content> {
+    var layoutCount = 0
+    override func layout() { layoutCount += 1; super.layout() }
 }
 
 @MainActor

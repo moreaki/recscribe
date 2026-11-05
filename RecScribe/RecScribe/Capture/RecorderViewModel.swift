@@ -197,6 +197,7 @@ import Observation
         healthTime = ProcessInfo.processInfo.systemUptime
         sourceHealth = controller.sourceHealth
         telemetry.sourceMeters = controller.sourceMeters
+        telemetry.refreshDetails()
     }
 
     func enableAutomaticRouting(_ devices: [InputDeviceInfo]) {

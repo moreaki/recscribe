@@ -54,6 +54,13 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(self.change(['new'], ['old'], 'docs/design.png'), 'full')
         self.assertEqual(self.change(['new'], ['old'], 'docs/design.md'), 'focused')
 
+    def test_agents_documentation_is_focused_but_policy_code_is_full(self):
+        self.assertEqual(self.change(['New guidance'], ['Old guidance'], 'AGENTS.md'), 'focused')
+        self.assertEqual(scope.classify([
+            ('M', 'AGENTS.md', ['New guidance'], ['Old guidance']),
+            ('M', 'scripts/ci-scope.py', ['new_policy()'], ['old_policy()'])
+        ])[0], 'full')
+
     def test_missing_baseline_or_event_is_full(self):
         for env in [{}, {'CI_EVENT':'push','CI_PUSH_BASE':'0'*40},
                     {'CI_EVENT':'pull_request'}, {'CI_EVENT':'push','CI_PUSH_BASE':'unknown'}]:
@@ -69,6 +76,7 @@ class ScopeTests(unittest.TestCase):
                 git('init'); git('config','user.email','test@example.invalid'); git('config','user.name','CI test')
                 file = Path(UI); file.parent.mkdir(parents=True)
                 file.write_text('Text("Old")\n.padding(8)\n' + '// unchanged\n' * 10 + 'deleteAll()\n')
+                Path('AGENTS.md').write_text('Old guidance\n')
                 git('add','.'); git('commit','-m','base'); base = git('rev-parse','HEAD')
                 file.write_text(file.read_text().replace('Old','New').replace('padding(8)','padding(12)'))
                 git('commit','-am','presentation')
@@ -88,6 +96,12 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(scope.detect({'CI_EVENT':'push','CI_PUSH_BASE':base})[0], 'full')
                 base = git('rev-parse','HEAD'); file.chmod(0o755); git('commit','-am','mode')
                 self.assertEqual(scope.detect({'CI_EVENT':'push','CI_PUSH_BASE':base})[0], 'full')
+                base = git('rev-parse','HEAD')
+                Path('AGENTS.md').write_text('New guidance\n')
+                git('commit','-am','instructions documentation')
+                self.assertEqual(scope.detect({'CI_EVENT':'push','CI_PUSH_BASE':base})[0], 'focused')
+                self.assertEqual(scope.detect({'CI_EVENT':'pull_request','CI_PR_BASE':base,
+                                             'CI_PR_HEAD':git('rev-parse','HEAD')})[0], 'focused')
             finally:
                 os.chdir(old_cwd)
 

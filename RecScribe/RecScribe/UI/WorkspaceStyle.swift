@@ -1,15 +1,24 @@
 import SwiftUI
 
-/// Shared app chrome, inspired by Quantivane's compact cards and Modex's
-/// restrained workspace. Capture red is reserved for recording, not navigation.
+/// Focus palette. Semantic system labels retain accessibility contrast behavior.
 enum WorkspaceStyle {
-    static let blue = Color(studioHex: 0x70AEF6)
-    static let violet = Color(studioHex: 0xB39CF7)
-    static let mint = Color(studioHex: 0x79DCC3)
-    static let background = Color(studioHex: 0x101116)
-    static let panel = Color(studioHex: 0x1B1D25)
-    static let selected = Color(studioHex: 0x282C38)
-    static let border = Color.white.opacity(0.09)
+    static let blue = adaptive(light: 0x286A56, dark: 0x9BD2BB)
+    static let violet = blue
+    static let mint = blue
+    static let background = adaptive(light: 0xFCFCFB, dark: 0x151719)
+    static let panel = adaptive(light: 0xF7F8F6, dark: 0x1C1F21)
+    static let selected = adaptive(light: 0xE6F0E9, dark: 0x283C33)
+    static let border = adaptive(light: 0xE0E5E1, dark: 0x343B37)
+    static let recording = adaptive(light: 0xB83E46, dark: 0xF39196)
+
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let hex = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
+            return NSColor(srgbRed: Double((hex >> 16) & 255) / 255,
+                           green: Double((hex >> 8) & 255) / 255,
+                           blue: Double(hex & 255) / 255, alpha: 1)
+        })
+    }
     static let contentPadding: CGFloat = 22
     static let railWidth: CGFloat = 320
     static let iconSize: CGFloat = 34
@@ -114,11 +123,29 @@ struct WorkspaceCard<Content: View>: View {
     }
 }
 
+/// A shared preference row keeps the decision and its control aligned.
+struct FocusPreferenceRow<Control: View>: View {
+    let title: String
+    var detail: String? = nil
+    @ViewBuilder var control: () -> Control
+    var body: some View {
+        HStack(alignment: .center, spacing: 28) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title).font(.body.weight(.medium))
+                if let detail { Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            control().frame(width: 260, alignment: .trailing)
+        }.padding(.vertical, 16)
+            .overlay(alignment: .bottom) { Divider() }
+    }
+}
+
 enum SettingsSection: String, WorkspaceTab, Identifiable {
-    case storage = "Recording", transcription = "Transcription", models = "Models", ai = "Intelligence", diagnostics = "Diagnostics"
+    case general = "General", storage = "Recording", transcription = "Transcription", models = "Models", ai = "Intelligence", diagnostics = "Diagnostics"
     var id: Self { self }
     var symbol: String {
         switch self {
+        case .general: "paintpalette"
         case .storage: "waveform.circle"
         case .transcription: "text.bubble"
         case .models: "cpu"
@@ -128,9 +155,23 @@ enum SettingsSection: String, WorkspaceTab, Identifiable {
     }
     var tint: Color {
         switch self {
+        case .general: WorkspaceStyle.blue
         case .storage: WorkspaceStyle.mint
         case .transcription, .diagnostics: WorkspaceStyle.blue
         case .models, .ai: WorkspaceStyle.violet
+        }
+    }
+}
+
+enum FocusAppearance: String, CaseIterable {
+    case system = "System", light = "Light", dark = "Dark"
+    static let defaultsKey = "workspaceAppearance"
+
+    @MainActor func apply() {
+        NSApp.appearance = switch self {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
         }
     }
 }

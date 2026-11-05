@@ -9,6 +9,155 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct WorkspaceRegressionTests {
+    @Test func workspaceShortcutsFollowSidebarOrder() {
+        let destinations = StudioWorkspaceMode.allCases.map(\.window)
+        #expect(destinations == [.studio, .live, .recordings, .routing, .settings])
+        #expect(destinations.map(\.commandKey) == ["1", "2", "3", "4", "5"])
+    }
+
+    @Test func liveCloudCompletionAndLibraryRefreshKeepStudioContextUntilExplicitHandoff() async {
+        let oldJob = URL(fileURLWithPath: "/synthetic/old-job")
+        let oldSource = URL(fileURLWithPath: "/synthetic/old.recscribe.json")
+        let newJob = URL(fileURLWithPath: "/synthetic/new-live-job")
+        let newSource = URL(fileURLWithPath: "/synthetic/new.recscribe.json")
+        var remembered: URL?
+        let library = SessionLibrary(rememberJob: { job, _ in remembered = job })
+        library.rememberOpenedTranscript(oldJob, source: oldSource)
+        library.setRecording(true)
+        library.acceptCloudTranscript(newJob, source: newSource)
+        library.setRecording(false)
+        #expect(library.latestJob == newJob)
+        #expect(library.studioJob == oldJob && library.studioSource == oldSource)
+        #expect(remembered == oldJob)
+        library.forgetTranscript(newJob)
+        #expect(library.studioJob == oldJob && library.studioSource == oldSource && remembered == oldJob)
+        library.acceptCloudTranscript(newJob, source: newSource)
+        library.openRecordingInStudio(newSource)
+        #expect(library.studioJob == newJob && library.studioSource == newSource)
+        #expect(remembered == newJob)
+        let unprocessed = URL(fileURLWithPath: "/synthetic/unprocessed.recscribe.json")
+        library.openRecordingInStudio(unprocessed)
+        #expect(library.studioJob == nil && library.studioSource == unprocessed)
+        #expect(remembered == nil) // Never display an older transcript under a new title.
+        library.acceptCloudTranscript(newJob, source: newSource)
+        #expect(library.studioJob == nil && library.studioSource == unprocessed)
+        library.acceptCloudTranscript(newJob, source: unprocessed)
+        #expect(library.studioJob == newJob && library.studioSource == unprocessed)
+        #expect(remembered == newJob)
+        await library.shutdown()
+    }
+
+    @Test func recordingSearchAndDateGroupsPreserveIdentityAcrossDayBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let today = calendar.startOfDay(for: now)
+        func entry(_ name: String, _ offset: TimeInterval, title: String? = nil) -> SessionEntry {
+            var session = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mic"], options: .init())
+            session.startedAt = today.addingTimeInterval(offset); session.title = title
+            return .init(id: URL(fileURLWithPath: "/synthetic/\(name).recscribe.json"), session: session)
+        }
+        let old = entry("old", -86_401), yesterday = entry("yesterday", -1)
+        let first = entry("first", 0, title: "Café planning"), later = entry("later", 60)
+        let future = entry("future", 86_400)
+        let entries = [old, first, future, later, yesterday]
+        let groups = RecordingLibraryProjection.groups(entries, now: now, calendar: calendar)
+        #expect(groups.map(\.title) == ["Future dates", "Today", "Yesterday", "Earlier"])
+        #expect(groups.flatMap(\.entries).map(\.id) == [future.id, later.id, first.id, yesterday.id, old.id])
+        #expect(RecordingLibraryProjection.filtered(entries, query: "  CAFE  ").map(\.id) == [first.id])
+        #expect(RecordingLibraryProjection.filtered(entries, query: "yesterday").map(\.id) == [yesterday.id])
+        #expect(RecordingLibraryProjection.filtered(entries, query: " \n ").count == entries.count)
+        let selection: Set<URL> = [first.id, old.id]
+        let visible = Set(RecordingLibraryProjection.filtered(entries, query: "café").map(\.id))
+        #expect(selection.subtracting(visible) == [old.id])
+        #expect(selection.count == 2)
+    }
+
+    @Test(arguments: [false, true])
+    func automaticLocalTranscriptionKeepsStudioUntilAnExplicitRequest(explicit: Bool) async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let oldJob = root.appendingPathComponent("old-job")
+        let oldSource = root.appendingPathComponent("old.recscribe.json")
+        let newSource = root.appendingPathComponent("new.recscribe.json")
+        var values = AppSettings.Values()
+        values.autoTranscribe = true; values.aiEnabled = false; values.profile = .fast; values.processingLocation = .local
+        values.whisperPath = root.appendingPathComponent("unavailable-whisper").path
+        values.modelPath = root.appendingPathComponent("unavailable-model").path
+        values.vadModelPath = ""
+        let config = values
+        var result = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mic"], options: .init())
+        result.status = .completed
+        let verified = result
+        var remembered: URL?
+        let library = SessionLibrary(settings: { config }, processSession: { _, _, _, _, _ in verified },
+            readSessions: { _ in SessionSnapshot() }, rememberJob: { job, _ in remembered = job },
+            jobsDirectory: root.appendingPathComponent("Jobs"))
+        library.rememberOpenedTranscript(oldJob, source: oldSource)
+        if explicit { library.transcribe(newSource) }
+        else { library.enqueue(newSource) }
+        await waitUntil("local transcription preflight finishes") { library.latestJob != nil && library.canDeleteRecording }
+        // Deliberately missing tools stop before inference or any actual audio access.
+        #expect(library.errorMessage != nil)
+        #expect(library.latestSource == newSource)
+        if explicit {
+            #expect(library.studioJob == library.latestJob && library.studioSource == newSource)
+        } else {
+            #expect(library.studioJob == oldJob && library.studioSource == oldSource)
+        }
+        #expect(remembered == oldJob) // Failed work cannot replace the restorable document.
+        await library.shutdown()
+    }
+
+    @Test func hiddenLibraryAndWindowTeardownKeepAppOwnedStartupRecoveryRunning() async throws {
+        let suite = "recscribe-library-lifecycle-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let recorder = RecorderViewModel(controller: MockRecordingControlling(),
+            permissions: MockPermissionProviding(.granted), clock: ManualClock(),
+            audioSource: MockAudioSourceProviding(), defaults: defaults)
+        let (snapshots, continuation) = AsyncStream<SessionSnapshot>.makeStream()
+        defer { continuation.finish() }
+        let calls = OSAllocatedUnfairLock(initialState: [URL]())
+        var values = AppSettings.Values(); values.autoTranscribe = false
+        let config = values
+        let library = SessionLibrary(settings: { config }, processSession: { source, _, _, _, _ in
+            calls.withLock { $0.append(source) }
+            var session = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mic"], options: .init())
+            session.status = .completed
+            return session
+        }, readSessions: { _ in
+            for await snapshot in snapshots { try Task.checkCancellation(); return snapshot }
+            return SessionSnapshot()
+        })
+        let source = URL(fileURLWithPath: "/synthetic/startup.recscribe.json")
+        library.recoverUnfinalizedSessions(in: source.deletingLastPathComponent())
+        #expect(library.refreshing)
+        var appeared = false, disappeared = false
+        let host = NSHostingView(rootView: AnyView(RecordingLibraryView(embeddedInStudio: true, isVisible: false)
+            .environment(recorder).environment(library)
+            .onAppear { appeared = true }.onDisappear { disappeared = true }))
+        host.frame = NSRect(x: 0, y: 0, width: 1000, height: 700)
+        let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = host
+        defer { window.contentView = nil; window.close() }
+        window.orderFront(nil)
+        host.layoutSubtreeIfNeeded()
+        await waitUntil("hidden library mounted") { appeared }
+        #expect(library.refreshing)
+        host.rootView = AnyView(EmptyView())
+        host.layoutSubtreeIfNeeded()
+        await waitUntil("library removed with window content") { disappeared }
+        #expect(library.refreshing)
+        var unfinished = RecordingSession(sampleRate: 48_000, channels: 1, channelMap: ["mic"], options: .init())
+        unfinished.status = .finalized
+        continuation.yield(SessionSnapshot(entries: [.init(id: source, session: unfinished)]))
+        continuation.finish()
+        await waitUntil("startup recovery completes") { calls.withLock { $0 == [source] } && library.canDeleteRecording }
+        #expect(calls.withLock { $0 } == [source])
+        await library.shutdown()
+    }
+
     @Test func observationEffectsCoalesceLatestValueAndStopAfterCancellation() async throws {
         let model = RecorderTelemetry()
         var values: [TimeInterval] = []
@@ -97,14 +246,14 @@ struct WorkspaceRegressionTests {
         let parent = NSMenuItem(title: "Localized menu title", action: nil, keyEquivalent: "")
         parent.submenu = localizedFile
         menu.addItem(parent)
-        for destination in [AppWindow.studio, .routing, .recordings, .settings] {
+        for destination in [AppWindow.studio, .routing, .recordings, .settings, .live] {
             let item = NSMenuItem(title: "Localized command", action: #selector(WindowCommandTarget.open(_:)),
                                   keyEquivalent: String(destination.commandKey))
             item.target = target
             item.representedObject = destination.rawValue
             localizedFile.addItem(item)
         }
-        for destination in [AppWindow.routing, .recordings, .settings, .studio, .routing] {
+        for destination in [AppWindow.routing, .recordings, .settings, .studio, .live, .routing] {
             #expect(AppWindow.performOpenCommand(destination, in: menu))
             #expect(target.opened.last == destination)
             if destination == .settings { #expect(target.navigation.mode == .settings) }
@@ -120,13 +269,13 @@ struct WorkspaceRegressionTests {
         studioCommand.isHidden = true
         #expect(!AppWindow.performOpenCommand(.studio, in: menu))
         #expect(!AppWindow.performOpenCommand(.studio, in: NSMenu()))
-        #expect(target.opened.count == 5)
+        #expect(target.opened.count == 6)
     }
 
     @Test func destinationIsSelectedBeforeOpeningAndSurvivesWindowRecreation() {
         let navigation = StudioNavigation()
         for (destination, mode) in [(AppWindow.routing, StudioWorkspaceMode.routing),
-                                    (.recordings, .recordings), (.settings, .settings), (.studio, .studio)] {
+                                    (.recordings, .recordings), (.settings, .settings), (.studio, .studio), (.live, .live)] {
             // No Studio view/subscriber exists when a command or menu action opens it.
             navigation.open(destination) { sceneID in
                 #expect(sceneID == AppWindow.studio.rawValue)

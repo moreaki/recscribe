@@ -18,9 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        // Pin AppKit menus/panels as well as SwiftUI to the app's dark palette.
-        // The template status icon still follows the menu bar's own appearance.
-        NSApp.appearance = NSAppearance(named: .darkAqua)
+        // Includes AppKit panels; the template status icon follows the menu bar.
+        (FocusAppearance(rawValue: UserDefaults.standard.string(forKey: FocusAppearance.defaultsKey) ?? "") ?? .system).apply()
         services.start()
     }
 

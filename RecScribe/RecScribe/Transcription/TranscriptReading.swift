@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import RecScribeCore
 
@@ -5,6 +6,101 @@ import RecScribeCore
 nonisolated enum TranscriptReading {
     // A high overlap groups simultaneous channel alternatives, not speaker identities.
     static let minimumOverlap = 0.8
+
+    struct SummarySource: Identifiable, Sendable {
+        let id: String
+        let groupID: String?
+        let timing: String?
+        let channels: String?
+    }
+
+    /// Resolve only exact, unambiguous citations supplied by the summary. Missing
+    /// references remain visible; displaying a summary never invents evidence.
+    static func summarySources(in document: TranscriptPreview) -> [[SummarySource]] {
+        let candidates = document.readingGroups.flatMap { group in
+            group.segments.map { (segment: $0, groupID: group.id) }
+        }
+        let byID = Dictionary(grouping: candidates, by: { $0.segment.id })
+        return (document.summary?.notes ?? []).map { note in
+            var seen = Set<String>()
+            return note.segmentIds.filter { seen.insert($0).inserted }.map { id in
+                guard let matches = byID[id], matches.count == 1, let match = matches.first else {
+                    return SummarySource(id: id, groupID: nil, timing: nil, channels: nil)
+                }
+                let single = Group(segments: [match.segment])
+                return SummarySource(id: id, groupID: match.groupID, timing: single.timing, channels: single.channels)
+            }
+        }
+    }
+
+    struct ReviewItem: Identifiable, Sendable {
+        let id: String
+        let groupID: String?
+        let title: String
+        let reasons: [String]
+        let key: String
+
+        init(id: String, groupID: String?, title: String, reasons: [String], segmentIDs: [String] = []) {
+            self.id = id; self.groupID = groupID; self.title = title; self.reasons = reasons
+            let fields = [groupID == nil ? "document" : "passage", "reasons:\(reasons.count)"]
+                + reasons.sorted() + ["segments:\(segmentIDs.count)"] + segmentIDs.sorted()
+            let scoped = fields.map { "\($0.utf8.count):\($0)" }.joined()
+            key = SHA256.hash(data: Data(scoped.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
+    }
+
+    /// Reading and All channels share the same passage-scoped review task.
+    static func reviewGroupID(for segmentID: String, in document: TranscriptPreview) -> String? {
+        document.readingGroups.first { $0.segments.contains { $0.id == segmentID } }?.id
+    }
+
+    /// Scoped reading projection: global notes and passage notes remain distinct.
+    /// Opening this list never acknowledges a warning or changes canonical data.
+    static func reviewItems(in document: TranscriptPreview) -> [ReviewItem] {
+        var items = Array(Set(document.reviewReasons)).sorted().enumerated().map { index, reason in
+            ReviewItem(id: "document-\(index)", groupID: nil, title: reviewTitle(reason), reasons: [reason])
+        }
+        for group in document.readingGroups {
+            var reasons = Set(group.segments.flatMap { $0.reviewReasons ?? [] })
+            if group.segments.contains(where: \.needsReview), reasons.isEmpty { reasons.insert("verify_against_audio") }
+            if !group.isShared(in: document) { reasons.insert("overlapping_channel_variants") }
+            if !reasons.isEmpty {
+                items.append(ReviewItem(id: "passage-\(group.id)", groupID: group.id,
+                    title: "\(group.timing) · \(group.channels)", reasons: reasons.sorted(), segmentIDs: group.segments.map(\.id)))
+            }
+        }
+        return items
+    }
+
+    private static func reviewTitle(_ reason: String) -> String {
+        switch reason {
+        case "confidence_unavailable": "Confidence information"
+        case "low_confidence": "Uncertain recognition"
+        case "translate_processor_not_configured": "Translation not applied"
+        case "normalize_processor_not_configured": "Text cleanup not applied"
+        case "engine_pass_disagreement": "Recognition disagreement"
+        case "source_contains_clipping": "Source clipping"
+        case "ai_derived_text_unverified": "AI edited text"
+        case "ai_summary_unverified": "Summary verification"
+        default: "Additional processing note"
+        }
+    }
+
+    static func reviewLabel(_ reason: String) -> String {
+        switch reason {
+        case "confidence_unavailable": "Confidence was not supplied by this speech model. Verify against the audio."
+        case "low_confidence": "The speech model is uncertain about these words."
+        case "translate_processor_not_configured": "Translation has not been applied. Original speech is shown."
+        case "normalize_processor_not_configured": "Text cleanup has not been applied. Original speech is shown."
+        case "verify_against_audio": "Listen to this passage and verify the words."
+        case "overlapping_channel_variants": "Overlapping sources have different text or timing. Compare the originals."
+        case "engine_pass_disagreement": "Recognition passes disagree. Compare with the audio."
+        case "source_contains_clipping": "The source contains clipping. Some words may be distorted."
+        case "ai_derived_text_unverified": "AI edited text needs checking against the original."
+        case "ai_summary_unverified": "Check the summary against its source passages."
+        default: "Additional processing note. See technical details for the original message."
+        }
+    }
 
     struct Group: Identifiable, Sendable, Equatable {
         let segments: [TranscriptPreview.Segment]

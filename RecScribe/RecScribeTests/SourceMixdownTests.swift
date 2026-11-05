@@ -283,6 +283,9 @@ struct SourceMixdownTests {
         let sample = try #require(timed)
         output.queue.sync { output.process(sample, type: .audio, clock: clock) }
         #expect(abs(captured.withLock { $0 } - 10900) < 1 / 48000.0)
+        captured.withLock { $0 = .nan }
+        output.queue.sync { output.process(sample, type: .audio) } // Drain after the stream no longer supplies its clock.
+        #expect(abs(captured.withLock { $0 } - 10900) < 1 / 48000.0)
     }
 
     @Test func lateInputUsesHistoricalMuteAndMasterRamps() throws {

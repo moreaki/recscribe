@@ -386,6 +386,7 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
     private var buffers = 0
     private var callbackMS = 0.0
     private var maxCallbackMS = 0.0
+    private var synchronizationClock: CMClockOrTimebase?
     private let onError: @MainActor @Sendable (String) -> Void
 
     init(id: UUID = UUID(), audioCallback: @escaping @Sendable (AVAudioPCMBuffer) -> Void,
@@ -415,7 +416,9 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         of type: SCStreamOutputType
     ) {
         if sampleCallback != nil, type == .audio || type == .microphone {
-            guard let clock = stream.synchronizationClock else {
+            // Retain the stream clock through shutdown: callbacks admitted
+            // before stop still need its timebase while the output drains.
+            guard let clock = stream.synchronizationClock ?? synchronizationClock else {
                 rejectPacket("Playback synchronization clock is unavailable; source tracks are preserved", conversion: false)
                 return
             }
@@ -427,6 +430,7 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
 
     func process(_ sampleBuffer: CMSampleBuffer, type: SCStreamOutputType, clock: CMClockOrTimebase? = nil) {
         dispatchPrecondition(condition: .onQueue(queue))
+        if let clock { synchronizationClock = clock }
         let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
         guard accepting, frameCount > 0, type == .audio || type == .microphone else { return }
         let began = ContinuousClock.now
@@ -454,7 +458,7 @@ nonisolated final class AudioCaptureOutput: NSObject, SCStreamOutput, @unchecked
         }
         if let callback = sampleCallback {
             let presentation = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-            let timestamp = clock.map { CMSyncConvertTime(presentation, from: $0, to: CMClockGetHostTimeClock()) } ?? presentation
+            let timestamp = synchronizationClock.map { CMSyncConvertTime(presentation, from: $0, to: CMClockGetHostTimeClock()) } ?? presentation
             guard timestamp.isNumeric, timestamp.seconds.isFinite else {
                 rejectPacket("Capture timestamps are invalid; source tracks are preserved", conversion: false)
                 return

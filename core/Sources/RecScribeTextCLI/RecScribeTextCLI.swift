@@ -12,7 +12,9 @@ import RecScribeCore
             let task = Task { try await run(parsed) }
             let signals = [SIGINT, SIGTERM].map { number in
                 signal(number, SIG_IGN)
-                let source = DispatchSource.makeSignalSource(signal: number, queue: .global(qos: .utility))
+                // main() creates this actor-isolated handler. Dispatch it on
+                // the main executor while the recognition worker stays utility.
+                let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
                 source.setEventHandler { task.cancel() }
                 source.resume()
                 return source

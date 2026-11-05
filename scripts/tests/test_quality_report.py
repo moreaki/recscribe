@@ -34,6 +34,12 @@ def matrix(rows):
     return {"schema_version": "1.0", "split": "development", "rows": rows, "host": {"os": "Test OS", "cpu_count": 4}}
 
 
+def native_language_pass(recognized="de", effective="auto", asr="auto"):
+    return {"engine": "whisper.cpp", "asr_language": asr, "detected_language": recognized,
+        "language_policy": {"policy": "current_auto", "effective_argument": effective,
+            "recognizer_language": recognized, "confidence": None}}
+
+
 class QualityReportTests(unittest.TestCase):
     def test_quality_uses_repeat_one_without_pseudoreplication(self):
         rows = [cell(identifier, repeat) for identifier in ["a", "b", "c"] for repeat in [1, 2, 3]]
@@ -116,6 +122,121 @@ class QualityReportTests(unittest.TestCase):
         self.assertEqual(timing["model_load_seconds_per_native_invocation"]["median"], 0.25)
         self.assertIn("not total process", timing["model_load_seconds_per_native_invocation"]["scope"])
         self.assertIsNone(timing["first_result_latency_seconds"])
+
+    def test_coarse_language_labels_use_repeat_one_and_preserve_lexical_denominators(self):
+        correct, wrong, later = cell("correct", language="de-CH"), cell("wrong", language="de-CH"), cell("correct", repeat=2, language="de-CH")
+        correct["measurement"]["engine_passes"] = [native_language_pass("de")]
+        wrong["measurement"]["engine_passes"] = [native_language_pass("en")]
+        later["measurement"]["engine_passes"] = [native_language_pass("fr")]
+        result = report.summarize(matrix([correct, wrong, later]))
+        quality = result["cohorts"][0]["quality"]
+        labels = quality["automatic_language_labels"]
+        self.assertEqual(labels["planned_unique_utterances"], 2)
+        self.assertEqual(labels["observed_unique_utterances"], 2)
+        self.assertEqual(labels["unobserved_unique_utterances"], 0)
+        self.assertEqual(labels["expected_base_language_counts"], {"de": 2})
+        self.assertEqual(labels["recognized_base_language_counts"], {"de": 1, "en": 1})
+        self.assertEqual(labels["confusion_counts"], [
+            {"expected_base_language": "de", "recognized_base_language": "de", "unique_utterances": 1},
+            {"expected_base_language": "de", "recognized_base_language": "en", "unique_utterances": 1}])
+        self.assertEqual(labels["observed_label_matches"], 1)
+        self.assertEqual(labels["observed_label_mismatches"], 1)
+        self.assertEqual(labels["observed_base_label_agreement"], 0.5)
+        self.assertIsNone(labels["confidence"])
+        self.assertIsNone(labels["human_language_id_accuracy"])
+        self.assertIsNone(quality["language_id_accuracy"])
+        self.assertEqual(labels["switch_boundary_gate"], "UNMEASURED")
+        self.assertEqual(labels["out_of_set_gate"], "UNMEASURED")
+        self.assertEqual(quality["wer"]["reference_units"], 20)
+        self.assertEqual(quality["wer"]["errors"], 2)
+        self.assertIn("published monolingual", labels["scope"])
+        self.assertIn("de-CH → de", report.markdown(result))
+
+    def test_known_language_controls_and_explicit_native_arguments_never_become_detection(self):
+        known, argument, policy = cell("known", mode="known"), cell("argument"), cell("policy")
+        # Even inconsistent auto-looking provenance cannot make a known row a detection.
+        known["measurement"]["engine_passes"] = [native_language_pass()]
+        argument["measurement"]["engine_passes"] = [native_language_pass(asr="de")]
+        policy["measurement"]["engine_passes"] = [native_language_pass(effective="de")]
+        result = report.summarize(matrix([known, argument, policy]))
+        explicit = next(value for value in result["cohorts"] if value["language_mode"] == "known")["quality"]["automatic_language_labels"]
+        automatic = next(value for value in result["cohorts"] if value["language_mode"] == "auto")["quality"]["automatic_language_labels"]
+        self.assertEqual(explicit["planned_unique_utterances"], 0)
+        self.assertEqual(explicit["observed_unique_utterances"], 0)
+        self.assertEqual(explicit["ineligibility_counts"], {"explicit_language_control": 1})
+        self.assertIsNone(explicit["observed_base_label_agreement"])
+        self.assertEqual(automatic["planned_unique_utterances"], 2)
+        self.assertEqual(automatic["unobserved_reason_counts"], {"not_an_automatic_native_invocation": 2})
+        self.assertEqual(automatic["confusion_counts"], [])
+
+    def test_empty_vad_raw_label_missing_policy_and_missing_pass_stay_unobserved(self):
+        empty, policy_missing, pass_missing = [cell(identifier, language="en") for identifier in ["empty", "policy-missing", "pass-missing"]]
+        native = native_language_pass(None)
+        native["detected_language"] = "en"  # Runtime initial state after VAD found no speech.
+        empty["measurement"]["engine_passes"] = [native]
+        native = native_language_pass("en"); del native["language_policy"]
+        policy_missing["measurement"]["engine_passes"] = [native]
+        pass_missing["measurement"]["detected_language"] = "en"
+        quality = report.summarize(matrix([empty, policy_missing, pass_missing]))["cohorts"][0]["quality"]
+        labels = quality["automatic_language_labels"]
+        self.assertEqual(labels["planned_unique_utterances"], 3)
+        self.assertEqual(labels["observed_unique_utterances"], 0)
+        self.assertEqual(labels["unobserved_unique_utterances"], 3)
+        self.assertEqual(labels["unobserved_reason_counts"], {"no_structured_nonempty_speech_label": 1,
+            "missing_structured_language_policy": 1, "missing_native_pass": 1})
+        self.assertEqual(labels["recognized_base_language_counts"], {})
+        self.assertIsNone(labels["observed_base_label_agreement"])
+        self.assertEqual(quality["cer"]["reference_units"], 60)
+
+    def test_multiple_channels_region_wrappers_and_non_native_passes_are_ambiguous(self):
+        channels, regions, other = [cell(identifier) for identifier in ["channels", "regions", "other"]]
+        channels["measurement"]["engine_passes"] = [native_language_pass(), native_language_pass()]
+        wrapper = native_language_pass()
+        wrapper["channel_regions"] = [{"provenance": native_language_pass()}]
+        regions["measurement"]["engine_passes"] = [wrapper]
+        non_native = native_language_pass(); non_native["engine"] = "synthetic"
+        other["measurement"]["engine_passes"] = [non_native]
+        labels = report.summarize(matrix([channels, regions, other]))["cohorts"][0]["quality"]["automatic_language_labels"]
+        self.assertEqual(labels["observed_unique_utterances"], 0)
+        self.assertEqual(labels["unobserved_unique_utterances"], 3)
+        self.assertEqual(labels["unobserved_reason_counts"], {"ambiguous_multiple_engine_passes": 1,
+            "ambiguous_region_invocations": 1, "not_a_direct_native_pass": 1})
+
+    def test_coarse_language_labels_do_not_fall_back_after_failed_or_missing_first_repeat(self):
+        failed, later, missing = cell("failed", status="failed"), cell("failed", repeat=2), cell("missing", repeat=2)
+        for row in [failed, later, missing]:
+            row["measurement"]["engine_passes"] = [native_language_pass()]
+        labels = report.summarize(matrix([failed, later, missing]))["cohorts"][0]["quality"]["automatic_language_labels"]
+        self.assertEqual(labels["planned_unique_utterances"], 2)
+        self.assertEqual(labels["observed_unique_utterances"], 0)
+        self.assertEqual(labels["unobserved_reason_counts"], {"repeat_one_not_completed": 2})
+        self.assertIsNone(labels["observed_base_label_agreement"])
+
+    def test_unknown_source_languages_and_declared_switches_are_not_monolingual_trials(self):
+        rows = [cell("unknown", language="und"), cell("multiple", language="mul"), cell("invalid", language="de/fr"),
+            cell("switched"), cell("non-speech", task="non_speech"), cell("uncertain-switches")]
+        for row in rows:
+            row["measurement"]["engine_passes"] = [native_language_pass()]
+        corpus = {"cases": [{"id": "switched", "language": "de", "code_switches": [{"language": "fr"}]},
+            {"id": "uncertain-switches", "language": "de", "code_switches": None}]}
+        result = report.summarize(matrix(rows), corpus)
+        labels = [value["quality"]["automatic_language_labels"] for value in result["cohorts"]]
+        self.assertEqual(sum(value["planned_unique_utterances"] for value in labels), 0)
+        self.assertEqual(sum(value["ineligible_unique_utterances"] for value in labels), 6)
+        exclusions = {}
+        for value in labels:
+            for reason, count in value["ineligibility_counts"].items():
+                exclusions[reason] = exclusions.get(reason, 0) + count
+        self.assertEqual(exclusions, {"unknown_or_invalid_source_language": 3, "declared_code_switching": 1,
+            "non_speech_source": 1, "unknown_code_switch_metadata": 1})
+        self.assertTrue(all(value["observed_base_label_agreement"] is None for value in labels))
+
+    def test_base_language_tags_are_validated_generically_without_regional_identity_claims(self):
+        for tag, expected in [("de-CH", "de"), ("pt-BR", "pt"), ("zh-Hant-TW", "zh"), ("en-GB", "en"),
+            ("ar", "ar"), ("gsw", "gsw"), ("abc-123", "abc"), ("und", None), ("mul", None), ("zxx", None),
+            ("auto", None), ("de/fr", None), ("de--CH", None), ("e", None), ("de ", None), (None, None)]:
+            with self.subTest(tag=tag):
+                self.assertEqual(report.base_language(tag), expected)
 
     def test_inconsistent_counts_duplicate_cells_and_changed_artifact_sizes_fail(self):
         inconsistent = cell(); inconsistent["measurement"]["character_errors"] = 7

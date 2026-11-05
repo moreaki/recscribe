@@ -247,3 +247,40 @@ Full regional/reference/scoring gaps remain governed by the
 [corpus contract](corpus-contract.md), [experiment contract](experiment-contract.md)
 and #103–#105/#112. The next research result must compare an actual AI-authored
 weight edit against these controls under a matching, recorded runtime.
+
+## Supplement: post-baseline artifact inspection, 2026-11-05
+
+This supplementary inspection uses already retained JSON inventories under
+`~/Library/Application Support/RecScribe/Benchmarks/Research/112/`; it does not
+change the completed matrix, raw measurements or tables above. These are
+post-baseline observations, not an earlier dependency/model inspection lock.
+The inventories have no embedded inspection timestamp. The SHA-256s below are
+their recorded `source_sha256` values and match the baseline artifacts above.
+E/D means encoder/decoder; state is the stored hidden-state width.
+
+| Model | Recorded model SHA-256 | E/D layers | E/D state | E/D heads | Mel bins | Tensors | Stored scalar elements |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| tiny | `be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21` | 4/4 | 384/384 | 6/6 | 80 | 167 | 37,760,640 |
+| base | `60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe` | 6/6 | 512/512 | 8/8 | 80 | 245 | 72,593,920 |
+| small | `1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b` | 12/12 | 768/768 | 12/12 | 80 | 479 | 241,734,912 |
+| large-v3-turbo | `1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69` | 32/4 | 1280/1280 | 20/20 | 128 | 587 | 808,878,080 |
+| full large-v3 | `64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2` | 32/32 | 1280/1280 | 20/20 | 128 | 1,259 | 1,543,490,560 |
+
+The existing per-tensor layout metadata gives this precision distribution;
+counts and element totals sum to each inventory's recorded totals.
+
+| Model | F16 tensors / scalar elements | F32 tensors / scalar elements |
+| --- | --- | --- |
+| tiny | 67 / 36,965,760 | 100 / 794,880 |
+| base | 99 / 71,504,384 | 146 / 1,089,536 |
+| small | 195 / 239,966,976 | 284 / 1,767,936 |
+| large-v3-turbo | 235 / 805,798,400 | 352 / 3,079,680 |
+| full large-v3 | 515 / 1,539,801,600 | 744 / 3,688,960 |
+
+Stored scalar elements include positional tensors; they are **not an inferred
+trainable parameter count**. Layout/precision metadata establishes neither
+recognition quality nor a failure mechanism. No model binary was reread and no
+tensor statistics were recomputed for this supplement. Exact evidence files are
+`tiny-static-v1.json`, `base-tensor-inventory.json`,
+`small-tensor-inventory.json`, `large-v3-turbo-tensor-inventory.json` and
+`large-v3-tensor-inventory.json` under the protected research directory above.

@@ -117,3 +117,7 @@ loading. It preserves incomplete/failed denominators and refuses held-out
 reporting by default. `--allow-held-out` requires a matching retained freeze,
 bound snapshots and the predeclared review/budget evidence after candidate
 selection is frozen. See the experiment contract before using that path.
+
+For the protected synthetic Q30/attenuation preparation, `derive-sensitivity.py`
+usage and the still-unexecuted VAD/language/padding stages, see
+[speech and language experiments](speech-language-experiments.md#prepared-synthetic-development-inputs).

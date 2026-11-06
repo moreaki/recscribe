@@ -191,6 +191,35 @@ def validate_measurement(row, execution, model_hash):
         if errors is not None and all(v is not None for v in operations): require(sum(operations) == errors, "Edit operations disagree with total errors")
 
 
+def reference_placeholder(pair, rows, original, execution):
+    """Validate only the runner's unpaired runtime fallback for a reference row.
+
+    With no explicit comparisons or baseline profile, paired() emits one of
+    these records per candidate row. It is not an observed parent comparison.
+    """
+    fields = {"identity", "candidate_profile", "id", "task", "repeat", "language_mode", "path", "source_channel",
+              "candidate_model", "candidate_model_sha256", "baseline_model", "baseline_profile", "comparison_id",
+              "intervention", "intervention_id", "language", "conditions", "coverage_role", "pairing_contract_version", "status"}
+    require(isinstance(pair, dict) and set(pair) == fields, "Malformed legacy reference placeholder fields")
+    require(pair["status"] == "pending_pair" and pair["comparison_id"] is None and pair["baseline_profile"] is None
+            and pair["intervention_id"] is None and pair["intervention"] == "runtime"
+            and pair["pairing_contract_version"] == "model-lineage-v2", "Malformed legacy reference placeholder status/lineage")
+    require(all(isinstance(pair[k], str) for k in ("id", "candidate_model", "language_mode")) and type(pair["repeat"]) is int,
+            "Malformed legacy reference placeholder cell")
+    key = (pair["id"], pair["candidate_model"], pair["language_mode"], pair["repeat"])
+    row = rows.get(key)
+    require(row is not None and row.get("profile_kind") == "candidate", "Legacy reference placeholder lacks its canonical candidate row")
+    require(pair["baseline_model"] == pair["candidate_model"] == original["id"]
+            and pair["candidate_model_sha256"] == original["sha256"] and pair["candidate_profile"] == execution["profile_id"],
+            "Legacy reference placeholder changes original model/profile identity")
+    for field in ("id", "task", "repeat", "language_mode", "path", "source_channel", "language", "conditions", "coverage_role"):
+        require(type(pair[field]) is type(row.get(field)) and pair[field] == row.get(field), "Legacy reference placeholder source/cell identity differs")
+    identity_fields = ("id", "language", "language_mode", "path", "source_sha256", "reference_sha256", "scoring_policy", "task")
+    identity = "|".join(row[field] for field in identity_fields) + "|" + str(row["source_channel"]) + "|" + str(row["repeat"])
+    require(pair["identity"] == identity, "Legacy reference placeholder identity string differs")
+    return key
+
+
 def validate_inputs(report, matrix, matrix_hash, plan):
     cases, models, comparisons = validate_plan(plan)
     require(isinstance(report, dict) and isinstance(matrix, dict), "Report and matrix must be JSON objects")
@@ -243,9 +272,14 @@ def validate_inputs(report, matrix, matrix_hash, plan):
         rows[key] = row
     expected_pairs = set(itertools.product(comparisons.values(), cases, plan["language_modes"], range(1, plan["repetitions"] + 1)))
     pair_roles = {value: role for role, value in comparisons.items()}
-    pairs = {}
+    pairs, placeholders = {}, {}
     require(isinstance(matrix.get("paired_comparisons"), list), "Explicit native parent-pair array required")
     for pair in matrix["paired_comparisons"]:
+        if partition["kind"] == "reference":
+            key = reference_placeholder(pair, rows, original, execution)
+            require(key not in placeholders, "Duplicate legacy reference placeholder")
+            placeholders[key] = pair
+            continue
         require(isinstance(pair, dict) and all(isinstance(pair.get(v), str) for v in ("comparison_id", "id", "language_mode")) and type(pair.get("repeat")) is int, "Invalid parent pair identity")
         key = (pair["comparison_id"], pair["id"], pair["language_mode"], pair["repeat"])
         require(key in expected_pairs and key not in pairs, "Unexpected/duplicate native pair; derived-to-derived native pairs are prohibited")
@@ -267,6 +301,7 @@ def validate_inputs(report, matrix, matrix_hash, plan):
                 a, b = prior.observation(before, metric), prior.observation(after, metric)
                 require(equivalent(pair.get(metric + "_delta"), b - a if a is not None and b is not None else None), "Native pair metric delta mismatch")
         pairs[key] = pair
+    require(partition["kind"] != "reference" or set(placeholders) == set(rows), "Legacy reference placeholder grid must match all retained canonical rows")
     rebuilt = public.summarize(matrix, {"cases": list(cases.values())}, allow_held_out=plan["split"] == "held_out", freeze_verified=plan["split"] == "held_out")
     for field in ("requested_cells", "completed_cells", "cell_status_counts", "unique_source_utterances_planned", "comparisons"):
         require(equivalent(report.get(field), rebuilt[field]), "Public report disagrees with matrix: " + field)
@@ -276,7 +311,7 @@ def validate_inputs(report, matrix, matrix_hash, plan):
     for key, cohort in actual.items():
         for field in ("model_kind", "baseline_model_id", "baseline_model_sha256", "coverage_role", "requested_cells", "cell_status_counts", "quality", "timing", "peak_process_rss_bytes", "artifact_metrics", "utterance_repeats"):
             require(equivalent(cohort.get(field), expected_cohorts[key][field]), "Public cohort disagrees with matrix: " + field)
-    return cases, models, rows, pairs, expected, expected_pairs, byte_evidence
+    return cases, models, rows, pairs, expected, expected_pairs, byte_evidence, placeholders
 
 
 def row_contrast(plan, cases, rows, mode, baseline, candidate):
@@ -353,7 +388,7 @@ def float_control(plan, cases, rows, mode, original, balanced):
 
 
 def assess(report, matrix, matrix_hash, plan):
-    cases, models, rows, pairs, expected, expected_pairs, byte_evidence = validate_inputs(report, matrix, matrix_hash, plan)
+    cases, models, rows, pairs, expected, expected_pairs, byte_evidence, placeholders = validate_inputs(report, matrix, matrix_hash, plan)
     partition = plan["partition"]
     arms = partition["arms"] if partition["kind"] == "family" else {"original": partition["model"]}
     results = []
@@ -375,6 +410,7 @@ def assess(report, matrix, matrix_hash, plan):
                                    "observed_model_file_bytes": model["model_file_bytes"] if observed == len(keys) else None,
                                    "planned_cells": len(keys), "measured_byte_cells": observed}
         if partition["kind"] == "reference":
+            coverage["legacy_unpaired_reference_placeholders"] = sum(key[2] == mode for key in placeholders)
             metrics = row_contrast(plan, cases, rows, mode, arms["original"], arms["original"])
             reference = {"model": arms["original"],
                 "macro_cer": metrics["macro_metrics"]["baseline_macro_cer"], "macro_wer": metrics["macro_metrics"]["baseline_macro_wer"],
@@ -426,7 +462,7 @@ def assess(report, matrix, matrix_hash, plan):
     decisions = {v["language_mode"]: v["decision"] for v in results}
     decision = "reject" if "reject" in decisions.values() else "inconclusive_no_promotion" if "inconclusive_no_promotion" in decisions.values() else "reference_observed_no_promotion" if partition["kind"] == "reference" else "continue_no_promotion"
     resources = [{key: cohort.get(key) for key in ("language", "task", "model", "model_sha256", "language_mode", "timing", "peak_process_rss_bytes", "artifact_metrics")} for cohort in report["cohorts"]]
-    return {"schema_version": VERSION, "created_utc": datetime.now(timezone.utc).isoformat(), "stage": plan["stage"], "split": plan["split"],
+    result = {"schema_version": VERSION, "created_utc": datetime.now(timezone.utc).isoformat(), "stage": plan["stage"], "split": plan["split"],
         "repetitions": plan["repetitions"], "partition": partition, "quality_selection": "successful repeat_1_only; no later fallback or selective retry",
         "scoring_policy": POLICY, "model_mode_assessments": results,
         "partition_assessment": {"id": partition["id"], "kind": partition["kind"], "decision": decision, "mode_decisions": decisions},
@@ -440,6 +476,14 @@ def assess(report, matrix, matrix_hash, plan):
             "Native/critical-content/regional/grouping/live/fallback/independent-channel gates remain pending",
             "Resources are uncontrolled observations; one-repeat quality stages cannot establish repeat stability",
             "Only explicit report/matrix/plan/runtime JSON is read; snapshot attestations bind hashes, raw paths are not followed"]}
+    if partition["kind"] == "reference":
+        result["legacy_reference_placeholder_evidence"] = {
+            "contract_version": "legacy-unpaired-reference-v1", "status": "unpaired_legacy_runtime_evidence_only",
+            "observed_placeholder_cells": len(placeholders), "native_parent_pair_cells": 0, "assessor_derived_q5_pair_cells": 0,
+            "counts_by_language_mode": {mode: sum(key[2] == mode for key in placeholders) for mode in plan["language_modes"]},
+            "cell_identities": [{"id": key[0], "model": key[1], "language_mode": key[2], "repeat": key[3]} for key in sorted(placeholders)],
+            "interpretation": "No explicit comparison/baseline profile: pending runtime placeholders are not paired observations or gains"}
+    return result
 
 
 def markdown(result):
@@ -448,6 +492,9 @@ def markdown(result):
         lines += ["## " + value["partition"] + " / " + value["language_mode"] + ": " + value["decision"], "",
                   "Gate values are numerical evidence only; unknown never passes.", ""]
         lines += ["- " + key + ": " + ("unknown" if state is None else str(state).lower()) for key, state in value["gates"].items()]
+        if value["kind"] == "reference":
+            lines += ["", "Legacy unpaired runtime placeholders: " + str(value["coverage"]["legacy_unpaired_reference_placeholders"])
+                      + "; counted separately from zero native parent comparisons and zero Q5 contrasts.", ""]
         if value["kind"] == "family":
             lines += ["", "Balanced Q5 versus ordinary Q5 is an assessor-derived contrast, not a native pretrained-parent pair.",
                       "Model-file saving: " + prior.number(value["model_file_saving_vs_original"]), ""]

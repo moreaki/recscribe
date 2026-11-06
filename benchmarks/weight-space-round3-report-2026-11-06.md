@@ -1,11 +1,12 @@
-# Round 3: activation-aware channel balancing — preparation report, 2026-11-06
+# Round 3: activation-aware channel balancing — preliminary report, 2026-11-06
 
-**Preliminary preparation snapshot; quality results pending.** Activation calibration completed
+**Preliminary preparation/panel snapshot; fresh quality results pending.** Activation calibration completed
 81/81 fixed model/source diagnostics and all 14 model artifacts have recorded
-byte counts and SHA-256 identities. **Quality, decoding controls, native artifact
-compatibility, latency and memory outcomes remain PENDING.** Fresh held-out
-reference text remains opaque. Quality execution has been launched under the
-pre-inference family seal; no quality outcomes are incorporated here. No default, packaging or distribution change is
+byte counts and SHA-256 identities. All three small-model balanced-F16 numerical
+panels passed. **Fresh quality, complete native compatibility and resource
+summaries remain PENDING.** Fresh held-out reference text remains opaque. The
+serial run paused after 702 completed panel cells for a reference-placeholder
+validation repair; completed inference is retained without retry. No default, packaging or distribution change is
 authorized; these preparation checks do not establish a useful Whisper gain.
 
 This report follows the [prospective protocol](weight-space-round3-protocol.md).
@@ -47,7 +48,9 @@ one and an all-zero site fails. Gamma/beta are divided by s and every receiving
 input-channel weight is multiplied by s with the stored F32/F16 rounding.
 Encoder, tied embeddings, cross-attention K/V, GELU and output layers are
 excluded. Real-arithmetic equivalence does not establish numerical decoding
-equivalence; the actual balanced-F16 controls remain pending.
+equivalence. The three-repeat nine-source balanced-F16 panels now match their
+originals in all 54 hypothesis pairs and 27 automatic-label pairs per family;
+this is numerical-control evidence, not a quantized-model accuracy gain.
 
 The independent static audit records all three balanced-F16 mappings and all
 six Q5 containers passing their declared byte/finite/layout checks. It verifies
@@ -166,9 +169,9 @@ establish repeat stability.
 
 | Model | Balanced-F16 decoding control | Dev known CER/WER | Held-out known CER/WER | Held-out auto CER/WER | Latency/RSS/RTF | Native artifact compatibility |
 | --- | --- | --- | --- | --- | --- | --- |
-| Tiny | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING |
-| Base | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING |
-| Small | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING |
+| Tiny | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
+| Base | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
+| Small | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
 | large-v3-turbo | PENDING reference observation | PENDING | PENDING | PENDING | PENDING | PENDING round-3 invocation |
 | large-v3 | PENDING reference observation | PENDING | PENDING | PENDING | PENDING | PENDING round-3 invocation |
 
@@ -238,6 +241,32 @@ source IDs/audio/references/tasks/channels, scorer, selection and gates remain
 unchanged. The corrected preparation completed before the initial family seal
 and guarded quality launch; the failed attempt is retained.
 
+At 12:21 UTC the serial coordinator stopped safely after 702 completed panel
+cells (Tiny/Base/Small 216 each; Turbo 54). The unchanged native runner emits
+legacy `pending_pair` runtime placeholders for reference-only plans with no
+explicit comparison and no baseline profile. The initial assessor rejected
+their null comparison IDs as if they were real parent comparisons. Inference
+and retained reporting had completed; no fresh development or held-out inference
+had started. The correction validates the exact placeholder fields and full
+canonical-row grid, retains them separately and still counts zero actual
+parent/Q5 comparisons for references. Family metrics, gates and result fields
+are unchanged. All 702 cells, original seals, tools, journal and assessments
+are retained. A new documented postprocessing-only continuation must reproduce
+the first three assessments' numeric/gate bodies before launching only the
+remaining 11 fixed partitions; no completed inference may be repeated.
+
+After this correction, **138 offline quality and 12 tensor contracts passed**,
+including 28 channel-assessment contracts and strict all-missing/malformed/
+duplicate/foreign/real-pair rejection. The complete local native/frozen suite
+also passed **87 tests in 15 suites**, including the event-driven synthetic
+batch-order fixture and both sleeping/parked cancellation paths. An inherited
+five-second fixture polling deadline had failed under CI scheduling delay; its
+replacement waits for actual later completion while preserving all ordering,
+concurrency and canonical-evidence assertions, with a separate one-minute
+deadlock bound. Earlier CI failure/timeout evidence remains retained. Current
+head full functional/TSan/Release CI is a separate required gate and remains
+pending; local checks do not replace it. No frozen capture was rebaselined.
+
 Each guarded native launch is capped at 3,600 seconds, two threads, serial nice10
 utility work, with a cancel marker and owned-session shutdown/reaping. Fresh
 native idle/live-off inspection is required before inference. Active/uncertain
@@ -281,6 +310,7 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Runner build receipt | `80365554c266678ce87e6009df1b4598e73fc9c64b28c8279276d1208a590d3a` |
 | Private orchestration validation | `da76b4fdff460be6e209b4266bab290ad66e025b08fdc7cab7e3dd19b3b0e1d2` |
 | Full pre-inference family seal | `0f0371e506720dff1eed7238780b1fdcad7efb1a55fc6bd6496469dc35785635` |
+| Reference-placeholder repair validation | `18d0e09e62a922c15e9170d08affdbc38ce558071a70a2d462222e67fddb8a84` |
 | All-five-held-out receipt | **PENDING** |
 | Panel/development/held-out matrices, reports, assessments | **PENDING** |
 
@@ -295,6 +325,7 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Official whisper-quantize binary | `2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd` |
 | Profile file / effective settings | `4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857` / `cdd7cdc0076480723ee4be3cf4d5d2f417ffb7c6ce44fcaeaed517c164048169` |
 | Public reporter / channel assessor | `121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059` / `b2943432a35e6dd35365fd87cc8093d1e9ba52c5f2589b43b36adcfa9a6e9206` |
+| Corrected reference-placeholder assessor | `78b9715dfbf0016d57421b9a04347b9b78e84ed6f6bd4b8c1dba284569a3e0be` |
 | Guard | `66ccbc45bd70ae9abee2b3fc6f796109e7f5b1c99fdeb91c1ae4f956b2a79f69` |
 | Private coordinator / all-held-out sealer | `fd16363b1e5b9bebc0d0a68937d718d0297b050218252c2d9703292a25d1efa8` / `b9dad655a7026ecc4323eeab905e540d97879574be7273df8d68fa7c7d43f457` |
 

@@ -47,8 +47,9 @@ class QualityChannelAssessmentTests(unittest.TestCase):
         partition = {"id": "tiny", "kind": "family", "arms": arms,
                      "comparison_ids": {role: "tiny-" + role + "-vs-original" for role in channel.ARM_KINDS if role != "original"}}
         if reference:
-            arms = {"original": {"id": "large-v3-turbo", "sha256": sha("reference-large"), "model_file_bytes": 2000}}
-            partition = {"id": "large-v3-turbo", "kind": "reference", "model": arms["original"]}
+            reference_id = reference if isinstance(reference, str) else "large-v3-turbo"
+            arms = {"original": {"id": reference_id, "sha256": sha("reference-large"), "model_file_bytes": 2000}}
+            partition = {"id": reference_id, "kind": "reference", "model": arms["original"]}
         plan = {"schema_version": channel.PLAN_VERSION, "stage": stage, "split": split, "repetitions": repetitions,
                 "language_modes": modes, "cases": cases, "partition": partition, "execution": execution,
                 "runtime_record": {"path": str(runtime_path), "sha256": runtime_hash}}
@@ -82,7 +83,7 @@ class QualityChannelAssessmentTests(unittest.TestCase):
                 "artifact_metrics": artifact, "measurement": measurement})
         return plan, matrix
 
-    def materialize(self, plan, matrix):
+    def materialize(self, plan, matrix, pair_mutation=None):
         partition, execution = plan["partition"], plan["execution"]
         rows = {(v["id"], v["model"], v["language_mode"], v["repeat"]): v for v in matrix["rows"]}
         pairs = []
@@ -104,7 +105,21 @@ class QualityChannelAssessmentTests(unittest.TestCase):
                             a, b = channel.prior.observation(before, metric), channel.prior.observation(after, metric)
                             value[metric + "_delta"] = b - a if a is not None and b is not None else None
                     pairs.append(value)
+        else:
+            # Canonical BenchmarkExperiment.paired() fallback: no explicit
+            # specifications and no baseline profile leave one pending record
+            # per candidate row, without observed deltas/baseline evidence.
+            for row in matrix["rows"]:
+                if row["profile_kind"] != "candidate": continue
+                identity_fields = ("id", "language", "language_mode", "path", "source_sha256", "reference_sha256", "scoring_policy", "task")
+                value = {key: row.get(key) for key in ("id", "task", "repeat", "language_mode", "path", "source_channel", "language", "conditions", "coverage_role")}
+                value.update(identity="|".join(row[field] for field in identity_fields) + "|" + str(row["source_channel"]) + "|" + str(row["repeat"]),
+                    candidate_profile=row["profile"], candidate_model=row["model"], candidate_model_sha256=row["model_sha256"],
+                    baseline_model=row["baseline_model_id"], baseline_profile=None, comparison_id=None, intervention="runtime",
+                    intervention_id=row["intervention_id"], pairing_contract_version="model-lineage-v2", status="pending_pair")
+                pairs.append(value)
         matrix["paired_comparisons"] = pairs
+        if pair_mutation is not None: pair_mutation(matrix["paired_comparisons"])
         matrix_path, plan_path, report_path = [self.root / name for name in ("matrix.json", "plan.json", "report.json")]
         matrix_hash = write(matrix_path, matrix); write(plan_path, plan)
         report = channel.public.summarize(matrix, {"cases": plan["cases"]}, allow_held_out=plan["split"] == "held_out", freeze_verified=plan["split"] == "held_out")
@@ -114,8 +129,8 @@ class QualityChannelAssessmentTests(unittest.TestCase):
         write(report_path, report)
         return report, matrix_hash, (report_path, matrix_path, plan_path)
 
-    def assess(self, plan, matrix):
-        report, digest, _ = self.materialize(plan, matrix)
+    def assess(self, plan, matrix, pair_mutation=None):
+        report, digest, _ = self.materialize(plan, matrix, pair_mutation)
         return channel.assess(report, matrix, digest, plan)
 
     def change(self, matrix, role, *, language=None, mode=None, repeat=None, cer=None, wer=None):
@@ -139,6 +154,8 @@ class QualityChannelAssessmentTests(unittest.TestCase):
         chinese = next(v for v in value["balanced_q5_vs_plain_q5"]["per_language"] if v["language"] == "zh")
         self.assertIsNone(chinese["baseline"]["wer"]); self.assertIsNone(chinese["wer_delta"])
         self.assertFalse(result["default_promotion"]); self.assertEqual(result["native_review"], "PENDING")
+        self.assertNotIn("legacy_reference_placeholder_evidence", result)
+        self.assertNotIn("legacy_unpaired_reference_placeholders", value["coverage"])
         self.assertEqual(result["product_acceptance"], "PENDING"); self.assertEqual(result["resource_acceptance"], "UNCONTROLLED / NOT EVALUATED")
 
     def test_both_substantial_gain_targets_and_original_floor_are_independent(self):
@@ -333,9 +350,78 @@ class QualityChannelAssessmentTests(unittest.TestCase):
         self.assertEqual(result["partition_assessment"]["decision"], "reference_observed_no_promotion")
         for value in result["model_mode_assessments"]:
             self.assertEqual(value["coverage"]["planned_native_parent_pair_cells"], 0)
+            self.assertEqual(value["coverage"]["completed_native_parent_pair_cells"], 0)
+            self.assertEqual(value["coverage"]["legacy_unpaired_reference_placeholders"], 144)
             self.assertNotIn("balanced_q5_vs_plain_q5", value)
             self.assertNotIn("canonical_row_pairs", value["reference_metrics"])
             self.assertEqual(value["reference_metrics"]["per_language"][0]["cer"]["planned_utterances"], 16)
+
+    def test_both_large_panel_writer_placeholders_are_separate_unpaired_evidence(self):
+        for model in ("large-v3-turbo", "large-v3"):
+            with self.subTest(model=model):
+                plan, matrix = self.fixture(stage="panel", reference=model)
+                result = self.assess(plan, matrix)
+                evidence = result["legacy_reference_placeholder_evidence"]
+                self.assertEqual(len(matrix["rows"]), 54)
+                self.assertEqual(len(matrix["paired_comparisons"]), 54)
+                self.assertEqual(evidence["observed_placeholder_cells"], 54)
+                self.assertEqual(evidence["native_parent_pair_cells"], 0)
+                self.assertEqual(evidence["assessor_derived_q5_pair_cells"], 0)
+                self.assertEqual(evidence["counts_by_language_mode"], {"known": 27, "auto": 27})
+                self.assertEqual(len(evidence["cell_identities"]), 54)
+                self.assertTrue(all(p["comparison_id"] is None and p["baseline_profile"] is None and p["status"] == "pending_pair" for p in matrix["paired_comparisons"]))
+                self.assertEqual(result["partition_assessment"]["decision"], "reference_observed_no_promotion")
+                self.assertFalse(result["default_promotion"])
+
+    def test_pinned_reference_writer_cannot_omit_all_legacy_placeholders(self):
+        plan, matrix = self.fixture(stage="panel", reference=True)
+        with self.assertRaisesRegex(ValueError, "placeholder grid"):
+            self.assess(plan, matrix, lambda pairs: pairs.clear())
+
+    def test_reference_placeholders_reject_real_pairs_deltas_or_changed_identity(self):
+        mutations = (("status", "paired_exploratory"), ("comparison_id", "real-comparison"), ("baseline_profile", "current-defaults"),
+            ("intervention_id", "adaptation"), ("intervention", "combined"), ("pairing_contract_version", "other"),
+            ("candidate_model", "tiny"), ("baseline_model", "tiny"), ("candidate_model_sha256", sha("other")), ("candidate_profile", "other"),
+            ("identity", "forged"), ("source_channel", 1), ("language", "fr"), ("task", "transcription"), ("path", "live-replay"),
+            ("repeat", True), ("repeat", 0), ("repeat", 4), ("id", "unknown"), ("language_mode", "unknown"),
+            ("cer_delta", 0), ("baseline_model_sha256", None), ("candidate_artifact_metrics", {}), ("critical_content_review", "unmeasured"), ("reason", "other"))
+        for field, value in mutations:
+            plan, matrix = self.fixture(stage="panel", reference=True)
+            report, _, _ = self.materialize(plan, matrix)
+            matrix["paired_comparisons"][0][field] = value
+            digest = write(self.root / "matrix.json", matrix)
+            report["source_matrix_sha256"] = digest
+            with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, "[Pp]laceholder"):
+                channel.assess(report, matrix, digest, plan)
+
+    def test_reference_placeholder_missing_duplicate_or_extra_cells_reject(self):
+        for change in ("missing_field", "missing_cell", "duplicate", "extra_cell"):
+            plan, matrix = self.fixture(stage="panel", reference=True)
+            def mutate(pairs):
+                if change == "missing_field": pairs[0].pop("baseline_profile")
+                elif change == "missing_cell": pairs.pop()
+                elif change == "duplicate": pairs.append(copy.deepcopy(pairs[0]))
+                else:
+                    pairs.append(copy.deepcopy(pairs[0])); pairs[-1]["id"] = "foreign"
+            with self.subTest(change=change), self.assertRaises(ValueError): self.assess(plan, matrix, mutate)
+
+    def test_reference_placeholders_never_repair_failed_quality_coverage(self):
+        plan, matrix = self.fixture(stage="panel", reference=True)
+        row = next(v for v in matrix["rows"] if v["language_mode"] == "known" and v["repeat"] == 1)
+        row["status"] = row["measurement"]["status"] = "failed"
+        result = self.assess(plan, matrix)
+        values = {v["language_mode"]: v for v in result["model_mode_assessments"]}
+        self.assertEqual(values["known"]["coverage"]["legacy_unpaired_reference_placeholders"], 27)
+        self.assertEqual(values["known"]["decision"], "inconclusive_no_promotion")
+        self.assertEqual(values["known"]["coverage"]["completed_native_parent_pair_cells"], 0)
+        self.assertEqual(values["auto"]["decision"], "reference_observed_no_promotion")
+
+    def test_family_cannot_accept_a_legacy_reference_placeholder(self):
+        reference_plan, reference_matrix = self.fixture(stage="panel", reference=True)
+        self.materialize(reference_plan, reference_matrix)
+        placeholder = copy.deepcopy(reference_matrix["paired_comparisons"][0])
+        plan, matrix = self.fixture(stage="panel")
+        with self.assertRaises(ValueError): self.assess(plan, matrix, lambda pairs: pairs.append(placeholder))
 
     def test_expected_grids_reject_duplicates_unknown_repeats_and_derived_native_pairs(self):
         for change in ("duplicate", "repeat", "derived_pair"):

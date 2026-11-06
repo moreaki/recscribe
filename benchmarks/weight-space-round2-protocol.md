@@ -114,6 +114,11 @@ Record native runtime/library/model/recipe/tool hashes before execution.
 2. New development-validation: 72 sources × three models × parent/candidate ×
    known mode × three repeats = **1,296 cells**. This set assesses the fixed
    family; it does not optimize gains, heads, references or another recipe.
+   An execution-only amendment before any development-validation inference
+   partitions this into three **432-cell model matrices** under the unchanged
+   3,600-second launch limit. The original unexecuted aggregate configuration
+   remains preserved as superseded. Sources, artifact hashes, settings, repeats,
+   gates and the 4,212-cell total are unchanged; no partial run is retried.
 3. Freeze all three candidates, settings, scoring, source/hash identities,
    control status, budgets and selection history before opening heldout outcomes.
    The fixed family is independently evaluated regardless of development

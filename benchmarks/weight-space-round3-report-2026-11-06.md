@@ -1,17 +1,38 @@
-# Round 3: activation-aware channel balancing — preliminary report, 2026-11-06
+# Round 3: activation-aware channel balancing — measured report, 2026-11-06
 
-**Preliminary preparation/panel snapshot; fresh quality results pending.** Activation calibration completed
-81/81 fixed model/source diagnostics and all 14 model artifacts have recorded
-byte counts and SHA-256 identities. All three small-model balanced-F16 numerical
-panels passed. **Fresh quality, complete native compatibility and resource
-summaries remain PENDING.** Fresh held-out reference text remains opaque. All
-five panels completed 756 cells. Tiny development reached 288 attempts with
-287 successes and one failed original-Tiny Chinese output containing invalid
-UTF-8 in recognized text. The failed cell remains unscored. A sealed continuation
-is running the nine untouched grids without inference retry; see the prospective
-[execution amendments](weight-space-round3-execution-amendments-2026-11-06.md).
-No default, packaging or distribution change is
-authorized; these preparation checks do not establish a useful Whisper gain.
+**Reject this fixed adaptation family for promotion.** All three balanced-Q5
+candidates failed the frozen quality gates in both known and automatic modes.
+Against ordinary Q5, Tiny's relative CER gains were 1.764% / 1.902%; Base CER
+worsened 2.322% / 3.087%; Small gained 1.850% CER but worsened WER by 5.734%.
+None meets the required 10% CER and 5% WER improvements. Ordinary quantization
+supplies the 58.6–61.0% model-file savings; AI balancing supplies no additional
+size reduction. No model/default, distribution or installed-app change follows.
+
+All **5,796 planned runner cells were terminally attempted: 5,793 measured
+successes and three unscored development failures**. All **4,032 held-out cells
+succeeded**, covering 144 sources, sixteen per language. Native comparisons are
+**3,720 paired + six pending = 3,726 planned**; all **1,242 Q5 contrasts** are
+complete. The 828 legacy reference placeholders remain separate, unpaired
+evidence. Failed cells were never repaired, omitted or retried; full development
+metrics requiring their missing data remain unknown.
+
+All five held-out plans were sealed together under
+`ccc920c498ee85b1b4e8c8a4b72f54b82284d0cc63bcbff9f1ddbb92d08e1de5`, created at **15:08:07.849369 UTC** and accepted at
+**15:08:11.154654 UTC**. The first held-out command started at
+**15:08:11.169709 UTC**, after all ten panel/development assessments, and the
+serial study finished at **18:17:51.352485 UTC**. Held-out reference text was
+semantically uninspected before the freeze. All artifacts/settings advanced
+regardless of development direction. The [execution amendments](weight-space-round3-execution-amendments-2026-11-06.md)
+retain every earlier stop and metadata correction.
+
+The [measurement appendix](weight-space-round3-measurements-2026-11-06.md)
+contains every held-out artifact/mode/language rate, denominator, timing and
+process-RSS observation. Protected CSV exports also retain panel/development
+cohorts, missing values and upstream model-load timers; their identities are
+listed below. Independent audits reconciled 630 language/resource cohorts,
+70 macro rows and all 453 gates. Resource acceptance remains
+**UNCONTROLLED / NOT EVALUATED**; native approval and broader product coverage
+remain pending.
 
 This report follows the [prospective protocol](weight-space-round3-protocol.md).
 The negative [round-1](weight-space-pilot-report-2026-11-05.md) and
@@ -22,6 +43,46 @@ with a fixed analytic rule instead of scale search. The
 [weight-space programming article](https://rikiyat.github.io/blog/weight-space-programming/)
 motivates AI-authored direct weight reasoning; neither source establishes an
 accuracy or speed improvement for this Whisper experiment.
+
+## Held-out adaptation effect
+
+These are equal-language macro rates: nine CER languages and eight meaningful
+whitespace-WER languages. Positive relative gain means lower error. Each mode
+has the same 144 sources; modes are conditions, not additional independent speech.
+All rates below have complete held-out coverage. The unchanged gate targets are
+10% relative CER and 5% relative WER gain over ordinary Q5, plus the separate
+original-F16 and per-language floors.
+
+| Family | Mode | Ordinary Q5 → balanced Q5 CER | Ordinary Q5 → balanced Q5 WER | Relative CER gain | Relative WER gain | Frozen decision |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| tiny | known | 16.923% → 16.624% | 36.915% → 36.218% | +1.764% | +1.888% | Reject |
+| tiny | auto | 17.469% → 17.136% | 37.971% → 37.536% | +1.902% | +1.144% | Reject |
+| base | known | 12.867% → 13.165% | 27.188% → 27.099% | -2.322% | +0.328% | Reject |
+| base | auto | 12.900% → 13.298% | 27.264% → 27.251% | -3.087% | +0.049% | Reject |
+| small | known | 7.316% → 7.180% | 14.237% → 15.053% | +1.850% | -5.734% | Reject |
+| small | auto | 7.316% → 7.180% | 14.237% → 15.053% | +1.850% | -5.734% | Reject |
+
+The independent audit agrees with all stored mode/partition/family decisions:
+359 true, 84 false and ten unknown gate observations. The ten unknowns belong
+to development coverage affected by the three failed cells; none is a held-out
+gate. A known failed gate still rejects, without converting an unknown into a
+pass. Tiny also breaches original-F16 quality floors and introduces a new coarse
+automatic-label error against that control. Base has French/Chinese regressions
+against ordinary Q5 and original-F16 regressions. Small's WER regression and
+German/Swiss comparison caps also fail. The full gate evidence is retained.
+
+The three numerical panels passed their required three-repeat identity checks.
+Fresh balanced-F16 controls have slightly different rates from their original
+F16 controls: real-arithmetic compensation and a nine-source panel do not prove
+globally identical finite-precision decoding. Their complete results remain in
+the appendix. This finding does not introduce an additional post-hoc gate.
+
+The untouched larger references reach about 3.8% macro CER on this read-speech
+set. Full Large-v3 has slightly lower CER than Turbo, while Turbo has lower WER;
+neither is universally better across these metrics. Their much larger files,
+process memory and observed latency are reported separately below. This does
+not demonstrate a Shannon capacity limit for the smaller models or validate
+a larger-model adaptation.
 
 ## Fixed experiment and completed preparation
 
@@ -69,10 +130,10 @@ itself explicitly did not rehash model payloads.
 Ordinary and balanced Q5 have identical byte counts but distinct hashes. Their
 recorded model-file savings against their own F16 originals are **58.615% Tiny,
 59.644% Base and 61.016% Small**. Balancing alone retains the F16 byte count and
-parameter geometry. Ordinary quantization supplies this size reduction; only
-the forthcoming balanced-Q5 versus ordinary-Q5 comparison can measure an
-additional adaptation benefit. Download containers, installed/bundled increments
-and runtime memory are separate, currently unmeasured quantities.
+parameter geometry. Ordinary quantization supplies this size reduction; the measured balanced-Q5 versus ordinary-Q5 contrast above isolates the
+additional adaptation effect, which failed the frozen gain targets. Process RSS
+is observed separately below. Download containers, installed/bundled increments,
+total unified GPU allocation and controlled memory acceptance remain unmeasured.
 
 ## Artifact identities and lineage
 
@@ -120,17 +181,17 @@ remain preserved externally. Acquisition was prospectively bounded to 512 MiB
 network and 512 MiB protected output, with 32 MiB archive/source prefixes and
 explicit duration/cancellation limits; no silent count reduction or expansion.
 
-| Language/task | Recorded regional/script scope | New dev / held-out quality |
+| Language/task | Recorded regional/script scope | Measured v1 evidence / native approval |
 | --- | --- | --- |
-| Swiss German → written Standard German | Published Swiss canton metadata; Latin script; native wording/rendering approval pending | PENDING / PENDING |
-| German | `de_de`, Germany; Latin | PENDING / PENDING |
-| French | `fr_fr`, France; Latin | PENDING / PENDING |
-| Italian | `it_it`, Italy; Latin | PENDING / PENDING |
-| English | `en_us`, US; Latin | PENDING / PENDING |
-| Arabic | `ar_eg` locale; Arabic script; no adjudicated MSA/dialect breadth claim | PENDING / PENDING |
-| Chinese | `cmn_hans_cn`, Mandarin; Simplified Han only | PENDING / PENDING |
-| Spanish | `es_419`, Latin America; Latin | PENDING / PENDING |
-| Portuguese | `pt_br`, Brazil; Latin | PENDING / PENDING |
+| Swiss German → written Standard German | Published Swiss canton metadata; Latin script; native wording/rendering approval pending | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| German | `de_de`, Germany; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| French | `fr_fr`, France; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| Italian | `it_it`, Italy; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| English | `en_us`, US; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| Arabic | `ar_eg` locale; Arabic script; no adjudicated MSA/dialect breadth claim | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| Chinese | `cmn_hans_cn`, Mandarin; Simplified Han only | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| Spanish | `es_419`, Latin America; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
+| Portuguese | `pt_br`, Brazil; Latin | [Rates and counts](weight-space-round3-measurements-2026-11-06.md); native/v2 review pending |
 
 Swiss published canton counts are dev AG2/BE2/BL1/SG1/UR1/ZH1 and held-out
 AG2/BE4/LU1/SG3/VS1/ZG1/ZH4, with 8 and 16 known speakers. Canton metadata is
@@ -141,22 +202,22 @@ multilingual fallback and independent-channel acceptance remain pending.
 Swiss dialect spelling is a separate output task; this study scores its
 published written-German rendering.
 
-Planned scoring remains exploratory `swift-nfc-casefold-alphanumeric-v1`:
+Scoring used exploratory `swift-nfc-casefold-alphanumeric-v1`:
 count errors/reference units within each language, then equal means over nine
 CER languages and eight meaningful WER languages. Chinese whitespace WER is
 unreported. Only successful repeat 1 supplies quality, with no later fallback
 or selective retry. Native-approved v2/strict Arabic scoring and critical-content
 adjudication remain pending; unreviewed corpus entries are not native approval.
 
-## Frozen comparison plan and pending outcomes
+## Frozen comparison plan and measured coverage
 
-All four arms of all three families and both larger references proceed regardless
-of development direction. Five partitions run per stage, serially: Tiny, Base,
+All four arms of all three families and both larger references proceeded regardless
+of development direction. Five partitions ran per stage, serially: Tiny, Base,
 Small, Turbo, full Large. All 15 configurations, source/runtime/model identities
-and assessment preplans are bound before quality inference. After all ten panel
-and development partitions complete, all five held-out freezes and final plans
-must be sealed together before the first held-out outcome. Final plans may add
-only the freeze SHA and two links back to the retained preplan/family seal.
+and assessment preplans were bound before quality inference. All ten panel and
+development grids were terminal and assessed before all five held-out freezes
+and final plans were sealed together. Final plans added only the freeze SHA and
+two links back to the retained preplan/family seal.
 
 | Stage | Unique sources | Language modes | Repeats | Planned inference cells | Native original-parent pairs | Derived Q5 contrasts |
 | --- | ---: | --- | ---: | ---: | ---: | ---: |
@@ -171,19 +232,27 @@ balanced-F16 hypothesis/automatic-label identity and describe variation. They
 do not multiply independent sources; one-repeat quality matrices do not
 establish repeat stability.
 
-| Model | Balanced-F16 decoding control | Dev known CER/WER | Held-out known CER/WER | Held-out auto CER/WER | Latency/RSS/RTF | Native artifact compatibility |
-| --- | --- | --- | --- | --- | --- | --- |
-| Tiny | PASS: 54 hypothesis / 27 auto-label pairs | Reject; original CER floor unknown, one failed cell | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
-| Base | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
-| Small | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
-| large-v3-turbo | N/A: untouched reference | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
-| large-v3 | N/A: untouched reference | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
+| Model | Three-repeat F16 panel | Development | Original F16 held-out known CER / WER | Balanced Q5 known CER / WER | Balanced Q5 auto CER / WER | Held-out decision |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| tiny | 54 hypothesis / 27 label pairs match | Reject | 15.699% / 34.720% | 16.624% / 36.218% | 17.136% / 37.536% | Reject both modes |
+| base | 54 hypothesis / 27 label pairs match | Reject | 12.201% / 25.958% | 13.165% / 27.099% | 13.298% / 27.251% | Reject both modes |
+| small | 54 hypothesis / 27 label pairs match | Reject | 6.909% / 14.459% | 7.180% / 15.053% | 7.180% / 15.053% | Reject both modes |
+| large-v3-turbo | Untouched reference | Reference observed | 3.816% / 7.215% | N/A | N/A | Reference only |
+| large-v3 | Untouched reference | Reference observed | 3.787% / 7.427% | N/A | N/A | Reference only |
 
-Material gates remain prospective and separate for each small model/mode:
+The two larger references have identical known/auto aggregate rates in this run;
+all per-language values and both modes remain in the appendix. Development has
+1,005 measured cells of 1,008 attempts: original Tiny Chinese is unscored once,
+and original/balanced-F16 Base German are unscored once each. Their five affected
+full metric aggregates remain null; observed partial counts are retained
+separately. No later repeat or different case supplies the missing score.
+
+The following gates were frozen before inference, separately for each small model/mode:
 balanced Q5 must reduce macro CER by at least 10% and macro WER by at least 5%
 against ordinary Q5, save at least 50% model bytes, and stay within original-F16
-macro increases of 0.0025 CER/0.005 WER. Every language, including Swiss, has
-CER increase ≤0.01 and meaningful WER increase ≤0.02 against both original and
+macro increases of 0.0025 CER/0.005 WER: absolute 0.25/0.50 percentage points.
+Every language, including Swiss, has CER increase ≤0.01 and meaningful WER
+increase ≤0.02: absolute one/two percentage points against both original and
 ordinary Q5. Swiss has the same caps in this prospective round; earlier rounds'
 stricter Swiss decisions are retained. Require zero newly wrong coarse automatic
 base labels against either control; unknown evidence cannot pass. Balanced-F16
@@ -255,9 +324,9 @@ had started. The correction validates the exact placeholder fields and full
 canonical-row grid, retains them separately and still counts zero actual
 parent/Q5 comparisons for references. Family metrics, gates and result fields
 are unchanged. All 702 cells, original seals, tools, journal and assessments
-are retained. A new documented postprocessing-only continuation must reproduce
-the first three assessments' numeric/gate bodies before launching only the
-remaining 11 fixed partitions; no completed inference may be repeated.
+are retained. The canonical postprocessing-only continuation reproduced the first three
+numeric/gate bodies before launching the then-untouched 11 partitions. This is
+retained history; no completed inference was repeated.
 
 After this correction, **138 offline quality and 12 tensor contracts passed**,
 including 28 channel-assessment contracts and strict all-missing/malformed/
@@ -277,17 +346,27 @@ audit remain protected; receipt SHA is
 Later documentation/report heads require their own applicable CI; earlier green
 evidence does not pass a later head. No frozen capture was rebaselined.
 
-The attempted-grid continuation preserves 1,044 terminal runner attempts:
+The first attempted-grid continuation historically preserved 1,044 terminal runner attempts:
 1,043 successful and one failed, with 699 paired / 3 pending native comparisons
 and 234 Q5 contrasts. Its initial six reassessments succeeded under seal
 `7a60e45cc03a1dd0b33bbd606384aab2e7ef2a3bb5d01b4c49f4a7c040e9e04e`.
 All five prior assessment bodies remain exactly equal except timestamp/source
-evidence. Only nine untouched grids / 4,752 runner cells execute next.
+evidence. At that historical boundary, nine untouched grids / 4,752 cells remained.
 The malformed recognized-text bytes stay preserved, with no repair, guessed
 score, selective retry or missing-coverage pass. The unchanged analyzer retains
 Tiny development's reject decision and unknown original-CER floor. The terminal
 attempt barrier and distinct successful-coverage requirements are documented in
 the linked amendment, not hidden by overwriting the original protocol.
+
+Base development subsequently completed 286 of 288 attempts; original Base and
+balanced F16 each produced nonblank speech with zero duration on the same German
+source. The native reader correctly rejected both. A separately frozen finite
+structural-output classifier extended failure accounting before held-out work,
+without changing the reader, scorer, models or settings. Continuation seal
+`80db4a50db73891c570d0330811812f764c100f16fbb9cf80874fca4986f4d37`
+retains all earlier sources/seals/refusals and the three raw failed outputs.
+All six prior assessment bodies rebuilt identically apart from timestamp/evidence.
+The final study reached all 15 terminal grids without a repeated inference.
 
 Development launches remain capped at 3,600 seconds; the prospective held-out
 operational cap is 10,800 seconds. Every launch keeps two threads, serial nice10
@@ -299,20 +378,58 @@ guard on this 24-core shared desktop. Descriptor polling retains a capture-inten
 race and does not prove real-time recording scheduling. No capture or foreign
 application is stopped to run this study.
 
-Resource acceptance remains **UNCONTROLLED / NOT EVALUATED**. Planned per-language
-wall/load/RSS/outer-CLI RTF observations will retain measured counts and units;
-no speed/memory improvement has been measured. First-result latency, total GPU
-memory, energy, bundle increments and controlled thermals/load remain unmeasured.
-Original audio/references, raw transcripts when produced, timings, models,
-manifests and provenance stay protected externally, outside disposable retention.
-The installed app, language switches, uncertainty and channel state are unchanged.
+Resource acceptance remains **UNCONTROLLED / NOT EVALUATED**. The following
+known-mode overview uses medians of the **144 underlying successful invocation
+measurements per artifact**, not averages of language medians. Wall time is the
+outer invocation latency; RSS is peak process-resident memory and excludes an
+accounting of total unified GPU allocation. Load is the upstream reported
+model-load timer, not complete initialization or first-result latency.
+Workload RTF is sum(invocation wall)/sum(source audio): one aggregate observation.
+The source audio total is 1,718.49 s in each row. Known and auto reuse the same
+sources as different conditions. Full distributions/counts, both modes and all
+languages are retained in the appendix and protected exports.
+
+| Artifact | File MiB | Wall median s [min..max], n=144 | Peak process RSS median MiB, n=144 | Upstream load median ms, n=144 | Whole-workload RTF, n=1 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| tiny | 74.093 | 1.247 [0.951..3.452] | 274.13 | 45.91 | 0.147 |
+| tiny-balanced-f16 | 74.093 | 1.148 [0.888..1.836] | 273.98 | 43.62 | 0.097 |
+| tiny-plain-q5 | 30.663 | 2.677 [2.130..3.298] | 207.48 | 153.02 | 0.225 |
+| tiny-balanced-q5 | 30.663 | 2.692 [2.235..3.622] | 207.16 | 178.22 | 0.226 |
+| base | 141.098 | 2.570 [0.976..3.091] | 383.30 | 144.04 | 0.185 |
+| base-balanced-f16 | 141.098 | 2.775 [2.118..3.459] | 383.61 | 199.05 | 0.231 |
+| base-plain-q5 | 56.942 | 2.724 [1.671..3.233] | 267.59 | 169.30 | 0.226 |
+| base-balanced-q5 | 56.942 | 2.708 [2.037..3.191] | 267.70 | 181.37 | 0.226 |
+| small | 465.013 | 1.606 [1.306..2.158] | 857.42 | 157.06 | 0.135 |
+| small-balanced-f16 | 465.013 | 1.600 [1.357..2.167] | 857.18 | 157.75 | 0.135 |
+| small-plain-q5 | 181.280 | 1.404 [1.127..2.183] | 526.06 | 74.28 | 0.120 |
+| small-balanced-q5 | 181.280 | 1.399 [1.108..1.995] | 526.20 | 74.46 | 0.119 |
+| large-v3-turbo | 1549.297 | 2.512 [2.289..3.041] | 1928.26 | 480.58 | 0.212 |
+| large-v3 | 2951.654 | 5.580 [4.699..7.126] | 4034.71 | 1055.24 | 0.471 |
+
+There is no consistent balancing-only latency/RSS improvement. Ordinary Q5
+reduces model-file bytes and observed process RSS; it is sometimes slower than
+F16 in this shared-desktop sequence. Small Q5 is faster in these observations,
+while Turbo uses much less memory and lower latency than full Large-v3.
+These are descriptive measurements, not controlled speed or memory acceptance.
+Per-language held-out wall/RSS/load each have n=16; each language's workload RTF
+has n=1 aggregate computed from those 16 invocations. No sixteen-sample RTF
+distribution or pooled median-of-medians is claimed.
+
+First-result latency, complete initialization, total GPU memory, energy, bundle
+increments and controlled thermals/load remain unmeasured. Original audio,
+references, raw transcripts, timings, models, manifests and provenance remain
+protected externally, outside disposable retention. No installed app, saved
+language policy, independent-channel state or default was changed.
 
 ## Evidence identities
 
 Protected receipts use `R3 = ~/Library/Application Support/RecScribe/Benchmarks/Research/112/round-3`;
-raw corpus/model payloads are not included in this public report. Report drafting
-read metadata and source only; it did not follow audio/reference/model/native-log
-paths, execute recognition or inspect fresh held-out text. All hashes are SHA-256.
+raw corpus/model payloads and CSV exports are not copied into the checkout.
+Report curation and numeric audits use retained measurements and metadata,
+without raw audio/reference inspection, recognition or rescoring. The separate
+post-run provenance audit rehashed the 14 models, 11 native files and both CLI
+binaries: all 27 payload identities matched. Its capture-priority guard exited
+cleanly with no live owned session or cancellation. All hashes are SHA-256.
 
 | Receipt/metadata | SHA-256 |
 | --- | --- |
@@ -339,8 +456,18 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Terminal-attempt continuation seal | `7a60e45cc03a1dd0b33bbd606384aab2e7ef2a3bb5d01b4c49f4a7c040e9e04e` |
 | Failed-cell opaque classification | `3ab1af270c06bd621252bcb73de4f06d0c123696d2ce4dd1951641670d017677` |
 | Guard maximum-duration equivalence | `f032e72acaf5fe67b3a34b741e21a4869b625adaf5ad6827adc28038d2f0950c` |
-| All-five-held-out receipt | **PENDING** |
-| Panel/development/held-out matrices, reports, assessments | **PENDING** |
+| All-five-held-out receipt | `ccc920c498ee85b1b4e8c8a4b72f54b82284d0cc63bcbff9f1ddbb92d08e1de5` |
+| Final serial journal binding all 15 matrices/reports/assessments | `528d05b1b936d7e1d5242965549b059df5a72fe336811724640ad82d65550232` |
+| Structural-output continuation seal | `80db4a50db73891c570d0330811812f764c100f16fbb9cf80874fca4986f4d37` |
+| Final metadata summary.json | `0b2beb08cc5be91eaac03a50f540cc85ef0b9f7808f162807b51e539adafbea8` |
+| Unedited generated summary.md | `deb4666cf2ecf0a3d838a06c3d06cab87a877664aad7422273df8837f0654806` |
+| Projection audit | `5d8166539f33a51c8a066fa4be678fc07d09dd3c7917efcd6afa79965d7afa90` |
+| Independent numeric/resource audit | `d8693125d5078cfd81cb59b4cd7f5128bf0141258c83dc6acc6219075a7bba7e` |
+| Independent 453-gate audit | `d202e1118dc47a99c3a54168a5996e7a9df8003619c81decd820edd3d1395b50` |
+| Post-run model/native/runner hashes | `f90cc14be17437fcb4de6b334fcfce7f4af930b529052bf5dcbcff1b4b32b872` |
+| Post-run clean guard execution receipt | `12b3dbcc5719d007163fbe13d9bf324fa21a7f7004b5c294b6099f0238bda95c` |
+| Current implementation 7cc0a62 full CI evidence | `7564734d13e6b8fa15f7cc44a03aad0ba77b981bf4a79f5490ac1c4543f58098` |
+| Published measurement appendix | `93fe7e8f1d96c923f5b9cb6b55e83a8e7ba769149c09fa495384afa40ddb5251` |
 
 | Source/tool identity | SHA-256 or Git revision |
 | --- | --- |
@@ -352,11 +479,15 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Ordinary / balanced Q5 wrappers | `a96a7d61e15edeb813e50b347e5b8ab493e4b454491b625cef741eaa6d6425eb` / `68e2c049e41c5defa8a3aeb39078497a73427c664adaba55dbaf7e9587d07171` |
 | Official whisper-quantize binary | `2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd` |
 | Profile file / effective settings | `4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857` / `cdd7cdc0076480723ee4be3cf4d5d2f417ffb7c6ce44fcaeaed517c164048169` |
-| Public reporter / channel assessor | `121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059` / `b2943432a35e6dd35365fd87cc8093d1e9ba52c5f2589b43b36adcfa9a6e9206` |
+| Public reporter / original historical assessor | `121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059` / `b2943432a35e6dd35365fd87cc8093d1e9ba52c5f2589b43b36adcfa9a6e9206` |
 | Corrected reference-placeholder assessor | `78b9715dfbf0016d57421b9a04347b9b78e84ed6f6bd4b8c1dba284569a3e0be` |
-| Guard | `66ccbc45bd70ae9abee2b3fc6f796109e7f5b1c99fdeb91c1ae4f956b2a79f69` |
-| Attempted-grid guard / failure classifier | `7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c` / `7fabce50796cd4e638b140b932d4295b6d36ecc7e962ed44099bbcbb18383f4b` |
-| Private coordinator / all-held-out sealer | `fd16363b1e5b9bebc0d0a68937d718d0297b050218252c2d9703292a25d1efa8` / `b9dad655a7026ecc4323eeab905e540d97879574be7273df8d68fa7c7d43f457` |
+| Original historical guard | `66ccbc45bd70ae9abee2b3fc6f796109e7f5b1c99fdeb91c1ae4f956b2a79f69` |
+| Attempted-v1 guard / historical failure classifier | `7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c` / `7fabce50796cd4e638b140b932d4295b6d36ecc7e962ed44099bbcbb18383f4b` |
+| Original historical coordinator / all-held-out sealer | `fd16363b1e5b9bebc0d0a68937d718d0297b050218252c2d9703292a25d1efa8` / `b9dad655a7026ecc4323eeab905e540d97879574be7273df8d68fa7c7d43f457` |
+| Current v2 coordinator / sealer | `bb7e516fd199242122d19502575dbc967fcc7b31a87d14eba16d5ab5c3e7ec1d` / `bf1d48747cfcb4fed93d232307b818e885921227f90e34addaaa3b27d2458fd5` |
+| Current finite native-output classifier | `b5fa141cab70dce2401d095aacc3f4d192b92e157878afddfb72a4a4608bc353` |
+| Frozen final formatter / projection adapter | `b07bf7baac7486152fb0290a0e623252fc1351f56c74e4711de5db90b9d23bed` / `667edef309fdcb2491f104b6675c632f411829620b42e8ba8e35cccc63b02113` |
+| Independent gate audit / provenance audit | `eae2453a7ea880f64ac577c3133088ba67275a888958f46eb3997ae69cac835d` / `f8bf80d175509138f8577c89c08d13cef7a71971e1e13bee947fe1edbf1235da` |
 
 | Native runtime file (recorded inventory) | SHA-256 |
 | --- | --- |
@@ -372,6 +503,58 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | whisper.cpp 1.9.5 libparakeet | `16ed9f49842cde9371fc605e0d6a7ad1dae5b8d8df9c97c72bce2f3c663ca0e6` |
 | whisper.cpp 1.9.5 libwhisper | `a2972b454e49de7c83036eed4adbd06d8271f6f7c87b14e679d035d898d3ed4d` |
 
-All quality decisions, per-language error counts, automatic-label outcomes,
-balanced-F16 decoding identities and resource observations must be filled from
-completed frozen evidence. Missing data or unexecuted checks remain pending.
+The final formatter requires all 15 terminal attempts and all frozen links.
+Its exit 0 means evidence processing succeeded, not that model quality passed:
+the study status is COMPLETE_TERMINAL_ATTEMPTS_QUALITY_INCOMPLETE_NO_PROMOTION.
+The independent gate audit agrees with all 453 observations and stored decisions;
+the independent numeric audit checks 9,991 count/rate relations across 630
+language/resource cohorts and 70 macro rows. Post-run hashes cover 6,722,090,842
+bytes across 27 payloads. No inference was repeated; the three failed raw outputs
+remain unscored and all original data stays retained.
+
+## Protected numerical exports
+
+These are external data under R3, not new CLI job/results folders in the checkout.
+The published appendix reproduces the projection's numerical tables; the
+following exact exports support all phases and retain missing observations.
+
+| Protected export relative to R3 | SHA-256 |
+| --- | --- |
+| `final-attempted-v2-projection-v1/quality.csv` | `3677e07e04efccdb4469f2349e7a661818acb18d071519574ee228ed85743f75` |
+| `final-attempted-v2-projection-v1/resources.csv` | `8f44a702d9ef29b2adbf7a6eaf267928a700dc673848bf6d96a4813b0c580d80` |
+| `final-attempted-v2-projection-v1/macros.csv` | `48610dfe952accc9573f3f65da4830e5768051bf59aa0e50702d47bbf18b4c1c` |
+| `final-attempted-v2-projection-v1/report.md` | `beccb09de7b53dc15f77747454b5fda23d645f734a04f6c5209603be6088c122` |
+| `final-numeric-projection-audit-v1/native-load-observations.csv` | `1b724bb833d47291e6ad435186f25bfdcc71263b3237b0ef8cd245b4ae37c131` |
+| `final-numeric-projection-audit-v1/heldout-resource-headlines.csv` | `5fe95dc422fe93757eec8e486a37d80702c6c7c5d4ff10e21d8da0da3b42b041` |
+
+## Validation and remaining acceptance
+
+Implementation head 7cc0a62 passed full CI:
+[run 42238195724](https://github.com/moreaki/recscribe/actions/runs/42238195724).
+Functional and Thread Sanitizer each report 461 tests in 86 matching suites:
+458 passed, three matching existing opt-in skips and zero failures. Exact test
+name/count evidence and the mandatory sanitizer gate passed, with no runtime
+diagnostics or unexpected host restart. Release, native/frozen 87 tests in 15
+suites, offline quality 138, GGML 12, supervisor contracts 12 and boundary/PCM
+checks passed. Frozen reference captures were never rebaselined. Earlier hang
+logs remain retained: the healthy new native run did not reproduce the hang;
+its cause remains unresolved and actual stall sampling was unexecuted.
+
+This final documentation update requires applicable checks on its own PR head;
+the earlier implementation pass does not pass a later commit. No automatic
+merge, bundled-default recommendation, installed-app or distribution change.
+
+Native reference/critical-content approval, reviewed-v2 eligibility, complete
+speaker/session independence, broader regional/script/natural/switch/live/channel
+coverage and controlled resource acceptance remain pending. Signed-product
+audio, signed Keychain and opt-in local synthetic speech checks were the three
+matching CI skips, not newly disabled tests. First-result latency, complete
+initialization, total GPU allocation, energy and assembled bundle costs remain
+unmeasured. Nothing here establishes a capacity ceiling for Tiny/Base/Small.
+
+The fresh development and held-out sets are now consumed research evidence.
+Do not retune on them and call a later evaluation fresh. Further work needs a
+new development-only mechanism, preserved controls and fresh predeclared
+held-out data. The larger references can inform that hypothesis without
+promoting a model or claiming weight-space programming cannot work.
+Missing data or unexecuted checks remain pending.

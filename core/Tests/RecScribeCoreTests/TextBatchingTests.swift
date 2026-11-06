@@ -9,9 +9,32 @@ private actor BatchTransport: IntelligenceTransport {
     let delay: Duration
     let failFirst: Bool
     let slowFirst: Bool
+    private var firstCompletionWaiter: CheckedContinuation<Void, any Error>?
 
     init(delay: Duration = .milliseconds(20), failFirst: Bool = false, slowFirst: Bool = false) {
         self.delay = delay; self.failFirst = failFirst; self.slowFirst = slowFirst
+    }
+
+    private func waitForLaterCompletion() async throws {
+        try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            if !completed.isEmpty { return }
+            try await withCheckedThrowingContinuation { (waiter: CheckedContinuation<Void, any Error>) in
+                if Task.isCancelled { waiter.resume(throwing: CancellationError()) }
+                else if !completed.isEmpty { waiter.resume() }
+                else if firstCompletionWaiter != nil {
+                    waiter.resume(throwing: CoreFailure("Duplicate synthetic first request"))
+                } else { firstCompletionWaiter = waiter }
+            }
+        } onCancel: {
+            Task { await self.cancelFirstCompletion() }
+        }
+    }
+
+    private func cancelFirstCompletion() {
+        let waiter = firstCompletionWaiter
+        firstCompletionWaiter = nil
+        waiter?.resume(throwing: CancellationError())
     }
 
     func send(_ request: URLRequest, maximumBytes: Int) async throws -> Data {
@@ -26,23 +49,25 @@ private actor BatchTransport: IntelligenceTransport {
         defer { active -= 1 }
         do {
             if slowFirst && !failFirst && id == "seg-000001" {
-                // Gate on an actual later completion, not wall-clock scheduling:
-                // concurrent audio/reference tests can delay either sleeping task.
-                let deadline = ContinuousClock.now + .seconds(5)
-                while completed.isEmpty {
-                    guard ContinuousClock.now < deadline else { throw CoreFailure("Later synthetic batch did not complete") }
-                    try await Task.sleep(for: .milliseconds(1))
-                }
+                // Only an actual later response releases the first request.
+                // Unrelated work may delay either task without changing ordering.
+                try await waitForLaterCompletion()
             } else {
                 try await Task.sleep(for: slowFirst && id == "seg-000001" ? .milliseconds(150) : delay)
             }
             if failFirst && id == "seg-000001" { throw CoreFailure("Synthetic batch failure") }
-            completed.append(id)
             let result: JSONValue = ["segments": .array(segments.map { ["id": $0["id"], "text": $0["id"]] }),
                 "notes": prompt["summarize"] == true ? [["text": .string(id), "segment_ids": .array(segments.map { $0["id"] })]] : []]
             let answer = JSONValue.string(String(decoding: try result.encoded(), as: UTF8.self))
-            return try (cloud ? JSONValue.object(["status": "completed", "output": [["content": [["type": "output_text", "text": answer]]]]])
+            let response = try (cloud ? JSONValue.object(["status": "completed", "output": [["content": [["type": "output_text", "text": answer]]]]])
                         : ["done": true, "response": answer]).encoded()
+            completed.append(id)
+            if id != "seg-000001" {
+                let waiter = firstCompletionWaiter
+                firstCompletionWaiter = nil
+                waiter?.resume()
+            }
+            return response
         } catch {
             if error is CancellationError { cancelled += 1 }
             throw error
@@ -103,7 +128,7 @@ private actor BatchTransport: IntelligenceTransport {
         #expect(throws: (any Error).self) { try TextDerivation(client: .init(policy: policy), options: options()).batches(for: document(count: 1)) }
     }
 
-    @Test func outOfOrderRequestsKeepCanonicalAndEvidenceOrderAndBoundConcurrency() async throws {
+    @Test(.timeLimit(.minutes(1))) func outOfOrderRequestsKeepCanonicalAndEvidenceOrderAndBoundConcurrency() async throws {
         let root = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let transport = BatchTransport(slowFirst: true)
@@ -142,12 +167,13 @@ private actor BatchTransport: IntelligenceTransport {
         #expect(await transport.started == 3)
     }
 
-    @Test func cancellationStopsAllInflightRequestsAndDoesNotPublishTranscript() async throws {
+    @Test(.timeLimit(.minutes(1)), arguments: [false, true])
+    func cancellationStopsAllInflightRequestsAndDoesNotPublishTranscript(slowFirst: Bool) async throws {
         let root = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("source.json"), output = root.appendingPathComponent("job")
         let data = try document(count: 6).encoded(); try data.write(to: source)
-        let transport = BatchTransport(delay: .seconds(30))
+        let transport = BatchTransport(delay: .seconds(30), slowFirst: slowFirst)
         var policy = IntelligencePolicy(); policy.maximumBatchSegments = 1
         let client = IntelligenceClient(transport: transport, policy: policy), options = options()
         let task = Task { try await TextJob(client: client).run(source: source, output: output, options: options, key: Data("synthetic".utf8)) }

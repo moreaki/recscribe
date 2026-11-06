@@ -100,3 +100,45 @@ recording scheduling. Native/v2/critical-content, grouping and representative
 natural/switch/live/independent-channel acceptance remain pending. No missing
 score or check is converted into a pass.
 
+## Native structural-output validation extension
+
+Base development then reached all 288 attempts: 286 succeeded and two failed.
+Both failures concern the same German source, once with original Base and once
+with balanced F16. Each retained native JSON contains a nonblank spoken segment
+whose source offsets are both 15,960 ms. The existing reader correctly rejects
+speech without duration. The raw files remain unchanged, with SHA-256 identities
+`15ff61a5f4231a05c6935534917dea176dc226fd37de5c7cd121e9dd24e7566d`
+and `964c10b323227303e6a74a8e78fb560662ac506ff93bedae10b811994a30b20c`.
+Neither output receives an invented interval, repaired transcript or score.
+
+The UTF-8-only continuation stopped and retained its refusal receipt
+`850246ff9e0346283a5e7d9c34f6ef6a0ad3f8b681530f1f347450098d3c149b`.
+A separately versioned classifier now recognizes finite native structural-output
+validation failures, coupling each exact error identity to an independent raw
+structural witness. It replays the reader's first rejection in segment order;
+an unrelated later defect cannot justify the recorded failure. Unsupported
+transcription scaffolding, invalid offsets/speech and zero-duration speech are
+explicit classes. All other failure, cancellation and uncertainty stops remain.
+The production reader, comparison CLI and scoring are unchanged.
+
+The new classifier SHA is
+`b5fa141cab70dce2401d095aacc3f4d192b92e157878afddfb72a4a4608bc353`.
+Seventeen producer and 36 continuation/proof contracts passed, including actual
+producer-to-consumer fixtures and corrupted or ambiguous witnesses. Actual Base
+reporter/assessor CLI writes confirmed 286/288 measured cells, 213/216 native
+pairs, 72/72 Q5 contrasts, unknown completeness gates and the unchanged rejection.
+
+Continuation seal
+`80db4a50db73891c570d0330811812f764c100f16fbb9cf80874fca4986f4d37`
+retains every earlier source/seal/journal and all seven attempted grids:
+**1,332 attempts, 1,329 measured successes and three unscored failures**.
+There are 912 measured native pairs, six pending pairs and 306 Q5 contrasts.
+Only eight untouched partitions, 4,464 runner cells, remain. Full artifact/native
+and historical source hashes passed; all six earlier assessment bodies rebuilt
+exactly, excluding only timestamp/evidence. The preflight receipt SHA is
+`f2cb7bd5c517424370e6d898e9f8ef732283cf9429d3431926626b517c83447d`.
+
+This extension and all candidate settings were frozen before any held-out
+inference. It changes failure accounting only: no retries, omitted planned
+cases, new model/settings, changed quality gates or default promotion.
+

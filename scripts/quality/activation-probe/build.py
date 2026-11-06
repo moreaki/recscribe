@@ -21,7 +21,7 @@ VERSION = "1.9.5"
 GGML_VERSION = "0.27.0"
 HERE = Path(__file__).resolve().parent
 REPOSITORY = HERE.parents[2]
-PRODUCTS = REPOSITORY / "Build/Products/WhisperActivationProbe-v1"
+PRODUCTS = REPOSITORY / "Build/Products/WhisperActivationProbe-v2"
 
 
 def safe(path, *, directory=False, new=False):
@@ -140,6 +140,21 @@ def build(args):
                "-o", str(staged)]
     print("Compiling bounded offline activation probe with installed Apple clang++", flush=True)
     subprocess.run(command, check=True, timeout=240)
+    # Integration preflight of the actual staged executable, not a source-text
+    # assertion. This registers/inspects devices only; no model/audio is opened.
+    inspected = subprocess.run([str(staged), "--inspect-backends"], capture_output=True, text=True, timeout=15)
+    if len(inspected.stdout) + len(inspected.stderr) > 1024 * 1024:
+        raise ValueError("Backend inspection output exceeds its bound")
+    stdout_path, stderr_path = run / "backend-inspection.stdout.json", run / "backend-inspection.stderr.log"
+    for path, content in ((stdout_path, inspected.stdout), (stderr_path, inspected.stderr)):
+        with path.open("x") as stream: stream.write(content)
+    if inspected.returncode != 0:
+        raise ValueError("Staged native backend inspection failed; retained its stdout/stderr")
+    inspection = json.loads(inspected.stdout)
+    if inspection.get("schema_version") != "whisper-probe-backend-inspection-v1" or inspection.get("status") != "registered" or \
+            inspection.get("metal_gpu_available") is not True or inspection.get("initializer") != "ggml_backend_load_all" or \
+            inspection.get("model_loaded") is not False or inspection.get("encoder_passes") != 0 or inspection.get("decoder_passes") != 0:
+        raise ValueError("Unexpected staged backend inspection evidence")
     if sources_before != source_inventory(upstream, ggml) or natives_before != native_inventory(ggml)[0]:
         raise ValueError("Frozen source/header/native input changed during build")
     if not staged.is_file() or not os.access(staged, os.X_OK) or staged.stat().st_size > 16 * 1024 * 1024:
@@ -158,6 +173,8 @@ def build(args):
               "sdk": str(sdk), "os": os_version, "command": command,
               "source_headers": sources_before, "native_files": natives_before,
               "native_dependency_links": native_links, "binary": identity(binary),
+              "backend_inspection": inspection, "backend_inspection_stdout_sha256": digest(stdout_path),
+              "backend_inspection_stderr_sha256": digest(stderr_path),
               "binary_dependency_links": binary_links, "asr_or_activation_execution": False,
               "no_source_or_installed_app_changes": True}
     write_receipt(output, record)

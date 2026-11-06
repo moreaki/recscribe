@@ -6,6 +6,7 @@
 #endif
 #include RECSCRIBE_WHISPER_SOURCE
 #include "activation_stats.h"
+#include "backend_policy.h"
 #include "probe_inputs.h"
 
 #include <cerrno>
@@ -33,6 +34,48 @@ static std::string sha256(const std::vector<std::uint8_t> & bytes) {
     text << std::hex << std::setfill('0');
     for (const auto byte : result) text << std::setw(2) << unsigned(byte);
     return text.str();
+}
+
+static std::string json_string(const std::string & value) {
+    std::ostringstream text;
+    text << '"';
+    for (const unsigned char c : value) {
+        if (c == '"' || c == '\\') text << '\\' << char(c);
+        else if (c < 0x20) text << "\\u" << std::hex << std::setfill('0') << std::setw(4) << unsigned(c) << std::dec;
+        else text << char(c);
+    }
+    text << '"';
+    return text.str();
+}
+
+static rp::BackendEvidence device_evidence(ggml_backend_dev_t device, ggml_backend_t backend = nullptr) {
+    require(device != nullptr, "Actual GGML device identity is unavailable");
+    const auto registry = ggml_backend_dev_backend_reg(device);
+    require(registry != nullptr, "Actual GGML registry identity is unavailable");
+    const auto kind = ggml_backend_dev_type(device);
+    const char * type = kind == GGML_BACKEND_DEVICE_TYPE_CPU ? "cpu" :
+        kind == GGML_BACKEND_DEVICE_TYPE_GPU ? "gpu" : kind == GGML_BACKEND_DEVICE_TYPE_IGPU ? "igpu" :
+        kind == GGML_BACKEND_DEVICE_TYPE_ACCEL ? "accel" : kind == GGML_BACKEND_DEVICE_TYPE_META ? "meta" : "unknown";
+    const char * name = ggml_backend_dev_name(device), * reg = ggml_backend_reg_name(registry);
+    const char * selected = backend ? ggml_backend_name(backend) : "";
+    require(name != nullptr && reg != nullptr && selected != nullptr, "Actual GGML backend names are unavailable");
+    return {name, reg, type, selected};
+}
+
+static void append_backend(std::ostringstream & out, const rp::BackendEvidence & value) {
+    out << "{\"device_name\":" << json_string(value.device_name) << ",\"registry\":" << json_string(value.registry)
+        << ",\"device_type\":" << json_string(value.device_type) << ",\"backend_name\":" << json_string(value.backend_name) << '}';
+}
+
+static std::vector<rp::BackendEvidence> initialize_backends(bool use_gpu) {
+    // Match the pinned official CLI caller's required dynamic registration.
+    ggml_backend_load_all();
+    const auto count = ggml_backend_dev_count();
+    require(count > 0 && count <= 32, "GGML backend loading produced no bounded device inventory");
+    std::vector<rp::BackendEvidence> devices;
+    for (std::size_t i = 0; i < count; ++i) devices.push_back(device_evidence(ggml_backend_dev_get(i)));
+    rp::validate_backend_inventory(devices, use_gpu);
+    return devices;
 }
 
 struct Options {
@@ -102,6 +145,7 @@ struct Target {
     const ggml_tensor * gamma;
     const ggml_tensor * beta;
     rp::ChannelStats stats;
+    rp::BackendEvidence backend;
     Target(std::string name, const ggml_tensor * g, const ggml_tensor * b, int width)
         : site(std::move(name)), gamma(g), beta(b), stats(std::size_t(width)) {}
 };
@@ -111,6 +155,7 @@ struct Probe {
     std::int64_t deadline;
     std::vector<Target> targets;
     std::string error;
+    ggml_backend_sched_t decoder_scheduler = nullptr;
     bool stopped() const {
         return interrupted || fs::exists(opt.cancel) || ggml_time_us() >= deadline;
     }
@@ -136,6 +181,10 @@ static bool observe(ggml_tensor * tensor, bool ask, void * data) {
             (tensor->src[0]->src[0] == selected->gamma || tensor->src[0]->src[1] == selected->gamma),
             "Matched bias is not a post-affine LayerNorm output");
         if (ask) return true;
+        const auto backend = ggml_backend_sched_get_tensor_backend(probe.decoder_scheduler, tensor);
+        require(backend != nullptr, "LayerNorm scheduler backend is unavailable");
+        selected->backend = device_evidence(ggml_backend_get_device(backend), backend);
+        rp::validate_site_backend(selected->backend);
         require(tensor->type == GGML_TYPE_F32 && ggml_is_contiguous(tensor) &&
             tensor->ne[0] == std::int64_t(selected->stats.channels) && tensor->ne[1] > 0 &&
             tensor->ne[1] <= 64 && tensor->ne[2] == 1 && tensor->ne[3] == 1 &&
@@ -172,18 +221,37 @@ static void exclusive_output(const fs::path & path, const std::string & bytes) {
 int main(int argc, char ** argv) {
     try {
         std::signal(SIGINT, interrupt_handler); std::signal(SIGTERM, interrupt_handler);
+        if (argc == 2 && std::string(argv[1]) == "--inspect-backends") {
+            const auto devices = initialize_backends(true);
+            std::ostringstream out;
+            out << "{\"schema_version\":\"whisper-probe-backend-inspection-v1\",\"status\":\"registered\","
+                << "\"initializer\":\"ggml_backend_load_all\",\"metal_gpu_available\":true,\"available_devices\":[";
+            for (std::size_t i = 0; i < devices.size(); ++i) { if (i) out << ','; append_backend(out, devices[i]); }
+            out << "],\"model_loaded\":false,\"encoder_passes\":0,\"decoder_passes\":0}\n";
+            std::printf("%s", out.str().c_str());
+            return 0;
+        }
         const auto opt = options(argc, argv);
-        Probe probe{opt, ggml_time_us() + 120LL * 1000 * 1000, {}, {}};
+        Probe probe{opt, ggml_time_us() + 120LL * 1000 * 1000, {}, {}, nullptr};
         require(!probe.stopped(), "Cancelled before model initialization");
+        // The pinned official CLI initializes dynamically loaded GGML backends
+        // before loading a model. The library entry point does not do so.
+        const auto available_devices = initialize_backends(!opt.cpu);
         const auto audio = rp::pcm16_mono_16k(read_bounded(opt.wav, 2 * 1024 * 1024));
         const auto reference_bytes = read_bounded(opt.reference, 16 * 1024);
         require(rp::valid_utf8(reference_bytes), "Expected nonempty bounded UTF-8 development reference");
         const std::string reference(reference_bytes.begin(), reference_bytes.end());
         auto parameters = whisper_context_default_params();
-        parameters.use_gpu = !opt.cpu; parameters.flash_attn = false;
+        parameters.use_gpu = !opt.cpu; parameters.flash_attn = false; parameters.gpu_device = 0;
         std::unique_ptr<whisper_context, decltype(&whisper_free)> ctx(
             whisper_init_from_file_with_params(opt.model.c_str(), parameters), whisper_free);
         require(bool(ctx) && bool(ctx->state), "Cannot initialize diagnostic model/state");
+        std::vector<rp::BackendEvidence> selected_backends;
+        for (const auto backend : ctx->state->backends)
+            selected_backends.push_back(device_evidence(ggml_backend_get_device(backend), backend));
+        rp::validate_selected_backends(selected_backends, !opt.cpu);
+        probe.decoder_scheduler = ctx->state->sched_decode.sched;
+        require(probe.decoder_scheduler != nullptr, "Decoder scheduler is unavailable");
         const auto & h = ctx->model.hparams;
         require((h.n_text_state == 384 && h.n_text_head == 6 && h.n_text_layer == 4) ||
             (h.n_text_state == 512 && h.n_text_head == 8 && h.n_text_layer == 6) ||
@@ -260,10 +328,15 @@ int main(int argc, char ** argv) {
             << ",\"reference_input_sha256\":\"" << reference_hash << "\""
             << ",\"source_audio_samples\":" << audio.size() << ",\"explicit_language\":\"" << opt.language
             << "\",\"threads\":" << opt.threads << ",\"use_gpu\":" << (opt.cpu ? "false" : "true")
-            << ",\"flash_attention\":false,\"encoder_passes\":1,\"decoder_passes\":2},"
+            << ",\"flash_attention\":false,\"gpu_device\":0,\"encoder_passes\":1,\"decoder_passes\":2},"
             << "\"identity\":{\"bitwise_equal\":" << (equal ? "true" : "false")
             << ",\"max_abs_logit_difference\":" << max_abs_difference << ",\"argmax_mismatch_positions\":" << argmax_mismatches
-            << ",\"compared_logits\":" << baseline.size() << "},\"targets\":[";
+            << ",\"compared_logits\":" << baseline.size() << "},\"backend_evidence\":{\"initializer\":\"ggml_backend_load_all\","
+            << "\"selected_metal_gpu_verified\":" << (!opt.cpu ? "true" : "false") << ",\"available_devices\":[";
+        for (std::size_t i = 0; i < available_devices.size(); ++i) { if (i) out << ','; append_backend(out, available_devices[i]); }
+        out << "],\"selected_backends\":[";
+        for (std::size_t i = 0; i < selected_backends.size(); ++i) { if (i) out << ','; append_backend(out, selected_backends[i]); }
+        out << "]},\"targets\":[";
         for (std::size_t i = 0; i < probe.targets.size(); ++i) {
             const auto & target = probe.targets[i]; const auto & s = target.stats;
             if (i) out << ',';
@@ -273,7 +346,7 @@ int main(int argc, char ** argv) {
                 << ",\"count\":" << s.count << ",\"observations\":" << s.observations << ",\"sum_abs\":";
             append_values(out, s.sum_abs); out << ",\"sum_squares\":"; append_values(out, s.sum_squares);
             out << ",\"max_abs\":"; append_values(out, s.max_abs); out << ",\"mean_abs\":"; append_values(out, means);
-            out << ",\"rms\":"; append_values(out, rms); out << '}';
+            out << ",\"rms\":"; append_values(out, rms); out << ",\"backend\":"; append_backend(out, target.backend); out << '}';
         }
         out << "]}\n";
         require(!probe.stopped(), "Cancelled before evidence publication");

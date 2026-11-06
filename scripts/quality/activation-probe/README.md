@@ -14,6 +14,17 @@ native-library hashes, host/toolchain, commands and input identities. A version
 string is not a replacement for these hashes. The calibration executable is
 distinct from the frozen CLI used for quality comparisons.
 
+The executable calls the official CLI's `ggml_backend_load_all()` initializer
+before any model load. A missing CPU or selected Metal GPU device fails clearly
+before the library's device assertion. The actual context must select Metal;
+requested GPU mode alone cannot pass. Loaded devices, selected backend names,
+registry/device types and every observed LayerNorm site's actual backend are
+retained as additional `backend_evidence`/target metadata. Legitimate pinned CPU
+node fallback is recorded and allowed; there is no all-GPU placement requirement.
+These fields augment the statistics schema and are bound by each output hash.
+The pinned GGML registry API names its Metal plugin `MTL`; retain that exact
+identifier instead of substituting the display/technology name `Metal`.
+
 ## Fixed observation
 
 For each predeclared **original development** clip, the helper:
@@ -64,7 +75,7 @@ The guard and builder must receive the same **new** `--output` receipt path:
 ```sh
 python3 scripts/work-artifacts.py run --label issue-112-round3-probe-build test -- \
   python3 scripts/quality/run-guard.py --output /absolute/protected/probe-build-v2.json \
-  --timeout 300 -- /absolute/python3 scripts/quality/activation-probe/build.py \
+  --timeout 300 --foreign-cpu-limit 1000 -- /absolute/python3 scripts/quality/activation-probe/build.py \
   --upstream-root /absolute/protected/whisper.cpp \
   --ggml-root /opt/homebrew/Cellar/ggml/0.27.0 \
   --output /absolute/protected/probe-build-v2.json
@@ -74,15 +85,22 @@ The direct builder validates the exact clean upstream commit and installed
 GGML version/dynamic-backend configuration, records compiler/SDK/OS and source,
 header, native-library and binary hashes, verifies inputs unchanged after the
 240-second-bounded compilation, and creates the product exclusively under the
-calling checkout's stable `Build/Products/WhisperActivationProbe-v1` directory.
+calling checkout's stable `Build/Products/WhisperActivationProbe-v2` directory.
 Staging and compiler output remain in the managed run. Existing binaries and
 receipts are never replaced. Its receipt records build evidence only; it does
 not claim a real activation/ASR check. Dynamically loaded backend plugins and
 their non-system dependency hashes are retained alongside link metadata.
 
+Before publishing, the builder invokes the staged executable's bounded
+`--inspect-backends` mode with a 15-second timeout and retains stdout/stderr and
+their hashes in the receipt. This exercises actual registration/availability
+with no model, audio, reference, encoder or decoder. Actual selected Metal and
+site placement still require the real diagnostic and exact logit check. The v1
+executable and failed diagnostic evidence remain recoverable.
+
 Where CMake is already available, an alternative uses the existing
 `Build/DerivedData` location for the stable CMake cache and puts
-the executable under `Build/Products/WhisperActivationProbe-v1`. Do not build a
+the executable under `Build/Products/WhisperActivationProbe-v2`. Do not build a
 fresh cache for another invocation or replace the installed app. For example,
 with an already retained pinned upstream checkout and installed GGML root:
 
@@ -93,7 +111,7 @@ python3 scripts/work-artifacts.py run --label issue-112-round3-probe-build test 
   -DRECSCRIBE_WHISPER_ROOT=/absolute/protected/whisper.cpp \
   -DRECSCRIBE_GGML_ROOT=/opt/homebrew/Cellar/ggml/0.27.0 \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/absolute/recscribe/Build/Products/WhisperActivationProbe-v1
+  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/absolute/recscribe/Build/Products/WhisperActivationProbe-v2
 python3 scripts/work-artifacts.py run --label issue-112-round3-probe-build test -- \
   cmake --build Build/DerivedData/WhisperActivationProbe --target recscribe-activation-probe --parallel 2
 ```

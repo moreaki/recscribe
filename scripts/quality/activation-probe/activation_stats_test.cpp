@@ -1,4 +1,5 @@
 #include "activation_stats.h"
+#include "backend_policy.h"
 #include "probe_inputs.h"
 #include <cassert>
 #include <limits>
@@ -10,6 +11,31 @@ template<class F> static void rejects(F f) {
 }
 
 int main() {
+    using recscribe_probe::BackendEvidence;
+    const BackendEvidence cpu{"CPU", "CPU", "cpu", "CPU"};
+    const BackendEvidence metal{"MTL0", "MTL", "gpu", "Metal"};
+    const BackendEvidence cuda{"CUDA0", "CUDA", "gpu", "CUDA"};
+    using recscribe_probe::validate_backend_inventory;
+    using recscribe_probe::validate_selected_backends;
+    using recscribe_probe::validate_site_backend;
+    rejects([&] { validate_backend_inventory({}, true); });
+    rejects([&] { validate_backend_inventory({cpu}, true); });
+    rejects([&] { validate_backend_inventory({metal}, true); });
+    rejects([&] { validate_backend_inventory({cuda, metal, cpu}, true); });
+    validate_backend_inventory({cpu}, false);
+    validate_backend_inventory({metal, cpu}, true);
+    auto display_name = metal; display_name.registry = "Metal";
+    rejects([&] { validate_backend_inventory({display_name, cpu}, true); });
+    auto integrated = metal; integrated.device_type = "igpu";
+    validate_backend_inventory({integrated, cpu}, true); // Upstream also accepts IGPU.
+    rejects([&] { validate_selected_backends({cpu}, true); });
+    rejects([&] { validate_selected_backends({metal}, true); });
+    validate_selected_backends({metal, cpu}, true);
+    validate_site_backend(cpu); // Legitimate CPU placement in Metal mode.
+    validate_site_backend(metal);
+    rejects([&] { validate_site_backend(cuda); });
+    auto unnamed = metal; unnamed.backend_name.clear();
+    rejects([&] { validate_selected_backends({unnamed, cpu}, true); });
     using recscribe_probe::ChannelStats;
     ChannelStats s(3);
     const float values[] = {-2, 0, 3, 4, -5, 0};

@@ -4,9 +4,13 @@
 81/81 fixed model/source diagnostics and all 14 model artifacts have recorded
 byte counts and SHA-256 identities. All three small-model balanced-F16 numerical
 panels passed. **Fresh quality, complete native compatibility and resource
-summaries remain PENDING.** Fresh held-out reference text remains opaque. The
-serial run paused after 702 completed panel cells for a reference-placeholder
-validation repair; completed inference is retained without retry. No default, packaging or distribution change is
+summaries remain PENDING.** Fresh held-out reference text remains opaque. All
+five panels completed 756 cells. Tiny development reached 288 attempts with
+287 successes and one failed original-Tiny Chinese output containing invalid
+UTF-8 in recognized text. The failed cell remains unscored. A sealed continuation
+is running the nine untouched grids without inference retry; see the prospective
+[execution amendments](weight-space-round3-execution-amendments-2026-11-06.md).
+No default, packaging or distribution change is
 authorized; these preparation checks do not establish a useful Whisper gain.
 
 This report follows the [prospective protocol](weight-space-round3-protocol.md).
@@ -169,11 +173,11 @@ establish repeat stability.
 
 | Model | Balanced-F16 decoding control | Dev known CER/WER | Held-out known CER/WER | Held-out auto CER/WER | Latency/RSS/RTF | Native artifact compatibility |
 | --- | --- | --- | --- | --- | --- | --- |
-| Tiny | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
-| Base | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
-| Small | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | PENDING full plan |
-| large-v3-turbo | PENDING reference observation | PENDING | PENDING | PENDING | PENDING | PENDING round-3 invocation |
-| large-v3 | PENDING reference observation | PENDING | PENDING | PENDING | PENDING | PENDING round-3 invocation |
+| Tiny | PASS: 54 hypothesis / 27 auto-label pairs | Reject; original CER floor unknown, one failed cell | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
+| Base | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
+| Small | PASS: 54 hypothesis / 27 auto-label pairs | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
+| large-v3-turbo | N/A: untouched reference | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
+| large-v3 | N/A: untouched reference | PENDING | PENDING | PENDING | PENDING | Panel loaded; full plan pending |
 
 Material gates remain prospective and separate for each small model/mode:
 balanced Q5 must reduce macro CER by at least 10% and macro WER by at least 5%
@@ -263,11 +267,30 @@ batch-order fixture and both sleeping/parked cancellation paths. An inherited
 five-second fixture polling deadline had failed under CI scheduling delay; its
 replacement waits for actual later completion while preserving all ordering,
 concurrency and canonical-evidence assertions, with a separate one-minute
-deadlock bound. Earlier CI failure/timeout evidence remains retained. Current
-head full functional/TSan/Release CI is a separate required gate and remains
-pending; local checks do not replace it. No frozen capture was rebaselined.
+deadlock bound. Earlier CI failure/timeout evidence remains retained. Source head
+**1c3c277** passed full hosted functional and TSan validation: **461 tests / 86
+matching suites each**, no failures, sanitizer diagnostics or unexpected host
+restart, and a passing mandatory evidence gate. Release, native/frozen 87 tests,
+offline quality 138 and tensor 12 also passed. The decoded CI log and independent
+audit remain protected; receipt SHA is
+`3af64b607506a868cd6e88604c1c0701a82788c0b12aa9700653c378eaac823b`.
+Later documentation/report heads require their own applicable CI; earlier green
+evidence does not pass a later head. No frozen capture was rebaselined.
 
-Each guarded native launch is capped at 3,600 seconds, two threads, serial nice10
+The attempted-grid continuation preserves 1,044 terminal runner attempts:
+1,043 successful and one failed, with 699 paired / 3 pending native comparisons
+and 234 Q5 contrasts. Its initial six reassessments succeeded under seal
+`7a60e45cc03a1dd0b33bbd606384aab2e7ef2a3bb5d01b4c49f4a7c040e9e04e`.
+All five prior assessment bodies remain exactly equal except timestamp/source
+evidence. Only nine untouched grids / 4,752 runner cells execute next.
+The malformed recognized-text bytes stay preserved, with no repair, guessed
+score, selective retry or missing-coverage pass. The unchanged analyzer retains
+Tiny development's reject decision and unknown original-CER floor. The terminal
+attempt barrier and distinct successful-coverage requirements are documented in
+the linked amendment, not hidden by overwriting the original protocol.
+
+Development launches remain capped at 3,600 seconds; the prospective held-out
+operational cap is 10,800 seconds. Every launch keeps two threads, serial nice10
 utility work, with a cancel marker and owned-session shutdown/reaping. Fresh
 native idle/live-off inspection is required before inference. Active/uncertain
 capture or known competing ASR/build/test/VM work stops owned research. The
@@ -311,6 +334,11 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Private orchestration validation | `da76b4fdff460be6e209b4266bab290ad66e025b08fdc7cab7e3dd19b3b0e1d2` |
 | Full pre-inference family seal | `0f0371e506720dff1eed7238780b1fdcad7efb1a55fc6bd6496469dc35785635` |
 | Reference-placeholder repair validation | `18d0e09e62a922c15e9170d08affdbc38ce558071a70a2d462222e67fddb8a84` |
+| Canonical-packaging continuation seal | `55af321be03c42e13394c8986a984af38ad148f1d8cc2ceb6dc4650b246a0b2c` |
+| Actual Tiny/Turbo CLI-write smoke | `52d70a009be5fde9be7b072e22a2eb43e7d96cfbba33aee7ed5e48d3b365e932` |
+| Terminal-attempt continuation seal | `7a60e45cc03a1dd0b33bbd606384aab2e7ef2a3bb5d01b4c49f4a7c040e9e04e` |
+| Failed-cell opaque classification | `3ab1af270c06bd621252bcb73de4f06d0c123696d2ce4dd1951641670d017677` |
+| Guard maximum-duration equivalence | `f032e72acaf5fe67b3a34b741e21a4869b625adaf5ad6827adc28038d2f0950c` |
 | All-five-held-out receipt | **PENDING** |
 | Panel/development/held-out matrices, reports, assessments | **PENDING** |
 
@@ -327,6 +355,7 @@ paths, execute recognition or inspect fresh held-out text. All hashes are SHA-25
 | Public reporter / channel assessor | `121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059` / `b2943432a35e6dd35365fd87cc8093d1e9ba52c5f2589b43b36adcfa9a6e9206` |
 | Corrected reference-placeholder assessor | `78b9715dfbf0016d57421b9a04347b9b78e84ed6f6bd4b8c1dba284569a3e0be` |
 | Guard | `66ccbc45bd70ae9abee2b3fc6f796109e7f5b1c99fdeb91c1ae4f956b2a79f69` |
+| Attempted-grid guard / failure classifier | `7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c` / `7fabce50796cd4e638b140b932d4295b6d36ecc7e962ed44099bbcbb18383f4b` |
 | Private coordinator / all-held-out sealer | `fd16363b1e5b9bebc0d0a68937d718d0297b050218252c2d9703292a25d1efa8` / `b9dad655a7026ecc4323eeab905e540d97879574be7273df8d68fa7c7d43f457` |
 
 | Native runtime file (recorded inventory) | SHA-256 |

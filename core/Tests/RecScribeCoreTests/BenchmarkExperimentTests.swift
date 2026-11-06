@@ -89,6 +89,38 @@ import Testing
         }
     }
 
+    @Test func singleRepeatQualityPlanRetainsAllSourcesAndSafetyGates() throws {
+        let folder = try AudioFixture.folder(); defer { try? FileManager.default.removeItem(at: folder) }
+        let configURL = folder.appendingPathComponent("experiment.json")
+        let manifest = repo.appendingPathComponent("benchmarks/manifests/corpus.template.json")
+        var config = experiment(folder)
+        var planned: [[JSONValue]] = []
+        for repeats in [1, 3] {
+            config["repetitions"] = .integer(Int64(repeats))
+            try config.encoded().write(to: configURL)
+            let report = try BenchmarkExperiment.run(manifest: manifest, configuration: configURL,
+                output: folder.appendingPathComponent("repeat-\(repeats)"), cli: configURL, dryRun: true)
+            planned.append(try #require(report["rows"].array))
+        }
+        #expect(!planned[0].isEmpty && planned[1].count == 3 * planned[0].count)
+        #expect(planned[0].allSatisfy { $0["repeat"] == 1 && $0["measurement"] == .null })
+        #expect(Set(planned[0].compactMap { $0["id"].string }) == Set(planned[1].compactMap { $0["id"].string }))
+        for repeats in [0, 11] {
+            config["repetitions"] = .integer(Int64(repeats))
+            try config.encoded().write(to: configURL)
+            #expect(throws: CoreFailure.self) {
+                try BenchmarkExperiment.run(manifest: manifest, configuration: configURL,
+                    output: folder.appendingPathComponent("invalid-\(repeats)"), cli: configURL, dryRun: true)
+            }
+        }
+        config["repetitions"] = 1
+        try config.encoded().write(to: configURL)
+        #expect(throws: CoreFailure.self) {
+            try BenchmarkExperiment.run(manifest: manifest, configuration: configURL,
+                output: folder.appendingPathComponent("unattested"), cli: configURL, dryRun: false)
+        }
+    }
+
     @Test func corpusChecksumFailuresPersistFailedRowsAndOtherPendingCells() throws {
         let folder = try AudioFixture.folder(); defer { try? FileManager.default.removeItem(at: folder) }
         let audio = folder.appendingPathComponent("source.wav"), reference = folder.appendingPathComponent("reference.txt")

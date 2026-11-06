@@ -135,10 +135,10 @@ public enum BenchmarkExperiment {
               let modes = config["language_modes"].array, !modes.isEmpty,
               let paths = config["paths"].array, !paths.isEmpty,
               let profiles = config["profiles"].array, !profiles.isEmpty,
-              let repeats = config["repetitions"].integer, (3...10).contains(repeats),
+              let repeats = config["repetitions"].integer, (1...10).contains(repeats),
               let threads = config["threads"].integer, (1...4).contains(threads),
               ["development", "held_out"].contains(config["split"].string ?? "") else {
-            throw CoreFailure("Invalid experiment: require revision, model/profile matrix, split, 3–10 repeats and 1–4 threads")
+            throw CoreFailure("Invalid experiment: require revision, model/profile matrix, split, 1–10 repeats and 1–4 threads")
         }
         guard Set(models.compactMap { $0["id"].string }).count == models.count,
               Set(profiles.compactMap { $0["id"].string }).count == profiles.count,

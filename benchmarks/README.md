@@ -109,6 +109,14 @@ All three candidates failed the predeclared quality gates. Per-language quality,
 timing/RSS observations, hashes and unresolved coverage/resource gates are retained;
 no default or compression improvement is established.
 
+The prospective [round-3 protocol](weight-space-round3-protocol.md) tests fixed
+activation-aware channel balancing before q5_1 quantization, with original,
+balanced-F16, ordinary-Q5 and balanced-Q5 arms for Tiny/Base/Small and untouched
+Turbo/full Large-v3 references. It sets substantial effect/size gates and equal
+per-language quality floors, including Swiss. Calibration, artifacts and fresh
+held-out outcomes must be separately sealed and measured; implementation or
+passing synthetic contracts alone is not evidence of an improvement.
+
 Generate a text-free summary from a retained matrix into a new protected external
 directory:
 

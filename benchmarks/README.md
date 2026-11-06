@@ -102,6 +102,13 @@ pending. Accuracy uses repeat 1 only; inference repeats measure variability and
 do not multiply the number of independent speech samples. Chinese whitespace WER
 is not reported. No default model is selected by this pilot.
 
+The [2026-11-06 round-2 weight-space report](weight-space-round2-report-2026-11-06.md)
+completes 4,212 frozen inference cells for localized Tiny/Base/Small edits,
+compensated controls and 72 fresh held-out utterances across all nine languages.
+All three candidates failed the predeclared quality gates. Per-language quality,
+timing/RSS observations, hashes and unresolved coverage/resource gates are retained;
+no default or compression improvement is established.
+
 Generate a text-free summary from a retained matrix into a new protected external
 directory:
 

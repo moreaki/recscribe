@@ -41,8 +41,13 @@ jobs:
         run: xcrun swift test --package-path core
       - name: Offline Whisper quality tooling
         run: |
-          python3 -m unittest discover -s scripts/tests -p 'test_quality_*.py'
-          python3 -m unittest discover -s scripts/tests -p 'test_ggml_weights.py'
+          python3 scripts/work-artifacts.py run --label whisper-quality test -- bash -c '
+            set -euo pipefail
+            python3 -m venv "$RECSCRIBE_RUN_DIR/venv"
+            "$RECSCRIBE_RUN_DIR/venv/bin/python" -m pip install --disable-pip-version-check --timeout 30 --retries 1 --only-binary=:all: -r scripts/quality/requirements.txt
+            "$RECSCRIBE_RUN_DIR/venv/bin/python" -m unittest discover -s scripts/tests -p "test_quality_*.py"
+            "$RECSCRIBE_RUN_DIR/venv/bin/python" -m unittest discover -s scripts/tests -p "test_ggml_weights.py"
+          '
       - name: Verify PCM storage ownership and sanitizer evidence checks
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'

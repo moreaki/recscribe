@@ -1,0 +1,23 @@
+{
+  "author": "Codex AI; fixed round-2 affine-bias hypothesis without training",
+  "development_evidence": [
+    "https://github.com/moreaki/recscribe/blob/50ff6ab20671e7270d8da5fe85949ef13c103583/benchmarks/pilot-baseline-2026-11-05.md"
+  ],
+  "edits": [
+    {
+      "count": 64,
+      "dtype": "f32",
+      "factor": 0.9,
+      "op": "scale",
+      "shape": [
+        384
+      ],
+      "start": 192,
+      "tensor": "decoder.blocks.0.cross_attn.value.bias"
+    }
+  ],
+  "format": "whisper-ggml-unquantized-v1",
+  "hypothesis": "Fixed 10% attenuation of one high affine/content-ratio cross-head value bias; static hypothesis, no causal or ASR improvement established",
+  "input_sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+  "schema_version": "1.0"
+}

@@ -122,6 +122,8 @@ import Testing
         h.permissions.status = .granted
         time.advance()
         await waitUntil("grant without activation") { h.model.permissionStatus == .granted }
+        // The independent registration probe can publish the grant before the watcher finishes.
+        await waitUntil("grant watcher completion") { !h.model.grantWatcherIsPolling }
         #expect(!h.model.grantWatcherIsPolling)
     }
     @Test func aFreshObservedGrantSurvivesAnOlderHeldDenial() async {

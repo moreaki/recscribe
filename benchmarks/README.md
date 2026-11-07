@@ -109,6 +109,23 @@ All three candidates failed the predeclared quality gates. Per-language quality,
 timing/RSS observations, hashes and unresolved coverage/resource gates are retained;
 no default or compression improvement is established.
 
+The prospective [round-3 protocol](weight-space-round3-protocol.md) tests fixed
+activation-aware channel balancing before q5_1 quantization, with original,
+balanced-F16, ordinary-Q5 and balanced-Q5 arms for Tiny/Base/Small and untouched
+Turbo/full Large-v3 references. It sets substantial effect/size gates and equal
+per-language quality floors, including Swiss. Calibration, artifacts and fresh
+held-out outcomes must be separately sealed and measured; implementation or
+passing synthetic contracts alone is not evidence of an improvement.
+
+The [measured round-3 report](weight-space-round3-report-2026-11-06.md) records
+5,796 terminal attempts: 5,793 measured successes and three unscored development
+failures. All 4,032 held-out cells succeeded, but all three balanced-Q5 candidates
+failed the frozen quality gates in both language modes. The
+[per-language measurements](weight-space-round3-measurements-2026-11-06.md)
+retain all 14 artifacts, counts, timing and process-RSS observations. Q5 supplies
+the 58.6–61.0% file saving; balancing adds no further size saving. Native/product
+and controlled resource acceptance remain pending; no default is selected.
+
 Generate a text-free summary from a retained matrix into a new protected external
 directory:
 

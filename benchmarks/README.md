@@ -148,3 +148,15 @@ usage and the staged VAD/language/padding design, see
 The [2026-11-05 runtime sensitivity pilot](runtime-sensitivity-pilot-2026-11-05.md)
 records the completed Tiny diagnostic; defaults remain unchanged and resource
 comparisons remain uncontrolled/not evaluated.
+
+The [2026-11-09 round-4 report](weight-space-round4-report-2026-11-09.md)
+completes the frozen attention-rotation/Q4 experiment in Small and Turbo, with
+untouched Tiny, Base and full Large-v3 references. All 4,554 calls were attempted:
+4,553 succeeded and one Base development output remains unscored; all 3,168 fresh
+held-out calls succeeded. Both rotation families fail the material-gain gates.
+Ordinary Turbo Q4 supplies a separate conventional-compression research lead,
+without an AI gain, default or distribution change. The
+[complete per-language appendix](weight-space-round4-measurements-2026-11-09.md)
+and [source/numeric evidence archive](weight-space/round-4/execution-evidence/README.md)
+retain counts, nulls, hashes and control attribution. Native/v2/product and
+controlled resource acceptance remain pending.

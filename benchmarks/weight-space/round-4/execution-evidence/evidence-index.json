@@ -1,0 +1,772 @@
+{
+  "schema_version": "round4-public-execution-evidence-index-v1",
+  "status": "PUBLISHED_TERMINAL_ATTEMPTS_WITH_PARTIAL_DEVELOPMENT_QUALITY_NO_PROMOTION",
+  "archive_copies_executed": false,
+  "original_evidence_relocated_or_modified": false,
+  "source_files": [
+    {
+      "archive_path": "sources/run-remaining.py",
+      "original_relative_path": "run-remaining.py",
+      "sha256": "c0fc46a4e51895b8c1587ccf61c9e28f9c7b86ad67e2d3bdee0b9fccea1a6cc4",
+      "bytes": 19102,
+      "category": "tool",
+      "role": "original campaign controller; stopped before Base classification",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "subprocess",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/seal-heldout.py",
+      "original_relative_path": "seal-heldout.py",
+      "sha256": "cf97523a03e6843fb8fcb4fec2151b41db4f6c08fddf69e65c77fddc20346dad",
+      "bytes": 54963,
+      "category": "tool",
+      "role": "unchanged terminal validator and joint held-out sealer",
+      "static_import_roots": [
+        "argparse",
+        "collections",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "itertools",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "sys"
+      ]
+    },
+    {
+      "archive_path": "sources/classify-native-output-failure-v2.py",
+      "original_relative_path": "classify-native-output-failure-v2.py",
+      "sha256": "b5fa141cab70dce2401d095aacc3f4d192b92e157878afddfb72a4a4608bc353",
+      "bytes": 19059,
+      "category": "tool",
+      "role": "unchanged finite native-output failure classifier",
+      "static_import_roots": [
+        "argparse",
+        "codecs",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/run-guard.py",
+      "original_relative_path": "run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523,
+      "category": "tool",
+      "role": "actual recording-priority owned-session guard",
+      "static_import_roots": [
+        "argparse",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "signal",
+        "subprocess",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/native-load-check-v1.py",
+      "original_relative_path": "native-load-check-v1.py",
+      "sha256": "99e17c61ac61f6776c62237e3f113fa1009c638265632d829bd838797c400edd",
+      "bytes": 19410,
+      "category": "tool",
+      "role": "actual load-only admission check; no ASR",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "subprocess",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/summarize-round4-v1.py",
+      "original_relative_path": "summarize-round4-v1.py",
+      "sha256": "9638db9ee4cf02b15dafc854bdcbfce74c523de04757115ba5eb358226ddd870",
+      "bytes": 30175,
+      "category": "tool",
+      "role": "unchanged numeric build function reused by continuation adapter; original main not executed",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "json",
+        "math",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/project-round4-report-v1.py",
+      "original_relative_path": "project-round4-report-v1.py",
+      "sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38",
+      "bytes": 23071,
+      "category": "tool",
+      "role": "frozen final numeric CSV and Markdown projector",
+      "static_import_roots": [
+        "argparse",
+        "csv",
+        "datetime",
+        "hashlib",
+        "io",
+        "json",
+        "math",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/audit-final-numeric-gates-v1.py",
+      "original_relative_path": "audit-final-numeric-gates-v1.py",
+      "sha256": "0248cb4163d62b457759d4e46124a44f4b571b5d310b9e84c56de092f656976a",
+      "bytes": 92886,
+      "category": "tool",
+      "role": "original independent numeric audit; 41 scientific functions retained in continuation audit",
+      "static_import_roots": [
+        "argparse",
+        "collections",
+        "csv",
+        "datetime",
+        "hashlib",
+        "io",
+        "itertools",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "statistics",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/audit-postrun-preservation-v1.py",
+      "original_relative_path": "audit-postrun-preservation-v1.py",
+      "sha256": "9ba1fdf806ce592dc21f052e386f0ebc2d410c7a58bb66e84262cf18bb82f8f9",
+      "bytes": 13599,
+      "category": "tool",
+      "role": "unchanged opaque preservation core reused by continuation authority",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "signal",
+        "stat",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/run-remaining.py",
+      "original_relative_path": "continuation-v1/run-remaining.py",
+      "sha256": "7eb2c2509a25436d90f19e40ac8b56987b05744907ed1fc07c3c47dca2759d1a",
+      "bytes": 24223,
+      "category": "tool",
+      "role": "actual filename-only continuation controller; no repeated inference",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "sys"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/project-journal.py",
+      "original_relative_path": "continuation-v1/project-journal.py",
+      "sha256": "555095305a22d49ba8225da1de35d57a3e3220a8c8cb11382aa4c728ce6f2846",
+      "bytes": 18686,
+      "category": "tool",
+      "role": "frozen two-raw-journal verifier and explicitly derived logical projection",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/summarize-continuation-v1.py",
+      "original_relative_path": "continuation-v1/summarize-continuation-v1.py",
+      "sha256": "ab945f3b9aa775e7ed27aa87be723bb4a8a3fd5e8b4d9e2d6cb6ff4a3b62f3c1",
+      "bytes": 7417,
+      "category": "tool",
+      "role": "actual final summary adapter; reuses original numeric builder",
+      "static_import_roots": [
+        "argparse",
+        "hashlib",
+        "importlib",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "signal",
+        "stat",
+        "sys"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/audit-final-numeric-gates.py",
+      "original_relative_path": "continuation-v1/audit-final-numeric-gates.py",
+      "sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+      "bytes": 95233,
+      "category": "tool",
+      "role": "actual final independent numeric and provenance audit",
+      "static_import_roots": [
+        "argparse",
+        "collections",
+        "csv",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "io",
+        "itertools",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "re",
+        "signal",
+        "stat",
+        "statistics",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/audit-postrun-preservation.py",
+      "original_relative_path": "continuation-v1/audit-postrun-preservation.py",
+      "sha256": "39a6af31274210c193cc2913f0d8d9f940c86ebf8971dab7f7efdd2b805e35b1",
+      "bytes": 16186,
+      "category": "tool",
+      "role": "actual final preservation authority; reused opaque core",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "signal",
+        "stat",
+        "sys",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/test-native-load-check-v1.py",
+      "original_relative_path": "test-native-load-check-v1.py",
+      "sha256": "87c8bf4fa366b2c2146fb15d6790d07216764e2bb73ef0f2dcf99f9216bd664e",
+      "bytes": 11443,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "signal",
+        "subprocess",
+        "sys",
+        "tempfile",
+        "time",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/test-round4-report-v1.py",
+      "original_relative_path": "test-round4-report-v1.py",
+      "sha256": "da33a571f150ee360c87024aca175c230747a719f525f2f9c7c90bb55caa544a",
+      "bytes": 12634,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "hashlib",
+        "importlib",
+        "pathlib",
+        "tempfile",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/test-project-journal.py",
+      "original_relative_path": "continuation-v1/test-project-journal.py",
+      "sha256": "a07fb09788b651d1649a98d501d0f2402178872627252620870e66e9d1b32efe",
+      "bytes": 8259,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "importlib",
+        "pathlib",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/smoke-project-journal.py",
+      "original_relative_path": "continuation-v1/smoke-project-journal.py",
+      "sha256": "dfed5bdda4cef5e892fafdcc8cfbaeea6f3ea299ec2bded5ae6c28969702fd50",
+      "bytes": 4367,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "subprocess",
+        "sys"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/test-summary-continuation.py",
+      "original_relative_path": "continuation-v1/test-summary-continuation.py",
+      "sha256": "f2a7bec7712d3f6aa46a51aef91bdf9808f11028a7b04dedb5794366dd371649",
+      "bytes": 8215,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "tempfile",
+        "types",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/test-numeric-core.py",
+      "original_relative_path": "continuation-v1/test-numeric-core.py",
+      "sha256": "ab42e6803f3be4db4d98f2de776786a65b3be727fb79b0603f7bac9532a3b7aa",
+      "bytes": 455,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "importlib",
+        "pathlib",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/test-preservation-adapter.py",
+      "original_relative_path": "continuation-v1/test-preservation-adapter.py",
+      "sha256": "c6c305e9ebd4c17359389930efeb5fcec7d7b3aca58f757a06dfdd8c39f10caf",
+      "bytes": 6456,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "hashlib",
+        "importlib",
+        "json",
+        "pathlib",
+        "tempfile",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/continuation-v1/smoke-audit-preservation.py",
+      "original_relative_path": "continuation-v1/smoke-audit-preservation.py",
+      "sha256": "f8d83c94ad49a782ba91629619fa82ea32c4f5454ba5d200035ee2dd8221e8d9",
+      "bytes": 6593,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "argparse",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "stat",
+        "time"
+      ]
+    },
+    {
+      "archive_path": "sources/test-final-numeric-audit-v1.py",
+      "original_relative_path": "test-final-numeric-audit-v1.py",
+      "sha256": "64375df06db4be3c0cab1497b0a14ef465273870816bfd43534493a6fe408408",
+      "bytes": 9536,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "importlib",
+        "pathlib",
+        "unittest"
+      ]
+    },
+    {
+      "archive_path": "sources/test-postrun-preservation-v1.py",
+      "original_relative_path": "test-postrun-preservation-v1.py",
+      "sha256": "f92d7db4da12938d127745d19fee7e7e0aec50874f87cfdeafea5d4511a2239b",
+      "bytes": 14426,
+      "category": "synthetic_harness",
+      "role": "synthetic test/smoke source; not executed during archiving",
+      "static_import_roots": [
+        "copy",
+        "hashlib",
+        "importlib",
+        "io",
+        "json",
+        "os",
+        "pathlib",
+        "tempfile",
+        "unittest"
+      ]
+    }
+  ],
+  "source_file_count": 24,
+  "source_bytes": 537917,
+  "planned_numeric_exports": {
+    "quality.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 495,
+      "sha256": "d80921f6b57f1cb09d535de77ef98224804867f4096ecd1bedcefebe81473246",
+      "bytes": 99363,
+      "generator": {
+        "archive_path": "sources/project-round4-report-v1.py",
+        "sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38",
+        "role": "frozen_summary_numeric_projection"
+      },
+      "observed_rows": 495
+    },
+    "resources.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 495,
+      "sha256": "dd20926116b1e507cc064ad1e871f7c7c82c67b2cb36f33a0ad729550000cdd5",
+      "bytes": 195542,
+      "generator": {
+        "archive_path": "sources/project-round4-report-v1.py",
+        "sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38",
+        "role": "frozen_summary_numeric_projection"
+      },
+      "observed_rows": 495
+    },
+    "macros.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 55,
+      "sha256": "f14277c5fef6f2452deafac75872a4a1593fd0455e00bb57fedee3a2a7c8af91",
+      "bytes": 6609,
+      "generator": {
+        "archive_path": "sources/project-round4-report-v1.py",
+        "sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38",
+        "role": "frozen_summary_numeric_projection"
+      },
+      "observed_rows": 55
+    },
+    "heldout-resource-headlines.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 22,
+      "sha256": "77a054e0237bf787ed3cf96568e3b5eea6973bd290b1bf18762348be9d713ac8",
+      "bytes": 5277,
+      "generator": {
+        "archive_path": "sources/continuation-v1/audit-final-numeric-gates.py",
+        "sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+        "role": "independent_counted_numeric_and_gate_audit"
+      },
+      "observed_rows": 22
+    },
+    "heldout-quality-headlines.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 22,
+      "sha256": "8df2cc5a5d7fcfaffbad8daacf2b080e92d0eac80798c75bef0729350de8cac8",
+      "bytes": 2764,
+      "generator": {
+        "archive_path": "sources/continuation-v1/audit-final-numeric-gates.py",
+        "sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+        "role": "independent_counted_numeric_and_gate_audit"
+      },
+      "observed_rows": 22
+    },
+    "native-load-observations.csv": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_rows": 495,
+      "sha256": "3ed9fca15314f0b6ec5041848c36feb0e052e02722d38cfef7fb65b142090b81",
+      "bytes": 133061,
+      "generator": {
+        "archive_path": "sources/continuation-v1/audit-final-numeric-gates.py",
+        "sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+        "role": "independent_counted_numeric_and_gate_audit"
+      },
+      "observed_rows": 495
+    },
+    "gate-headlines.json": {
+      "status": "COPIED_VERBATIM_FROM_VERIFIED_FINAL_OUTPUT",
+      "planned_records": 10,
+      "sha256": "a71219e98fb29b6daaf4c324d51218d965509a80bb492c21f54d565fef871d31",
+      "bytes": 15314,
+      "generator": {
+        "archive_path": "sources/continuation-v1/audit-final-numeric-gates.py",
+        "sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+        "role": "independent_counted_numeric_and_gate_audit"
+      },
+      "observed_records": 10
+    }
+  },
+  "final_journal_projection": {
+    "status": "VERIFIED_TWO_UNCHANGED_RAW_JOURNALS_WITH_EXPLICIT_DERIVED_PROJECTION",
+    "original_stopped_journal_sha256": "72a096b9b51912569c9b37ddc8c4ac7098b4040eea1be96e337335c4b13196e5",
+    "continuation_journal_sha256": "c8b184bbaf4266899aaa11ad2bef025b8395ea7f7060ab885ef24417485237e2",
+    "logical_journal_sha256": "604012932eec90b6e2ac6f1be0a2613bae5fa08afbe4d1c9846476a09e554882",
+    "projection_receipt_sha256": "cfb3b333d24cdea3a93b6fa9a10b150d44d20b8a73ae1a90c2067aa4b7b6efc5",
+    "executing_projector_sha256": "555095305a22d49ba8225da1de35d57a3e3220a8c8cb11382aa4c728ce6f2846",
+    "logical_journal_is_raw": false,
+    "actual_stop_retained": true,
+    "inference_retries": 0
+  },
+  "final_independent_numeric_audit": {
+    "status": "PASSED_INDEPENDENT_COUNTED_NUMERIC_GATES_PROJECTION_AND_METADATA_CHAIN",
+    "receipt_sha256": "69bd834cfd96dde4ddf8b1fd31335d200b8b63c33cabb465b6034dd8b834322d",
+    "executing_source_sha256": "79516b2a6d286bd83253d39182c82068c51129e058cff70b88261e9fb2aebd91",
+    "reused_numeric_gate_core_sha256": "0248cb4163d62b457759d4e46124a44f4b571b5d310b9e84c56de092f656976a",
+    "checks": {
+      "native_counted_rates": 21416,
+      "gates": 327,
+      "gates_true": 279,
+      "quality_cohorts": 495,
+      "resource_cohorts": 495,
+      "macro_rows": 55,
+      "gates_unknown": 1,
+      "gates_false": 47
+    }
+  },
+  "final_preservation_authority": {
+    "status": "PASS_OPAQUE_INPUT_AND_RETAINED_OUTPUT_HASHES",
+    "receipt_sha256": "82149a50ce679bde1f18777d834d4430cfc6c9d9670095951765e4e876fe83d3",
+    "closed_guard_sha256": "ec271b760510c896b8d02b95b8441b8706cf2785849f1fe0393f2fc9f2ef7ce0",
+    "executing_source_sha256": "39a6af31274210c193cc2913f0d8d9f940c86ebf8971dab7f7efdd2b805e35b1",
+    "reused_preservation_core_sha256": "9ba1fdf806ce592dc21f052e386f0ebc2d410c7a58bb66e84262cf18bb82f8f9",
+    "frozen_inputs": 1029,
+    "retained_outputs": 72969,
+    "closed_guard_exit_code": 0,
+    "owned_session_reaped": true
+  },
+  "fixed_seal_sha256": {
+    "initial_family": "8058f9785929639d70da620fd6f12841b3078aa17352f6d02b542b6a7f191fe2",
+    "original_admission": "1e9d6a0dbea1fd9f9df2ece06a9044e24eb4f2b37c259500cca87545e9d29153",
+    "continuation": "081fef424c87316422758d49d5b6abb9324f56e0fc52d1c3457d0604f07ff4dd",
+    "continuation_launch": "4819733cb98728b71fae53f7c4aea514cea923267003e4e3663a1059d38ee258",
+    "joint_heldout_family": "24ef35dc480aa3817ac9298e72cb86480623119b1e85f26f069877a0e060902c"
+  },
+  "public_dependency_sources": [
+    {
+      "path": "scripts/quality/assess-attention-rotation.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/assess-attention-rotation.py"
+    },
+    {
+      "path": "scripts/quality/assess-affine-pilot.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/assess-affine-pilot.py"
+    },
+    {
+      "path": "scripts/quality/report-pilot.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/report-pilot.py"
+    },
+    {
+      "path": "scripts/quality/attention-rotate.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/attention-rotate.py"
+    },
+    {
+      "path": "scripts/quality/quantize-attention-rotation.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/quantize-attention-rotation.py"
+    },
+    {
+      "path": "scripts/quality/ggml_weights.py",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/ggml_weights.py"
+    },
+    {
+      "path": "scripts/quality/requirements.txt",
+      "historical_revision": "6c43510b0f168e9ded973d7f2dffc5096dc930f2",
+      "url": "https://github.com/moreaki/recscribe/blob/6c43510b0f168e9ded973d7f2dffc5096dc930f2/scripts/quality/requirements.txt"
+    }
+  ],
+  "planned_cells": 4554,
+  "planned_native_parent_pairs": 2484,
+  "planned_q4_sibling_contrasts": 828,
+  "planned_reference_placeholders": 1242,
+  "resource_acceptance": "UNCONTROLLED / NOT EVALUATED",
+  "native_review": "PENDING",
+  "product_acceptance": "PENDING",
+  "default_promotion": false,
+  "planned_numeric_export_count": 7,
+  "planned_markdown_appendix": {
+    "status": "COPIED_COMPLETE_FILE_VERBATIM_FROM_FROZEN_PROJECTOR",
+    "source_output_name": "report.md",
+    "published_file": "../../../weight-space-round4-measurements-2026-11-09.md",
+    "sha256": "e2930fade2b2d7acae3e97c1cc24ed463fb6e357e098a7f298a2e8f959d0e6f2",
+    "bytes": 46821,
+    "generator": {
+      "archive_path": "sources/project-round4-report-v1.py",
+      "sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38",
+      "role": "frozen_summary_readable_projection"
+    },
+    "copy_contract": "Entire generated report.md copied byte-for-byte; no prefix, title or body edits",
+    "prefix_bytes": 0
+  },
+  "artifact_identities": [
+    {
+      "id": "tiny",
+      "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+      "model_file_bytes": 77691713
+    },
+    {
+      "id": "base",
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+      "model_file_bytes": 147951465
+    },
+    {
+      "id": "small",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "model_file_bytes": 487601967
+    },
+    {
+      "id": "small-rotated-f16",
+      "sha256": "5ca99bcafe04287b475f318bfc3ec310bed1d7fad39b3fc8eb089c4021643ace",
+      "model_file_bytes": 487601967
+    },
+    {
+      "id": "small-plain-q4",
+      "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "model_file_bytes": 145458015
+    },
+    {
+      "id": "small-rotated-q4",
+      "sha256": "b5d141d1638f07ccca730cf918d37db95656caaf026fab73f09e271eb59b6931",
+      "model_file_bytes": 145458015
+    },
+    {
+      "id": "large-v3-turbo",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "model_file_bytes": 1624555275
+    },
+    {
+      "id": "large-v3-turbo-rotated-f16",
+      "sha256": "28821c38bf056593f46af223424406b975464c7c3ee7bafd348e4bdd832f9b09",
+      "model_file_bytes": 1624555275
+    },
+    {
+      "id": "large-v3-turbo-plain-q4",
+      "sha256": "2ceb779ca61ce46ed6e9aa43c4a0f8a89a37f683df3c0ba3119238fcd5852155",
+      "model_file_bytes": 473992235
+    },
+    {
+      "id": "large-v3-turbo-rotated-q4",
+      "sha256": "73229e9eedd0160c34cd4464ea3fa5682c8f6b25a4f20d5208642dae7011fb35",
+      "model_file_bytes": 473992235
+    },
+    {
+      "id": "large-v3",
+      "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "model_file_bytes": 3095033483
+    }
+  ],
+  "coverage": {
+    "planned_cells": 4554,
+    "attempted_cells": 4554,
+    "completed_cells": 4553,
+    "failed_cells": 1,
+    "planned_native_parent_pairs": 2484,
+    "completed_native_parent_pairs": 2484,
+    "pending_native_parent_pairs": 0,
+    "planned_assessor_derived_q4_pairs": 828,
+    "completed_assessor_derived_q4_pairs": 828,
+    "pending_assessor_derived_q4_pairs": 0,
+    "runtime_reference_placeholders": 1242
+  },
+  "quality_coverage": {
+    "terminal_plan_complete": true,
+    "full_counted_quality_complete": false,
+    "heldout_planned_cells": 3168,
+    "heldout_successful_cells": 3168,
+    "failed_development_cells": 1,
+    "partial_scope": "Base development reference; failed cell remains unscored and its planned aggregates incomplete"
+  },
+  "final_summary": {
+    "status": "COMPLETE_TERMINAL_ATTEMPTS_QUALITY_INCOMPLETE_NO_PROMOTION",
+    "sha256": "6861461fadfaec0207d650da5ff04ce5a19e08f592e74c0f27c9cb948ac01e15",
+    "executing_adapter_sha256": "ab945f3b9aa775e7ed27aa87be723bb4a8a3fd5e8b4d9e2d6cb6ff4a3b62f3c1",
+    "reused_numeric_builder_sha256": "9638db9ee4cf02b15dafc854bdcbfce74c523de04757115ba5eb358226ddd870",
+    "original_builder_main_executed": false
+  },
+  "final_projection": {
+    "status": "PASSED_NUMERIC_PROJECTION_AUDIT_NO_ACCEPTANCE_CLAIM",
+    "audit_sha256": "d304eb1c8b5cec1d28ca88c0963ce6e320aa2e55de0319b45ad7d4672ccd2728",
+    "executing_source_sha256": "ce29043f8c7ba02d550069cf18f7efc57e8517cae43570da2a84a94b8fe19f38"
+  }
+}

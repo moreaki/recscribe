@@ -73,6 +73,60 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
             supervisor.sample_owned(200, Path(root), lambda *a, **k:None, lambda:False)
             run.assert_not_called()
 
+    def test_xctest_is_sampled_only_after_owned_session_filtering(self):
+        listing = SimpleNamespace(stdout="100 1 100 /foreign/Xcode/usr/bin/xctest\n"
+            "200 1 200 /owned/swift\n201 200 201 /owned/Xcode/usr/bin/xctest\n"
+            "202 200 200 /owned/unrecognized-test-host\n")
+        sampled, notes = [], []
+        def run(argv, **kwargs):
+            if argv[0] == "/bin/ps": return listing
+            sampled.append(argv)
+            return SimpleNamespace(returncode=0)
+        with tempfile.TemporaryDirectory() as root, \
+             patch.object(supervisor.subprocess, "run", side_effect=run), \
+             patch.object(supervisor.os, "getpgrp", return_value=999), \
+             patch.object(supervisor.os, "getsid", side_effect=lambda pid:100 if pid==100 else 200):
+            self.assertTrue(supervisor.sample_owned(200, Path(root), lambda event, **details:notes.append((event,details)), lambda:False))
+        self.assertEqual([argv[:3] for argv in sampled], [["/usr/bin/sample", "201", "1"]])
+        event, details = notes[0]
+        self.assertEqual(event, "quiet_stall")
+        self.assertEqual(details["owned_test_pids"], [201])
+        self.assertEqual(details["owned_process_count"], 3)
+        self.assertFalse(details["owned_process_snapshot_truncated"])
+        self.assertEqual(details["owned_process_snapshot"], [
+            {"pid":200,"parent":1,"group":200,"basename":"swift","eligible":False},
+            {"pid":201,"parent":200,"group":201,"basename":"xctest","eligible":True},
+            {"pid":202,"parent":200,"group":200,"basename":"unrecognized-test-host","eligible":False}])
+
+    def test_stall_retains_unknown_or_empty_owned_inventory_without_sampling_foreign_names(self):
+        for owned in ([], [{"pid":201,"parent":200,"group":201,"command":"/owned/unknown-host"}]):
+            notes = []
+            with tempfile.TemporaryDirectory() as root, \
+                 patch.object(supervisor, "owned_processes", return_value=owned), \
+                 patch.object(supervisor.subprocess, "run") as run:
+                self.assertFalse(supervisor.sample_owned(200, Path(root), lambda event, **details:notes.append((event,details)), lambda:False))
+                run.assert_not_called()
+            details = notes[0][1]
+            self.assertEqual(details["owned_process_count"], len(owned))
+            self.assertEqual(len(details["owned_process_snapshot"]), len(owned))
+            self.assertEqual(details["owned_test_pids"], [])
+            self.assertFalse(details["owned_process_snapshot_truncated"])
+            self.assertTrue(all(not p["eligible"] and "command" not in p for p in details["owned_process_snapshot"]))
+
+    def test_stall_inventory_is_bounded_to_64_with_exact_total_and_truncation(self):
+        owned = [{"pid":201+i,"parent":200,"group":200,"command":"/owned/unknown-"+str(i)} for i in range(70)]
+        notes = []
+        with tempfile.TemporaryDirectory() as root, \
+             patch.object(supervisor, "owned_processes", return_value=owned), \
+             patch.object(supervisor.subprocess, "run") as run:
+            self.assertFalse(supervisor.sample_owned(200, Path(root), lambda event, **details:notes.append((event,details)), lambda:False))
+            run.assert_not_called()
+        details = notes[0][1]
+        self.assertEqual(details["owned_process_count"], 70)
+        self.assertTrue(details["owned_process_snapshot_truncated"])
+        self.assertEqual([p["pid"] for p in details["owned_process_snapshot"]], list(range(201,265)))
+        self.assertTrue(all(set(p)=={"pid","parent","group","basename","eligible"} for p in details["owned_process_snapshot"]))
+
     def test_cleanup_reaps_descendants_even_after_the_leader_exits(self):
         members = [{"pid":201}]
         numbers = []

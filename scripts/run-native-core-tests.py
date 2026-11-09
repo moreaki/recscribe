@@ -61,12 +61,17 @@ def signal_owned(group, number):
 
 def test_process(value):
     name = Path(value["command"]).name
-    return name.endswith(".xctest") or name in {"RecScribeCorePackageTests", "swiftpm-testing"}
+    return name.endswith(".xctest") or name in {"xctest", "RecScribeCorePackageTests", "swiftpm-testing"}
 
 
 def sample_owned(group, output, note, interrupted):
-    targets = [p for p in owned_processes(group) if test_process(p)][:3]
-    note("quiet_stall", quiet_seconds=QUIET_SECONDS, owned_test_pids=[p["pid"] for p in targets])
+    owned = owned_processes(group)
+    targets = [p for p in owned if test_process(p)][:3]
+    snapshot = [{"pid": p["pid"], "parent": p["parent"], "group": p["group"],
+                 "basename": Path(p["command"]).name, "eligible": test_process(p)} for p in owned[:64]]
+    note("quiet_stall", quiet_seconds=QUIET_SECONDS, owned_test_pids=[p["pid"] for p in targets],
+         owned_process_snapshot=snapshot, owned_process_count=len(owned),
+         owned_process_snapshot_truncated=len(owned) > 64)
     for target in targets:
         if interrupted():
             return bool(targets)

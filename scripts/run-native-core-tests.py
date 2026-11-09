@@ -61,7 +61,7 @@ def signal_owned(group, number):
 
 def test_process(value):
     name = Path(value["command"]).name
-    return name.endswith(".xctest") or name in {"xctest", "RecScribeCorePackageTests", "swiftpm-testing"}
+    return name.endswith(".xctest") or name in {"xctest", "RecScribeCorePackageTests", "swiftpm-testing", "swiftpm-testing-helper"}
 
 
 def sample_owned(group, output, note, interrupted):

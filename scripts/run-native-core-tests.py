@@ -19,6 +19,9 @@ QUIET_SECONDS = 60
 TERM_GRACE_SECONDS = 2
 KILL_GRACE_SECONDS = 1
 LOG_LIMIT = 32 * 1024 * 1024
+SAMPLER_TOTAL_SECONDS = 10
+SAMPLER_CLEANUP_SECONDS = 2
+SAMPLER_POLL_SECONDS = .1
 COMMAND = ["xcrun", "swift", "test", "--package-path", "core"]
 PASS_SUMMARY = re.compile(rb"Test run with ([0-9]+) tests?(?: in [0-9]+ suites?)? passed after")
 
@@ -64,7 +67,61 @@ def test_process(value):
     return name.endswith(".xctest") or name in {"xctest", "RecScribeCorePackageTests", "swiftpm-testing", "swiftpm-testing-helper"}
 
 
-def sample_owned(group, output, note, interrupted):
+def stop_sampler(child, deadline, note):
+    """Reap only the sampler's new session, inside its reserved total budget."""
+    cleaned = False
+    try:
+        if deadline - time.monotonic() <= .5:
+            raise subprocess.TimeoutExpired("sampler cleanup", 0)
+        members = owned_processes(child.pid)
+        groups = {}
+        for member in members:
+            groups.setdefault(member["group"], member["pid"])
+        if child.poll() is None and not any(p["pid"] == child.pid for p in members):
+            raise ValueError("Live sampler missing from its owned session")
+        for pgid, pid in groups.items():
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired("sampler cleanup", 0)
+            try:
+                if os.getsid(pid) != child.pid or os.getpgid(pid) != pgid or pgid == os.getpgrp():
+                    raise ValueError("Owned sampler identity changed before signaling")
+                # subprocess.run previously used SIGKILL for its sampler timeout.
+                os.killpg(pgid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        remaining = deadline - time.monotonic()
+        if remaining <= .5:
+            raise subprocess.TimeoutExpired("sampler reap", 0)
+        child.wait(timeout=min(.5, remaining - .5))
+        if deadline - time.monotonic() <= .5:
+            raise subprocess.TimeoutExpired("sampler verification", 0)
+        cleaned = not owned_processes(child.pid)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        note("sampler_cleanup_error", pid=child.pid, error_type=type(error).__name__)
+        # If inventory failed, retain uncertainty but still reap our direct child.
+        if child.poll() is None:
+            try:
+                if os.getsid(child.pid) == child.pid and os.getpgid(child.pid) == child.pid:
+                    child.kill()
+            except ProcessLookupError:
+                pass
+        remaining = deadline - time.monotonic()
+        try:
+            child.wait(timeout=min(.5, max(0, remaining)))
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    within_budget = time.monotonic() <= deadline
+    note("sampler_cleanup", pid=child.pid, owned_session_reaped=cleaned, within_total_budget=within_budget)
+    return cleaned and within_budget
+
+
+def sample_owned(group, output, note, interrupted, suite_deadline):
+    # One shared budget includes every target, inventory, startup and cleanup.
+    started = time.monotonic()
+    deadline = min(started + SAMPLER_TOTAL_SECONDS, suite_deadline)
+    if started >= suite_deadline:
+        note("sample_skipped", reason="suite_deadline_exhausted")
+        return False
     owned = owned_processes(group)
     targets = [p for p in owned if test_process(p)][:3]
     snapshot = [{"pid": p["pid"], "parent": p["parent"], "group": p["group"],
@@ -75,17 +132,49 @@ def sample_owned(group, output, note, interrupted):
     for target in targets:
         if interrupted():
             return bool(targets)
+        work_deadline = deadline - SAMPLER_CLEANUP_SECONDS
+        if work_deadline - time.monotonic() <= 1:
+            note("sample_skipped", pid=target["pid"], reason="insufficient_capture_and_cleanup_budget")
+            break
         # Revalidate immediately before passing any PID to the sampler.
         if target not in owned_processes(group):
             continue
+        if interrupted():
+            return bool(targets)
+        if work_deadline - time.monotonic() <= 1:
+            note("sample_skipped", pid=target["pid"], reason="budget_exhausted_during_revalidation")
+            break
         destination = output / ("native-sample-" + str(target["pid"]) + ".txt")
+        child = None
         try:
             with destination.with_suffix(".stderr.txt").open("xb") as errors:
-                result = subprocess.run(["/usr/bin/sample", str(target["pid"]), "1", "-file", str(destination)],
-                                        stdout=errors, stderr=subprocess.STDOUT, timeout=2)
-            note("sample_finished", pid=target["pid"], returncode=result.returncode, path=str(destination))
+                child = subprocess.Popen(["/usr/bin/sample", str(target["pid"]), "1", "-file", str(destination)],
+                                         stdin=subprocess.DEVNULL, stdout=errors, stderr=subprocess.STDOUT,
+                                         start_new_session=True)
+                if child.poll() is None and (os.getsid(child.pid) != child.pid or os.getpgid(child.pid) != child.pid):
+                    raise ValueError("Sampler must own a new session")
+                note("sample_started", pid=target["pid"], sampler_pid=child.pid, capture_seconds=1,
+                     total_budget_seconds=deadline-started, cleanup_reserve_seconds=SAMPLER_CLEANUP_SECONDS)
+                while child.poll() is None:
+                    if interrupted():
+                        break
+                    remaining = work_deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    try:
+                        child.wait(timeout=min(SAMPLER_POLL_SECONDS, remaining))
+                    except subprocess.TimeoutExpired:
+                        pass
+                if child.poll() is None:
+                    note("sample_unavailable", pid=target["pid"],
+                         error_type="Interrupted" if interrupted() else "SamplerWorkDeadlineExpired")
+                else:
+                    note("sample_finished", pid=target["pid"], returncode=child.returncode, path=str(destination))
         except (OSError, subprocess.TimeoutExpired) as error:
             note("sample_unavailable", pid=target["pid"], error_type=type(error).__name__)
+        finally:
+            if child is not None and not stop_sampler(child, deadline, note):
+                raise ValueError("Owned sampler cleanup or total diagnostic budget is uncertain")
     return bool(targets)
 
 
@@ -139,6 +228,7 @@ def supervise(output):
     cleaned = False
     events = []
     started = time.monotonic()
+    suite_deadline = started + TIMEOUT_SECONDS
     last_output = started
     sampled = False
     next_sample = started
@@ -166,12 +256,18 @@ def supervise(output):
                     if requested["signal"] is not None:
                         reason = "interrupted"
                         break
-                    if now - started >= TIMEOUT_SECONDS:
+                    if now >= suite_deadline:
                         reason = "timeout"
                         break
                     if not sampled and now >= next_sample and now - last_output >= QUIET_SECONDS:
-                        sampled = sample_owned(group, output, note, lambda: requested["signal"] is not None)
+                        sampled = sample_owned(group, output, note, lambda: requested["signal"] is not None, suite_deadline)
                         next_sample = time.monotonic() + 15
+                        if requested["signal"] is not None:
+                            reason = "interrupted"
+                            break
+                        if time.monotonic() >= suite_deadline:
+                            reason = "timeout"
+                            break
                     for key, _ in ready.select(.1):
                         chunk = os.read(key.fd, 65536)
                         if not chunk:
@@ -227,6 +323,8 @@ def supervise(output):
               returncode if returncode is not None and returncode >= 0 else 128 - (returncode or 0))
     record = {"schema_version": "native-core-supervision-v1", "command": COMMAND,
               "timeout_seconds": TIMEOUT_SECONDS, "quiet_seconds": QUIET_SECONDS,
+              "sampler_total_seconds": SAMPLER_TOTAL_SECONDS,
+              "sampler_cleanup_reserve_seconds": SAMPLER_CLEANUP_SECONDS,
               "reason": reason, "command_returncode": returncode, "exit_code": result,
               "owned_group_reaped": cleaned, "signal": requested["signal"], "events": events,
               "elapsed_seconds": time.monotonic() - started, "log_bytes": log_bytes,

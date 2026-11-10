@@ -144,6 +144,7 @@ final class SessionPlaybackCoordinator {
     private var resumeAfterSeek: Bool?
     private(set) var position = 0.0
     private(set) var duration = 0.0
+    private(set) var passage: PlaybackPolicy.Passage?
     private(set) var isPlaying = false
     private(set) var player: AVPlayer?
     private(set) var playing: UUID?
@@ -231,6 +232,11 @@ final class SessionPlaybackCoordinator {
             isPlaying = false; phase = .paused
         } else {
             _ = claimGlobalPlayback()
+            if let passage, position >= passage.end {
+                resumeAfterSeek = true
+                seekWithinPlayback(to: passage.start)
+                return
+            }
             if duration > 0, position >= duration { seek(to: 0) }
             player.play()
             refreshTransportState()
@@ -242,6 +248,7 @@ final class SessionPlaybackCoordinator {
     func setScrubbing(_ editing: Bool) {
         guard let player, phase != .failed, editing != isScrubbing else { return }
         if editing {
+            clearPassage()
             scrubWantsPlayback = resumeAfterSeek ?? isPlaying
             resumeAfterSeek = nil
             isScrubbing = true
@@ -271,7 +278,7 @@ final class SessionPlaybackCoordinator {
         case .playing: phase = .playing
         case .waitingToPlayAtSpecifiedRate: phase = isPlaying ? .buffering : .paused
         case .paused:
-            phase = duration > 0 && position >= duration && !seekInFlight ? .ended : .paused
+            phase = duration > 0 && position >= (passage?.end ?? duration) && !seekInFlight ? .ended : .paused
         @unknown default: phase = .paused
         }
     }
@@ -293,6 +300,16 @@ final class SessionPlaybackCoordinator {
     /// an active seek runs as soon as the current seek completes.
     func seek(to seconds: Double) {
         guard seconds.isFinite, phase != .failed else { return }
+        clearPassage()
+        seekWithinPlayback(to: seconds)
+    }
+
+    private func clearPassage() {
+        passage = nil
+        player?.currentItem?.forwardPlaybackEndTime = .invalid
+    }
+
+    private func seekWithinPlayback(to seconds: Double) {
         let upperBound = duration > 0 ? duration : max(0, seconds)
         let target = min(upperBound, max(0, seconds))
         position = target
@@ -338,15 +355,15 @@ final class SessionPlaybackCoordinator {
         if let player { levels.apply(to: player, devices: outputDevices) }
     }
 
-    func play(_ entry: SessionEntry) {
+    func play(_ entry: SessionEntry, passage: PlaybackPolicy.Passage? = nil) {
         let initialDuration = entry.session.duration
-        load(id: entry.session.id, name: entry.displayTitle, initialDuration: initialDuration) { [build] in
+        load(id: entry.session.id, name: entry.displayTitle, initialDuration: initialDuration, passage: passage) { [build] in
             try await build(entry)
         }
     }
 
-    func playFile(_ url: URL) {
-        load(id: UUID(), name: url.lastPathComponent, initialDuration: nil) {
+    func playFile(_ url: URL, passage: PlaybackPolicy.Passage? = nil) {
+        load(id: UUID(), name: url.lastPathComponent, initialDuration: nil, passage: passage) {
             guard url.isFileURL else { throw SessionError.invalid("Playback requires a local audio file") }
             let asset = AVURLAsset(url: url)
             guard try await asset.load(.isPlayable), !(try await asset.loadTracks(withMediaType: .audio)).isEmpty else {
@@ -374,6 +391,7 @@ final class SessionPlaybackCoordinator {
         id selection: UUID,
         name: String,
         initialDuration: Double?,
+        passage: PlaybackPolicy.Passage? = nil,
         operation: @escaping @MainActor () async throws -> AVPlayerItem
     ) {
         stop()
@@ -392,7 +410,8 @@ final class SessionPlaybackCoordinator {
                     selection: selection,
                     initialDuration: initialDuration,
                     assetDuration: assetDuration,
-                    id: id
+                    id: id,
+                    passage: passage
                 )
             } catch is CancellationError { }
             catch {
@@ -412,7 +431,8 @@ final class SessionPlaybackCoordinator {
         selection: UUID,
         initialDuration: Double?,
         assetDuration: Double?,
-        id: UUID
+        id: UUID,
+        passage requestedPassage: PlaybackPolicy.Passage? = nil
     ) {
         item.preferredForwardBufferDuration = PlaybackPolicy.preferredForwardBufferDuration
         let player = AVPlayer(playerItem: item)
@@ -424,7 +444,18 @@ final class SessionPlaybackCoordinator {
         refreshOutput()
         attachPlayerObservers(player: player, item: item, id: id)
         playing = selection
-        activate(player)
+        if let requestedPassage {
+            guard let bounded = requestedPassage.bounded(to: duration) else {
+                failPlayback(SessionError.invalid("This passage is outside the available audio."))
+                return
+            }
+            passage = bounded
+            // AVFoundation enforces the stop boundary; a UI timer cannot prevent
+            // audio from leaking into the next passage while the main thread is busy.
+            item.forwardPlaybackEndTime = CMTime(seconds: bounded.end, preferredTimescale: PlaybackPolicy.seekTimescale)
+            resumeAfterSeek = true
+            seekWithinPlayback(to: bounded.start)
+        } else { activate(player) }
         refreshTransportState()
     }
 
@@ -468,7 +499,7 @@ final class SessionPlaybackCoordinator {
                 self.player?.pause()
                 self.isPlaying = false; self.phase = .ended
                 if self.duration > 0 {
-                    self.position = self.duration
+                    self.position = self.passage?.end ?? self.duration
                 }
             }
         }
@@ -586,6 +617,7 @@ final class SessionPlaybackCoordinator {
         player = nil
         playing = nil
         loading = false; phase = .idle; sourceName = nil; errorMessage = nil
+        passage = nil
         position = 0
         duration = 0
         isPlaying = false

@@ -46,6 +46,74 @@ struct SessionPlaybackAcceptanceTests {
         }
     }
 
+    @Test func passagePlaysOnlyRequestedIntervalAndRestartsAtItsBeginning() async throws {
+        let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let playback = SessionPlayback()
+        defer { playback.stop() }
+        let passage = try #require(PlaybackPolicy.Passage(start: 4, end: 4.25))
+        playback.playFile(url, passage: passage)
+        await waitUntil("real passage reaches its native end boundary", timeout: .seconds(10)) { playback.phase == .ended }
+        let player = try #require(playback.player), item = try #require(player.currentItem)
+        #expect(playback.position == 4.25 && !playback.isPlaying)
+        #expect(abs(player.currentTime().seconds - 4.25) < 0.05)
+        #expect(item.forwardPlaybackEndTime.seconds == 4.25)
+        playback.togglePlayback()
+        #expect(playback.position == 4)
+        await waitUntil("passage replay stops at the same boundary", timeout: .seconds(10)) { playback.phase == .ended }
+        #expect(playback.position == 4.25)
+        playback.seek(to: 12)
+        #expect(playback.passage == nil && !item.forwardPlaybackEndTime.isValid)
+        await waitUntil("ordinary seek after passage") { abs(player.currentTime().seconds - 12) < 0.05 }
+    }
+
+    @Test func passagePauseReplacementAndCaptureDiscardStaleSeekCompletions() async throws {
+        let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let gate = SeekGate(), playback = SessionPlayback(activate: { $0.pause() }, seekPlayer: gate.seek)
+        defer { playback.stop() }
+        let first = try #require(PlaybackPolicy.Passage(start: 4, end: 6))
+        let second = try #require(PlaybackPolicy.Passage(start: 10, end: 40))
+        playback.playFile(url, passage: first)
+        await waitUntil("passage initial seek") { gate.targets.count == 1 }
+        let retired = try #require(playback.player)
+        #expect(retired.rate == 0 && gate.targets == [4]) // No audio before seeking.
+        playback.togglePlayback() // Pause while the initial seek is outstanding.
+        gate.completions[0](true)
+        await waitUntil("pause preserved after initial seek") { playback.phase == .paused }
+        #expect(!playback.isPlaying && retired.rate == 0)
+        playback.playFile(url, passage: second)
+        await waitUntil("replacement passage seek") { gate.targets.count == 2 }
+        let replacement = try #require(playback.player)
+        #expect(retired.currentItem == nil && playback.passage?.end == 30)
+        #expect(replacement.currentItem?.forwardPlaybackEndTime.seconds == 30)
+        gate.completions[0](true) // An old callback cannot resume the replacement.
+        await settle()
+        #expect(replacement.rate == 0 && gate.targets == [4, 10])
+        playback.setRecording(true)
+        gate.completions[1](true)
+        await settle()
+        #expect(playback.player == nil && playback.passage == nil && !playback.isPlaying)
+        #expect(replacement.currentItem == nil)
+    }
+
+    @Test func invalidPassagesFailClosedAndBoundsClampOnlyAtAudioEnd() async throws {
+        #expect(PlaybackPolicy.Passage(start: -.infinity, end: 3) == nil)
+        #expect(PlaybackPolicy.Passage(start: 0, end: .nan) == nil)
+        #expect(PlaybackPolicy.Passage(start: -1, end: 3) == nil)
+        #expect(PlaybackPolicy.Passage(start: 3, end: 3) == nil)
+        let passage = try #require(PlaybackPolicy.Passage(start: 4, end: 6))
+        #expect(passage.bounded(to: 4) == nil)
+        #expect(passage.bounded(to: 0) == nil)
+        #expect(passage.bounded(to: .infinity) == nil)
+        let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let playback = SessionPlayback()
+        defer { playback.stop() }
+        let outside = try #require(PlaybackPolicy.Passage(start: 30, end: 40))
+        playback.playFile(url, passage: outside)
+        await waitUntil("out of bounds passage rejected") { !playback.loading }
+        #expect(playback.phase == .failed && !playback.isPlaying)
+        #expect(playback.player?.currentItem == nil)
+    }
+
     @Test func draggingHoldsPositionBetweenCompletedSeeksAndRestoresIntentOnlyAfterFinalSeek() async throws {
         let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         for initiallyPlaying in [false, true] {

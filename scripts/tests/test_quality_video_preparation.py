@@ -62,6 +62,19 @@ class VideoPreparationTests(unittest.TestCase):
             manual["subtitles"]["de"][0]["url"] += suffix
             self.assertEqual(video.caption_status(manual, "de"), "no_downloadable_same_language_reference")
 
+    def test_regional_manual_tracks_are_discovered_without_silent_script_selection(self):
+        info = {"subtitles": {"en-US": [{"ext": "vtt", "url": "https://example.com/manual"}],
+                               "en-GB": [{"ext": "vtt", "url": "https://example.com/translated?tlang=en"}],
+                               "de": [{"ext": "vtt", "url": "https://example.com/german"}]},
+                "automatic_captions": {"en": [{"ext": "vtt"}]}}
+        original = copy.deepcopy(info)
+        self.assertEqual(video.manual_caption_languages(info, "en"), ["en-US"])
+        self.assertEqual(video.caption_status(info, "en"), "manual_regional_track_requires_explicit_selection")
+        self.assertEqual(video.caption_status(info, "en-US"), "manual_source_track_unreviewed")
+        chinese = {"subtitles": {"zh-Hant": [{"ext": "vtt", "url": "https://example.com/manual"}]}}
+        self.assertEqual(video.caption_status(chinese, "zh-Hans"), "manual_regional_track_requires_explicit_selection")
+        self.assertEqual(info, original)
+
     def test_cancel_prevents_helper_launch(self):
         with tempfile.TemporaryDirectory() as name:
             root = Path(name); (root / "cancel.request").touch()

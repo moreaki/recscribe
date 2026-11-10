@@ -76,6 +76,11 @@ resource comparisons. Its retained-output limit is not a measured network budget
 
 Subtitles remain provisional. Manual upload does not establish correct wording,
 timing or audible language; automatic/translated tracks are not human references.
+The preparer inventories manual regional/script tags sharing the planned base
+language. If only `en-US` exists for requested `en` (or `zh-Hant` for `zh-Hans`),
+it records that explicit selection is required. It does not silently choose a
+regional/script convention or report the source as automatic-only. Freeze the
+chosen track tag in a new plan before acquisition; retain earlier packages.
 If only burned-in subtitles exist, the audio package has a missing reference.
 Keep original cues unchanged. A reviewer derives a separate, versioned aligned
 reference, checks clip boundaries and critical content, and records actual review

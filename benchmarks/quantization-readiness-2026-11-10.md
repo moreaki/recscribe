@@ -37,9 +37,17 @@ were prepared. The Swiss held-out source exceeded the 1,200-second source bound
 and was rejected. Nine sources are marked development and eight held-out;
 these partition labels do not establish independent speakers or sessions.
 
-No selected source exposed a downloadable manual same-language VTT track.
-Automatic captions were not accepted as references; burned-in subtitles were
-not converted into gold text. **Zero references are approved**, and no scored
+The initial exact base-language lookup downloaded no manual VTT tracks. A later
+inventory found an uploaded `en-US` track for the English development source,
+missed by the requested exact `en` lookup. The earlier assertion that none of
+the sources exposed a manual same-language track was too broad; this corrects it.
+The raw regional track is now retained separately (8,202 bytes, SHA-256
+`5b7ff207383dca5f6984879d604f28b4e2b0fb690cf37a4d0210ae8eedd1c555`),
+with a pending review packet of 24 original cues intersecting the clip, including
+two partial boundary cues. Uploaded captions are still unreviewed; no model
+hypotheses were read to prepare that packet. Automatic captions were not accepted
+as references; burned-in subtitles were not converted into gold text.
+**Zero references are approved**, and no scored
 quality evaluation has been performed. Original audio, metadata, logs, source
 intervals and hashes remain protected externally. A subsequent preservation
 audit rechecked all 121 retained source-package files unchanged. Its source
@@ -141,5 +149,21 @@ guard. Repeating the fixed panel after correcting packaging is an explicit
 protocol amendment; original failed calls are never replaced or promoted to
 passes. Zero-duration speech remains a failure. This is development resource
 work, with no scored quality or held-out outcomes used to select the correction.
-The Mac locked during packaging verification; fresh native admission and the
-complete measurements remain pending. No inference worker is left running.
+The strict panel's next launch was deferred before inference by `fileproviderd`.
+Controlled three-repeat measurements remain pending under the original 50%
+foreign-process policy. A separately frozen native compatibility check then
+completed **22/22 calls** on one development source, both known/automatic modes,
+covering all five F16 and six Q5/Q4 artifacts. All produced valid canonical output
+with review flags; the guard shut down cleanly. Its 1000% foreign-process limit
+was declared prospectively for compatibility only, so retained timings/RSS are
+**UNCONTROLLED / NOT EVALUATED** for resource acceptance. No size, quality or
+timed-ASR gate was changed. All twelve parent output-hash comparisons differ;
+that does not quantify accuracy. See the
+[compatibility report](quantization-compatibility-2026-11-10.md).
+
+Postflight verification rehashed all eleven models, all 121 original source-package
+files, six original freeze inputs and nine critical archived files unchanged.
+It verified all 22 row identities, twelve parent comparisons and 359 retained
+output files. All inference workers have exited; no recording or app/default
+was changed. Reporter 1.3 explicitly describes resource-only reports as unscored
+and avoids claiming CER or language-ID accuracy when references were not read.

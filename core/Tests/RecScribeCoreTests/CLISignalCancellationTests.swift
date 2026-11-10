@@ -63,7 +63,13 @@ import Testing
             }
         }
         if process.isRunning { kill(process.processIdentifier, SIGKILL) }
-        process.waitUntilExit()
+        // CI sampled waitUntilExit() stuck here after the OS child was gone.
+        // Keep teardown finite so an earlier assertion/timeout can be reported.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while process.isRunning && ContinuousClock.now < deadline {
+            Thread.sleep(forTimeInterval: 0.01)
+        }
+        #expect(!process.isRunning, "Fixture CLI did not terminate within the cleanup deadline")
     }
 
     @Test(arguments: [SIGINT, SIGTERM])

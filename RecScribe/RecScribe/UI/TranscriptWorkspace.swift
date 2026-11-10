@@ -223,7 +223,8 @@ struct TranscriptWorkspace: View {
             if document != nil, let job = displayedJob {
                 Button(section == .summary ? "Generate summary" : "Improve text", systemImage: "sparkles") {
                     library.requestTextProcessing(job, summary: section == .summary, sourceName: source?.lastPathComponent)
-                }
+                }.disabled(review.loading || review.context == nil || !review.corrections.isEmpty)
+                    .help(review.corrections.isEmpty ? "Process this transcript" : "AI processing of manually corrected text is not available yet. Your saved corrections are preserved.")
             }
             Divider()
             Button("AI & transcription settings", systemImage: "slider.horizontal.3") {
@@ -275,7 +276,7 @@ struct TranscriptWorkspace: View {
                             Button("Copy plain text") { copyToPasteboard(document.reviewPlainText, format: "review notes") }
                         }.disabled(document.reviewPlainText.isEmpty)
                         if !markdown.isEmpty { ShareLink(item: markdown) { Label("Share…", systemImage: "square.and.arrow.up") } }
-                    }
+                    }.disabled(review.loading || review.context == nil)
                     Button("Details", systemImage: "info.circle") { inspector = .details; showsInspector = true }
                         .labelStyle(.iconOnly).help("Recording and transcript details")
                         .focused($inspectorTrigger, equals: .details)
@@ -313,7 +314,8 @@ struct TranscriptWorkspace: View {
                             inspector = .review; showsInspector = true
                         },
                         followPlayback: $followAudio,
-                        checkedReviewGroupIDs: Set(reviewItems.filter { review.checked.contains($0.key) }.compactMap(\.groupID))
+                        checkedReviewGroupIDs: Set(reviewItems.filter { review.checked.contains($0.key) }.compactMap(\.groupID)),
+                        review: review
                     ).overlay(alignment: .topTrailing) { processingMenu }
 
                 } else if section == .summary, let notes = document.summary?.notes, !notes.isEmpty {
@@ -336,7 +338,7 @@ struct TranscriptWorkspace: View {
                 if source == nil { Button("Choose recording / import…") { AppWindow.open(.recordings, using: openWindow, navigation: navigation) } }
                 Spacer(minLength: 0)
             }
-            if let message = error ?? library.errorMessage {
+            if let message = error ?? review.error ?? library.errorMessage {
                 Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -491,7 +493,7 @@ struct TranscriptWorkspace: View {
                                             .keyboardShortcut("n", modifiers: [.command, .option])
                                             .help("Next unchecked item (⌥⌘N)")
                                     }
-                                    Text("Checked records your review of this version. It does not certify accuracy or change original flags, text or exports. A changed transcript requires a new review.")
+                                    Text("Checked records your review of this version. Editing or restoring a passage reopens its review. Original recognition and flags are preserved.")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading).id(item.id)
                             }
@@ -558,6 +560,9 @@ struct TranscriptWorkspace: View {
             }
         }
         .onDisappear { review.reset() }
+        .onChange(of: review.corrections) { _, corrections in
+            if let document { self.document = document.applying(corrections) }
+        }
         .task(id: "\(displayedJob?.path ?? ""):\(waitingForDocument):\(documentReload)") {
             pendingPassage = nil
             document = nil
@@ -573,6 +578,7 @@ struct TranscriptWorkspace: View {
                 if section == .live { section = .transcript }
                 await review.load(job: job, document: result)
                 try Task.checkCancellation()
+                document = result.applying(review.corrections)
                 if reviewItemID == nil { reviewItemID = uncheckedItems.first?.id ?? reviewItems.first?.id }
             } catch is CancellationError { }
             catch { if !Task.isCancelled { self.error = error.localizedDescription } }
@@ -608,6 +614,7 @@ struct TranscriptWorkspace: View {
                         Text("Displayed text").font(.caption).foregroundStyle(.secondary)
                         MarkdownReadingText(text: document.displayedText(segment))
                     }
+                    TranscriptSegmentEditor(segment: segment, document: document, review: review, showsOriginal: false)
                     if let start = segment.startMs, let end = segment.endMs,
                        let passage = PlaybackPolicy.Passage(start: Double(start) / 1_000, end: Double(end) / 1_000) {
                         Button("Listen to passage", systemImage: "play") { pendingPassage = passage }
@@ -631,6 +638,10 @@ private struct TranscriptSummaryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
                 Text("Draft summary").font(.caption).foregroundStyle(.secondary)
+                if !document.corrections.isEmpty {
+                    Label(TranscriptPreview.summaryCorrectionWarning, systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(.orange)
+                }
                 ForEach(notes.indices, id: \.self) { index in
                     VStack(alignment: .leading, spacing: 12) {
                         MarkdownReadingText(text: notes[index].text, font: .title3)

@@ -110,7 +110,7 @@ struct TranscriptReviewTests {
         switch scenario {
         case "corrupt": try Data("{".utf8).write(to: metadata)
         case "future-version":
-            try JSONSerialization.data(withJSONObject: ["version": 2, "revision": context.revision, "checked": [key]]).write(to: metadata)
+            try JSONSerialization.data(withJSONObject: ["version": 3, "revision": context.revision, "checked": [key]]).write(to: metadata)
         case "oversized": try Data(count: TranscriptReviewStore.maximumBytes + 1).write(to: metadata)
         case "symlink": try FileManager.default.createSymbolicLink(at: metadata, withDestinationURL: f.canonical)
         default: #expect(mkfifo(metadata.path, 0o600) == 0)

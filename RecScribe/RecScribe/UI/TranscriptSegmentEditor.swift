@@ -21,7 +21,7 @@ struct TranscriptSegmentEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let correction {
-                Label(correction.kind == .musicOnly ? (correction.acoustic == nil ? "Music only · marked by you" : "Music only · local analysis confirmed by you") : correction.cloud.map { "Cloud recognition · \($0.model) · verify against audio" } ?? "Manually corrected", systemImage: "pencil.circle")
+                Label(correction.kind == .musicOnly ? (correction.automatic != nil ? "Music only · automatically hidden · verify against audio" : correction.acoustic == nil ? "Music only · marked by you" : "Music only · local analysis confirmed by you") : correction.cloud.map { "Cloud recognition · \($0.model) · verify against audio" } ?? "Manually corrected", systemImage: "pencil.circle")
                     .font(.caption).foregroundStyle(WorkspaceStyle.mint)
             }
             if editing {
@@ -49,6 +49,7 @@ struct TranscriptSegmentEditor: View {
             HStack {
                 if !editing {
                     Button("Edit text", systemImage: "pencil") {
+                        review.stopAutomatic()
                         draft = correction?.kind == .musicOnly ? segment.sourceText : document.displayedText(segment)
                         baseline = correction; submitted = false
                         editing = true
@@ -57,11 +58,12 @@ struct TranscriptSegmentEditor: View {
                 Button("Music only", systemImage: "music.note") { submitted = true; review.setCorrection(.musicOnly, for: segment.id) }
                     .disabled(unavailable || correction?.kind == .musicOnly)
                 if correction != nil {
-                    Button("Remove correction") { submitted = true; review.setCorrection(nil, for: segment.id) }.disabled(unavailable)
+                    Button(correction?.automatic != nil ? "Restore original recognition" : "Remove correction") { submitted = true; review.setCorrection(nil, for: segment.id) }.disabled(unavailable)
                 }
             }.buttonStyle(.borderless).font(.caption)
             if let acoustic {
                 Button("Analyze sound locally", systemImage: "waveform") {
+                    review.stopAutomatic()
                     if let context = review.context { acoustic.request(job: context.job, document: document, segmentID: segment.id) }
                 }.buttonStyle(.borderless).font(.caption)
                     .disabled(unavailable || acoustic.blocked || acoustic.busy || cloud?.busy == true || document.source == nil)
@@ -89,6 +91,7 @@ struct TranscriptSegmentEditor: View {
             }
             if let cloud {
                 Button("Re-recognize with OpenAI…", systemImage: "cloud") {
+                    review.stopAutomatic()
                     if let context = review.context { cloud.request(job: context.job, document: document, segmentID: segment.id) }
                 }.buttonStyle(.borderless).font(.caption)
                     .disabled(unavailable || cloud.blocked || cloud.busy || cloud.preparing || cloud.pending != nil || document.source == nil)

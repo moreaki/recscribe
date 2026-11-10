@@ -218,7 +218,8 @@ import Testing
         for index in 0..<2 { #expect(rows[index]["measurement"] == oldRows[index]["measurement"]) }
         #expect(rows[3]["status"].string?.hasPrefix("completed") == true && rows[4]["status"].string?.hasPrefix("completed") == true)
         #expect(try String(contentsOf: counter, encoding: .utf8).split(separator: "\n").count == 4)
-        #expect(resumed["runner_sha256"] == old["runner_sha256"] && resumed["coordinator_sha256"] == .string(try WAVAudio.hash(coordinator)))
+        let coordinatorHash = try WAVAudio.hash(coordinator)
+        #expect(resumed["runner_sha256"] == old["runner_sha256"] && resumed["coordinator_sha256"] == .string(coordinatorHash))
         #expect(try Data(contentsOf: output.appendingPathComponent("checkpoint.original.json")) == before)
         #expect(try Data(contentsOf: matrix) == before)
         #expect(!FileManager.default.fileExists(atPath: output.appendingPathComponent("cell-2").path))

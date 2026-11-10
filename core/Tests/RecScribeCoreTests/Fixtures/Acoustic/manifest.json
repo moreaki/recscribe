@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "piano",
+      "audio": "piano.wav",
+      "sha256": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+      "expected": "instrumental",
+      "source": {
+        "page": "https://commons.wikimedia.org/wiki/File:J._S._Bach_-_English_Suite_no._3,_BWV_808.ogg",
+        "license": "CC0-1.0",
+        "credit": "J. S. Bach; performed by Radek Materka",
+        "offset_seconds": 30,
+        "original_sha256": "53ceecfd96b46de6508dd85b71fe7d15f1cc4d02f9dcea4e38a09d2b7443d7ed"
+      },
+      "review": {
+        "status": "listening-approved",
+        "reviewer": "user in Codex chat",
+        "date": "2026-11-10"
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "violin",
+      "audio": "violin.wav",
+      "sha256": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+      "expected": "instrumental",
+      "source": {
+        "page": "https://commons.wikimedia.org/wiki/File:Air_(Bach).ogg",
+        "license": "Public domain recording, 1920",
+        "credit": "J. S. Bach; Joel Belov, violin; Robert Gayler, piano",
+        "offset_seconds": 30,
+        "original_sha256": "94b703db3b1485f1a8ddbca16f0536305ecde64f27e51e831479f673ca43b613"
+      },
+      "review": {
+        "status": "listening-approved",
+        "reviewer": "user in Codex chat",
+        "date": "2026-11-10"
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "speech-en",
+      "audio": "speech-en.wav",
+      "sha256": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac",
+      "expected": "voice_or_mixed",
+      "source": {
+        "id": "fleurs-en-us-dev-10805693277239677928",
+        "reference_sha256": "3e819e899c17d5354f106eaefffda16ba6b6d64d218e758479c259843bc910f1",
+        "original_audio_sha256": "8746db0119035e4401877b6d63f2666eb21c6e918059b68c2ce6f483464de4af",
+        "source_id": "fleurs:en_us:dev:10805693277239677928.wav",
+        "source_url": "https://huggingface.co/datasets/google/fleurs/resolve/b4a42ed06e12025c42f3b4eff6338ace2fe2447a/data/en_us/audio/dev.tar.gz",
+        "license": "CC BY 4.0; Google FLEURS; retain pinned card and attribution"
+      },
+      "review": {
+        "status": "listening-approved",
+        "reviewer": "user in Codex chat",
+        "date": "2026-11-10"
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "speech-de",
+      "audio": "speech-de.wav",
+      "sha256": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3",
+      "expected": "voice_or_mixed",
+      "source": {
+        "id": "fleurs-de-de-dev-1102762088904212127",
+        "reference_sha256": "6c279e3e406d0fbbdeccad5f1323bfb7c4b11c47e8663c40a5d2403be7b86c50",
+        "original_audio_sha256": "869635f4045b5ecaeac6079b1695068c37d5e232fc03def3f918ff2d3657ce24",
+        "source_id": "fleurs:de_de:dev:1102762088904212127.wav",
+        "source_url": "https://huggingface.co/datasets/google/fleurs/resolve/b4a42ed06e12025c42f3b4eff6338ace2fe2447a/data/de_de/audio/dev.tar.gz",
+        "license": "CC BY 4.0; Google FLEURS; retain pinned card and attribution"
+      },
+      "review": {
+        "status": "derived-or-source-labelled; listening pending",
+        "reviewer": null,
+        "date": null
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "speech-zh",
+      "audio": "speech-zh.wav",
+      "sha256": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6",
+      "expected": "voice_or_mixed",
+      "source": {
+        "id": "fleurs-cmn-hans-cn-dev-11428443160573858127",
+        "reference_sha256": "373699f901324910c9f44b8613789a347155ff2631c8e667c433b906feabafdf",
+        "original_audio_sha256": "052286f2baef47fec3bb8549ff9fa3cd21fb5a38435f39a9865b6f50086a57c6",
+        "source_id": "fleurs:cmn_hans_cn:dev:11428443160573858127.wav",
+        "source_url": "https://huggingface.co/datasets/google/fleurs/resolve/b4a42ed06e12025c42f3b4eff6338ace2fe2447a/data/cmn_hans_cn/audio/dev.tar.gz",
+        "license": "CC BY 4.0; Google FLEURS; retain pinned card and attribution"
+      },
+      "review": {
+        "status": "derived-or-source-labelled; listening pending",
+        "reviewer": null,
+        "date": null
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "mixed-6db",
+      "audio": "mixed-6db.wav",
+      "sha256": "004e1a2e3f867479887333cb1c0b647b0095a5edd44a56948051c4fa138d0693",
+      "expected": "voice_or_mixed",
+      "source": {
+        "derived_from": [
+          "piano",
+          "speech-en"
+        ],
+        "speech_to_music_rms_db": -6,
+        "mix_gain": 0.7,
+        "license": "CC0-1.0 (music) and CC-BY-4.0 (speech); retain both source credits"
+      },
+      "review": {
+        "status": "derived-or-source-labelled; listening pending",
+        "reviewer": null,
+        "date": null
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "mixed-18db",
+      "audio": "mixed-18db.wav",
+      "sha256": "79297da952aa0b08e077ae3ddab5337bf1c8d0f6b30d2f5896c84943a5c1aaa7",
+      "expected": "voice_or_mixed",
+      "source": {
+        "derived_from": [
+          "piano",
+          "speech-en"
+        ],
+        "speech_to_music_rms_db": -18,
+        "mix_gain": 0.7,
+        "license": "CC0-1.0 (music) and CC-BY-4.0 (speech); retain both source credits"
+      },
+      "review": {
+        "status": "listening-approved",
+        "reviewer": "user in Codex chat",
+        "date": "2026-11-10"
+      },
+      "role": "development/challenge; not independent held-out validation"
+    },
+    {
+      "id": "mixed-30db",
+      "audio": "mixed-30db.wav",
+      "sha256": "28255a99cda5487cc97a0fe4c01eb211f7f5b3be66463ef7632482e624788781",
+      "expected": "voice_or_mixed",
+      "source": {
+        "derived_from": [
+          "piano",
+          "speech-en"
+        ],
+        "speech_to_music_rms_db": -30,
+        "mix_gain": 0.7,
+        "license": "CC0-1.0 (music) and CC-BY-4.0 (speech); retain both source credits"
+      },
+      "review": {
+        "status": "derived-or-source-labelled; listening pending",
+        "reviewer": null,
+        "date": null
+      },
+      "role": "development/challenge; not independent held-out validation"
+    }
+  ],
+  "automatic_suppression_approved": false
+}

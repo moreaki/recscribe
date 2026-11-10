@@ -15,10 +15,60 @@ import Testing
     }
 
     @Test func completeInstrumentalEvidenceIsOnlyAnExperimentalCandidate() throws {
-        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: covered.reversed(), completed: true)
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: covered.reversed(), completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: true)
         #expect(result.outcome == .instrumentalMusicCandidate)
+        #expect(result.musicOnlyConfirmationAllowed)
         #expect(!result.automaticSuppressionAllowed)
         #expect(try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONEncoder().encode(result)) == result)
+    }
+
+    @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
+    func oneSecondVoiceEvidenceVetoesLongWindowMusic(_ label: String) {
+        var guardWindows = covered
+        guardWindows[2] = window(1, 2, music: 0.1, voice: label)
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: guardWindows, voiceGuardCompleted: true)
+        #expect(result.outcome == .voiceOrMixed && !result.musicOnlyConfirmationAllowed)
+    }
+
+    @Test func missingIncompleteAndInvalidVoiceGuardCannotOfferMusicOnlyConfirmation() {
+        let missing = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true)
+        #expect(missing.outcome == .inconclusive && !missing.musicOnlyConfirmationAllowed)
+        for guards in [Array(covered.dropFirst()), Array(covered.dropLast()), [window(0, 3)], [window(-0.1, 0.9)]] {
+            let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+                voiceGuardWindows: guards, voiceGuardCompleted: true)
+            #expect(result.outcome == .inconclusive && !result.musicOnlyConfirmationAllowed)
+        }
+        let unfinished = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: false)
+        #expect(unfinished.outcome == .inconclusive)
+    }
+
+    @Test func oldCandidateEvidenceWithoutVoiceGuardIsReadableButNotConfirmable() throws {
+        let current = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: true)
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        json.removeValue(forKey: "voiceGuardWindows"); json.removeValue(forKey: "voiceGuardCompleted")
+        let old = try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(old.outcome == .instrumentalMusicCandidate)
+        #expect(!old.musicOnlyConfirmationAllowed && !old.automaticSuppressionAllowed)
+    }
+
+    @Test func oneSecondGuardChecksVoiceWithoutDemandingShortWindowMusicScores() {
+        let guards = covered.map { window($0.start, $0.end, music: 0.01) }
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: guards, voiceGuardCompleted: true)
+        #expect(result.musicOnlyConfirmationAllowed && result.outcome == .instrumentalMusicCandidate)
+        let fractionalGuards = guards + [window(2.25, 3.25, music: 0.01)]
+        let fractional = MusicOnlyAssessment.evaluate(duration: 3.25, windows: [window(0, 3), window(0.25, 3.25)], completed: true,
+            voiceGuardWindows: fractionalGuards, voiceGuardCompleted: true)
+        #expect(fractional.musicOnlyConfirmationAllowed)
+        let excess = Array(repeating: window(0, 1), count: MusicOnlyAssessment.maximumWindows)
+        let bounded = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: excess, voiceGuardCompleted: true)
+        #expect(!bounded.musicOnlyConfirmationAllowed)
+        #expect(bounded.windows.count + (bounded.voiceGuardWindows?.count ?? 0) <= MusicOnlyAssessment.maximumWindows)
     }
 
     @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
@@ -60,18 +110,60 @@ import Testing
         }
         #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: covered, completed: false).outcome == .inconclusive)
         #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: [], completed: true).outcome == .inconclusive)
-        #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true).outcome == .inconclusive)
+        #expect(MusicOnlyAssessment.evaluate(duration: 4, windows: [window(0, 4)], completed: true).outcome == .inconclusive)
         let excessive = Array(repeating: window(0, 3), count: MusicOnlyAssessment.maximumWindows + 1)
         let result = MusicOnlyAssessment.evaluate(duration: 3, windows: excessive, completed: true)
         #expect(result.outcome == .inconclusive && result.windows.count == MusicOnlyAssessment.maximumWindows)
     }
 
     @Test func silenceNoiseAndOneWeakWindowCannotBecomeMusicOnly() {
-        for music in [0.0, 0.5, 0.949] {
+        for music in [0.0, 0.5, 0.849] {
             var windows = covered
             windows[2] = window(1, 2, music: music)
             #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: windows, completed: true).outcome == .inconclusive)
         }
+    }
+
+    @Test func longerContextOnlyOffersListeningReviewAndCannotOverrideShortVoiceEvidence() {
+        var short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        let context = [window(0, 8, music: 0.83)]
+        let result = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+                                                  contextWindows: context, contextCompleted: true)
+        #expect(result.outcome == .musicNeedsListeningReview)
+        #expect(!result.automaticSuppressionAllowed)
+        short[2] = window(2, 5, music: 0.72, voice: "whispering")
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: context, contextCompleted: true).outcome == .voiceOrMixed)
+    }
+
+    @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
+    func everyLongerContextVoiceClassPreservesWords(_ label: String) {
+        let short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        let result = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [window(0, 8, music: 0.99, voice: label)], contextCompleted: true)
+        #expect(result.outcome == .voiceOrMixed)
+    }
+
+    @Test func incompleteContextMissingScoresAndWeakMusicNeverPromoteRecognition() {
+        let short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [window(0, 8)], contextCompleted: false).outcome == .inconclusive)
+        for context in [[window(0.01, 8)], [window(0, 7)], [window(0, 8.01)], [window(0, 8, music: 0.799)]] {
+            #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+                contextWindows: context, contextCompleted: true).outcome == .inconclusive)
+        }
+        var scores = window(0, 8).scores
+        scores.removeValue(forKey: "speech")
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [.init(start: 0, end: 8, scores: scores)], contextCompleted: true).outcome == .inconclusive)
+        var weak = short; weak[0] = window(0, 3, music: 0.649)
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: weak, completed: true,
+            contextWindows: [window(0, 8)], contextCompleted: true).outcome == .inconclusive)
+        let excess = Array(repeating: window(0, 8), count: MusicOnlyAssessment.maximumWindows)
+        let bounded = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: excess, contextCompleted: true)
+        #expect(bounded.outcome == .inconclusive)
+        #expect(bounded.windows.count + (bounded.contextWindows?.count ?? 0) <= MusicOnlyAssessment.maximumWindows)
     }
 
     @Test func localClassifierRejectsUnsupportedInputAndHonorsCancellationBeforeAnalysis() throws {
@@ -100,7 +192,7 @@ import Testing
         #expect(!report.assessment.automaticSuppressionAllowed)
         #expect(!report.assessment.windows.isEmpty)
         #expect(report.assessment.windows.allSatisfy {
-            $0.start >= 0 && $0.end <= 3 && $0.end > $0.start && $0.end - $0.start <= 1.000_001
+            $0.start >= 0 && $0.end <= 3 && $0.end > $0.start && $0.end - $0.start <= 3.000_001
         })
         #expect(report.assessment.windows.map(\.start).min() == 0)
         #expect(report.assessment.windows.map(\.end).max() == 3)

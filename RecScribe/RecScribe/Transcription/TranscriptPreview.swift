@@ -75,7 +75,20 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     private let originalIncludesCloudAudio: Bool
     var includesCloudAudio: Bool { originalIncludesCloudAudio || corrections.values.contains { $0.cloud != nil } }
     let includesCloudText: Bool
-    let recognitionLabel: String
+    let originalRecognitionLabel: String
+    private let recognitionModels: String
+    var hasMusicOnlyPassages: Bool { segments.contains { corrections[$0.id]?.kind == .musicOnly } }
+    var allPassagesAreMusicOnly: Bool { !segments.isEmpty && segments.allSatisfy { corrections[$0.id]?.kind == .musicOnly } }
+    var languageLabel: String {
+        if allPassagesAreMusicOnly { return "No spoken language · music only" }
+        if hasMusicOnlyPassages { return "Not verified for remaining speech" }
+        return processing.sourceLanguage ?? "Not supplied"
+    }
+    var recognitionLabel: String {
+        guard hasMusicOnlyPassages else { return originalRecognitionLabel }
+        return [recognitionModels, allPassagesAreMusicOnly ? "Music only · no spoken language" : "Includes music-only passages · speech languages unverified"]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+    }
     private(set) var revision: String?
     private(set) var reviewItems: [TranscriptReading.ReviewItem] = []
 
@@ -99,8 +112,9 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
             || payload.summary?.processor?.hasPrefix("openai:") == true
 
         let models = Array(Set(payload.processing.enginePasses?.map(\.model) ?? [])).sorted().joined(separator: ", ")
+        self.recognitionModels = models
         let languages = Array(Set(payload.processing.enginePasses?.compactMap(\.detectedLanguage) ?? [])).sorted().joined(separator: ", ")
-        self.recognitionLabel = [models, languages.isEmpty ? payload.processing.sourceLanguage ?? "" : languages]
+        self.originalRecognitionLabel = [models, languages.isEmpty ? payload.processing.sourceLanguage ?? "" : languages]
             .filter { !$0.isEmpty }
             .joined(separator: " · ")
 

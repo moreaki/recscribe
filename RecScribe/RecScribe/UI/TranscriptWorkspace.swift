@@ -174,6 +174,7 @@ struct TranscriptWorkspace: View {
     @State private var contentWidth: CGFloat = 1_000
     @State private var review = TranscriptReviewState()
     @State private var cloud = SegmentCloudState()
+    @State private var acoustic = SegmentAcousticState()
     @State private var documentReload = 0
     @FocusState private var inspectorTrigger: InspectorTab?
     private enum InspectorTab: String, CaseIterable, Hashable { case review = "Review", details = "Details" }
@@ -321,7 +322,7 @@ struct TranscriptWorkspace: View {
                         },
                         followPlayback: $followAudio,
                         checkedReviewGroupIDs: Set(reviewItems.filter { review.checked.contains($0.key) }.compactMap(\.groupID)),
-                        review: review, cloud: cloud
+                        review: review, cloud: cloud, acoustic: acoustic
                     ).overlay(alignment: .topTrailing) { processingMenu }
 
                 } else if section == .summary, let notes = document.summary?.notes, !notes.isEmpty {
@@ -352,7 +353,14 @@ struct TranscriptWorkspace: View {
                 }
             }
             if let notice = cloud.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
-            if let message = error ?? cloud.error ?? review.error ?? library.errorMessage {
+            if acoustic.busy {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Analyzing selected passage locally…").font(.caption)
+                    Button("Cancel sound analysis") { acoustic.reset() }
+                }
+            }
+            if let message = error ?? cloud.error ?? acoustic.error ?? review.error ?? library.errorMessage {
                 Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -515,8 +523,15 @@ struct TranscriptWorkspace: View {
                             Label("Recording details", systemImage: "info.circle").font(.headline)
                             if let source { Text(source.lastPathComponent).textSelection(.enabled) }
                             LabeledContent("Mode", value: document.processing.mode.rawValue)
-                            LabeledContent("Language", value: document.processing.sourceLanguage ?? "Not supplied")
+                            LabeledContent("Language", value: document.languageLabel)
                             LabeledContent("Recognition", value: document.recognitionLabel.isEmpty ? "Not supplied" : document.recognitionLabel)
+                            if document.hasMusicOnlyPassages {
+                                DisclosureGroup("Original model language estimates") {
+                                    Text(document.originalRecognitionLabel).font(.caption).textSelection(.enabled)
+                                    Text("These estimates may come from hallucinated words in music. They are preserved as original evidence.")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
                             if let metadata = document.source {
                                 LabeledContent("Duration", value: Duration.seconds(Double(metadata.durationMs) / 1_000).formatted(.time(pattern: .hourMinuteSecond)))
                                 LabeledContent("Channels", value: String(metadata.channels))
@@ -582,15 +597,17 @@ struct TranscriptWorkspace: View {
                 playback.stop(); section = .transcript
             }
         }
-        .onDisappear { review.reset(); cloud.reset() }
+        .onDisappear { review.reset(); cloud.reset(); acoustic.reset() }
         .onChange(of: cloudUnavailable, initial: true) { _, blocked in
             cloud.setBlocked(blocked)
+            acoustic.setBlocked(blocked)
         }
         .onChange(of: review.corrections) { _, corrections in
             if let document { self.document = document.applying(corrections) }
         }
         .task(id: "\(displayedJob?.path ?? ""):\(waitingForDocument):\(documentReload)") {
             cloud.reset()
+            acoustic.reset()
             pendingPassage = nil
             document = nil
             error = nil
@@ -635,13 +652,19 @@ struct TranscriptWorkspace: View {
                     Text(segment.confidenceLabel).font(.callout)
                     Text("Model confidence is not a measured probability that these words are correct. Music can produce confident errors.")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("Original recognition").font(.caption).foregroundStyle(.secondary)
-                    MarkdownReadingText(text: segment.sourceText)
-                    if document.displayedText(segment) != segment.sourceText {
+                    if document.corrections[segment.id]?.kind == .musicOnly {
+                        MarkdownReadingText(text: document.displayedText(segment))
+                        DisclosureGroup("Original recognition") { MarkdownReadingText(text: segment.sourceText) }
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Original recognition").font(.caption).foregroundStyle(.secondary)
+                        MarkdownReadingText(text: segment.sourceText)
+                    }
+                    if document.corrections[segment.id]?.kind != .musicOnly, document.displayedText(segment) != segment.sourceText {
                         Text("Displayed text").font(.caption).foregroundStyle(.secondary)
                         MarkdownReadingText(text: document.displayedText(segment))
                     }
-                    TranscriptSegmentEditor(segment: segment, document: document, review: review, showsOriginal: false, cloud: cloud)
+                    TranscriptSegmentEditor(segment: segment, document: document, review: review, showsOriginal: false, cloud: cloud, acoustic: acoustic)
                     if let start = segment.startMs, let end = segment.endMs,
                        let passage = PlaybackPolicy.Passage(start: Double(start) / 1_000, end: Double(end) / 1_000) {
                         Button("Listen to passage", systemImage: "play") { pendingPassage = passage }

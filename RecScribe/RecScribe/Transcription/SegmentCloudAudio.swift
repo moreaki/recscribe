@@ -93,7 +93,7 @@ nonisolated struct SegmentCloudSelection: Equatable, Sendable {
             let session = try RecordingSession.read(source)
             guard session.status != .recording, session.parts.count <= 10_000,
                   session.sampleRate == rate, session.channels == metadata.channels else {
-                throw SessionError.invalid("Finalize the selected recording before cloud re-recognition")
+                throw SessionError.invalid("Finalize the selected recording before processing this passage")
             }
             var cursor: Int64 = 0
             for part in session.parts {
@@ -142,10 +142,10 @@ nonisolated struct SegmentCloudSelection: Equatable, Sendable {
               !parts.isEmpty, parts.count <= 10_000 else { throw SessionError.invalid("Invalid selected audio bounds") }
         guard try TranscriptPreview.currentRevision(job) == revision else { throw SessionError.invalid("Transcript changed; select the passage again") }
         if let manifestIdentity, try Identity.read(source) != manifestIdentity {
-            throw SessionError.invalid("Recording changed; approve a new selection")
+            throw SessionError.invalid("Recording changed; select the passage again")
         }
         for part in parts where try Identity.read(part.url) != part.identity {
-            throw SessionError.invalid("Selected audio changed; approve a new selection")
+            throw SessionError.invalid("Selected audio changed; select the passage again")
         }
     }
 

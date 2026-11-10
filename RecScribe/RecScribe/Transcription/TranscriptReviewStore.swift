@@ -7,12 +7,13 @@ nonisolated struct TranscriptCorrection: Codable, Equatable, Sendable {
     let kind: Kind
     let text: String?
     var cloud: SegmentCloudReference? = nil
+    var acoustic: SegmentAcousticReference? = nil
     static let musicOnly = Self(kind: .musicOnly, text: nil)
     static let maximumTextBytes = 65_536
     var valid: Bool {
         switch kind {
-        case .musicOnly: text == nil && cloud == nil
-        case .text: text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
+        case .musicOnly: text == nil && cloud == nil && acoustic?.valid != false
+        case .text: acoustic == nil && text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
         }
     }
     var displayedText: String { kind == .musicOnly ? "[Music only]" : text ?? "" }
@@ -62,7 +63,7 @@ actor TranscriptReviewStore {
     nonisolated static let maximumBytes = 1_024 * 1_024
     private let root: URL
     private struct Record: Codable {
-        var version = 3
+        var version = 4
         let revision: String
         let checked: Set<String>
         var corrections: [String: TranscriptCorrection]?
@@ -158,9 +159,10 @@ actor TranscriptReviewStore {
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         let record = try JSONDecoder().decode(Record.self, from: data)
         let corrections = record.corrections ?? [:]
-        guard [1, 2, 3].contains(record.version), record.version != 1 || corrections.isEmpty,
+        guard [1, 2, 3, 4].contains(record.version), record.version != 1 || corrections.isEmpty,
               record.version == 1 || record.corrections != nil,
-              record.version == 3 || corrections.values.allSatisfy({ $0.cloud == nil }),
+              record.version >= 3 || corrections.values.allSatisfy({ $0.cloud == nil }),
+              record.version == 4 || corrections.values.allSatisfy({ $0.acoustic == nil }),
               record.checked.count <= Self.maximumItems, corrections.count <= Self.maximumItems,
               corrections.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 1_024 && $0.value.valid }),
               record.revision.count == 64, record.revision.allSatisfy(\.isHexDigit),

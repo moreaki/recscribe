@@ -129,7 +129,7 @@ struct TranscriptCorrectionTests {
         _ = try await store.setCorrection(.musicOnly, for: "s1", in: initial)
         #expect(try Data(contentsOf: legacy) == old)
         let record = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: f.metadata(revision: initial.revision))) as? [String: Any])
-        #expect(record["version"] as? Int == 2)
+        #expect(record["version"] as? Int == 3)
         #expect(try await store.loadSnapshot(initial).corrections["s1"] == .musicOnly)
     }
 
@@ -150,6 +150,23 @@ struct TranscriptCorrectionTests {
         #expect(flock(lock, LOCK_EX | LOCK_NB) == 0)
         await rejects { try await store.setCorrection(nil, for: "s1", in: current) }
         #expect(try Data(contentsOf: file) == saved)
+    }
+
+    @Test func v2ManualCorrectionsRemainReadableAndMigrateWithoutLosingText() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        var current = try await context(f)
+        try FileManager.default.createDirectory(at: f.reviews, withIntermediateDirectories: true)
+        let file = f.metadata(revision: current.revision)
+        try JSONSerialization.data(withJSONObject: ["version": 2, "revision": current.revision, "checked": [],
+            "corrections": ["s1": ["kind": "text", "text": "Existing manual correction"]]]).write(to: file)
+        let store = TranscriptReviewStore(root: f.reviews)
+        let loaded = try await store.loadSnapshot(current)
+        #expect(loaded.corrections["s1"]?.text == "Existing manual correction" && loaded.corrections["s1"]?.cloud == nil)
+        current.corrections = loaded.corrections
+        _ = try await store.setChecked(try #require(current.keys.first), checked: true, in: current)
+        #expect(try await store.loadSnapshot(current).corrections == loaded.corrections)
+        let record = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        #expect(record["version"] as? Int == 3)
     }
 
     @Test func statePublishesOnlySavedCorrectionsAndResetCannotChangeAnotherTranscript() async throws {

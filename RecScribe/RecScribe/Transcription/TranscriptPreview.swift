@@ -72,7 +72,8 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     private(set) var summaryMarkdownText = ""
     let reviewPlainText: String
     let reviewMarkdownText: String
-    let includesCloudAudio: Bool
+    private let originalIncludesCloudAudio: Bool
+    var includesCloudAudio: Bool { originalIncludesCloudAudio || corrections.values.contains { $0.cloud != nil } }
     let includesCloudText: Bool
     let recognitionLabel: String
     private(set) var revision: String?
@@ -91,7 +92,7 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         self.reviewReasons = payload.reviewReasons
 
         let cloudAudio = payload.processing.allowCloudAudio == true
-        self.includesCloudAudio = cloudAudio
+        self.originalIncludesCloudAudio = cloudAudio
         self.includesCloudText = payload.processing.openaiModel != nil
             || (payload.processing.localOnly == false && !cloudAudio)
             || payload.languageProcessing?.processor?.hasPrefix("openai:") == true
@@ -118,7 +119,7 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     }
 
     private(set) var corrections: [String: TranscriptCorrection] = [:]
-    static let summaryCorrectionWarning = "This summary predates manual corrections. Verify its source passages."
+    static let summaryCorrectionWarning = "This summary predates passage corrections. Verify its source passages."
 
     func applying(_ corrections: [String: TranscriptCorrection]) -> Self {
         var result = self

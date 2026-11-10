@@ -6,12 +6,13 @@ nonisolated struct TranscriptCorrection: Codable, Equatable, Sendable {
     enum Kind: String, Codable, Sendable { case text, musicOnly }
     let kind: Kind
     let text: String?
+    var cloud: SegmentCloudReference? = nil
     static let musicOnly = Self(kind: .musicOnly, text: nil)
     static let maximumTextBytes = 65_536
     var valid: Bool {
         switch kind {
-        case .musicOnly: text == nil
-        case .text: text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true
+        case .musicOnly: text == nil && cloud == nil
+        case .text: text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
         }
     }
     var displayedText: String { kind == .musicOnly ? "[Music only]" : text ?? "" }
@@ -61,7 +62,7 @@ actor TranscriptReviewStore {
     nonisolated static let maximumBytes = 1_024 * 1_024
     private let root: URL
     private struct Record: Codable {
-        var version = 2
+        var version = 3
         let revision: String
         let checked: Set<String>
         var corrections: [String: TranscriptCorrection]?
@@ -157,8 +158,9 @@ actor TranscriptReviewStore {
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         let record = try JSONDecoder().decode(Record.self, from: data)
         let corrections = record.corrections ?? [:]
-        guard [1, 2].contains(record.version), record.version != 1 || corrections.isEmpty,
-              record.version != 2 || record.corrections != nil,
+        guard [1, 2, 3].contains(record.version), record.version != 1 || corrections.isEmpty,
+              record.version == 1 || record.corrections != nil,
+              record.version == 3 || corrections.values.allSatisfy({ $0.cloud == nil }),
               record.checked.count <= Self.maximumItems, corrections.count <= Self.maximumItems,
               corrections.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 1_024 && $0.value.valid }),
               record.revision.count == 64, record.revision.allSatisfy(\.isHexDigit),

@@ -23,9 +23,10 @@ not change model confidence or original uncertainty flags.
 Corrections and review status share one atomic, locked metadata record under
 `~/Library/Application Support/RecScribe/Review`. Records are keyed by the job path
 and exact SHA-256 revision of the canonical transcript. New revisions do not
-inherit old corrections, and previous records remain recoverable. Legacy v1
-checked-status files are read without modification; new records use v2 so older
-readers cannot silently discard corrections. These are persistent user data,
+inherit old corrections, and previous records remain recoverable. Legacy v1/v2
+records remain readable; current v3 records preserve manual corrections and cloud
+evidence references so older readers cannot silently discard provenance (see
+[selected-passage cloud recognition](segment-cloud-recognition.md)). These are persistent user data,
 outside disposable developer-artifact retention.
 
 Saves are serialized, bounded to 10,000 segments/items and 1 MiB per metadata

@@ -6,6 +6,7 @@ struct TranscriptSegmentEditor: View {
     let document: TranscriptPreview
     @Bindable var review: TranscriptReviewState
     var showsOriginal = true
+    var cloud: SegmentCloudState? = nil
     @State private var editing = false
     @State private var draft = ""
     @State private var baseline: TranscriptCorrection?
@@ -18,7 +19,7 @@ struct TranscriptSegmentEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let correction {
-                Label(correction.kind == .musicOnly ? "Music only · marked by you" : "Manually corrected", systemImage: "pencil.circle")
+                Label(correction.kind == .musicOnly ? "Music only · marked by you" : correction.cloud.map { "Cloud recognition · \($0.model) · verify against audio" } ?? "Manually corrected", systemImage: "pencil.circle")
                     .font(.caption).foregroundStyle(WorkspaceStyle.mint)
             }
             if editing {
@@ -57,6 +58,27 @@ struct TranscriptSegmentEditor: View {
                     Button("Remove correction") { submitted = true; review.setCorrection(nil, for: segment.id) }.disabled(unavailable)
                 }
             }.buttonStyle(.borderless).font(.caption)
+            if let cloud {
+                Button("Re-recognize with OpenAI…", systemImage: "cloud") {
+                    if let context = review.context { cloud.request(job: context.job, document: document, segmentID: segment.id) }
+                }.buttonStyle(.borderless).font(.caption)
+                    .disabled(unavailable || cloud.blocked || cloud.busy || cloud.preparing || cloud.pending != nil || document.source == nil)
+                    .help("Approve uploading only this channel and time range. Compare the result before applying it.")
+                if let result = cloud.result, result.selection.segmentID == segment.id {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Cloud recognition · \(result.reference.model)").font(.caption.weight(.medium))
+                        if result.text.isEmpty {
+                            Text("The model returned no words. Compare with the audio; original recognition is preserved.").font(.caption)
+                        } else {
+                            MarkdownReadingText(text: result.text)
+                            Button("Use this recognition") { cloud.apply(to: review) }
+                                .disabled(unavailable || cloud.busy || cloud.blocked || editing || correction == result.correction)
+                        }
+                        Button("Reveal cloud response", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([result.evidence]) }
+                            .buttonStyle(.borderless).font(.caption)
+                    }.padding(.vertical, 8)
+                }
+            }
             if showsOriginal, editing || correction != nil {
                 DisclosureGroup("Original recognition") { MarkdownReadingText(text: segment.sourceText) }
                     .font(.caption).foregroundStyle(.secondary)

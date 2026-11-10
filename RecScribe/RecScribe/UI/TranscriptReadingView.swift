@@ -10,6 +10,7 @@ struct TranscriptReadingView: View {
     var onReview: ((String) -> Void)? = nil
     var checkedReviewGroupIDs: Set<String>
     private var review: TranscriptReviewState?
+    private var cloud: SegmentCloudState?
     @Binding private var selectedGroupID: String?
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
@@ -34,7 +35,8 @@ struct TranscriptReadingView: View {
         onReview: ((String) -> Void)? = nil,
         followPlayback: Binding<Bool>? = nil,
         checkedReviewGroupIDs: Set<String> = [],
-        review: TranscriptReviewState? = nil
+        review: TranscriptReviewState? = nil,
+        cloud: SegmentCloudState? = nil
     ) {
         self.document = document
         self.hasPlayback = playback != nil
@@ -44,6 +46,7 @@ struct TranscriptReadingView: View {
         self.onReview = onReview
         self.checkedReviewGroupIDs = checkedReviewGroupIDs
         self.review = review
+        self.cloud = cloud
         self.externalFollow = followPlayback
         self._selectedGroupID = selectedGroupID
         _mode = State(initialValue: mode)
@@ -127,13 +130,13 @@ struct TranscriptReadingView: View {
                                     }
                                     if let review {
                                         if group.segments.count == 1 {
-                                            TranscriptSegmentEditor(segment: first, document: document, review: review)
+                                            TranscriptSegmentEditor(segment: first, document: document, review: review, cloud: cloud)
                                         } else {
                                             DisclosureGroup("Edit sources") {
                                                 ForEach(group.segments) { segment in
                                                     VStack(alignment: .leading, spacing: 8) {
                                                         Text(TranscriptReading.Group(segments: [segment]).channels).font(.caption.weight(.medium))
-                                                        TranscriptSegmentEditor(segment: segment, document: document, review: review)
+                                                        TranscriptSegmentEditor(segment: segment, document: document, review: review, cloud: cloud)
                                                     }.padding(.vertical, 4)
                                                 }
                                             }.font(.caption).foregroundStyle(.secondary)

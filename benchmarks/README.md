@@ -9,6 +9,11 @@ outside the checkout, for example under `~/Library/Application Support/RecScribe
 These are preserved evaluation evidence, not disposable developer output.
 Synthetic unit tests need no licensed audio download and are not an ASR benchmark.
 
+For a new development/held-out slice, the [fresh acquisition
+contract](fresh-slice-contract.md) documents the bounded helper, consumed-manifest
+exclusions and original-byte preservation. Acquired public references still need
+the corpus contract's human/native review before reviewed-v2 comparisons.
+
 ```sh
 swift build --package-path core -c release
 core/.build/release/recscribe-text benchmark \

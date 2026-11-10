@@ -1,9 +1,10 @@
 # Quantization readiness — 10 November 2026
 
 Ordinary quantization clears the requested **30% same-model file-size gate** for
-Small, large-v3-turbo and full large-v3. Quality preservation, native load
-compatibility, latency and memory acceptance remain **pending**. This is a
-feasibility result, not a recommendation to change a shipped model or default.
+Small, large-v3-turbo and full large-v3. All eleven artifacts also completed a
+22-call native compatibility check on one development clip in known/auto modes.
+Quality preservation and controlled latency/memory acceptance remain **pending**.
+These results do not recommend changing a shipped model or default.
 
 | Model | Original F16 bytes | Q5_1 bytes | Reduction | Q4_0 bytes | Reduction |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -102,10 +103,12 @@ Swift 6.4. The repository's pinned Xcode 27.2 hosted validation remains required
   50% foreign-process limit for timed ASR, so no timing claim was produced.
 - Nine critical archived receipts/binaries (51,590,311 bytes) and four frozen
   remote refs were reverified unchanged, alongside all 11 model hashes.
-- Native real-model probes, controlled three-repeat resource comparisons,
-  reviewed nine-language quality evaluation and full hosted functional/Thread
-  Sanitizer checks remain pending until actual evidence is retained. The complete
-  PR diff selects full CI, including the existing sanitizer evidence gate.
+- The later 22-call native compatibility check completed with valid canonical
+  output and review flags. Broader source coverage, controlled three-repeat
+  resource comparisons and reviewed nine-language quality remain pending.
+  Full hosted functional/Thread Sanitizer checks are required on each publication
+  head; previous verified passes are recorded below. The complete PR diff selects
+  full CI, including the existing sanitizer evidence gate.
 
 The existing runner's explicit `resources_only` mode permits resource work before
 references are ready. It retains raw transcripts and timing without reading or

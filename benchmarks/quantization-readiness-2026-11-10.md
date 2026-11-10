@@ -49,11 +49,16 @@ Those packages used preparer v1; the subsequent v1.1 helper adds continuous
 recording-priority checks and verified descendant cleanup. It was validated
 offline, without rewriting the retained v1 source packages.
 
-Eighteen development derivatives add exact 1/8 attenuation and 30-second digital
-silence prefixes. These share their parents' source groups. They do not provide
-natural adverse-condition coverage or additional independent speakers. The new
-deterministic white-noise primitive records achieved SNR and clipping; generating
-additional real-source noisy views is separate from this source-package receipt.
+Twenty-seven development derivatives add exact 1/8 attenuation, 30-second digital
+silence prefixes and fixed 10 dB synthetic white noise. These share their parents'
+source groups. They do not provide natural adverse-condition coverage or additional
+independent speakers. The nine noisy views retain the original frame counts and
+achieve 9.9941–10.0068 dB post-clipping SNR, with 28 clipped samples in total.
+Seeds are fixed from each parent hash and the recipe identifier. The combined
+pending manifest has 44 views of 17 original sources. The first noise preparation
+hit its time bound before producing audio; that attempt and its seal remain
+retained separately. The successful preparation cached the completed recording
+probe for one second, with the same recipe, seeds and time/byte limits.
 
 Actual language, regional variety, script, word boundaries, subtitle correctness,
 code switches and permitted-use review remain unadjudicated. Planning tags from
@@ -65,8 +70,9 @@ The consented recording and review checklist is tracked in #122 and
 
 ## Validation and remaining gates
 
-Local compatibility validation used Xcode 27.1 / Swift 6.4. The repository's
-pinned Xcode 27.2 hosted validation remains required.
+The benchmark host is an Apple M2 Ultra Mac Studio with 24 CPU cores and 64 GB
+memory, running macOS 26.6.2. Local compatibility validation used Xcode 27.1 /
+Swift 6.4. The repository's pinned Xcode 27.2 hosted validation remains required.
 
 - Full native suite: **92 tests in 16 suites passed**, including mandatory frozen
   reference contracts and a non-silent resource-only matrix using a synthetic
@@ -76,10 +82,22 @@ pinned Xcode 27.2 hosted validation remains required.
 - Source-boundary self-test and repository check passed; the PCM ownership probe
   processed 20,000 buffers with zero owner overlap or corruption. This probe is
   not a full app Thread Sanitizer pass.
-- Release build, native real-model probes, controlled three-repeat resource
-  comparisons, reviewed nine-language quality evaluation and full hosted
-  functional/Thread Sanitizer checks are tracked separately as pending until
-  actual evidence is retained.
+- Release CLI compilation passed from source `517d3440975bd6837c409e6a70c3a23081f947c6`;
+  binary SHA-256 is
+  `b082ca6dddb9fc1d315d95cb4a9bcc5c06f1b49f94dc9b06b5ec5c32d897eaec`.
+  The build receipt also hashes the actual whisper binary and 12 library paths.
+- The real CLI dry run reports **594/594 resource-panel cells ready**: 11 models,
+  nine planned language slices, known/automatic modes and three repeats. No ASR
+  was executed. A prospective candidate/input seal retains all identities;
+  fresh native idle/live-off and quiet-workload admission are still required.
+  The workload probe observed `fileproviderd` at 99.1% CPU, exceeding the unchanged
+  50% foreign-process limit for timed ASR, so no timing claim was produced.
+- Nine critical archived receipts/binaries (51,590,311 bytes) and four frozen
+  remote refs were reverified unchanged, alongside all 11 model hashes.
+- Native real-model probes, controlled three-repeat resource comparisons,
+  reviewed nine-language quality evaluation and full hosted functional/Thread
+  Sanitizer checks remain pending until actual evidence is retained. The complete
+  PR diff selects full CI, including the existing sanitizer evidence gate.
 
 The existing runner's explicit `resources_only` mode permits resource work before
 references are ready. It retains raw transcripts and timing without reading or

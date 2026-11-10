@@ -360,6 +360,18 @@ struct TranscriptWorkspace: View {
                     Button("Cancel sound analysis") { acoustic.reset() }
                 }
             }
+            if let notice = review.automaticNotice {
+                HStack {
+                    if review.automaticBusy { ProgressView().controlSize(.small) }
+                    Text(notice).font(.caption).foregroundStyle(.secondary)
+                    if review.automaticBusy {
+                        Button("Stop automatic music check") { review.stopAutomatic() }
+                    } else if review.automaticRemaining > 0, let document {
+                        Button("Continue music check") { review.suppressMusicAutomatically(in: document) }
+                            .disabled(cloudUnavailable || cloud.busy || cloud.preparing || acoustic.busy || review.saving)
+                    }
+                }
+            }
             if let message = error ?? cloud.error ?? acoustic.error ?? review.error ?? library.errorMessage {
                 Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
@@ -602,6 +614,9 @@ struct TranscriptWorkspace: View {
             cloud.setBlocked(blocked)
             acoustic.setBlocked(blocked)
         }
+        .onChange(of: cloudUnavailable || cloud.busy || cloud.preparing || acoustic.busy, initial: true) { _, blocked in
+            review.setAutomaticBlocked(blocked)
+        }
         .onChange(of: review.corrections) { _, corrections in
             if let document { self.document = document.applying(corrections) }
         }
@@ -624,6 +639,7 @@ struct TranscriptWorkspace: View {
                 try Task.checkCancellation()
                 document = result.applying(review.corrections)
                 if reviewItemID == nil { reviewItemID = uncheckedItems.first?.id ?? reviewItems.first?.id }
+                review.suppressMusicAutomatically(in: result)
             } catch is CancellationError { }
             catch { if !Task.isCancelled { self.error = error.localizedDescription } }
         }

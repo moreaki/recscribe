@@ -7,7 +7,7 @@ nonisolated struct SegmentCloudSelection: Equatable, Sendable {
     static let maximumMilliseconds: Int64 = 120_000
     static let maximumAudioBytes = 24_000_000
 
-    struct Identity: Equatable, Sendable {
+    struct Identity: Codable, Equatable, Sendable {
         let device: Int32
         let inode: UInt64
         let bytes: Int64
@@ -30,7 +30,7 @@ nonisolated struct SegmentCloudSelection: Equatable, Sendable {
         }
     }
 
-    struct Part: Equatable, Sendable {
+    struct Part: Codable, Equatable, Sendable {
         let url: URL
         let identity: Identity
         let startFrame: Int64

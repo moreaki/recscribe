@@ -286,7 +286,7 @@ class QualityFreshSliceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "initial 256 or 512"):
                 fresh.Acquisition(root, fresh.Exclusions(), maximum_network_bytes=513 * 1024 * 1024)
 
-    def run_metadata_only_main(self, root, partial=False):
+    def run_metadata_only_main(self, root, partial=False, languages=None):
         prior = root / "prior-consumed-round2.json"
         prior.write_text(json.dumps({"cases": [{"id": "round2-old", "source_id": "round2:source", "reference": "/not/opened",
                                                 "reference_sha256": "old-reference", "speaker_ids": ["round2-speaker"]}]}))
@@ -303,6 +303,7 @@ class QualityFreshSliceTests(unittest.TestCase):
                 acquisition.cases += [{"id": f"fixture-{split}-de-CH-{n}", "language": "de-CH", "split": split, "reviewed": False} for n in range(count)]
         args = ["--output", str(output), "--exclude-manifest", str(prior), "--count", "8", "--heldout-count", "16",
                 "--corpus-version", "round3-corpus-20261106-v1", "--max-network-mib", "512", "--max-output-mib", "512"]
+        if languages is not None: args += ["--languages", languages]
         with patch.object(fresh.Acquisition, "fetch", return_value=b"fixture source metadata"), \
              patch.dict(fresh.SOURCE_HASHES, {"card": fresh.sha(b"fixture source metadata")}), \
              patch.object(fresh, "fleurs", side_effect=fleurs), patch.object(fresh, "swiss", side_effect=swiss), \
@@ -338,6 +339,18 @@ class QualityFreshSliceTests(unittest.TestCase):
             heldout = next(x for x in acquisition["manifests"] if x["split"] == "held_out")
             self.assertEqual((heldout["cases"], heldout["planned_cases"]), (143, 144))
             self.assertTrue((output / "held_out/NOT-FOR-DEVELOPMENT.txt").exists())
+
+    def test_swiss_only_completion_never_reacquires_other_languages_or_reduces_requested_counts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output, calls = self.run_metadata_only_main(Path(directory).resolve(), languages="de-CH")
+            self.assertEqual(calls, [("de-CH", 8, 16)])
+            plan = json.loads((output / "selection-plan.original.json").read_bytes())
+            self.assertEqual(plan["languages"], ["de-CH"])
+            self.assertEqual(plan["planned_cases"], {"development": 8, "held_out": 16})
+            self.assertFalse(json.loads((output / "held_out/manifest.exploratory.legacy.json").read_bytes())["frozen"])
+        for languages in ("", "en,en", "en,unknown", "en,"):
+            with self.subTest(languages=languages), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                fresh.arguments(["--output", "/tmp/new", "--exclude-manifest", "/tmp/prior", "--languages", languages])
 
 
 if __name__ == "__main__":

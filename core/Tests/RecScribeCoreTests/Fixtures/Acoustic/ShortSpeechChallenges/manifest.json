@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "piano-en-250ms-30db",
+      "audio": "piano-en-250ms-30db.wav",
+      "sha256": "0379b4fcdaf3249cc4400c3914790b7ae7526a2575e837bce2599c5a065eca95",
+      "speech_language": "en",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.25,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-en"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-en-500ms-30db",
+      "audio": "piano-en-500ms-30db.wav",
+      "sha256": "cc6dea1eaeb99e159368e8c59c688b3f9680be7308706acb76deb1303871f490",
+      "speech_language": "en",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.5,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-en"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-en-1000ms-30db",
+      "audio": "piano-en-1000ms-30db.wav",
+      "sha256": "d1e254979de1f44aeb6e0abfe9319f0d7f45e8b3240801c79612fe9bdee23958",
+      "speech_language": "en",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 1.0,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-en"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-de-250ms-30db",
+      "audio": "piano-de-250ms-30db.wav",
+      "sha256": "f9d67017954b534d8fb406bd9114739306378f2bc24ccabc6a2e856a73bf7ead",
+      "speech_language": "de",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.25,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-de"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-de-500ms-30db",
+      "audio": "piano-de-500ms-30db.wav",
+      "sha256": "e33511b014ed7604ed70cecf884f0418943131f3b9e92ad39c3bcdcb8c6416bd",
+      "speech_language": "de",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.5,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-de"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-de-1000ms-30db",
+      "audio": "piano-de-1000ms-30db.wav",
+      "sha256": "c804a812e794bad021dcf6dbb3e3c6bbacdc7d6d1a0848baad1bcf5527f3ee67",
+      "speech_language": "de",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 1.0,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-de"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-zh-250ms-30db",
+      "audio": "piano-zh-250ms-30db.wav",
+      "sha256": "8feb5c2e157da8ec1019f446355a91c9015031b4f12571ffcbaa574887e71ef0",
+      "speech_language": "zh",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.25,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-zh"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-zh-500ms-30db",
+      "audio": "piano-zh-500ms-30db.wav",
+      "sha256": "b6e90bd1693e8079e7cb2f689ab7173ba86652b5dd7ef0fd20b934fbeb7c415b",
+      "speech_language": "zh",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 0.5,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-zh"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    },
+    {
+      "id": "piano-zh-1000ms-30db",
+      "audio": "piano-zh-1000ms-30db.wav",
+      "sha256": "5641a37175e239708f8ad7cb42f928aac16a18f6a5f1fb4b32807fa7f31b9c87",
+      "speech_language": "zh",
+      "speech_start_seconds": 3.5,
+      "speech_duration_seconds": 1.0,
+      "speech_source_offset_seconds": 2,
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "sources": [
+        "piano",
+        "speech-zh"
+      ],
+      "review_status": "derived development challenge; listening approval pending",
+      "source_sha256": {
+        "piano": "6e2ebb4cfb74597d3a8ee8d3ad7ccc0e8775fcbf653a6662d82a8009bf8ab8f1",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "expected": "retain_recognition",
+      "role": "derived development challenge; not independent held-out"
+    }
+  ],
+  "automatic_suppression_approved": false
+}

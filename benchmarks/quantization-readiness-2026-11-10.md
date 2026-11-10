@@ -105,3 +105,41 @@ scoring references; exact output-hash agreement cannot prove accuracy. Fresh
 held-out quality remains unopened until reviewed references, independence and
 prospective quality/runtime budgets satisfy the freeze contract. No model is
 promoted from a file-size result.
+
+## Execution follow-up
+
+PR #125 head `c2ec357becb2d8384b083d220d713bd96c8e67fc` passed both required
+checks in [full CI run 42849327884](https://github.com/moreaki/recscribe/actions/runs/42849327884).
+Hosted native/frozen validation passed 92 tests. Complete functional and TSan
+runs each recorded 461 tests: 458 passed, the same three existing opt-in skips,
+zero failures/runtime warnings/diagnostics and no unexpected test-host restart.
+Independent verification passed the complete matching-count sanitizer gate and
+the provider artifact SHA-256
+`1ac289d8bb26cb85848bb0a9fd9bb1863173b43aebca2aa7f7c330e753b157e2`.
+This evidence authenticates that head; later publication heads require their own
+applicable checks.
+
+After the user confirmed a quiet Mac/no recording, a native Live check verified
+idle/00:00/live-off. The first launch cancelled during model hashing because
+Codex Renderer exceeded the unchanged 50% foreign-process CPU guard. The next
+launch attempted five Tiny cells before macOS Contacts synchronization exceeded
+that limit: four failed and one was cancelled. All five raw ASR JSON files are
+retained, with zero canonical transcripts or completed pipeline measurements.
+Three Swiss calls failed the unchanged zero-duration-speech contract. A German
+call exposed an omitted SwiftPM schema resource bundle in the staged CLI.
+
+The corrected staged product retains the identical executable/hash and the three
+required resource-bundle files. Schema bytes match the source revision; a
+model-free check matches all five frozen renderer export hashes. The original
+incomplete staging, raw jobs, failures/cancellation and seals remain unchanged.
+The [experiment contract](experiment-contract.md) now documents complete CLI
+staging and resource verification.
+
+A separate complete-product pilot is prospectively sealed with the same eleven
+models, source inputs, decoding settings, three repeats, two threads and CPU
+guard. Repeating the fixed panel after correcting packaging is an explicit
+protocol amendment; original failed calls are never replaced or promoted to
+passes. Zero-duration speech remains a failure. This is development resource
+work, with no scored quality or held-out outcomes used to select the correction.
+The Mac locked during packaging verification; fresh native admission and the
+complete measurements remain pending. No inference worker is left running.

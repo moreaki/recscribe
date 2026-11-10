@@ -395,5 +395,57 @@
     "critical_archived_bytes": 51590311,
     "frozen_remote_refs_reverified": 4,
     "changed": false
+  },
+  "execution_followup": {
+    "ci": {
+      "head": "c2ec357becb2d8384b083d220d713bd96c8e67fc",
+      "url": "https://github.com/moreaki/recscribe/actions/runs/42849327884",
+      "status": "PASSED; later heads require own checks",
+      "native_tests": 92,
+      "functional_tests": 461,
+      "sanitizer_tests": 461,
+      "passed_each": 458,
+      "matching_existing_skips_each": 3,
+      "failures": 0,
+      "runtime_warnings": 0,
+      "unexpected_restarts": 0,
+      "artifact_digest": "sha256:1ac289d8bb26cb85848bb0a9fd9bb1863173b43aebca2aa7f7c330e753b157e2",
+      "digest_and_sanitizer_gate_verified": true
+    },
+    "attempt_v1": {
+      "inference_cells": 0,
+      "status": "CANCELLED during preflight; Codex renderer CPU"
+    },
+    "attempt_v2": {
+      "attempted_cells": 5,
+      "failed": 4,
+      "cancelled": 1,
+      "retained_raw_asr_jsons": 5,
+      "canonical_transcripts": 0,
+      "completed_resource_measurements": 0,
+      "failures": [
+        "Three Tiny Swiss zero-duration speech failures",
+        "One omitted schema resource bundle in staged CLI"
+      ],
+      "guard_stop": "AddressBookSourceSync CPU"
+    },
+    "packaging_correction": {
+      "executable_unchanged": true,
+      "resource_bundle_files": 3,
+      "source_schema_hashes_match": true,
+      "frozen_renderer_export_hashes_matched": 5,
+      "original_failed_attempts_preserved": true
+    },
+    "next_fixed_pilot": {
+      "models": 11,
+      "cells": 594,
+      "guard_foreign_cpu_percent": 50,
+      "threads": 2,
+      "repetitions": 3,
+      "scope": "resources_only",
+      "status": "PENDING fresh unlocked native admission"
+    },
+    "quality": "UNMEASURED",
+    "promotion": false
   }
 }

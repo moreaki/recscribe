@@ -363,12 +363,17 @@ def arguments(argv=None):
     parser.add_argument("--heldout-count", type=int, choices=range(4, 17),
                         help="Held-out cases per language; defaults to --count, at most 16")
     parser.add_argument("--corpus-version", type=corpus_version, default=DEFAULT_CORPUS_VERSION)
+    parser.add_argument("--languages", default=",".join([*base.LOCALES, "de-CH"]),
+                        help="Explicit language subset for a separately frozen completion; default all nine")
     parser.add_argument("--max-network-mib", type=int, choices=(256, 512, 1024, 2048), default=256)
     parser.add_argument("--max-output-mib", type=int, choices=(256, 512), default=256)
     parser.add_argument("--archive-prefix-mib", type=int, choices=(32, 64, 128), default=32,
                         help="Prospective per-archive cap; freeze before acquisition, never grow a failed run")
     parser.add_argument("--timeout-seconds", type=int, default=1200, choices=range(1, 1801))
     args = parser.parse_args(argv)
+    args.languages = args.languages.split(",")
+    if not args.languages or len(set(args.languages)) != len(args.languages) or any(language not in [*base.LOCALES, "de-CH"] for language in args.languages):
+        parser.error("Use unique supported language tags without empty entries")
     if args.heldout_count is None: args.heldout_count = args.count
     return args
 
@@ -378,7 +383,8 @@ def selection_plan(args, exclusions):
         "corpus_version": args.corpus_version,
         "count_per_language_per_split": args.count if args.count == args.heldout_count else None,
         "counts_per_language": {"development": args.count, "held_out": args.heldout_count},
-        "planned_cases": {"development": args.count * 9, "held_out": args.heldout_count * 9},
+        "languages": args.languages,
+        "planned_cases": {"development": args.count * len(args.languages), "held_out": args.heldout_count * len(args.languages)},
         "development_source_splits": ["FLEURS dev", "FHNW public"], "heldout_source_splits": ["FLEURS test", "FHNW private"],
         "selection": "First eligible archive members; prior/new IDs, original/prepared audio and reference hashes and known speakers/sessions excluded",
         "speaker_policy": "One accepted source per known speaker across new splits; prior known speakers excluded; unknown groups remain unknown",
@@ -416,13 +422,14 @@ def main(argv=None):
         acquisition.save(root / "sources/swiss/source-page.original.html", acquisition.fetch(base.SWISS_PAGE))
         for heldout in (False, True):
             for language in base.LOCALES:
+                if language not in args.languages: continue
                 try: fleurs(acquisition, language, args.heldout_count if heldout else args.count, heldout)
                 except (ValueError, OSError, tarfile.TarError) as error:
                     errors.append({"language": language, "split": "held_out" if heldout else "development", "error_type": type(error).__name__, "error": str(error)})
                 print(json.dumps({"language": language, "split": "held_out" if heldout else "development",
                     "selected": sum(c["language"] == language and c["split"] == ("held_out" if heldout else "development") for c in acquisition.cases),
                     "network_bytes": acquisition.network_bytes}), flush=True)
-        swiss(acquisition, args.count, args.heldout_count)
+        if "de-CH" in args.languages: swiss(acquisition, args.count, args.heldout_count)
     except BaseException as error:
         errors.append({"error_type": type(error).__name__, "error": str(error)})
     finally:
@@ -437,8 +444,8 @@ def main(argv=None):
             acquisition.json(path, document, final=True)
             pending = copy.deepcopy(document); pending["schema_version"] = "2.0"
             acquisition.json(root / split / "manifest.v2.pending.json", pending, final=True)
-            manifests.append({"split": split, "path": str(path), "sha256": sha(path.read_bytes()), "cases": len(cases), "planned_cases": targets[split] * 9,
-                "counts": {language: sum(c["language"] == language for c in cases) for language in [*base.LOCALES, "de-CH"]}})
+            manifests.append({"split": split, "path": str(path), "sha256": sha(path.read_bytes()), "cases": len(cases), "planned_cases": targets[split] * len(args.languages),
+                "counts": {language: sum(c["language"] == language for c in cases) for language in args.languages}})
         acquisition.save(root / "held_out/NOT-FOR-DEVELOPMENT.txt", b"Fresh exploratory heldout: do not inspect reference text or outcomes before candidate/settings/budgets freeze. No human/native approval has occurred.\n", final=True)
         acquisition.json(root / "acquisition.json", {"schema_version": ACQUISITION_SCHEMA_VERSION,
             "selection_rule_version": SELECTION_RULE_VERSION, "corpus_version": args.corpus_version,

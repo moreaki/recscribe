@@ -16,6 +16,14 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         let endMs: Int64?
         let channel: Int?
         let reviewReasons: [String]?
+        let confidence: Double?
+
+        var confidenceLabel: String {
+            guard let confidence, confidence.isFinite, (0...1).contains(confidence) else {
+                return "Model confidence: unavailable"
+            }
+            return "Model confidence: \(Int((confidence * 100).rounded()))%"
+        }
     }
     struct Processing: Decodable, Sendable {
         struct Engine: Decodable, Sendable { let model: String; let detectedLanguage: String? }

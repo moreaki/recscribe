@@ -3,6 +3,22 @@ import Foundation
 
 /// File transport behavior, independent of capture formats and listening levels.
 nonisolated enum PlaybackPolicy {
+    struct Passage: Equatable, Sendable {
+        let start: Double
+        let end: Double
+
+        init?(start: Double, end: Double) {
+            guard start.isFinite, end.isFinite, start >= 0, end > start else { return nil }
+            self.start = start
+            self.end = end
+        }
+
+        func bounded(to duration: Double) -> Self? {
+            guard duration.isFinite, duration > 0 else { return nil }
+            return Self(start: start, end: min(end, duration))
+        }
+    }
+
     static let skipSeconds: TimeInterval = 15
     static let backwardSymbol = "gobackward.15"
     static let forwardSymbol = "goforward.15"

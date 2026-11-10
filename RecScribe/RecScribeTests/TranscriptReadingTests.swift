@@ -29,6 +29,19 @@ enum ReadingFixtures {
 }
 
 struct TranscriptReadingTests {
+    @Test func confidenceUsesOnlySuppliedValidModelValuesAndPreservesExports() throws {
+        for (value, label) in [(0.876, "88%"), (0.0, "0%"), (1.0, "100%"), (-0.1, "unavailable"), (1.1, "unavailable")] {
+            var segment = ReadingFixtures.segment("s1", "Original recognition")
+            segment["confidence"] = value
+            let document = try ReadingFixtures.document([segment])
+            #expect(document.segments[0].confidenceLabel == "Model confidence: " + label)
+            #expect(document.text == "[Review] Original recognition")
+        }
+        let document = try ReadingFixtures.document([ReadingFixtures.segment("s1", "Legacy recognition")])
+        #expect(document.segments[0].confidence == nil)
+        #expect(document.segments[0].confidenceLabel == "Model confidence: unavailable")
+    }
+
     @Test func summaryCitationsResolveExactOriginalSourcesAndFailClosedForAmbiguousIDs() throws {
         let segments = [ReadingFixtures.segment("s1", "Monday"),
                         ReadingFixtures.segment("s2", "Tuesday", channel: 1, start: 20, end: 2020),

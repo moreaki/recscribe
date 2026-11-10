@@ -156,6 +156,7 @@ struct TranscriptWorkspace: View {
     @Environment(\.studioNavigation) private var navigation
     @State private var playback: SessionPlayback
     @State private var pendingSeekSeconds: Double?
+    @State private var pendingPassage: PlaybackPolicy.Passage?
     @State private var section: Section
     @State private var document: TranscriptPreview?
     @State private var error: String?
@@ -244,6 +245,7 @@ struct TranscriptWorkspace: View {
                         detail: document?.recognitionLabel ?? "Full recording",
                         recording: library.recordingActive, playback: playback,
                         pendingSeekSeconds: $pendingSeekSeconds,
+                        pendingPassage: $pendingPassage,
                         sourceAvailabilityChanged: { sourceAvailable = $0 },
                         playbackAvailabilityChanged: { playbackAvailable = $0 },
                         focusLayout: true)
@@ -477,6 +479,8 @@ struct TranscriptWorkspace: View {
                                             systemImage: review.checked.contains(item.key) ? "arrow.uturn.backward" : "checkmark") {
                                             review.setChecked(item, checked: !review.checked.contains(item.key))
                                         }.buttonStyle(.borderedProminent)
+                                            .keyboardShortcut("k", modifiers: [.command, .option])
+                                            .help("Mark checked or reopen item (⌥⌘K)")
                                             .disabled(review.context == nil || review.loading || review.saving)
                                         if review.saving { ProgressView().controlSize(.small).accessibilityLabel("Saving review status") }
                                     }
@@ -484,6 +488,8 @@ struct TranscriptWorkspace: View {
                                     if let next = nextItems.first(where: { !review.checked.contains($0.key) }) {
                                         Button("Next unchecked item", systemImage: "arrow.right") { selectReviewItem(next) }
                                             .buttonStyle(.borderless).font(.caption)
+                                            .keyboardShortcut("n", modifiers: [.command, .option])
+                                            .help("Next unchecked item (⌥⌘N)")
                                     }
                                     Text("Checked records your review of this version. It does not certify accuracy or change original flags, text or exports. A changed transcript requires a new review.")
                                         .font(.caption).foregroundStyle(.secondary)
@@ -553,6 +559,7 @@ struct TranscriptWorkspace: View {
         }
         .onDisappear { review.reset() }
         .task(id: "\(displayedJob?.path ?? ""):\(waitingForDocument):\(documentReload)") {
+            pendingPassage = nil
             document = nil
             error = nil
             review.reset()
@@ -592,15 +599,20 @@ struct TranscriptWorkspace: View {
                     Divider()
                     Text(source.channels).font(.subheadline.weight(.semibold))
                     Text(source.timing).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(segment.confidenceLabel).font(.callout)
+                    Text("Model confidence is not a measured probability that these words are correct. Music can produce confident errors.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Text("Original recognition").font(.caption).foregroundStyle(.secondary)
                     MarkdownReadingText(text: segment.sourceText)
                     if document.displayedText(segment) != segment.sourceText {
                         Text("Displayed text").font(.caption).foregroundStyle(.secondary)
                         MarkdownReadingText(text: document.displayedText(segment))
                     }
-                    if let start = source.startSeconds {
-                        Button("Listen to passage", systemImage: "play") { pendingSeekSeconds = start }
+                    if let start = segment.startMs, let end = segment.endMs,
+                       let passage = PlaybackPolicy.Passage(start: Double(start) / 1_000, end: Double(end) / 1_000) {
+                        Button("Listen to passage", systemImage: "play") { pendingPassage = passage }
                             .disabled(!playbackAvailable)
+                            .help("Play this time range and stop at its end")
                     }
                     Text(segment.id).font(.caption.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
                 }

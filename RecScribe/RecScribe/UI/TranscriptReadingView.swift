@@ -11,6 +11,7 @@ struct TranscriptReadingView: View {
     var checkedReviewGroupIDs: Set<String>
     private var review: TranscriptReviewState?
     private var cloud: SegmentCloudState?
+    private var acoustic: SegmentAcousticState?
     @Binding private var selectedGroupID: String?
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
@@ -36,7 +37,8 @@ struct TranscriptReadingView: View {
         followPlayback: Binding<Bool>? = nil,
         checkedReviewGroupIDs: Set<String> = [],
         review: TranscriptReviewState? = nil,
-        cloud: SegmentCloudState? = nil
+        cloud: SegmentCloudState? = nil,
+        acoustic: SegmentAcousticState? = nil
     ) {
         self.document = document
         self.hasPlayback = playback != nil
@@ -47,6 +49,7 @@ struct TranscriptReadingView: View {
         self.checkedReviewGroupIDs = checkedReviewGroupIDs
         self.review = review
         self.cloud = cloud
+        self.acoustic = acoustic
         self.externalFollow = followPlayback
         self._selectedGroupID = selectedGroupID
         _mode = State(initialValue: mode)
@@ -130,13 +133,13 @@ struct TranscriptReadingView: View {
                                     }
                                     if let review {
                                         if group.segments.count == 1 {
-                                            TranscriptSegmentEditor(segment: first, document: document, review: review, cloud: cloud)
+                                            TranscriptSegmentEditor(segment: first, document: document, review: review, cloud: cloud, acoustic: acoustic)
                                         } else {
                                             DisclosureGroup("Edit sources") {
                                                 ForEach(group.segments) { segment in
                                                     VStack(alignment: .leading, spacing: 8) {
                                                         Text(TranscriptReading.Group(segments: [segment]).channels).font(.caption.weight(.medium))
-                                                        TranscriptSegmentEditor(segment: segment, document: document, review: review, cloud: cloud)
+                                                        TranscriptSegmentEditor(segment: segment, document: document, review: review, cloud: cloud, acoustic: acoustic)
                                                     }.padding(.vertical, 4)
                                                 }
                                             }.font(.caption).foregroundStyle(.secondary)
@@ -199,8 +202,8 @@ struct TranscriptReadingView: View {
                     Text("\(single.channels) · \(single.timing) · \(segment.id)").font(.caption).foregroundStyle(.secondary)
                     MarkdownReadingText(text: document.displayedText(segment))
                     if document.displayedText(segment) != segment.sourceText {
-                        Text("Original ASR").font(.caption).foregroundStyle(.secondary)
-                        MarkdownReadingText(text: segment.sourceText)
+                        DisclosureGroup("Original recognition") { MarkdownReadingText(text: segment.sourceText) }
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                     ForEach(segment.reviewReasons ?? [], id: \.self) { reason in
                         Text(TranscriptReading.reviewLabel(reason)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)

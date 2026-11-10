@@ -29,6 +29,16 @@ import RecScribeCore
 
     static func run(_ arguments: Arguments) async throws {
         let source = URL(fileURLWithPath: arguments.source)
+        if arguments.command == "inspect-sound" {
+            let work = Task.detached(priority: .utility) {
+                try LocalSoundClassifier.assess(source) { try Task.checkCancellation() }
+            }
+            let report = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            print(String(decoding: try encoder.encode(report), as: UTF8.self))
+            return
+        }
         if arguments.command == "benchmark" {
             guard let output = arguments.output else { throw CoreFailure("benchmark requires --output") }
             if arguments.whisperProfile != nil { _ = try loadWhisperProfile(arguments.whisperProfile) }
@@ -121,8 +131,11 @@ import RecScribeCore
         var mode: TextMode = .verbatim
         var summary = false, cloudConsent = false, keyStdin = false, dryRun = false
         init(_ args: [String]) throws {
-            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark"].contains(args[0]) else { throw CoreFailure(usage) }
+            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark", "inspect-sound"].contains(args[0]) else { throw CoreFailure(usage) }
             command = args[0]; source = args[1]
+            guard command != "inspect-sound" || args.count == 2 else {
+                throw CoreFailure("inspect-sound accepts only a mono WAV path; no recognition, credentials or cloud options")
+            }
             var index = 2
             while index < args.count {
                 let flag = args[index]; index += 1
@@ -186,6 +199,7 @@ import RecScribeCore
         }
     }
     static let usage = """
+    recscribe-text inspect-sound passage.wav
     recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]
       [--whisper-cli /path/to/whisper-cli --model /path/to/model.bin --threads 1..4]
       [--experiment /path/to/experiment.json] [--whisper-profile /path/to/profile.json]

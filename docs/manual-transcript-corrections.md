@@ -24,8 +24,8 @@ Corrections and review status share one atomic, locked metadata record under
 `~/Library/Application Support/RecScribe/Review`. Records are keyed by the job path
 and exact SHA-256 revision of the canonical transcript. New revisions do not
 inherit old corrections, and previous records remain recoverable. Legacy v1/v2
-records remain readable; current v3 records preserve manual corrections and cloud
-evidence references so older readers cannot silently discard provenance (see
+and v3 records remain readable; current v4 records preserve manual corrections,
+local sound evidence and cloud evidence references so older readers cannot silently discard provenance (see
 [selected-passage cloud recognition](segment-cloud-recognition.md)). These are persistent user data,
 outside disposable developer-artifact retention.
 

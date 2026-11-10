@@ -19,7 +19,7 @@ public struct MusicOnlyAssessment: Codable, Equatable, Sendable {
     }
 
     // These are hypotheses for corpus evaluation, not calibrated accuracy percentages.
-    public static let minimumMusicScore = 0.95
+    public static let minimumMusicScore = 0.85
     public static let maximumVoiceScore = 0.05
     public static let maximumWindows = 512
     public static let voiceLabels: Set<String> = [
@@ -48,7 +48,7 @@ public struct MusicOnlyAssessment: Codable, Equatable, Sendable {
         // Reject malformed evidence before comparing scores; absent classes are not zero.
         guard windows.allSatisfy({ window in
             window.start.isFinite && window.end.isFinite && window.start >= 0 &&
-            window.end > window.start && window.end - window.start <= 1.000_001 &&
+            window.end > window.start && window.end - window.start <= 3.000_001 &&
             window.end <= duration + 0.000_001 &&
             requiredLabels.allSatisfy { label in
                 guard let value = window.scores[label] else { return false }

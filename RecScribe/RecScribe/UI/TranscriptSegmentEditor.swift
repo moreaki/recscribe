@@ -7,6 +7,7 @@ struct TranscriptSegmentEditor: View {
     @Bindable var review: TranscriptReviewState
     var showsOriginal = true
     var cloud: SegmentCloudState? = nil
+    var acoustic: SegmentAcousticState? = nil
     @State private var editing = false
     @State private var draft = ""
     @State private var baseline: TranscriptCorrection?
@@ -19,7 +20,7 @@ struct TranscriptSegmentEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let correction {
-                Label(correction.kind == .musicOnly ? "Music only · marked by you" : correction.cloud.map { "Cloud recognition · \($0.model) · verify against audio" } ?? "Manually corrected", systemImage: "pencil.circle")
+                Label(correction.kind == .musicOnly ? (correction.acoustic == nil ? "Music only · marked by you" : "Music only · local analysis confirmed by you") : correction.cloud.map { "Cloud recognition · \($0.model) · verify against audio" } ?? "Manually corrected", systemImage: "pencil.circle")
                     .font(.caption).foregroundStyle(WorkspaceStyle.mint)
             }
             if editing {
@@ -58,6 +59,27 @@ struct TranscriptSegmentEditor: View {
                     Button("Remove correction") { submitted = true; review.setCorrection(nil, for: segment.id) }.disabled(unavailable)
                 }
             }.buttonStyle(.borderless).font(.caption)
+            if let acoustic {
+                Button("Analyze sound locally", systemImage: "waveform") {
+                    if let context = review.context { acoustic.request(job: context.job, document: document, segmentID: segment.id) }
+                }.buttonStyle(.borderless).font(.caption)
+                    .disabled(unavailable || acoustic.blocked || acoustic.busy || cloud?.busy == true || document.source == nil)
+                    .help("Check this channel and time range for instrumental music. No audio leaves this Mac.")
+                if let result = acoustic.result, result.selection.segmentID == segment.id {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(result.correction == nil ? "Voice detected or music-only result uncertain. Recognition kept." : "Likely instrumental music · listen before confirming")
+                            .font(.caption.weight(.medium))
+                        Text("Local sound analysis is not a transcription accuracy percentage. Quiet speech can be missed.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if result.correction != nil {
+                            Button("Confirm music only") { acoustic.confirmMusicOnly(in: review) }
+                                .disabled(unavailable || acoustic.busy || acoustic.blocked || editing || correction == result.correction)
+                        }
+                        Button("Reveal sound analysis", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([result.evidence]) }
+                            .buttonStyle(.borderless).font(.caption)
+                    }.padding(.vertical, 8)
+                }
+            }
             if let cloud {
                 Button("Re-recognize with OpenAI…", systemImage: "cloud") {
                     if let context = review.context { cloud.request(job: context.job, document: document, segmentID: segment.id) }

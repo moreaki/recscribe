@@ -74,6 +74,48 @@ import Testing
         }
     }
 
+    @Test func longerContextOnlyOffersListeningReviewAndCannotOverrideShortVoiceEvidence() {
+        var short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        let context = [window(0, 8, music: 0.83)]
+        let result = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+                                                  contextWindows: context, contextCompleted: true)
+        #expect(result.outcome == .musicNeedsListeningReview)
+        #expect(!result.automaticSuppressionAllowed)
+        short[2] = window(2, 5, music: 0.72, voice: "whispering")
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: context, contextCompleted: true).outcome == .voiceOrMixed)
+    }
+
+    @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
+    func everyLongerContextVoiceClassPreservesWords(_ label: String) {
+        let short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        let result = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [window(0, 8, music: 0.99, voice: label)], contextCompleted: true)
+        #expect(result.outcome == .voiceOrMixed)
+    }
+
+    @Test func incompleteContextMissingScoresAndWeakMusicNeverPromoteRecognition() {
+        let short = (0...5).map { window(Double($0), Double($0 + 3), music: 0.72) }
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [window(0, 8)], contextCompleted: false).outcome == .inconclusive)
+        for context in [[window(0.01, 8)], [window(0, 7)], [window(0, 8.01)], [window(0, 8, music: 0.799)]] {
+            #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+                contextWindows: context, contextCompleted: true).outcome == .inconclusive)
+        }
+        var scores = window(0, 8).scores
+        scores.removeValue(forKey: "speech")
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: [.init(start: 0, end: 8, scores: scores)], contextCompleted: true).outcome == .inconclusive)
+        var weak = short; weak[0] = window(0, 3, music: 0.649)
+        #expect(MusicOnlyAssessment.evaluate(duration: 8, windows: weak, completed: true,
+            contextWindows: [window(0, 8)], contextCompleted: true).outcome == .inconclusive)
+        let excess = Array(repeating: window(0, 8), count: MusicOnlyAssessment.maximumWindows)
+        let bounded = MusicOnlyAssessment.evaluate(duration: 8, windows: short, completed: true,
+            contextWindows: excess, contextCompleted: true)
+        #expect(bounded.outcome == .inconclusive)
+        #expect(bounded.windows.count + (bounded.contextWindows?.count ?? 0) <= MusicOnlyAssessment.maximumWindows)
+    }
+
     @Test func localClassifierRejectsUnsupportedInputAndHonorsCancellationBeforeAnalysis() throws {
         let root = try AudioFixture.folder()
         defer { try? FileManager.default.removeItem(at: root) }

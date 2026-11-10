@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "violin-speech-en-6db",
+      "audio": "violin-speech-en-6db.wav",
+      "sha256": "174cbded639527eed84a23c73d03669ac3203d7bfd79b3da723cf8aa26901425",
+      "sources": [
+        "violin",
+        "speech-en"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "speech_to_music_rms_db": -6,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-en-18db",
+      "audio": "violin-speech-en-18db.wav",
+      "sha256": "1fc9187a8c8732d76db8a7c83026d31129b95a04e36adf66a57281b5712f976d",
+      "sources": [
+        "violin",
+        "speech-en"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "speech_to_music_rms_db": -18,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-en-30db",
+      "audio": "violin-speech-en-30db.wav",
+      "sha256": "c1bd85c8fae4e55f0f22a2ed097d44ba0739b1857c83ed1ba08422e3e0b7e263",
+      "sources": [
+        "violin",
+        "speech-en"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-en": "b94b62bf2a66241b41b79f417c612374e1e8f562b0883454c3a802ae762ca3ac"
+      },
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-de-6db",
+      "audio": "violin-speech-de-6db.wav",
+      "sha256": "2aae054d02b5db97496fd4f4d99aebac4aa63fcbb2073bb61a1fa5ba9dc2e05e",
+      "sources": [
+        "violin",
+        "speech-de"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "speech_to_music_rms_db": -6,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-de-18db",
+      "audio": "violin-speech-de-18db.wav",
+      "sha256": "c8eb23f420236e1a6dd275ff1db89f4706cc99ecd7ef943ffaf1125a890b93cc",
+      "sources": [
+        "violin",
+        "speech-de"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "speech_to_music_rms_db": -18,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-de-30db",
+      "audio": "violin-speech-de-30db.wav",
+      "sha256": "f3f2df840c15efee428910f7689e234fbbaa69ba63c64370ef2971e231529956",
+      "sources": [
+        "violin",
+        "speech-de"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-de": "cccbf277277b145a5e141636b7f66190c01055225a1cb199996db1ba0ea172a3"
+      },
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-zh-6db",
+      "audio": "violin-speech-zh-6db.wav",
+      "sha256": "9bd47b245e00353375f7ad173ae8a2b753a494a464f9168166edba73dbd8b59b",
+      "sources": [
+        "violin",
+        "speech-zh"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "speech_to_music_rms_db": -6,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-zh-18db",
+      "audio": "violin-speech-zh-18db.wav",
+      "sha256": "80934714d44b2c0fe1026d247324a29f6d90245de1752320cc9e9180602f1534",
+      "sources": [
+        "violin",
+        "speech-zh"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "speech_to_music_rms_db": -18,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    },
+    {
+      "id": "violin-speech-zh-30db",
+      "audio": "violin-speech-zh-30db.wav",
+      "sha256": "38866c224c27d90b1c0c13566d9ed5beb7e2c3e7c3f26e751ae0715272e05f28",
+      "sources": [
+        "violin",
+        "speech-zh"
+      ],
+      "source_sha256": {
+        "violin": "ec8fc16a66071f3c74d1c64ffa78fd2d2a2649bc7d3f1839a504dad603f93ab6",
+        "speech-zh": "0acd167cf560db7457d81e55c89c96408993a63c491085e1a45ec402081f7cd6"
+      },
+      "speech_to_music_rms_db": -30,
+      "mix_gain": 0.7,
+      "expected": "voice_or_mixed",
+      "review_status": "derived speech-bearing challenge; not listening-approved",
+      "role": "development challenge; shared sources, not independent held-out"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import SwiftUI
+import RecScribeCore
 
 /// The draft stays local to this source. Only confirmed saves change the transcript.
 struct TranscriptSegmentEditor: View {
@@ -67,8 +68,14 @@ struct TranscriptSegmentEditor: View {
                     .help("Check this channel and time range for instrumental music. No audio leaves this Mac.")
                 if let result = acoustic.result, result.selection.segmentID == segment.id {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(result.correction == nil ? "Voice detected or music-only result uncertain. Recognition kept." : "Likely instrumental music · listen before confirming")
+                        Text(result.report.assessment.outcome == .musicNeedsListeningReview
+                             ? "Possible music · check for quiet speech"
+                             : result.correction == nil ? "Voice detected or music-only result uncertain. Recognition kept." : "Likely instrumental music · listen before confirming")
                             .font(.caption.weight(.medium))
+                        if result.report.assessment.outcome == .musicNeedsListeningReview {
+                            Text("Longer context suggests music, but quiet speech can have the same scores. Recognition is kept. Listen to this passage before choosing Music only.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         Text("Local sound analysis is not a transcription accuracy percentage. Quiet speech can be missed.")
                             .font(.caption).foregroundStyle(.secondary)
                         if result.correction != nil {

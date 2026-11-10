@@ -9,6 +9,7 @@ struct TranscriptReadingView: View {
     var onSeek: ((Double) -> Void)? = nil
     var onReview: ((String) -> Void)? = nil
     var checkedReviewGroupIDs: Set<String>
+    private var review: TranscriptReviewState?
     @Binding private var selectedGroupID: String?
     @State private var mode: Mode
     @State private var expandedGroups: Set<String>
@@ -32,7 +33,8 @@ struct TranscriptReadingView: View {
         selectedGroupID: Binding<String?> = .constant(nil),
         onReview: ((String) -> Void)? = nil,
         followPlayback: Binding<Bool>? = nil,
-        checkedReviewGroupIDs: Set<String> = []
+        checkedReviewGroupIDs: Set<String> = [],
+        review: TranscriptReviewState? = nil
     ) {
         self.document = document
         self.hasPlayback = playback != nil
@@ -41,6 +43,7 @@ struct TranscriptReadingView: View {
         self.onSeek = onSeek
         self.onReview = onReview
         self.checkedReviewGroupIDs = checkedReviewGroupIDs
+        self.review = review
         self.externalFollow = followPlayback
         self._selectedGroupID = selectedGroupID
         _mode = State(initialValue: mode)
@@ -122,7 +125,21 @@ struct TranscriptReadingView: View {
                                             }
                                         }
                                     }
-                                    if group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document) {
+                                    if let review {
+                                        if group.segments.count == 1 {
+                                            TranscriptSegmentEditor(segment: first, document: document, review: review)
+                                        } else {
+                                            DisclosureGroup("Edit sources") {
+                                                ForEach(group.segments) { segment in
+                                                    VStack(alignment: .leading, spacing: 8) {
+                                                        Text(TranscriptReading.Group(segments: [segment]).channels).font(.caption.weight(.medium))
+                                                        TranscriptSegmentEditor(segment: segment, document: document, review: review)
+                                                    }.padding(.vertical, 4)
+                                                }
+                                            }.font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    if group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document, originalRecognition: true) {
                                         if let onReview {
                                             let checked = checkedReviewGroupIDs.contains(TranscriptReading.reviewGroupID(for: group.id, in: document) ?? group.id)
                                             Button("\(checked ? "Sources checked" : "Check sources") · \(group.segments.count) \(group.segments.count == 1 ? "source" : "sources")",
@@ -130,7 +147,7 @@ struct TranscriptReadingView: View {
                                                 .buttonStyle(.borderless).font(.caption).tint(WorkspaceStyle.blue)
                                         } else { Label("Review", systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.secondary) }
                                     }
-                                    if onReview == nil || !(group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document)) {
+                                    if onReview == nil || !(group.segments.contains(where: { $0.needsReview || !($0.reviewReasons ?? []).isEmpty }) || !group.isShared(in: document, originalRecognition: true)) {
                                         DisclosureGroup("Source details", isExpanded: expansion(group.id)) { sources(group) }
                                             .font(.caption).foregroundStyle(.secondary)
                                     }

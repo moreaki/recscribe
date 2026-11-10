@@ -66,10 +66,10 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     let reviewReasons: [String]
     let readingGroups: [TranscriptReading.Group]
     let channelGroups: [TranscriptReading.Group]
-    let text: String
-    let summaryText: String
-    let markdownText: String
-    let summaryMarkdownText: String
+    private(set) var text = ""
+    private(set) var summaryText = ""
+    private(set) var markdownText = ""
+    private(set) var summaryMarkdownText = ""
     let reviewPlainText: String
     let reviewMarkdownText: String
     let includesCloudAudio: Bool
@@ -103,30 +103,41 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
             .filter { !$0.isEmpty }
             .joined(separator: " · ")
 
-        let mode = payload.processing.mode
         let computedReadingGroups = TranscriptReading.groups(payload.segments)
         let computedChannelGroups = payload.segments.map { TranscriptReading.Group(segments: [$0]) }
         self.readingGroups = computedReadingGroups
         self.channelGroups = computedChannelGroups
-
-        self.text = payload.segments.map { segment in
-            let rendered = Self.displayedText(segment, mode: mode)
-            return (segment.needsReview ? "[Review] " : "") + rendered.trimmingCharacters(in: .whitespacesAndNewlines)
-        }.joined(separator: "\n\n")
-
-        let computedSummaryText = payload.summary?.notes.map {
-            "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))"
-        }.joined(separator: "\n\n") ?? ""
-        self.summaryText = computedSummaryText
-        self.summaryMarkdownText = computedSummaryText.isEmpty ? "" : "# Summary\n\n\(computedSummaryText)"
 
         let computedReviewPlain = payload.reviewReasons.joined(separator: "\n\n")
         self.reviewPlainText = computedReviewPlain
         let reviewBullets = payload.reviewReasons.map { "- \($0)" }.joined(separator: "\n")
         self.reviewMarkdownText = payload.reviewReasons.isEmpty ? "" : "# Review Notes\n\n\(reviewBullets)"
 
+        rebuildRendering()
+        self.reviewItems = TranscriptReading.reviewItems(in: self)
+    }
+
+    private(set) var corrections: [String: TranscriptCorrection] = [:]
+    static let summaryCorrectionWarning = "This summary predates manual corrections. Verify its source passages."
+
+    func applying(_ corrections: [String: TranscriptCorrection]) -> Self {
+        var result = self
+        result.corrections = corrections
+        result.rebuildRendering()
+        return result
+    }
+
+    private mutating func rebuildRendering() {
+        text = segments.map { segment in
+            (segment.needsReview ? "[Review] " : "") + displayedText(segment).trimmingCharacters(in: .whitespacesAndNewlines)
+        }.joined(separator: "\n\n")
+        let notes = summary?.notes.map { "\($0.text)\nSources: \($0.segmentIds.joined(separator: ", "))" }.joined(separator: "\n\n") ?? ""
+        let computedSummaryText = notes.isEmpty ? "" : (corrections.isEmpty ? "" : Self.summaryCorrectionWarning + "\n\n") + notes
+        summaryText = computedSummaryText
+        summaryMarkdownText = computedSummaryText.isEmpty ? "" : "# Summary\n\n\(computedSummaryText)"
+        let reviewBullets = reviewReasons.map { "- \($0)" }.joined(separator: "\n")
         var blocks: [String] = ["# Transcript"]
-        for group in computedReadingGroups {
+        for group in readingGroups {
             let reviewTag = group.segments.contains(where: \.needsReview) ? " · [Review]" : ""
             blocks.append("## \(group.timing) (\(group.channels)\(reviewTag))")
             let first = group.segments[0]
@@ -134,14 +145,14 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
                 $0.startMs == first.startMs
                     && $0.endMs == first.endMs
                     && $0.sourceText == first.sourceText
-                    && Self.displayedText($0, mode: mode) == Self.displayedText(first, mode: mode)
+                    && displayedText($0) == displayedText(first)
             }
             if isShared {
-                blocks.append(Self.displayedText(first, mode: mode).trimmingCharacters(in: .whitespacesAndNewlines))
+                blocks.append(displayedText(first).trimmingCharacters(in: .whitespacesAndNewlines))
             } else {
                 let variants = group.segments.map { segment in
                     let single = TranscriptReading.Group(segments: [segment])
-                    return "- **\(single.channels)** (\(single.timing)): \(Self.displayedText(segment, mode: mode).trimmingCharacters(in: .whitespacesAndNewlines))"
+                    return "- **\(single.channels)** (\(single.timing)): \(displayedText(segment).trimmingCharacters(in: .whitespacesAndNewlines))"
                 }.joined(separator: "\n")
                 blocks.append(variants)
             }
@@ -149,11 +160,10 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
         if !computedSummaryText.isEmpty {
             blocks.append("## Summary\n\n" + computedSummaryText)
         }
-        if !payload.reviewReasons.isEmpty {
+        if !reviewReasons.isEmpty {
             blocks.append("## Review Notes\n\n" + reviewBullets)
         }
         self.markdownText = blocks.joined(separator: "\n\n")
-        self.reviewItems = TranscriptReading.reviewItems(in: self)
     }
 
     static func read(_ directory: URL) async throws -> Self {
@@ -206,6 +216,10 @@ nonisolated struct TranscriptPreview: Decodable, Sendable {
     }
 
     func displayedText(_ segment: Segment) -> String {
+        corrections[segment.id]?.displayedText ?? Self.displayedText(segment, mode: processing.mode)
+    }
+
+    func originalDisplayedText(_ segment: Segment) -> String {
         Self.displayedText(segment, mode: processing.mode)
     }
 

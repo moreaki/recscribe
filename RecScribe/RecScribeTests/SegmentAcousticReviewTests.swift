@@ -160,4 +160,59 @@ import Testing
         #expect(document.applying(review.corrections).text == document.text)
         #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.json")) == original)
     }
+
+    @Test func candidateStatusWithRetainedQuietVoiceEvidenceCannotChangeText() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job)
+        let original = try Data(contentsOf: f.job.appendingPathComponent("transcript.json"))
+        let worker = SegmentAcousticReview(root: f.evidence)
+        let state = SegmentAcousticState(analyze: { selection in
+            let candidate = try await worker.run(selection)
+            var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(candidate.report)) as? [String: Any])
+            var assessment = try #require(json["assessment"] as? [String: Any])
+            var voices = try #require(assessment["voiceGuardWindows"] as? [[String: Any]])
+            var scores = try #require(voices[0]["scores"] as? [String: Double])
+            scores["whispering"] = 0.2; voices[0]["scores"] = scores
+            assessment["voiceGuardWindows"] = voices; json["assessment"] = assessment
+            let report = try JSONDecoder().decode(LocalSoundClassifier.Report.self, from: JSONSerialization.data(withJSONObject: json))
+            return .init(selection: candidate.selection, report: report, reference: candidate.reference, evidence: candidate.evidence)
+        })
+        let review = TranscriptReviewState(store: .init(root: f.reviews))
+        await review.load(job: f.job, document: document)
+        state.request(job: f.job, document: document, segmentID: "music")
+        await waitUntil("inconsistent report arrived") { !state.busy }
+        let result = try #require(state.result)
+        #expect(result.report.assessment.outcome == .instrumentalMusicCandidate)
+        #expect(result.correction == nil)
+        state.confirmMusicOnly(in: review)
+        #expect(!state.busy && !review.saving && review.corrections.isEmpty)
+        #expect(document.applying(review.corrections).text == document.text)
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.json")) == original)
+    }
+
+    @Test(arguments: ["mixed-18db", "ShortSpeechChallenges/piano-en-250ms-30db"])
+    func realMixedAndShortSpeechSourcesKeepTextLanguageAndOriginals(musicName: String) async throws {
+        let f = try Fixture(musicName: musicName); defer { try? FileManager.default.removeItem(at: f.root) }
+        let paths = [f.audio, f.job.appendingPathComponent("transcript.json"), f.job.appendingPathComponent("raw.json")]
+        let originals = try paths.map { try Data(contentsOf: $0) }
+        let document = try await TranscriptPreview.read(f.job)
+        let worker = SegmentAcousticReview(root: f.evidence)
+        let state = SegmentAcousticState(analyze: { try await worker.run($0) })
+        let review = TranscriptReviewState(store: .init(root: f.reviews))
+        await review.load(job: f.job, document: document)
+        state.request(job: f.job, document: document, segmentID: "music")
+        await waitUntil("mixed speech analysis completed") { !state.busy }
+        #expect(state.error == nil)
+        let result = try #require(state.result)
+        #expect(result.report.assessment.outcome == .voiceOrMixed && result.correction == nil)
+        state.confirmMusicOnly(in: review)
+        #expect(!state.busy && !review.saving && review.corrections.isEmpty)
+        let current = document.applying(review.corrections)
+        #expect(current.text == document.text && current.recognitionLabel == document.recognitionLabel)
+        #expect(!current.hasMusicOnlyPassages && current.languageLabel == document.languageLabel)
+        for markdown in [false, true] {
+            #expect(current.exportText(for: .transcript, markdown: markdown) == document.exportText(for: .transcript, markdown: markdown))
+        }
+        #expect(try paths.map { try Data(contentsOf: $0) } == originals)
+    }
 }

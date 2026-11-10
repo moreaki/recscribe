@@ -20,6 +20,8 @@ import Testing
             let report = try LocalSoundClassifier.assess(url)
             if fixture["id"].string == "piano" {
                 #expect(report.assessment.outcome == .instrumentalMusicCandidate, "\(name): \(report.assessment.reason)")
+                #expect(report.assessment.musicOnlyConfirmationAllowed && report.voiceGuardWindowSeconds == 1)
+                #expect(report.voiceGuardOverlap == 0.5 && report.assessment.voiceGuardCompleted == true)
             } else if fixture["expected"].string == "instrumental" {
                 #expect(report.assessment.outcome == .musicNeedsListeningReview)
                 #expect(report.contextWindowSeconds == 8)
@@ -59,6 +61,21 @@ import Testing
             #expect(outcome == .voiceOrMixed || outcome == .musicNeedsListeningReview, "\(name): keep known speech")
             #expect(outcome != .instrumentalMusicCandidate && !report.assessment.automaticSuppressionAllowed)
             #expect(try WAVAudio.hash(url) == hash)
+        }
+    }
+
+    @Test func shortQuietSpeechMixturesRetainRecognitionAndBindInputHashes() throws {
+        let root = try #require(Bundle.module.resourceURL).appendingPathComponent("Fixtures/Acoustic/ShortSpeechChallenges")
+        let manifest = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: root.appendingPathComponent("manifest.json")))
+        let cases = try #require(manifest["cases"].array)
+        #expect(cases.count == 9 && manifest["automatic_suppression_approved"] == false)
+        for fixture in cases {
+            let name = try #require(fixture["audio"].string), url = root.appendingPathComponent(name)
+            #expect(try WAVAudio.hash(url) == fixture["sha256"].string)
+            let report = try LocalSoundClassifier.assess(url)
+            #expect(report.assessment.outcome == .voiceOrMixed, "\(name): short speech source retained")
+            #expect(!report.assessment.musicOnlyConfirmationAllowed && !report.assessment.automaticSuppressionAllowed)
+            #expect(try WAVAudio.hash(url) == fixture["sha256"].string)
         }
     }
 

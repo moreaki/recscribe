@@ -24,7 +24,7 @@ nonisolated struct SegmentAcousticCandidate: Sendable {
     let reference: SegmentAcousticReference
     let evidence: URL
     var correction: TranscriptCorrection? {
-        guard report.assessment.outcome == .instrumentalMusicCandidate, reference.valid else { return nil }
+        guard report.assessment.musicOnlyConfirmationAllowed, reference.valid else { return nil }
         return .init(kind: .musicOnly, text: nil, acoustic: reference)
     }
 }

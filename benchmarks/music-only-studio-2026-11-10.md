@@ -73,3 +73,23 @@ veto. Existing piano, speech, and piano/speech cases retain their previous outco
 The nine new mixtures are hashed derived challenges with explicit pending listening
 review, shared sources and public-domain/CC BY 4.0 attribution. They are not new
 independent held-out evidence. No score above is a transcription accuracy percentage.
+
+## Short speech preservation follow-up
+
+Before offering music-only confirmation, the detector now also checks one-second
+voice windows with 50% overlap across the complete passage. The music decision
+still uses three-second windows. All 33 voice vetoes remain at 0.05 in both passes;
+the one-second music scores do not veto sustained instrumental music. The violin's
+long-context hint remains ineligible for confirmation.
+
+A development sweep inserted 250/500/1000 ms speech-source excerpts from English,
+German and Mandarin at 3.5 seconds into the piano, at -6/-18/-30 dB relative RMS.
+The #130 baseline retained all 27 as voice. Nine -30 dB cases are checked in with
+exact source/output hashes and mixture parameters. They are regression challenges,
+not evidence that the added pass improves measured accuracy. Source excerpts have
+not been independently word-aligned or approved as whispering/listening references.
+
+The added safeguard has separate contract tests for all 33 voice classes, complete
+coverage, invalid/missing evidence, shared observation limits and legacy candidate
+reports that lack the new voice check. Automatic suppression remains disabled;
+quiet speech may still escape every classifier window and originals stay preserved.

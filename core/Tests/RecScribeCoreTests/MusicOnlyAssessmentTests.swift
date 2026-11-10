@@ -15,10 +15,60 @@ import Testing
     }
 
     @Test func completeInstrumentalEvidenceIsOnlyAnExperimentalCandidate() throws {
-        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: covered.reversed(), completed: true)
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: covered.reversed(), completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: true)
         #expect(result.outcome == .instrumentalMusicCandidate)
+        #expect(result.musicOnlyConfirmationAllowed)
         #expect(!result.automaticSuppressionAllowed)
         #expect(try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONEncoder().encode(result)) == result)
+    }
+
+    @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
+    func oneSecondVoiceEvidenceVetoesLongWindowMusic(_ label: String) {
+        var guardWindows = covered
+        guardWindows[2] = window(1, 2, music: 0.1, voice: label)
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: guardWindows, voiceGuardCompleted: true)
+        #expect(result.outcome == .voiceOrMixed && !result.musicOnlyConfirmationAllowed)
+    }
+
+    @Test func missingIncompleteAndInvalidVoiceGuardCannotOfferMusicOnlyConfirmation() {
+        let missing = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true)
+        #expect(missing.outcome == .inconclusive && !missing.musicOnlyConfirmationAllowed)
+        for guards in [Array(covered.dropFirst()), Array(covered.dropLast()), [window(0, 3)], [window(-0.1, 0.9)]] {
+            let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+                voiceGuardWindows: guards, voiceGuardCompleted: true)
+            #expect(result.outcome == .inconclusive && !result.musicOnlyConfirmationAllowed)
+        }
+        let unfinished = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: false)
+        #expect(unfinished.outcome == .inconclusive)
+    }
+
+    @Test func oldCandidateEvidenceWithoutVoiceGuardIsReadableButNotConfirmable() throws {
+        let current = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: covered, voiceGuardCompleted: true)
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        json.removeValue(forKey: "voiceGuardWindows"); json.removeValue(forKey: "voiceGuardCompleted")
+        let old = try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(old.outcome == .instrumentalMusicCandidate)
+        #expect(!old.musicOnlyConfirmationAllowed && !old.automaticSuppressionAllowed)
+    }
+
+    @Test func oneSecondGuardChecksVoiceWithoutDemandingShortWindowMusicScores() {
+        let guards = covered.map { window($0.start, $0.end, music: 0.01) }
+        let result = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: guards, voiceGuardCompleted: true)
+        #expect(result.musicOnlyConfirmationAllowed && result.outcome == .instrumentalMusicCandidate)
+        let fractionalGuards = guards + [window(2.25, 3.25, music: 0.01)]
+        let fractional = MusicOnlyAssessment.evaluate(duration: 3.25, windows: [window(0, 3), window(0.25, 3.25)], completed: true,
+            voiceGuardWindows: fractionalGuards, voiceGuardCompleted: true)
+        #expect(fractional.musicOnlyConfirmationAllowed)
+        let excess = Array(repeating: window(0, 1), count: MusicOnlyAssessment.maximumWindows)
+        let bounded = MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true,
+            voiceGuardWindows: excess, voiceGuardCompleted: true)
+        #expect(!bounded.musicOnlyConfirmationAllowed)
+        #expect(bounded.windows.count + (bounded.voiceGuardWindows?.count ?? 0) <= MusicOnlyAssessment.maximumWindows)
     }
 
     @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())

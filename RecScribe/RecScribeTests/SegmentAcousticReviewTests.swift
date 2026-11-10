@@ -61,6 +61,16 @@ import Testing
         #expect(state.error == nil)
         let candidate = try #require(state.result)
         #expect(candidate.correction != nil && review.corrections.isEmpty)
+        #expect(candidate.report.assessment.voiceGuardCompleted == true && candidate.report.voiceGuardWindowSeconds == 1)
+        var legacyJSON = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(candidate.report)) as? [String: Any])
+        var assessmentJSON = try #require(legacyJSON["assessment"] as? [String: Any])
+        assessmentJSON.removeValue(forKey: "voiceGuardWindows"); assessmentJSON.removeValue(forKey: "voiceGuardCompleted")
+        legacyJSON["assessment"] = assessmentJSON
+        legacyJSON.removeValue(forKey: "voiceGuardWindowSeconds"); legacyJSON.removeValue(forKey: "voiceGuardOverlap")
+        let legacyReport = try JSONDecoder().decode(LocalSoundClassifier.Report.self, from: JSONSerialization.data(withJSONObject: legacyJSON))
+        let legacy = SegmentAcousticCandidate(selection: candidate.selection, report: legacyReport,
+            reference: candidate.reference, evidence: candidate.evidence)
+        #expect(legacy.report.assessment.outcome == .instrumentalMusicCandidate && legacy.correction == nil)
         #expect(document.text.contains("Hallucinated words"))
         #expect(FileManager.default.fileExists(atPath: candidate.evidence.appendingPathComponent("report.json").path))
         state.confirmMusicOnly(in: review)

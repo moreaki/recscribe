@@ -32,6 +32,14 @@ one selected source/channel. It is not an automatic ASR suppression gate.
   forcibly interrupted; this API must run off the UI/capture thread.
 - Scores are classifier outputs, not calibrated transcription accuracy percentages.
   Neither candidates nor inconclusive evidence establish a language.
+- A strong music result additionally requires complete one-second voice windows
+  with 50% overlap. Every monitored voice class must remain <=0.05 in every such
+  window. Their music scores are not used to establish music; this pass checks for
+  short speech that a longer window could dilute. Missing/invalid/unfinished voice
+  evidence keeps recognition and cannot offer music-only confirmation.
+- The original, one-second voice and optional eight-second context passes share
+  one 512-observation budget and one cooperative deadline. Final windows stay
+  entirely inside the selected passage; input bytes and channel bounds are unchanged.
 - `automaticSuppressionAllowed` is always false, including for candidates. Raw
   transcripts and original audio must remain immutable in future integration.
 
@@ -56,6 +64,13 @@ unfinished or gapped context stays inconclusive; context voice evidence keeps wo
 Studio explains the uncertainty and keeps recognition. The existing manual Music
 only action remains available after listening; the uncertain hint cannot invoke
 Confirm music only or create a correction by itself. This is not an accuracy %.
+
+Reports retain optional `voiceGuardWindows`, completion, window duration and overlap.
+Legacy reports remain readable, but an old candidate without completed voice evidence
+cannot offer music-only confirmation. Previously user-confirmed corrections are not
+rewritten or revoked. The nine short speech-source mixture fixtures are derived,
+unadjudicated development checks, not new listening approval or proof of whisper
+accuracy. Their #130 baseline already retained all cases; no accuracy gain is claimed.
 
 ## Studio confirmation and restoration
 

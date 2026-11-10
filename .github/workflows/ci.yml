@@ -38,7 +38,9 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_ci_scope.py'
           python3 scripts/check-source-boundary.py
       - name: Native core and frozen contracts
-        run: xcrun swift test --package-path core
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_native_core_supervisor.py'
+          python3 scripts/work-artifacts.py run --label native-core test -- python3 scripts/run-native-core-tests.py
       - name: Offline Whisper quality tooling
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_quality_*.py'
@@ -114,6 +116,10 @@ jobs:
             TestResults*.json
             TestResults-tsan.log
             TestResults*-diagnostics/
+            Build/Artifacts/test/*-native-core-*/native-core.log
+            Build/Artifacts/test/*-native-core-*/native-core-supervision.json
+            Build/Artifacts/test/*-native-core-*/native-sample-*.txt
+            Build/Artifacts/test/*-native-core-*/console.log
           if-no-files-found: ignore
 
   release-build:

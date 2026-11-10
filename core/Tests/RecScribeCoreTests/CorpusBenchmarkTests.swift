@@ -33,7 +33,7 @@ import Testing
         let report = try CorpusBenchmark.run(manifest: manifest, output: root.appendingPathComponent("readiness"), cli: cli,
             whisper: nil, model: nil, threads: 2, dryRun: true)
         let results = try #require(report["results"].array)
-        #expect(results.count == 5)
+        #expect(results.count == 50)
         #expect(results.allSatisfy { $0["status"] == "pending_corpus" && $0.object?["wer"] == nil })
         for ids in [["../unsafe"], ["same", "same"]] {
             let bad = root.appendingPathComponent("bad.json")

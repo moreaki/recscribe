@@ -41,6 +41,8 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_native_core_supervisor.py'
           python3 scripts/work-artifacts.py run --label native-core test -- python3 scripts/run-native-core-tests.py
+      - name: Offline Whisper quality tooling
+        run: python3 -m unittest discover -s scripts/tests -p 'test_quality_*.py'
       - name: Verify PCM storage ownership and sanitizer evidence checks
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'

@@ -71,6 +71,62 @@ import Testing
         #expect(bounded.windows.count + (bounded.voiceGuardWindows?.count ?? 0) <= MusicOnlyAssessment.maximumWindows)
     }
 
+    @Test(arguments: ["primary-voice", "guard-voice", "context-voice", "low-music",
+                      "missing-voice-class", "voice-gap", "invalid-timing", "excess-observations",
+                      "primary-incomplete", "primary-completion-missing", "context-incomplete", "context-completion-missing"])
+    func storedCandidateCannotOverrideItsRetainedEvidence(scenario: String) throws {
+        let primary = (0...5).map { window(Double($0), Double($0 + 3)) }
+        let voices = (0...14).map { window(Double($0) / 2, Double($0) / 2 + 1) }
+        let candidate = MusicOnlyAssessment.evaluate(duration: 8, windows: primary, completed: true,
+            voiceGuardWindows: voices, voiceGuardCompleted: true)
+        #expect(candidate.musicOnlyConfirmationAllowed)
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(candidate)) as? [String: Any])
+        var musicJSON = try #require(json["windows"] as? [[String: Any]])
+        var voicesJSON = try #require(json["voiceGuardWindows"] as? [[String: Any]])
+        switch scenario {
+        case "primary-voice", "low-music":
+            var scores = try #require(musicJSON[0]["scores"] as? [String: Double])
+            scores[scenario == "primary-voice" ? "speech" : "music"] = 0.2
+            musicJSON[0]["scores"] = scores
+        case "guard-voice", "missing-voice-class":
+            var scores = try #require(voicesJSON[0]["scores"] as? [String: Double])
+            scores["whispering"] = scenario == "guard-voice" ? 0.2 : nil
+            voicesJSON[0]["scores"] = scores
+        case "context-voice":
+            json["contextWindows"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([window(0, 8, voice: "humming")]))
+            json["contextCompleted"] = true
+        case "primary-incomplete": json["primaryCompleted"] = false
+        case "primary-completion-missing": json.removeValue(forKey: "primaryCompleted")
+        case "context-incomplete", "context-completion-missing":
+            json["contextWindows"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([window(0, 8)]))
+            if scenario == "context-incomplete" { json["contextCompleted"] = false }
+            else { json.removeValue(forKey: "contextCompleted") }
+        case "voice-gap": voicesJSON.removeFirst()
+        case "invalid-timing": voicesJSON[0]["end"] = 1.5
+        case "excess-observations": voicesJSON = Array(repeating: voicesJSON[0], count: MusicOnlyAssessment.maximumWindows + 1)
+        default: Issue.record("Unknown scenario")
+        }
+        json["windows"] = musicJSON; json["voiceGuardWindows"] = voicesJSON
+        let decoded = try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.outcome == .instrumentalMusicCandidate)
+        let confirmationAllowed = decoded.musicOnlyConfirmationAllowed
+        #expect(!confirmationAllowed, "A stored status cannot override voice, missing data or incomplete coverage")
+        #expect(!decoded.automaticSuppressionAllowed)
+    }
+
+    @Test func completeContextAndVoiceEvidenceRemainConfirmableAfterDecoding() throws {
+        let primary = (0...5).map { window(Double($0), Double($0 + 3)) }
+        let voices = (0...14).map { window(Double($0) / 2, Double($0) / 2 + 1) }
+        let result = MusicOnlyAssessment.evaluate(duration: 8, windows: primary, completed: true,
+            contextWindows: [window(0, 8)], contextCompleted: true,
+            voiceGuardWindows: voices, voiceGuardCompleted: true)
+        let decoded = try JSONDecoder().decode(MusicOnlyAssessment.self, from: JSONEncoder().encode(result))
+        #expect(decoded.musicOnlyConfirmationAllowed && decoded.primaryCompleted == true && decoded.contextCompleted == true)
+        let emptyContext = MusicOnlyAssessment.evaluate(duration: 8, windows: primary, completed: true,
+            contextWindows: [], contextCompleted: true, voiceGuardWindows: voices, voiceGuardCompleted: true)
+        #expect(!emptyContext.musicOnlyConfirmationAllowed && emptyContext.outcome == .inconclusive)
+    }
+
     @Test(arguments: Array(MusicOnlyAssessment.voiceLabels).sorted())
     func everyVoiceClassVetoesMusicOnly(_ label: String) {
         var windows = covered

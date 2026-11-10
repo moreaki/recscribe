@@ -72,6 +72,17 @@ rewritten or revoked. The nine short speech-source mixture fixtures are derived,
 unadjudicated development checks, not new listening approval or proof of whisper
 accuracy. Their #130 baseline already retained all cases; no accuracy gain is claimed.
 
+Confirmation eligibility re-evaluates retained scores, ranges and current policy;
+the stored `instrumentalMusicCandidate` status alone cannot authorize a correction.
+Primary and optional context completion are recorded explicitly. Missing completion,
+voice in any retained pass, missing classes, weak music, gaps, invalid timing or an
+exceeded observation budget deny confirmation even if decoded status says candidate.
+Older reports lacking these completion fields remain readable but cannot be newly
+confirmed. This does not rewrite earlier user-confirmed music-only annotations.
+The recheck is local, bounded by the existing observation limit, and runs no model,
+audio extraction, network request or file write. It strengthens evidence consistency;
+it does not establish a new measured detection-accuracy result.
+
 ## Studio confirmation and restoration
 
 Analyze sound locally prepares exactly the selected channel/time range with the

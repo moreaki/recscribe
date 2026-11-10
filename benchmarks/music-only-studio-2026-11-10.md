@@ -93,3 +93,19 @@ The added safeguard has separate contract tests for all 33 voice classes, comple
 coverage, invalid/missing evidence, shared observation limits and legacy candidate
 reports that lack the new voice check. Automatic suppression remains disabled;
 quiet speech may still escape every classifier window and originals stay preserved.
+
+## Evidence-consistency follow-up
+
+Regression tests showed that a decoded `instrumentalMusicCandidate` status could
+remain confirmable after its retained scores were changed to include voice, missing
+classes, weak music or incomplete coverage. Eligibility now re-evaluates those
+scores and ranges under current policy and requires explicitly completed primary
+and voice passes. Optional context must also be complete when present. A stored
+non-candidate is never promoted by this recheck.
+
+Tests cover contradictory voice evidence in each pass, missing/false completion,
+weak music, missing classes, gaps, timing errors and excess observations. The app
+contract verifies that retained whispering evidence blocks correction and keeps
+displayed/canonical text even when the report still says candidate. Valid completed
+evidence remains confirmable after encoding/decoding. This is an evidence-validation
+fix, not a new corpus accuracy measurement or proof of arbitrary quiet-speech recall.

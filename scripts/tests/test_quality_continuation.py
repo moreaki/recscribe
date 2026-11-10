@@ -36,3 +36,20 @@ class QualityContinuationTests(unittest.TestCase):
             else: rows[0]["measurement"]["scoring_version"] = "different"
             with self.subTest(change=change), self.assertRaises(ValueError):
                 continuation.validate_baselines(cases, rows, models)
+
+    def test_mode_split_preserves_every_call_setting_and_original_plan_without_mutation(self):
+        stage = dict(id="held-large", planned_calls=864, deadline_seconds=3600, corpus_sha256="a" * 64,
+                     **{k:"/protected/held-large" + (".json" if k in ("experiment", "freeze") else "")
+                        for k in ("experiment", "freeze", "output", "guard_log", "report")})
+        config = dict(language_modes=["known", "auto"], models=[{"id":"large"},{"id":"q5"},{"id":"q4"}],
+                      threads=2, repetitions=1, profiles=[{"id":"matched"}], freeze=stage["freeze"])
+        before = copy.deepcopy((stage, config))
+        split = continuation.split_large_heldout(stage, config)
+        self.assertEqual((stage, config), before)
+        self.assertEqual(sum(s["planned_calls"] for s, _ in split), 864)
+        self.assertEqual([c["language_modes"] for _, c in split], [["known"], ["auto"]])
+        for new_stage, new_config in split:
+            self.assertEqual(new_stage["deadline_seconds"], 3600)
+            self.assertEqual(new_stage["corpus_sha256"], stage["corpus_sha256"])
+            for k in ("models", "threads", "repetitions", "profiles"):
+                self.assertEqual(new_config[k], config[k])

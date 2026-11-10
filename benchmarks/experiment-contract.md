@@ -45,8 +45,15 @@ An output directory must be new. Results are protected evidence outside the
 checkout/disposable root, including exact source manifests/configuration, private
 profile bytes, host evidence, raw ASR, canonical transcripts, subprocess logs and
 timing files. Managed wrappers capture disposable command logs only. The matrix
-is bounded to 20,000 cells, 3–10 repeats and 1–4 threads. One ASR job runs at a
+is bounded to 20,000 cells, 1–10 repeats and 1–4 threads. One ASR job runs at a
 time. Every cell records missing prerequisites; pending never means zero error.
+
+A prospectively declared quality-only matrix may request one repeat to spend
+its compute budget on more independent source recordings. It measures no repeat
+variability. Keep at least three repeats in a separately fixed timing/stability
+panel; its repeated outputs do not enlarge the quality sample. The template and
+historical three-repeat experiments remain unchanged. Successful repeat 1 alone
+supplies quality, with no fallback to a later successful repeat.
 Checksums fail visibly. No retries beyond the existing recognizer policy are
 added. `cancel.request` in the matrix directory or Ctrl-C propagates cancellation
 to the active canonical job; previous and partial evidence remains available.

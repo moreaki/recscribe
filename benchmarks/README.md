@@ -107,6 +107,12 @@ pending. Accuracy uses repeat 1 only; inference repeats measure variability and
 do not multiply the number of independent speech samples. Chinese whitespace WER
 is not reported. No default model is selected by this pilot.
 
+Use the [recording-priority worker guard](recording-priority-guard.md) for bounded
+offline jobs after a native idle/live-off check. It cancels only its verified
+owned work and retains incomplete evidence. The [research archive
+index](research-archive.md) points to the frozen weight-space experiments and
+reports; rejected recipes are not part of these reusable infrastructure changes.
+
 Generate a text-free summary from a retained matrix into a new protected external
 directory:
 

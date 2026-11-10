@@ -5,6 +5,7 @@ No inference retries. All five original F16 development baselines must be
 complete before any held-out release. Numerical budgets/settings stay fixed.
 """
 from datetime import datetime, timezone, timedelta
+import copy
 import importlib.util
 import json
 import os
@@ -16,6 +17,21 @@ import time
 
 SPEC = importlib.util.spec_from_file_location("frozen_quality_campaign", Path(__file__).with_name("campaign-runner-v1.py"))
 original = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(original)
+
+
+def split_large_heldout(stage, config):
+    if stage["id"] != "held-large" or config["language_modes"] != ["known", "auto"]:
+        raise ValueError("Expected the original unstarted two-mode Large panel")
+    result = []
+    for mode in ("known", "auto"):
+        value, settings = copy.deepcopy(stage), copy.deepcopy(config)
+        value["id"] = "held-large-" + mode
+        for field in ("experiment", "freeze", "output", "guard_log", "report"):
+            value[field] = str(Path(stage[field]).with_name(Path(stage[field]).name.replace("held-large", value["id"], 1)))
+        value["planned_calls"] = stage["planned_calls"] // 2
+        settings["language_modes"] = [mode]; settings["freeze"] = value["freeze"]
+        result.append((value, settings))
+    return result
 
 
 def validate_baselines(cases, rows, models):
@@ -44,11 +60,17 @@ class Continuation(original.Campaign):
         self.plan_path = self.root / "campaign.execution-plan.json"
         self.plan = json.loads(self.plan_path.read_text())
         self.repo = Path(self.plan["repository_root"])
-        checkpoint = json.loads((self.root / "continuation-v1.plan.json").read_text())
+        checkpoint = json.loads((self.root / "continuation-v2.plan.json").read_text())
         if original.sha(__file__) != checkpoint["coordinator_sha256"] or original.sha(self.plan_path) != checkpoint["original_execution_plan_sha256"]:
             raise ValueError("Continuation/original source seal differs")
         for item in checkpoint["preserved_files"]:
             if original.sha(item["path"]) != item["sha256"]: raise ValueError("Preserved development checkpoint changed")
+        large = next(s for s in self.plan["stages"] if s["id"] == "held-large")
+        split = split_large_heldout(large, json.loads(Path(large["experiment"]).read_text()))
+        for stage, config in split:
+            if json.loads(Path(stage["experiment"]).read_text()) != config:
+                raise ValueError("Mode-split configuration differs from the original settings")
+        self.plan["stages"] = [s for s in self.plan["stages"] if s["id"] != "held-large"] + [s for s, _ in split]
         self.output = self.root / "campaign-continuation-v1"; self.output.mkdir(mode=0o700)
         self.cancel = self.root / "cancel.request"; self.cancelled = False
         first = json.loads((self.root / "plans-v1/launch.admission.json").read_text())
@@ -95,7 +117,7 @@ class Continuation(original.Campaign):
             self.release_heldout()
             for stage in self.plan["stages"]:
                 if stage["split"] == "held_out": self.run_stage(stage)
-            self.event("campaign-completed", new_stage_count=5, candidate_development_still_missing=49)
+            self.event("campaign-completed", new_stage_count=6, candidate_development_still_missing=49)
         except BaseException as error:
             self.event("campaign-stopped", error_type=type(error).__name__, error=str(error)); raise
         finally:

@@ -84,6 +84,14 @@ descriptive summaries are also reported. Chinese uses CER, never whitespace WER.
   independent groups and controlled resource evidence remain separate required
   adoption gates. Even a numerical lexical pass cannot promote an artifact.
 
+The recorded base seed is `10410520261110`. Cohort seeds are the first eight
+SHA-256 bytes of `base:comparison_id:mode:language`, interpreted unsigned big
+endian. Resample source indices with replacement within each language, preserving
+CER/WER correlation. The upper bound uses nearest rank
+`ceil(confidence * draws) - 1`. Macro resamples average the corpus-weighted
+language deltas with equal language weight. Exact rational arithmetic compares
+bounds with margins; display rounding cannot change a gate decision.
+
 Use the unchanged scorer `swift-nfc-casefold-alphanumeric-v1`, explicitly
 retaining its punctuation/combining-mark limitations. Do not silently upgrade
 these unreviewed references to v2 or choose normalization to favor a candidate.

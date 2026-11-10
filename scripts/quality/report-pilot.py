@@ -17,10 +17,13 @@ from pathlib import Path
 import re
 import statistics
 
-VERSION = "quality-pilot-report-1.3"
+VERSION = "quality-pilot-report-1.4"
 _EVIDENCE_SPEC = importlib.util.spec_from_file_location("evaluation_evidence", Path(__file__).with_name("evaluation-evidence.py"))
 evidence = importlib.util.module_from_spec(_EVIDENCE_SPEC)
 _EVIDENCE_SPEC.loader.exec_module(evidence)
+_PRESERVATION_SPEC = importlib.util.spec_from_file_location("quality_preservation", Path(__file__).with_name("quality-preservation.py"))
+preservation = importlib.util.module_from_spec(_PRESERVATION_SPEC)
+_PRESERVATION_SPEC.loader.exec_module(preservation)
 MAXIMUM_JSON_BYTES = 64 * 1024 * 1024
 COMPLETED = {"completed", "completed_with_review"}
 GROUP_FIELDS = ("language", "task", "model", "model_sha256", "profile", "language_mode", "path", "scoring_policy", "runtime_settings_sha256")
@@ -380,6 +383,7 @@ def summarize(matrix, corpus=None, experiment=None, allow_held_out=False, freeze
         "cohorts": cohorts, "comparisons": summarize_comparisons(matrix.get("paired_comparisons", [])),
         "corpus_preparation": evidence.corpus_preparation(corpus),
         "model_size_policy": evidence.model_size_decisions(experiment.get("model_size_policy"), experiment.get("models", []), cohorts),
+        "quality_preservation": preservation.evaluate(matrix, corpus, experiment),
         "limitations": ["Unscored resource-only probe; references were not read and recognition quality/language-ID accuracy remain unmeasured" if resources_only else
             "Exploratory published-reference pilot; review the per-language utterance counts before drawing representative multilingual accuracy conclusions",
             "Repeated invocations are not independent corpus samples; no quality scores were produced" if resources_only else
@@ -477,6 +481,14 @@ def markdown(report):
                 lines.append("| " + " | ".join(text(v) for v in [item.get("comparison_id"), str(item.get("language")) + " / " + str(item.get("language_mode")),
                     resource["paired_invocations"], span(resource["wall_seconds_delta"]), span(resource["peak_rss_bytes_delta"], divisor=1024 * 1024, places=1),
                     str(consistency["exact_matches"]) + " / " + str(consistency["observed_first_repeat_pairs"])]) + " |")
+    if report["quality_preservation"]["status"] != "not_requested":
+        lines += ["", "## Fixed quality preservation gates", "", "Exploratory source-unit intervals do not prove speaker independence or population equivalence. Missing first results remain pending. A numerical pass authorizes no reference approval or default promotion.", "",
+            "| Comparison | Mode | Complete | Primary CER delta / upper (pp) | Primary WER delta / upper (pp) | Numerical gate |", "| --- | --- | --- | --- | --- | --- |"]
+        for item in report["quality_preservation"]["comparisons"]:
+            def interval(metric):
+                value = item["primary_macro"][metric]
+                return "pending" if value is None else f'{100 * value["point_delta"]:.4f} / {100 * value["one_sided_upper_delta"]:.4f}'
+            lines.append("| " + " | ".join(text(v) for v in [item["comparison_id"], item["language_mode"], item["complete"], interval("cer"), interval("wer"), item["status"]]) + " |")
     lines += ["", "## Provenance and limits", "", "Machine/software, model/checkpoint/precision identities, artifact hashes, experiment/corpus/scoring identities and raw-evidence pointers are retained in the JSON report and original matrix snapshots.", ""]
     for limitation in report["limitations"]:
         lines.append("- " + text(limitation))

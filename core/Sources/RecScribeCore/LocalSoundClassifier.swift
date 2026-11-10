@@ -12,6 +12,9 @@ public enum LocalSoundClassifier {
         public let overlap: Double
         public let minimumMusicScore: Double
         public let maximumVoiceScore: Double
+        public let contextWindowSeconds: Double?
+        public let minimumContextMusicScore: Double?
+        public let minimumShortWindowMusicScore: Double?
         public let assessment: MusicOnlyAssessment
     }
 
@@ -33,13 +36,13 @@ public enum LocalSoundClassifier {
               file.processingFormat.sampleRate == Double(layout.rate) else {
             throw CoreFailure("Acoustic input format changed")
         }
-        func analyze(from first: Int64, frames: Int64) throws -> [MusicOnlyAssessment.Window] {
+        func analyze(from first: Int64, frames: Int64, windowSeconds: Int = 3) throws -> [MusicOnlyAssessment.Window] {
             let request = try SNClassifySoundRequest(classifierIdentifier: .version1)
             guard MusicOnlyAssessment.requiredLabels.isSubset(of: Set(request.knownClassifications)) else {
                 throw CoreFailure("Acoustic classifier taxonomy is unsupported")
             }
-            request.windowDuration = CMTime(seconds: 3, preferredTimescale: 16_000)
-            request.overlapFactor = 2.0 / 3.0
+            request.windowDuration = CMTime(seconds: Double(windowSeconds), preferredTimescale: 16_000)
+            request.overlapFactor = 1 - 1 / Double(windowSeconds)
             let observer = Observer(offset: Double(first) / Double(layout.rate))
             let analyzer = SNAudioStreamAnalyzer(format: file.processingFormat)
             try analyzer.add(request, withObserver: observer)
@@ -68,12 +71,23 @@ public enum LocalSoundClassifier {
             guard !state.failed, state.completed else { throw CoreFailure("Acoustic classifier failed") }
             return state.windows
         }
-        var windows = try analyze(from: 0, frames: layout.frames)
-        // SoundAnalysis omits an unfinished final window. Analyze the last three
-        // seconds separately, without padding or borrowing neighbouring audio.
-        if (windows.map(\.end).max() ?? 0) < duration - 0.000_001 {
-            let tailFrames = Int64(layout.rate) * 3
-            windows += try analyze(from: layout.frames - tailFrames, frames: tailFrames)
+        func completePass(windowSeconds: Int) throws -> [MusicOnlyAssessment.Window] {
+            var windows = try analyze(from: 0, frames: layout.frames, windowSeconds: windowSeconds)
+            // Complete the unfinished tail using only frames inside this passage.
+            if (windows.map(\.end).max() ?? 0) < duration - 0.000_001 {
+                let tailFrames = Int64(layout.rate) * Int64(windowSeconds)
+                windows += try analyze(from: layout.frames - tailFrames, frames: tailFrames, windowSeconds: windowSeconds)
+            }
+            return windows
+        }
+        let windows = try completePass(windowSeconds: 3)
+        let initial = MusicOnlyAssessment.evaluate(duration: duration, windows: windows, completed: true)
+        var context: [MusicOnlyAssessment.Window] = []
+        var attemptedContext = false
+        if initial.outcome == .inconclusive, duration >= 8, !windows.isEmpty,
+           windows.allSatisfy({ ($0.scores["music"] ?? 0) >= MusicOnlyAssessment.minimumShortWindowMusicScore }) {
+            attemptedContext = true
+            context = try completePass(windowSeconds: 8)
         }
         try checkpoint()
         guard try WAVAudio.hash(source, check: checkpoint) == digest else {
@@ -82,7 +96,11 @@ public enum LocalSoundClassifier {
         return Report(sourceSHA256: digest, classifier: "SoundAnalysis.version1", windowSeconds: 3,
                       overlap: 2.0 / 3.0, minimumMusicScore: MusicOnlyAssessment.minimumMusicScore,
                       maximumVoiceScore: MusicOnlyAssessment.maximumVoiceScore,
-                      assessment: .evaluate(duration: duration, windows: windows, completed: true))
+                      contextWindowSeconds: attemptedContext ? 8 : nil,
+                      minimumContextMusicScore: attemptedContext ? MusicOnlyAssessment.minimumContextMusicScore : nil,
+                      minimumShortWindowMusicScore: attemptedContext ? MusicOnlyAssessment.minimumShortWindowMusicScore : nil,
+                      assessment: .evaluate(duration: duration, windows: windows, completed: true,
+                                            contextWindows: context, contextCompleted: attemptedContext))
     }
 
     private final class Observer: NSObject, SNResultsObserving, Sendable {

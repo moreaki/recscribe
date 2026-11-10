@@ -35,6 +35,28 @@ one selected source/channel. It is not an automatic ASR suppression gate.
 - `automaticSuppressionAllowed` is always false, including for candidates. Raw
   transcripts and original audio must remain immutable in future integration.
 
+### Longer context and the violin fixture
+
+An inconclusive, voice-free passage of at least eight seconds can receive an
+additional eight-second analysis with one-second hops. This is attempted only
+when every short window has music score at least 0.65. Both passes retain all
+33 voice vetoes at 0.05, valid scores, full coverage and a shared 512-observation
+budget. The existing 30-second cooperative deadline covers both passes. A final
+eight-second window completes fractional tails using only passage frames.
+
+When every context window has music score at least 0.80, the result is
+`musicNeedsListeningReview`: possible music with quiet speech unresolved. It is
+never an instrumental music-only candidate. This distinction is necessary because
+the reviewed violin and quiet speech-over-violin mixtures have overlapping scores.
+The existing 0.85 short-window music-only candidate rule remains unchanged.
+
+Reports retain both sets of windows and the attempted context settings/thresholds.
+Old reports without optional context fields remain readable. Missing, malformed,
+unfinished or gapped context stays inconclusive; context voice evidence keeps words.
+Studio explains the uncertainty and keeps recognition. The existing manual Music
+only action remains available after listening; the uncertain hint cannot invoke
+Confirm music only or create a correction by itself. This is not an accuracy %.
+
 ## Studio confirmation and restoration
 
 Analyze sound locally prepares exactly the selected channel/time range with the

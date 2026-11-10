@@ -12,12 +12,12 @@ import Testing
         var audio: URL { root.appendingPathComponent("stereo.wav") }
         var reviews: URL { root.appendingPathComponent("Review") }
         var evidence: URL { root.appendingPathComponent("Acoustic") }
-        init() throws {
+        init(musicName: String = "piano") throws {
             try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
             let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent().appendingPathComponent("core/Tests/RecScribeCoreTests/Fixtures/Acoustic")
             // Locate PCM through the WAV layout; source files have extra header chunks.
-            let left = try Self.samples(fixtures.appendingPathComponent("piano.wav"))
+            let left = try Self.samples(fixtures.appendingPathComponent(musicName + ".wav"))
             let right = try Self.samples(fixtures.appendingPathComponent("speech-en.wav"))
             #expect(!left.isEmpty && left.count == right.count)
             #expect(left.count == 128_000)
@@ -128,5 +128,26 @@ import Testing
         let extreme = SegmentAcousticReference(id: UUID(), classifier: "SoundAnalysis.version1", startMs: .max,
             endMs: .min, channel: 0, audioSHA256: "", reportSHA256: "")
         #expect(!extreme.valid)
+    }
+
+    @Test func longerContextViolinResultKeepsWordsAndCannotApplyMusicOnly() async throws {
+        let f = try Fixture(musicName: "violin"); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job)
+        let original = try Data(contentsOf: f.job.appendingPathComponent("transcript.json"))
+        let worker = SegmentAcousticReview(root: f.evidence)
+        let state = SegmentAcousticState(analyze: { try await worker.run($0) })
+        let review = TranscriptReviewState(store: .init(root: f.reviews))
+        await review.load(job: f.job, document: document)
+        state.request(job: f.job, document: document, segmentID: "music")
+        await waitUntil("violin evidence arrived") { !state.busy }
+        #expect(state.error == nil)
+        let result = try #require(state.result)
+        #expect(result.report.assessment.outcome == .musicNeedsListeningReview)
+        #expect(result.report.contextWindowSeconds == 8 && result.report.assessment.contextWindows?.isEmpty == false)
+        #expect(result.correction == nil)
+        state.confirmMusicOnly(in: review)
+        #expect(!state.busy && !review.saving && review.corrections.isEmpty)
+        #expect(document.applying(review.corrections).text == document.text)
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.json")) == original)
     }
 }

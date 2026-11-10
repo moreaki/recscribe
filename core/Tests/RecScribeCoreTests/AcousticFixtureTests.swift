@@ -21,9 +21,9 @@ import Testing
             if fixture["id"].string == "piano" {
                 #expect(report.assessment.outcome == .instrumentalMusicCandidate, "\(name): \(report.assessment.reason)")
             } else if fixture["expected"].string == "instrumental" {
-                // The historical violin recording is a documented conservative miss.
-                // Do not lower the gate until this one recording happens to pass.
-                #expect(report.assessment.outcome == .instrumentalMusicCandidate || report.assessment.outcome == .inconclusive)
+                #expect(report.assessment.outcome == .musicNeedsListeningReview)
+                #expect(report.contextWindowSeconds == 8)
+                #expect(report.assessment.contextWindows?.isEmpty == false)
             } else {
                 #expect(report.assessment.outcome == .voiceOrMixed, "\(name): voice must be retained")
             }
@@ -42,6 +42,24 @@ import Testing
         let end = try #require(report.assessment.windows.map(\.end).max())
         #expect(abs(end - 79_683.0 / 16_000) < 0.000_001)
         #expect(report.assessment.outcome != .instrumentalMusicCandidate)
+    }
+
+    @Test func quietSpeechOverViolinNeverBecomesAMusicOnlyCandidate() throws {
+        let root = try #require(Bundle.module.resourceURL).appendingPathComponent("Fixtures/Acoustic/ViolinChallenges")
+        let manifest = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: root.appendingPathComponent("manifest.json")))
+        let cases = try #require(manifest["cases"].array)
+        #expect(cases.count == 9)
+        for fixture in cases {
+            let name = try #require(fixture["audio"].string)
+            let url = root.appendingPathComponent(name)
+            let hash = try WAVAudio.hash(url)
+            #expect(hash == fixture["sha256"].string)
+            let report = try LocalSoundClassifier.assess(url)
+            let outcome = report.assessment.outcome
+            #expect(outcome == .voiceOrMixed || outcome == .musicNeedsListeningReview, "\(name): keep known speech")
+            #expect(outcome != .instrumentalMusicCandidate && !report.assessment.automaticSuppressionAllowed)
+            #expect(try WAVAudio.hash(url) == hash)
+        }
     }
 
     @Test func inspectionCLIRejectsAnyUploadOrProcessingOptions() throws {

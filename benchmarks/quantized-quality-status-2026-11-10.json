@@ -1,0 +1,502 @@
+{
+  "schema_version": "quantized-quality-status-v1",
+  "created_utc": "2026-11-10T19:53:25.440713+00:00",
+  "status": "incomplete; Studio UI local work has priority",
+  "protected_campaign": "Benchmarks/Research/105/quantized-quality-20261110-v1",
+  "phase_source_revision": "c3cad7e3cafb63dc52ecd79a99880df9bd089152",
+  "retained_baseline_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4",
+  "native_product_source_revision": "517d3440975bd6837c409e6a70c3a23081f947c6",
+  "cli_sha256": "b082ca6dddb9fc1d315d95cb4a9bcc5c06f1b49f94dc9b06b5ec5c32d897eaec",
+  "whisper_binary_sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+  "host": {
+    "machine_name": "Mac Studio",
+    "machine_model": "Mac14,14",
+    "chip_type": "Apple M2 Ultra",
+    "physical_memory": "64 GB",
+    "number_processors": "proc 24:16:8:0",
+    "gpu_cores": "60",
+    "metal_family": "spdisplays_metal4",
+    "raw_hardware_sha256": "45d6472e16952046e9abea5293706d72bf97bc6255261505dcbeade98f465cd2",
+    "os": "Version 26.6.2 (Build 25G83)",
+    "cpu_count": 24,
+    "physical_memory_bytes": 68719476736,
+    "xcode": "Xcode 27.1\nBuild version 27A9275"
+  },
+  "settings": {
+    "profile": {
+      "schema_version": "1.0"
+    },
+    "language_modes": [
+      "known",
+      "auto"
+    ],
+    "threads": 2,
+    "paths": [
+      "final"
+    ],
+    "quality_repetitions": 1,
+    "additional_vad": false,
+    "search_fallback": "unchanged inherited"
+  },
+  "profile_sha256": "4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857",
+  "scoring_version": "swift-nfc-casefold-alphanumeric-v1",
+  "quality_policy": {
+    "schema_version": "1.0",
+    "languages": [
+      "de-CH",
+      "de",
+      "fr",
+      "it",
+      "en",
+      "ar",
+      "zh",
+      "es",
+      "pt"
+    ],
+    "primary_languages": [
+      "de",
+      "fr",
+      "it",
+      "en",
+      "ar",
+      "zh",
+      "es",
+      "pt"
+    ],
+    "word_metric_excluded_languages": [
+      "zh"
+    ],
+    "macro_cer_margin": 0.005,
+    "macro_wer_margin": 0.01,
+    "language_cer_margin": 0.01,
+    "language_wer_margin": 0.02,
+    "paired_sources_per_language": 16,
+    "bootstrap_draws": 2000,
+    "bootstrap_seed": 10410520261110,
+    "confidence": 0.95
+  },
+  "development": {
+    "planned_cells": 792,
+    "completed_cells": 598,
+    "missing_cells": 194,
+    "status_counts": {
+      "completed_with_review": 598,
+      "cancelled": 2,
+      "queued": 192
+    },
+    "original_planned_cells": 360,
+    "original_completed_cells": 359,
+    "original_missing_cells": 1,
+    "original_development_completeness": "NOT_MET",
+    "missing_measurements_retried": false,
+    "development_acceptance": "pending"
+  },
+  "held_reference_batch": {
+    "planned_calls": 576,
+    "status_counts": {
+      "completed_with_review": 204,
+      "failed": 1,
+      "cancelled": 1,
+      "queued": 370
+    },
+    "report_sha256": "7bf7a6cd10a3173583ee1fc7b4627f778b5090576d3fe7289dc0b958292bae47",
+    "quality_metrics": "partial reference observations; no quantized held-out observations"
+  },
+  "target_batches": [
+    {
+      "stage": "held-small",
+      "status": "unstarted",
+      "planned_calls": 864,
+      "experiment_sha256": "45e65c3d7f6bad8b6ff26ab5a3f924c6a42f43e8df96707c154c7501bace6c5d",
+      "freeze_sha256": "aa9befdfa5fe1a13ec3971581cd4d59ee09a0684ae8cc54696b00da3c57debad",
+      "language_modes": [
+        "known",
+        "auto"
+      ]
+    },
+    {
+      "stage": "held-turbo",
+      "status": "unstarted",
+      "planned_calls": 864,
+      "experiment_sha256": "6b9edd8e757f106369dbb9f5515066139e35a7f552af40648859bc36fb92f1c2",
+      "freeze_sha256": "5589833c9f39e2ef728ef3865ebe73042b9b55e1963708b2d4d4002a6dae190d",
+      "language_modes": [
+        "known",
+        "auto"
+      ]
+    },
+    {
+      "stage": "held-large-known",
+      "status": "unstarted",
+      "planned_calls": 432,
+      "experiment_sha256": "3e5f5d38ffb42ffc9a7bb63bdc9ec0b4b4eafa5403b07dbf89e78fccc8e04120",
+      "freeze_sha256": "3cb803f3610ab5464aadc67170acc740badf35d73d739a7a199fa6194efc1193",
+      "language_modes": [
+        "known"
+      ]
+    },
+    {
+      "stage": "held-large-auto",
+      "status": "unstarted",
+      "planned_calls": 432,
+      "experiment_sha256": "cdffc48fc0b3c1ed7ea680ef328071b6b0203b8e298738d6bf0c05c631a33b7b",
+      "freeze_sha256": "a89ddd6ff0b579f86a0c717a6c67b329e90565618639e6f6623a67a4d0912c0a",
+      "language_modes": [
+        "auto"
+      ]
+    }
+  ],
+  "target_calls_unstarted": 2592,
+  "original_deadline_utc": "2026-11-10T22:16:29.550378+00:00",
+  "original_deadline_not_reset": true,
+  "inference_retries": 0,
+  "models": [
+    {
+      "id": "tiny",
+      "checkpoint": "multilingual-tiny",
+      "kind": "pretrained",
+      "precision": "mixed-f16-f32",
+      "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+      "baseline_model_id": null,
+      "baseline_model_sha256": null,
+      "model_file_bytes": 77691713
+    },
+    {
+      "id": "base",
+      "checkpoint": "multilingual-base",
+      "kind": "pretrained",
+      "precision": "mixed-f16-f32",
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+      "baseline_model_id": null,
+      "baseline_model_sha256": null,
+      "model_file_bytes": 147951465
+    },
+    {
+      "id": "small",
+      "checkpoint": "multilingual-small",
+      "kind": "pretrained",
+      "precision": "mixed-f16-f32",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "baseline_model_id": null,
+      "baseline_model_sha256": null,
+      "model_file_bytes": 487601967
+    },
+    {
+      "id": "large-v3-turbo",
+      "checkpoint": "multilingual-large-v3-turbo",
+      "kind": "pretrained",
+      "precision": "mixed-f16-f32",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "baseline_model_id": null,
+      "baseline_model_sha256": null,
+      "model_file_bytes": 1624555275
+    },
+    {
+      "id": "large-v3",
+      "checkpoint": "multilingual-large-v3",
+      "kind": "pretrained",
+      "precision": "mixed-f16-f32",
+      "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "baseline_model_id": null,
+      "baseline_model_sha256": null,
+      "model_file_bytes": 3095033483
+    },
+    {
+      "id": "small-q4_0",
+      "checkpoint": "multilingual-small",
+      "kind": "compression",
+      "precision": "q4_0",
+      "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "baseline_model_id": "small",
+      "baseline_model_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "model_file_bytes": 145458015
+    },
+    {
+      "id": "small-q5_1",
+      "checkpoint": "multilingual-small",
+      "kind": "compression",
+      "precision": "q5_1",
+      "sha256": "52914f6730a59593fd6108d21dcac060a35ce569d9d70eec431e5623f387c82f",
+      "baseline_model_id": "small",
+      "baseline_model_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "model_file_bytes": 190085487
+    },
+    {
+      "id": "large-v3-turbo-q4_0",
+      "checkpoint": "multilingual-large-v3-turbo",
+      "kind": "compression",
+      "precision": "q4_0",
+      "sha256": "2ceb779ca61ce46ed6e9aa43c4a0f8a89a37f683df3c0ba3119238fcd5852155",
+      "baseline_model_id": "large-v3-turbo",
+      "baseline_model_sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "model_file_bytes": 473992235
+    },
+    {
+      "id": "large-v3-turbo-q5_1",
+      "checkpoint": "multilingual-large-v3-turbo",
+      "kind": "compression",
+      "precision": "q5_1",
+      "sha256": "05265418cae607e28c62db4095612e2c1967885d87cbda5a104834414b563ac8",
+      "baseline_model_id": "large-v3-turbo",
+      "baseline_model_sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "model_file_bytes": 624065675
+    },
+    {
+      "id": "large-v3-q5_1",
+      "checkpoint": "multilingual-large-v3",
+      "kind": "compression",
+      "precision": "q5_1",
+      "sha256": "fd2f2d00df064ba52640a97ac17433a8b17285a335ac45e3dba254f2bacf6720",
+      "baseline_model_id": "large-v3",
+      "baseline_model_sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "model_file_bytes": 1177039883
+    },
+    {
+      "id": "large-v3-q4_0",
+      "checkpoint": "multilingual-large-v3",
+      "kind": "compression",
+      "precision": "q4_0",
+      "sha256": "e002bafb9831c78dcee921e152611fb7e4d9c70d60f9eb46401783d3f861e7c3",
+      "baseline_model_id": "large-v3",
+      "baseline_model_sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "model_file_bytes": 889340843
+    }
+  ],
+  "coverage": [
+    {
+      "language": "de-CH",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 130.733875,
+      "task": "standard_rendering",
+      "declared_varieties": {
+        "Swiss German; published speaker dialect canton AG": 2,
+        "Swiss German; published speaker dialect canton SG": 3,
+        "Swiss German; published speaker dialect canton ZH": 3,
+        "Swiss German; published speaker dialect canton BE": 3,
+        "Swiss German; published speaker dialect canton TG": 1,
+        "Swiss German; published speaker dialect canton GR": 1,
+        "Swiss German; published speaker dialect canton GL": 1,
+        "Swiss German; published speaker dialect canton FR": 1,
+        "Swiss German; published speaker dialect canton BL": 1
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 16,
+      "unknown_speaker_cases": 0,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "de",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 264.54,
+      "task": "transcription",
+      "declared_varieties": {
+        "German; Germany locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "fr",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 161.28,
+      "task": "transcription",
+      "declared_varieties": {
+        "French; France locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "it",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 241.26,
+      "task": "transcription",
+      "declared_varieties": {
+        "Italian; Italy locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "en",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 150.72,
+      "task": "transcription",
+      "declared_varieties": {
+        "English; United States locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "ar",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 179.34,
+      "task": "transcription",
+      "declared_varieties": {
+        "Arabic; Egypt locale (audible dialect not independently adjudicated)": 16
+      },
+      "declared_scripts": [
+        "Arab"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "zh",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 203.2,
+      "task": "transcription",
+      "declared_varieties": {
+        "Mandarin; Simplified Chinese; China locale": 16
+      },
+      "declared_scripts": [
+        "Hans"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "es",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 193.56,
+      "task": "transcription",
+      "declared_varieties": {
+        "Spanish; Latin America locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    },
+    {
+      "language": "pt",
+      "development_sources": 4,
+      "heldout_sources": 16,
+      "heldout_seconds": 240.9,
+      "task": "transcription",
+      "declared_varieties": {
+        "Portuguese; Brazil locale": 16
+      },
+      "declared_scripts": [
+        "Latn"
+      ],
+      "project_reviewed_references": 0,
+      "published_speaker_ids": 0,
+      "unknown_speaker_cases": 16,
+      "unknown_session_cases": 16
+    }
+  ],
+  "acceptance": {
+    "same_parent_file_size": "All six previously measured Q5/Q4 artifacts pass the 30 percent gate; see quantization-readiness-2026-11-10.json",
+    "heldout_quantized_quality": "PENDING; zero target calls attempted",
+    "development_completeness": "NOT_MET",
+    "native_v2_reference_review": "PENDING",
+    "representative_real_world_coverage": "PENDING",
+    "controlled_latency_memory": "NOT_EVALUATED",
+    "model_default_promotion": "NOT_AUTHORIZED"
+  },
+  "validation": {
+    "offline_tests": {
+      "passed": 174,
+      "source_revision": "c3cad7e3cafb63dc52ecd79a99880df9bd089152"
+    },
+    "native_frozen": {
+      "passed": 92,
+      "scope": "Historical unchanged frozen native product before main integration; new PR head requires full CI"
+    },
+    "historical_pr_ci": {
+      "head": "0fb45153ca5530b9454efe6e5b717b5b9e0edbbe",
+      "run": 42869732554,
+      "functional_total": 465,
+      "functional_passed": 462,
+      "functional_skipped": 3,
+      "sanitizer_total": 465,
+      "sanitizer_passed": 462,
+      "sanitizer_skipped": 3,
+      "failures": 0,
+      "diagnostics": 0,
+      "unexpected_restarts": 0
+    },
+    "new_pr_head_full_ci": "REQUIRED; historical green does not pass a new head",
+    "preservation": {
+      "receipt_sha256": "606b5ade48b08c8b34735b24f09a730ed780f464db21eaddb415e9f5f53e9ee2",
+      "file_counts": {
+        "model": 11,
+        "cli": 1,
+        "resource_bundle": 3,
+        "native_dependency": 13,
+        "prepared_audio": 180,
+        "original_reference": 180,
+        "original_audio": 180
+      },
+      "all_hashes_match": true
+    },
+    "independent_count_audit": {
+      "cohorts": 234,
+      "count_rates": 1963,
+      "receipt_sha256": "6a9bf20a9ac363140bba15d7f47f3854f00693e08d03024c014add7da99e7da8"
+    }
+  },
+  "youtube": {
+    "originals": 17,
+    "planned_languages": 9,
+    "heldout_originals": 8,
+    "missing_heldout_language": "de-CH",
+    "uploaded_manual_tracks_recovered": 1,
+    "manual_track_language": "en-US",
+    "project_approved_references": 0
+  },
+  "provenance": {
+    "prospective_plan_sha256": "4fe5e00337e3504df3c6a8e3a6ddff0a866ff9975a1d960acf1f5c274f317024",
+    "phase_plan_sha256": "38ebb45f4d0c0d46b1618482c22a92959a0f71177bb2ad581140e4944224966d",
+    "joint_heldout_freeze_sha256": "f84b41cb347c5e63edd8f7cd8c3935fcf03085f3f6f1a3ad7b7eed5d185a9289",
+    "interruption_receipt_sha256": "02852c511f46fc820172df4c64fedfd3df9144d1592ba2825fe7b997c4b48664"
+  },
+  "limits": [
+    "Exploratory published read speech, not reviewed-v2 or representative product acceptance",
+    "FLEURS speaker/session independence and pretraining overlap unknown",
+    "Swiss written Standard German rendering; published canton labels unreviewed",
+    "Mandarin/Simplified only; Arabic and other regional audibility unreviewed",
+    "Missing original measurements remain pending; no references or fixtures rebaselined",
+    "All measured quality-run timing/RSS uncontrolled; total initialization, first-result, unified GPU memory, energy and bundle increment unmeasured"
+  ]
+}

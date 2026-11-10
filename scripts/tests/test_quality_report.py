@@ -41,6 +41,32 @@ def native_language_pass(recognized="de", effective="auto", asr="auto"):
 
 
 class QualityReportTests(unittest.TestCase):
+    def test_unscored_pairs_report_signed_resource_deltas_without_quality_gains(self):
+        pair = {"id": "source", "repeat": 1, "status": "paired_exploratory", "source_channel": 0,
+                "task": "transcription", "language_mode": "auto", "path": "final",
+                "comparison_id": "compression", "baseline_model": "small", "candidate_model": "small-q4",
+                "measurement_scope": "resources_only", "hypothesis_exact_match": True,
+                "wall_seconds_delta": -2, "peak_rss_bytes_delta": -100, "wer_delta": -.9, "cer_delta": -.9}
+        result = report.summarize_comparisons([pair])[0]
+        self.assertEqual(result["paired_first_repeat_utterances"], 0)
+        self.assertEqual(result["paired_unscored_first_repeat_utterances"], 1)
+        self.assertIsNone(result["macro_utterance_wer_delta"])
+        self.assertIsNone(result["macro_utterance_cer_delta"])
+        self.assertEqual(result["resource_observations"]["wall_seconds_delta"]["median"], -2)
+        self.assertEqual(result["unscored_output_consistency"]["exact_matches"], 1)
+
+    def test_resource_only_probe_retains_timing_and_never_scores_or_counts_language_accuracy(self):
+        row = cell()
+        row["measurement"]["measurement_scope"] = "resources_only"
+        row["measurement"]["engine_passes"] = [native_language_pass("de")]
+        cohort = report.summarize(matrix([row]))["cohorts"][0]
+        self.assertEqual(cohort["quality"]["completed_unique_utterances"], 0)
+        self.assertIsNone(cohort["quality"]["cer"]["corpus_weighted_rate"])
+        self.assertIsNone(cohort["quality"]["wer"]["corpus_weighted_rate"])
+        self.assertEqual(cohort["quality"]["automatic_language_labels"]["ineligibility_counts"], {"resource_only_probe": 1})
+        self.assertEqual(cohort["timing"]["completed_cells"], 1)
+        self.assertEqual(cohort["timing"]["complete_workload_repeats"], 1)
+
     def test_quality_uses_repeat_one_without_pseudoreplication(self):
         rows = [cell(identifier, repeat) for identifier in ["a", "b", "c"] for repeat in [1, 2, 3]]
         for row in rows:

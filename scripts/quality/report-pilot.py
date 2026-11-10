@@ -10,18 +10,22 @@ import argparse
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
 import re
 import statistics
 
-VERSION = "quality-pilot-report-1.1"
+VERSION = "quality-pilot-report-1.2"
+_EVIDENCE_SPEC = importlib.util.spec_from_file_location("evaluation_evidence", Path(__file__).with_name("evaluation-evidence.py"))
+evidence = importlib.util.module_from_spec(_EVIDENCE_SPEC)
+_EVIDENCE_SPEC.loader.exec_module(evidence)
 MAXIMUM_JSON_BYTES = 64 * 1024 * 1024
 COMPLETED = {"completed", "completed_with_review"}
 GROUP_FIELDS = ("language", "task", "model", "model_sha256", "profile", "language_mode", "path", "scoring_policy", "runtime_settings_sha256")
 ARTIFACT_FIELDS = ("model_file_bytes", "filesystem_allocated_bytes", "download_artifact_bytes", "download_artifact_sha256", "incremental_bundle_bytes", "bundle_size_status", "parameter_count", "parameter_count_status")
-PROVENANCE_FIELDS = ("baseline_revision", "configuration_sha256", "corpus_sha256", "corpus_version", "runner_sha256", "whisper_binary_sha256", "freeze_sha256", "source_revision_verification", "split", "threads", "serial_jobs", "dry_run", "capture_inactive_attestation", "workload_attestation")
+PROVENANCE_FIELDS = ("baseline_revision", "configuration_sha256", "corpus_sha256", "corpus_version", "runner_sha256", "whisper_binary_sha256", "freeze_sha256", "source_revision_verification", "split", "threads", "serial_jobs", "dry_run", "measurement_scope", "capture_inactive_attestation", "workload_attestation")
 LANGUAGE_ORDER = {name: index for index, name in enumerate(["de-CH", "de", "fr", "it", "en", "ar", "zh", "es", "pt"])}
 
 
@@ -167,6 +171,9 @@ def automatic_language_labels(rows, corpus_by_id):
     ineligible, unobserved = Counter(), Counter()
     for case_rows in cases.values():
         row = case_rows[0]
+        if (row.get("measurement") or {}).get("measurement_scope") == "resources_only" or row.get("measurement_scope") == "resources_only":
+            ineligible["resource_only_probe"] += 1
+            continue
         if row.get("language_mode") != "auto":
             ineligible["explicit_language_control" if row.get("language_mode") == "known" else "unsupported_language_mode"] += 1
             continue
@@ -208,7 +215,8 @@ def summarize_group(rows, corpus_by_id):
     cells = [(case_identity(row), row.get("repeat")) for row in rows]
     if len(cells) != len(set(cells)):
         raise ValueError("Duplicate benchmark cell would double-count a sample/repeat")
-    first = [row for row in rows if row.get("repeat") == 1 and completed(row)]
+    first = [row for row in rows if row.get("repeat") == 1 and completed(row)
+             and row["measurement"].get("measurement_scope") != "resources_only"]
     measured = [row for row in rows if completed(row)]
     for row in measured:
         observed = row["measurement"].get("scoring_version")
@@ -312,7 +320,22 @@ def summarize_comparisons(comparisons):
         for row in rows:
             if row["repeat"] == 1 and row.get("status") == "paired_exploratory":
                 first.append(row)
-        value.update(aggregation_status="observed direct comparison identities", paired_first_repeat_utterances=len(first))
+        resource_first = [r for r in first if r.get("measurement_scope") == "resources_only"]
+        first = [r for r in first if r.get("measurement_scope") != "resources_only"]
+        value.update(aggregation_status="observed direct comparison identities", paired_first_repeat_utterances=len(first),
+                     paired_unscored_first_repeat_utterances=len(resource_first))
+        resource_rows = [r for r in rows if r.get("measurement_scope") == "resources_only" and r.get("status") == "paired_exploratory"]
+        value["resource_observations"] = {"paired_invocations": len(resource_rows),
+            "scope": "Paired per-invocation deltas across requested repeats; not independent quality samples or unified GPU memory"}
+        # Signed deltas can be negative; unlike absolute timings they must not be discarded.
+        for name in ("wall_seconds_delta", "real_time_factor_delta", "peak_rss_bytes_delta"):
+            values = [r[name] for r in resource_rows if finite_number(r.get(name))]
+            value["resource_observations"][name] = {"measured_count": len(values), "median": statistics.median(values) if values else None,
+                "minimum": min(values) if values else None, "maximum": max(values) if values else None}
+        observed_matches = [r["hypothesis_exact_match"] for r in resource_first if type(r.get("hypothesis_exact_match")) is bool]
+        value["unscored_output_consistency"] = {"observed_first_repeat_pairs": len(observed_matches),
+            "exact_matches": sum(observed_matches), "different_outputs": len(observed_matches) - sum(observed_matches),
+            "scope": "Exact output-hash agreement only; does not establish recognition accuracy or semantic equivalence"}
         for field in ["baseline_model_sha256", "candidate_model_sha256"]:
             hashes = {row[field] for row in rows if row.get(field) is not None}
             if len(hashes) > 1:
@@ -352,6 +375,8 @@ def summarize(matrix, corpus=None, experiment=None, allow_held_out=False, freeze
         "cell_status_counts": dict(sorted(Counter(row.get("status", "unknown") for row in rows).items())),
         "corpus_evaluation_tier": corpus.get("evaluation_tier"), "source_credits": [{"license": license, "source_url": url} for license, url in sorted(credits, key=str)],
         "cohorts": cohorts, "comparisons": summarize_comparisons(matrix.get("paired_comparisons", [])),
+        "corpus_preparation": evidence.corpus_preparation(corpus),
+        "model_size_policy": evidence.model_size_decisions(experiment.get("model_size_policy"), experiment.get("models", []), cohorts),
         "limitations": ["Exploratory published-reference pilot; review the per-language utterance counts before drawing representative multilingual accuracy conclusions",
             "Repeated inference is latency/variation evidence, not independent corpus samples; quality uses successful repeat 1 only",
             "Individual FLEURS speaker/session grouping, natural long-form/adverse conditions and independent native reference adjudication remain incomplete",
@@ -418,6 +443,15 @@ def markdown(report):
         artifacts[(cohort.get("model"), cohort.get("model_sha256"))] = cohort["artifact_metrics"]
     for (model, sha), metrics in sorted(artifacts.items(), key=str):
         lines.append("| " + " | ".join(text(value) for value in [model, sha, metrics.get("model_file_bytes"), metrics.get("download_artifact_bytes"), metrics.get("filesystem_allocated_bytes"), metrics.get("incremental_bundle_bytes")]) + " |")
+    lines += ["", "## Model-file size gates", "", "Each gate names its own baseline. A size pass establishes no accuracy, latency, memory or default-promotion result.", "",
+        "| Comparison / purpose | Baseline → candidate | Reduction % | Required % | File-size gate |", "| --- | --- | --- | --- | --- |"]
+    for item in report["model_size_policy"]["comparisons"]:
+        lines.append("| " + " | ".join(text(v) for v in [item["id"] + " / " + item["purpose"], item["baseline_model_id"] + " → " + item["candidate_model_id"], item["reduction_percent"], item["minimum_reduction_percent"], item["size_gate"]]) + " |")
+    lines += ["", "## Corpus preparation gaps", "", report["corpus_preparation"]["approval"], "",
+        "| Language | Split / task | Declared cases / reviewed | Missing evidence (case counts) |", "| --- | --- | --- | --- |"]
+    for item in report["corpus_preparation"]["cohorts"]:
+        gaps = ", ".join(f"{key}: {value}" for key, value in item["missing_evidence_counts"].items()) or "No declaration gaps; native eligibility and review still required"
+        lines.append("| " + " | ".join(text(v) for v in [item["language"], str(item["split"]) + " / " + str(item["task"]), str(item["declared_cases"]) + " / " + str(item["declared_reviewed_cases"]), gaps]) + " |")
     if report["comparisons"]:
         lines += ["", "## Paired comparisons", "", "Quality changes below are per-utterance macro deltas from paired repeat 1; they are not corpus-weighted deltas. Values are percentage-point changes. Negative error-rate changes indicate fewer lexical errors. Older rows without direct comparison identity fields remain unavailable for aggregation.", "",
             "| Comparison | Intervention | Language | Baseline → candidate | Paired first-repeat utterances | WER change (pp) | CER change (pp) |", "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -425,6 +459,17 @@ def markdown(report):
             lines.append("| " + " | ".join([text(comparison.get("comparison_id")), text(comparison.get("intervention")), text(comparison.get("language")),
                 text(str(comparison.get("baseline_model")) + " → " + str(comparison.get("candidate_model"))), text(comparison["paired_first_repeat_utterances"]),
                 rate(comparison.get("macro_utterance_wer_delta")), rate(comparison.get("macro_utterance_cer_delta"))]) + " |")
+    if any(item.get("paired_unscored_first_repeat_utterances") for item in report["comparisons"]):
+        lines += ["", "## Unscored resource comparisons", "", "Quality remains unmeasured. Signed deltas are candidate minus parent; repeated invocations are performance observations, not independent quality samples. Output-hash equality does not establish accuracy.", "",
+            "| Comparison | Language / mode | Paired invocations | Wall delta seconds median [range] | Process RSS delta MiB median [range] | Repeat-1 exact outputs / observed |", "| --- | --- | --- | --- | --- | --- |"]
+        for item in report["comparisons"]:
+            if "resource_observations" not in item:
+                continue
+            resource, consistency = item["resource_observations"], item["unscored_output_consistency"]
+            if resource["paired_invocations"]:
+                lines.append("| " + " | ".join(text(v) for v in [item.get("comparison_id"), str(item.get("language")) + " / " + str(item.get("language_mode")),
+                    resource["paired_invocations"], span(resource["wall_seconds_delta"]), span(resource["peak_rss_bytes_delta"], divisor=1024 * 1024, places=1),
+                    str(consistency["exact_matches"]) + " / " + str(consistency["observed_first_repeat_pairs"])]) + " |")
     lines += ["", "## Provenance and limits", "", "Machine/software, model/checkpoint/precision identities, artifact hashes, experiment/corpus/scoring identities and raw-evidence pointers are retained in the JSON report and original matrix snapshots.", ""]
     for limitation in report["limitations"]:
         lines.append("- " + text(limitation))

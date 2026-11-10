@@ -15,6 +15,7 @@ import math
 import os
 from pathlib import Path
 import re
+import random
 import signal
 import stat
 import sys
@@ -235,6 +236,60 @@ def transform(source, destination, condition, frames, budget):
             "integer_rounding": "unchanged samples" if prefix else "truncate signed division toward zero",
             "source_to_derived_offset_seconds": prefix / RATE,
             "source_time_preserved": True, "word_alignment": "unavailable; no word/onset times inferred"}
+
+
+def add_white_noise(source, destination, *, snr_db, seed, budget):
+    """Supplemental PCM diagnostic, never natural-noise or independent speech.
+
+    Uniform MT19937 noise, scaled by full-source RMS; round-to-even PCM16 with
+    explicit clipping counts. Record achieved post-clipping SNR, not a guarantee
+    of audibility/word preservation. Existing two-condition recipes are unchanged.
+    """
+    if type(snr_db) not in (int, float) or not math.isfinite(snr_db) or not 0 <= snr_db <= 40:
+        raise ValueError("Synthetic SNR must be finite and between 0 and 40 dB")
+    if type(seed) is not int or not 0 <= seed < 2 ** 64:
+        raise ValueError("Use an explicit unsigned 64-bit seed")
+    source, destination = safe_path(source), safe_path(destination)
+    frames = wav_info(source, 600, budget)
+    original = inspect_file(source, 32 * 1024 * 1024, budget)
+    energy = 0
+    with open_regular(source) as raw, wave.open(raw, "rb") as incoming:
+        while block := incoming.readframes(CHUNK_BYTES // 2):
+            budget.check()
+            values = array("h"); values.frombytes(block)
+            if sys.byteorder != "little": values.byteswap()
+            energy += sum(v * v for v in values)
+    if energy == 0:
+        raise ValueError("Silent input has no defined signal-relative SNR")
+    amplitude = math.sqrt(energy / frames) * 10 ** (-snr_db / 20) * math.sqrt(3)
+    rng, noise_energy, clipped = random.Random(seed), 0, 0
+    budget.reserve(44 + frames * 2)
+    with open_regular(source) as raw, wave.open(raw, "rb") as incoming, destination.open("xb") as target:
+        with wave.open(target, "wb") as outgoing:
+            outgoing.setnchannels(1); outgoing.setsampwidth(2); outgoing.setframerate(RATE)
+            while block := incoming.readframes(CHUNK_BYTES // 2):
+                budget.check()
+                values = array("h"); values.frombytes(block)
+                if sys.byteorder != "little": values.byteswap()
+                result = array("h")
+                for value in values:
+                    noisy = round(value + rng.uniform(-amplitude, amplitude))
+                    bounded = min(32767, max(-32768, noisy))
+                    clipped += noisy != bounded
+                    noise_energy += (bounded - value) ** 2
+                    result.append(bounded)
+                if sys.byteorder != "little": result.byteswap()
+                outgoing.writeframesraw(result.tobytes())
+    unchanged(original, 32 * 1024 * 1024, budget)
+    result = inspect_file(destination, 44 + frames * 2, budget)
+    if result["bytes"] != 44 + frames * 2:
+        raise ValueError("Noisy derivative changed the declared frame count")
+    return {"condition": "synthetic-additive-uniform-white-noise", "source_sha256": original["sha256"],
+        "audio_sha256": result["sha256"], "audio_bytes": result["bytes"], "source_frames": frames, "derived_frames": frames,
+        "sample_rate": RATE, "requested_snr_db": snr_db, "achieved_post_clipping_snr_db": 10 * math.log10(energy / noise_energy) if noise_energy else None,
+        "seed": seed, "random_algorithm": "Python random.Random MT19937 uniform", "integer_rounding": "round to nearest, ties to even; clamp PCM16",
+        "clipped_samples": clipped, "source_to_derived_offset_seconds": 0, "source_time_preserved": True,
+        "word_alignment": "unreviewed; no word/onset times or reference approval inferred"}
 
 
 def prepare(manifest, output, *, maximum_cases=9, maximum_seconds=60,

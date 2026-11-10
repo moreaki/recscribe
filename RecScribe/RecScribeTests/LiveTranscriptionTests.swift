@@ -197,6 +197,11 @@ struct LiveTranscriptionTests {
         #expect(try String(contentsOf: root.appendingPathComponent("calls.txt"), encoding: .utf8) == "run\n")
         let raw = chunk.directory.appendingPathComponent("channel-0.raw.json")
         #expect(FileManager.default.fileExists(atPath: raw.path))
+        #expect(FileManager.default.fileExists(atPath: chunk.directory.appendingPathComponent("channel-0.raw.profile.json").path))
+        let evidenceDecoder = JSONDecoder(); evidenceDecoder.dateDecodingStrategy = .iso8601
+        let process = try evidenceDecoder.decode(LocalProcessRunner.Result.self,
+            from: Data(contentsOf: chunk.directory.appendingPathComponent("channel-0.raw.process.json")))
+        #expect(process.outcome == .exited && process.exitCode == 0)
         #expect(!FileManager.default.fileExists(atPath: chunk.directory.appendingPathComponent("working.wav").path))
         #expect(!FileManager.default.fileExists(atPath: chunk.directory.appendingPathComponent("channel-0.wav").path))
         let saved = try JSONDecoder().decode(LiveChunkResult.self, from: Data(contentsOf: chunk.directory.appendingPathComponent("chunk.json")))
@@ -209,6 +214,11 @@ struct LiveTranscriptionTests {
                     cursor: 0, finished: true, settings: failing, cancel: WorkCancellation())
             }.value
         }
+        let failedAttempt = try #require(FileManager.default.contentsOfDirectory(at: root.appendingPathComponent("failed"),
+            includingPropertiesForKeys: nil).first)
+        let failedProcess = try evidenceDecoder.decode(LocalProcessRunner.Result.self,
+            from: Data(contentsOf: failedAttempt.appendingPathComponent("channel-0.raw.process.json")))
+        #expect(failedProcess.outcome == .exited && failedProcess.exitCode == 1)
         #expect(try protected.map { try RecordingSession.hash($0) } == hashes)
     }
 

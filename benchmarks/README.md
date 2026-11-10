@@ -1,9 +1,12 @@
 # Local engine benchmarks
 
 The checked-in corpus manifest is a preparation template, not measured accuracy.
-It covers Swiss German, Standard German, English, noise-only audio and multiple
-speakers. Fill a private copy with local WAV paths, reference TXT paths, audio
-SHA-256, license/consent evidence and speaker count. Paths resolve relative to the
+It covers Swiss German, German, French, Italian, English, Arabic, Chinese, Spanish
+and Portuguese, plus pending adverse-condition/non-speech cases. Swiss German
+speech targets faithful written Standard German; optional dialect spelling is a
+separate task. Fill a private
+copy with local WAV/reference paths, both SHA-256s, reviewed license/consent and
+coverage/grouping metadata. Paths resolve relative to the
 manifest. Nothing is downloaded. Keep actual recordings, references and results
 outside the checkout, for example under `~/Library/Application Support/RecScribe/Benchmarks/`.
 These are preserved evaluation evidence, not disposable developer output.
@@ -15,7 +18,8 @@ exclusions and original-byte preservation. Acquired public references still need
 the corpus contract's human/native review before reviewed-v2 comparisons.
 
 ```sh
-swift build --package-path core -c release
+python3 scripts/work-artifacts.py run --label corpus-build test -- \
+  swift build --package-path core -c release
 core/.build/release/recscribe-text benchmark \
   benchmarks/manifests/corpus.template.json --dry-run \
   --output "$HOME/Library/Application Support/RecScribe/Benchmarks/readiness"
@@ -29,11 +33,12 @@ Missing corpus entries are `pending_corpus`, never zero error. The runner produc
 canonical jobs and records WER, CER, wall time, real-time factor and peak RSS bytes
 using macOS `/usr/bin/time -l`. RSS is a maximum process high-water mark including
 child accounting, not the sum of simultaneous Swift/whisper.cpp/Metal allocations.
-Unified GPU memory and model-load phase require separate instrumentation later.
+Unified GPU memory and first-result latency remain unmeasured. Supported upstream
+model-load timers are reported separately with their scope and retained logs.
 Wall time includes inspection, model load, inference, validation and rendering.
 Engine-pass duration is also recorded. Run each case in a fresh subprocess.
 
-WER/CER normalization is explicitly versioned in results as
+Legacy WER/CER normalization remains versioned in results as
 `swift-nfc-casefold-alphanumeric-v1`: Unicode NFC, Foundation case folding with
 POSIX locale, non-alphanumeric characters (except underscore) converted to spaces,
 repeated whitespace collapsed. CER counts Unicode scalars and omits spaces.
@@ -83,3 +88,50 @@ recorder baselines remain useful and unchanged. The separate optional
 `scripts/verify-mic-rate.sh` uses FFmpeg/ffprobe and standard-library Python for
 reference-tone diagnostics; it does not depend on the retired pipeline and is
 not part of app runtime, core tests or corpus benchmarks.
+
+## Nine-language quality work
+
+The v2 preparation manifest extends coverage to nine priority languages with
+explicit varieties, output tasks, development/held-out grouping and reference
+hashes. All checked-in recordings remain pending. See the versioned
+[corpus/scoring contract](corpus-contract.md) and the
+[serial matrix, immutable control and freeze contract](experiment-contract.md).
+Legacy corpus schema/scoring v1 remains readable for compatibility. Use v2 for
+new quality comparisons; do not pool it with historical normalization scores.
+
+The [2026-11-05 measured pilot baseline](pilot-baseline-2026-11-05.md) records
+810 completed inference cells on 27 published-reference development utterances,
+including all five untouched models and all nine languages. It is exploratory
+legacy coverage, with reviewed v2 grouping/native/condition acceptance still
+pending. Accuracy uses repeat 1 only; inference repeats measure variability and
+do not multiply the number of independent speech samples. Chinese whitespace WER
+is not reported. No default model is selected by this pilot.
+
+Use the [recording-priority worker guard](recording-priority-guard.md) for bounded
+offline jobs after a native idle/live-off check. It cancels only its verified
+owned work and retains incomplete evidence. The [research archive
+index](research-archive.md) points to the frozen weight-space experiments and
+reports; rejected recipes are not part of these reusable infrastructure changes.
+
+Generate a text-free summary from a retained matrix into a new protected external
+directory:
+
+```sh
+python3 scripts/work-artifacts.py run --label quality-report logs -- \
+  python3 scripts/quality/report-pilot.py /path/to/retained/matrix \
+  --output "$HOME/Library/Application Support/RecScribe/Benchmarks/NEW-REPORT"
+```
+
+The reporter verifies retained corpus/configuration snapshot hashes and reads
+structured metrics only, without raw reference/hypothesis text, audio or model
+loading. It preserves incomplete/failed denominators and refuses held-out
+reporting by default. `--allow-held-out` requires a matching retained freeze,
+bound snapshots and the predeclared review/budget evidence after candidate
+selection is frozen. See the experiment contract before using that path.
+
+For the protected synthetic Q30/attenuation preparation, `derive-sensitivity.py`
+usage and the staged VAD/language/padding design, see
+[speech and language experiments](speech-language-experiments.md#prepared-synthetic-development-inputs).
+The [2026-11-05 runtime sensitivity pilot](runtime-sensitivity-pilot-2026-11-05.md)
+records the completed Tiny diagnostic; defaults remain unchanged and resource
+comparisons remain uncontrolled/not evaluated.

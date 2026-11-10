@@ -124,7 +124,13 @@ public enum BenchmarkExperiment {
 
     /// Dry runs perform no engine calls. Unavailable cells stay explicit, without scores.
     public static func run(manifest: URL, configuration: URL, output: URL, cli: URL,
-                           dryRun: Bool, check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
+                           dryRun: Bool, resumeFrom: URL? = nil, resumeSHA256: String? = nil, coordinator: URL? = nil,
+                           check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
+        guard (resumeFrom == nil) == (resumeSHA256 == nil),
+              resumeSHA256.map({ $0.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil }) ?? true,
+              resumeFrom == nil || !dryRun else {
+            throw CoreFailure("Resume requires a measured checkpoint directory and its explicit SHA-256")
+        }
         let (configData, config) = try read(configuration)
         let (manifestData, corpus) = try read(manifest)
         let allCases = try CorpusManifest.validate(corpus)
@@ -260,6 +266,10 @@ public enum BenchmarkExperiment {
             "freeze_sha256": freezeSnapshot.map { .string(TextJob.hash($0)) } ?? .null,
             "comparisons": .array(plan.comparisons)]
         metadata["whisper_binary_sha256"] = whisperHash.map(JSONValue.string) ?? .null
+        if let coordinator {
+            metadata["coordinator_sha256"] = .string(try WAVAudio.hash(coordinator, check: check))
+            metadata["coordinator_scope"] = "Matrix orchestration/scoring; runner_sha256 identifies the retained transcription executable"
+        }
         var readiness: [String: CorpusManifest.Eligibility] = [:]
         var corpusFailures: [String: String] = [:]
         for item in cases {
@@ -344,6 +354,17 @@ public enum BenchmarkExperiment {
                     "status": !failures.isEmpty ? "failed" : (gaps.isEmpty ? (dryRun ? "ready" : "queued") : "pending")])
             } } } } }
         }
+        if let resumeFrom, let resumeSHA256 {
+            let checkpoint = try BenchmarkCheckpoint.load(directory: resumeFrom, expectedSHA256: resumeSHA256,
+                metadata: metadata, planned: rows, check: check)
+            try checkpoint.snapshot.write(to: output.appendingPathComponent("checkpoint.original.json"), options: .withoutOverwriting)
+            rows = checkpoint.rows
+            metadata["resume_provenance"] = checkpoint.provenance
+            metadata["resource_comparison_status"] = "UNCONTROLLED; continued calls span separate execution windows"
+            if let values = metadata["limitations"].array {
+                metadata["limitations"] = .array(values + ["Resumed invocations span separate execution windows; timing/RSS are uncontrolled"])
+            }
+        }
         func persist() throws -> JSONValue {
             var report = metadata
             report["rows"] = .array(rows)
@@ -366,6 +387,10 @@ public enum BenchmarkExperiment {
                 }
                 do {
                     try cancellation()
+                    // Persist before launching so a crash can never turn an
+                    // uncertain first attempt back into a schedulable queued cell.
+                    rows[index]["status"] = "running"
+                    _ = try persist()
                     let model = models.first { $0["id"] == row["model"] }!
                     let profile = profiles.first { $0["id"] == row["profile"] }!
                     let binary = profile["kind"] == "baseline" ? baselineCLI! : cli

@@ -109,7 +109,7 @@ class BoundedStream:
         result = self.acquisition.read(self.response, size)
         self.count += len(result)
         if self.count > self.maximum:
-            raise ValueError("Source stream exceeded 32 MiB selection budget")
+            raise ValueError(f"Source stream exceeded {self.maximum // (1024 * 1024)} MiB selection budget")
         return result
 
 

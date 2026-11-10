@@ -88,11 +88,14 @@ class Exclusions:
 
 class Acquisition(base.Acquisition):
     def __init__(self, root, exclusions, seconds=1200, maximum_network_bytes=256 * 1024 * 1024,
-                 maximum_output_bytes=256 * 1024 * 1024):
-        if maximum_network_bytes not in (256 * 1024 * 1024, 512 * 1024 * 1024) or maximum_output_bytes not in (256 * 1024 * 1024, 512 * 1024 * 1024):
-            raise ValueError("Choose an initial 256 or 512 MiB network/output budget")
+                 maximum_output_bytes=256 * 1024 * 1024, archive_prefix_mib=32):
+        if maximum_network_bytes not in tuple(n * 1024 * 1024 for n in (256, 512, 1024, 2048)) or maximum_output_bytes not in (256 * 1024 * 1024, 512 * 1024 * 1024):
+            raise ValueError("Choose an initial 256 or 512 MiB output budget and a 256/512/1024/2048 MiB network budget")
+        if type(archive_prefix_mib) is not int or archive_prefix_mib not in (32, 64, 128):
+            raise ValueError("Choose an initial 32, 64 or 128 MiB archive prefix")
         super().__init__(root)
         self.maximum_network_bytes, self.maximum_output_bytes = maximum_network_bytes, maximum_output_bytes
+        self.maximum_archive_bytes = archive_prefix_mib * 1024 * 1024
         self.exclusions, self.deadline = exclusions, time.monotonic() + seconds
         self.output_bytes, self.cases, self.skipped = 0, [], {}
         self.converter_version = None
@@ -261,7 +264,7 @@ def fleurs(acquisition, language, count, heldout):
         rows[values[1]] = values
     archive_url = base.FLEURS_BASE + f"data/{locale}/audio/{split}.tar.gz"
     selected = 0
-    with acquisition.open(archive_url) as response, tarfile.open(fileobj=base.BoundedStream(acquisition, response), mode="r|gz") as archive:
+    with acquisition.open(archive_url) as response, tarfile.open(fileobj=base.BoundedStream(acquisition, response, maximum=acquisition.maximum_archive_bytes), mode="r|gz") as archive:
         for member in archive:
             acquisition.check()
             if PurePosixPath(member.name).is_absolute() or ".." in PurePosixPath(member.name).parts: raise ValueError("Unsafe tar member path")
@@ -305,7 +308,7 @@ def swiss(acquisition, count, heldout_count=None):
         if header[:4] != b"PK\x03\x04": raise ValueError("Invalid Swiss ZIP local header")
         name_size, extra_size = struct.unpack_from("<HH", header, 26)
         offset = entry.header_offset + 30 + name_size + extra_size
-        length = min(32 * 1024 * 1024, entry.file_size)
+        length = min(acquisition.maximum_archive_bytes, entry.file_size)
         chunks = []
         for position in range(0, length, 8 * 1024 * 1024):
             source.seek(offset + position)
@@ -343,7 +346,7 @@ def swiss(acquisition, count, heldout_count=None):
                         "reference_conventions": "Exact published " + split + ".tsv sentence: written Standard German for Swiss German speech; unadjudicated"}, "flac")
                     selected += case is not None
                     if selected == target: break
-            if selected < target: raise ValueError("32 MiB Swiss prefix did not fill fresh distinct-speaker count")
+            if selected < target: raise ValueError(f"{acquisition.maximum_archive_bytes // (1024 * 1024)} MiB Swiss prefix did not fill fresh distinct-speaker count")
 
 
 def corpus_version(value):
@@ -360,8 +363,10 @@ def arguments(argv=None):
     parser.add_argument("--heldout-count", type=int, choices=range(4, 17),
                         help="Held-out cases per language; defaults to --count, at most 16")
     parser.add_argument("--corpus-version", type=corpus_version, default=DEFAULT_CORPUS_VERSION)
-    parser.add_argument("--max-network-mib", type=int, choices=(256, 512), default=256)
+    parser.add_argument("--max-network-mib", type=int, choices=(256, 512, 1024, 2048), default=256)
     parser.add_argument("--max-output-mib", type=int, choices=(256, 512), default=256)
+    parser.add_argument("--archive-prefix-mib", type=int, choices=(32, 64, 128), default=32,
+                        help="Prospective per-archive cap; freeze before acquisition, never grow a failed run")
     parser.add_argument("--timeout-seconds", type=int, default=1200, choices=range(1, 1801))
     args = parser.parse_args(argv)
     if args.heldout_count is None: args.heldout_count = args.count
@@ -381,7 +386,7 @@ def selection_plan(args, exclusions):
         "exclusion_manifests": exclusions.manifests,
         "prior_exclusions": {key: sorted(value) for key, value in exclusions.values.items()},
         "network_cap_bytes": args.max_network_mib * 1024 * 1024, "protected_output_cap_bytes": args.max_output_mib * 1024 * 1024,
-        "archive_stream_cap_bytes": 32 * 1024 * 1024, "swiss_prefix_cap_bytes": 32 * 1024 * 1024,
+        "archive_stream_cap_bytes": args.archive_prefix_mib * 1024 * 1024, "swiss_prefix_cap_bytes": args.archive_prefix_mib * 1024 * 1024,
         "timeout_seconds": args.timeout_seconds, "heldout_reference_display": False, "human_review": "not_performed",
         "failure_policy": "Retain partial sources/manifests and exit nonzero; no count reduction, prefix growth or byte-budget increase"}
 
@@ -395,7 +400,8 @@ def main(argv=None):
     prior = {key: sorted(value) for key, value in exclusions.values.items()}
     root.mkdir(parents=True, exist_ok=False, mode=0o700)
     acquisition = Acquisition(root, exclusions, args.timeout_seconds,
-                              args.max_network_mib * 1024 * 1024, args.max_output_mib * 1024 * 1024)
+                              args.max_network_mib * 1024 * 1024, args.max_output_mib * 1024 * 1024,
+                              args.archive_prefix_mib)
     targets = {"development": args.count, "held_out": args.heldout_count}
     def interrupt(_signal, _frame): raise InterruptedError("Acquisition interrupted; partial sources retained")
     signal.signal(signal.SIGINT, interrupt); signal.signal(signal.SIGTERM, interrupt)

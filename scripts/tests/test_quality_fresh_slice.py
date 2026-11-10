@@ -222,6 +222,30 @@ class QualityFreshSliceTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [])
             self.assertEqual(stereo.getvalue(), original)
 
+    def test_larger_prospective_caps_keep_defaults_and_enforce_remaining_network_bytes(self):
+        required = ["--output", "/tmp/new-corpus", "--exclude-manifest", "/tmp/prior.json"]
+        default = fresh.arguments(required)
+        self.assertEqual((default.archive_prefix_mib, default.max_network_mib), (32, 256))
+        larger = fresh.arguments(required + ["--archive-prefix-mib", "128", "--max-network-mib", "2048"])
+        plan = fresh.selection_plan(larger, fresh.Exclusions())
+        self.assertEqual(plan["archive_stream_cap_bytes"], 128 * 1024 * 1024)
+        self.assertEqual(plan["swiss_prefix_cap_bytes"], 128 * 1024 * 1024)
+        self.assertEqual(plan["network_cap_bytes"], 2048 * 1024 * 1024)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            acquisition = fresh.Acquisition(root, fresh.Exclusions(), maximum_network_bytes=2048 * 1024 * 1024,
+                                             archive_prefix_mib=128)
+            self.assertEqual(acquisition.maximum_archive_bytes, 128 * 1024 * 1024)
+            acquisition.network_bytes = acquisition.maximum_network_bytes - 2
+            source = io.BytesIO(b"abcdef")
+            self.assertEqual(acquisition.read(source, 99), b"ab")
+            with self.assertRaisesRegex(ValueError, "network budget"):
+                acquisition.read(source, 1)
+            self.assertEqual(source.tell(), 2)
+            for invalid in (0, 31, 129, True, 32.0):
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    fresh.Acquisition(root, fresh.Exclusions(), archive_prefix_mib=invalid)
+
     def test_version_helper_has_cancel_timeout_output_bounds_and_caches_success(self):
         with tempfile.TemporaryDirectory() as directory:
             acquisition = fresh.Acquisition(Path(directory).resolve(), fresh.Exclusions())

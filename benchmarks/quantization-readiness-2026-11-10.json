@@ -364,8 +364,36 @@
       "de-CH"
     ],
     "speaker_session_independence": "UNVERIFIED",
-    "manual_caption_tracks_available": 0
+    "manual_caption_tracks_available": 0,
+    "synthetic_noise_views": 9,
+    "total_views": 44,
+    "noise_requested_snr_db": 10,
+    "noise_achieved_post_clipping_snr_db_range": [
+      9.994108458450977,
+      10.006758318051016
+    ],
+    "noise_clipped_samples": 28
   },
   "untouched_control_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4",
-  "control_cli_sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6"
+  "control_cli_sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6",
+  "release_build": {
+    "source_revision": "517d3440975bd6837c409e6a70c3a23081f947c6",
+    "cli_sha256": "b082ca6dddb9fc1d315d95cb4a9bcc5c06f1b49f94dc9b06b5ec5c32d897eaec",
+    "bytes": 1255728,
+    "toolchain_scope": "Xcode 27.1 compatibility; pinned 27.2 hosted CI required"
+  },
+  "resource_panel_readiness": {
+    "requested_cells": 594,
+    "ready_cells": 594,
+    "ASR_executed": false,
+    "candidate_seal_sha256": "90aada0b23b6c0da64cfdca548164d0d806d8394c2b81f85ba61815dd2c7103d",
+    "measured_run": "PENDING; fresh native idle/live-off and quiet workload required",
+    "workload_probe": "fileproviderd at 99.1% CPU; exceeds 50% foreign-process limit"
+  },
+  "preservation": {
+    "critical_archived_files_reverified": 9,
+    "critical_archived_bytes": 51590311,
+    "frozen_remote_refs_reverified": 4,
+    "changed": false
+  }
 }

@@ -59,7 +59,10 @@ class QualityReportTests(unittest.TestCase):
         row = cell()
         row["measurement"]["measurement_scope"] = "resources_only"
         row["measurement"]["engine_passes"] = [native_language_pass("de")]
-        cohort = report.summarize(matrix([row]))["cohorts"][0]
+        summary = report.summarize(matrix([row]))
+        cohort = summary["cohorts"][0]
+        self.assertIn("Unscored resource-only", summary["limitations"][0])
+        self.assertIn("No WER or CER is scored", " ".join(summary["limitations"]))
         self.assertEqual(cohort["quality"]["completed_unique_utterances"], 0)
         self.assertIsNone(cohort["quality"]["cer"]["corpus_weighted_rate"])
         self.assertIsNone(cohort["quality"]["wer"]["corpus_weighted_rate"])

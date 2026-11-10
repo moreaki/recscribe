@@ -17,7 +17,7 @@ from pathlib import Path
 import re
 import statistics
 
-VERSION = "quality-pilot-report-1.2"
+VERSION = "quality-pilot-report-1.3"
 _EVIDENCE_SPEC = importlib.util.spec_from_file_location("evaluation_evidence", Path(__file__).with_name("evaluation-evidence.py"))
 evidence = importlib.util.module_from_spec(_EVIDENCE_SPEC)
 _EVIDENCE_SPEC.loader.exec_module(evidence)
@@ -355,6 +355,9 @@ def summarize(matrix, corpus=None, experiment=None, allow_held_out=False, freeze
     rows = matrix.get("rows")
     if not isinstance(rows, list):
         raise ValueError("Expected retained benchmark rows")
+    resources_only = matrix.get("measurement_scope") == "resources_only" or bool(rows) and all(
+        row.get("measurement_scope") == "resources_only" or
+        (row.get("measurement") or {}).get("measurement_scope") == "resources_only" for row in rows)
     corpus, experiment = corpus or {}, experiment or {}
     cases = corpus.get("cases", [])
     corpus_by_id = {case.get("id"): case for case in cases}
@@ -377,11 +380,15 @@ def summarize(matrix, corpus=None, experiment=None, allow_held_out=False, freeze
         "cohorts": cohorts, "comparisons": summarize_comparisons(matrix.get("paired_comparisons", [])),
         "corpus_preparation": evidence.corpus_preparation(corpus),
         "model_size_policy": evidence.model_size_decisions(experiment.get("model_size_policy"), experiment.get("models", []), cohorts),
-        "limitations": ["Exploratory published-reference pilot; review the per-language utterance counts before drawing representative multilingual accuracy conclusions",
+        "limitations": ["Unscored resource-only probe; references were not read and recognition quality/language-ID accuracy remain unmeasured" if resources_only else
+            "Exploratory published-reference pilot; review the per-language utterance counts before drawing representative multilingual accuracy conclusions",
+            "Repeated invocations are not independent corpus samples; no quality scores were produced" if resources_only else
             "Repeated inference is latency/variation evidence, not independent corpus samples; quality uses successful repeat 1 only",
-            "Individual FLEURS speaker/session grouping, natural long-form/adverse conditions and independent native reference adjudication remain incomplete",
+            "Inspect corpus preparation evidence for speaker/session grouping, natural long-form/adverse conditions and independent reference adjudication; declarations do not prove coverage",
             "Swiss speech targets written Standard German; lexical scores alone do not establish preserved meaning or equivalent rendering variants",
+            "Source-language planning tags are not adjudicated language truth; language-ID accuracy, confidence, switch boundaries and out-of-set behavior remain unmeasured" if resources_only else
             "Automatic language labels are coarse agreement with published monolingual source tags, using one unambiguous nonempty native pass from repeat 1; human ID accuracy, confidence, switch boundaries and out-of-set behavior remain unmeasured",
+            "No WER or CER is scored in resource-only mode" if resources_only else
             "Chinese whitespace WER is not reported; CER is reported under the exact retained normalization version",
             "Peak process RSS does not measure total unified CPU/GPU allocation; GPU memory and first-result latency remain unmeasured",
             "Upstream model-load timers are not complete process initialization; end-to-end throughput is not steady decoder throughput",

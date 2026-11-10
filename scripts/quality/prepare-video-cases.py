@@ -16,7 +16,7 @@ import re
 import subprocess
 import time
 
-VERSION = "video-evaluation-preparation-v1.1"
+VERSION = "video-evaluation-preparation-v1.2"
 _GUARD_SPEC = importlib.util.spec_from_file_location("video_recording_guard", Path(__file__).with_name("run-guard.py"))
 guard = importlib.util.module_from_spec(_GUARD_SPEC)
 _GUARD_SPEC.loader.exec_module(guard)
@@ -51,13 +51,21 @@ def validate(plan):
     return cases
 
 
+def manual_caption_languages(info, language):
+    # Discover regional/script tags, but never choose a rendering convention.
+    return sorted(tag for tag, tracks in (info.get("subtitles") or {}).items()
+                  if tag.split("-")[0] == language.split("-")[0]
+                  and any(t.get("ext") == "vtt" and "tlang=" not in t.get("url", "")
+                          and "kind=asr" not in t.get("url", "") for t in tracks))
+
+
 def caption_status(info, language):
     # Translated or automatic tracks are never used as original human references.
-    tracks = info.get("subtitles", {}).get(language, [])
-    manual = [t for t in tracks if t.get("ext") == "vtt" and "tlang=" not in t.get("url", "")
-              and "kind=asr" not in t.get("url", "")]
-    if manual:
+    manual = manual_caption_languages(info, language)
+    if language in manual:
         return "manual_source_track_unreviewed"
+    if manual:
+        return "manual_regional_track_requires_explicit_selection"
     if language in info.get("automatic_captions", {}):
         return "automatic_only_not_reference"
     return "no_downloadable_same_language_reference"
@@ -157,6 +165,7 @@ def prepare(plan, output):
             if info.get("is_live") or type(duration) not in (int, float) or not math.isfinite(duration) or not 2 <= duration <= 1200 or case["start_seconds"] + case["duration_seconds"] > duration:
                 raise ValueError("Source must have known duration ≤1200 seconds and contain the requested interval")
             row.update(caption_status=caption_status(info, case["subtitle_language"]),
+                       available_manual_subtitle_languages=manual_caption_languages(info, case["subtitle_language"]),
                        title=info.get("title"), source_channel_id=info.get("channel_id"),
                        declared_source_language=info.get("language"), source_license=info.get("license"),
                        permitted_use_review="PENDING; public access does not grant redistribution rights")

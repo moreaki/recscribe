@@ -125,6 +125,33 @@ Apple describes speech, music and singing as potentially co-occurring classes:
 
 ## Gate before production suppression
 
+### Delivery boundary and remaining acceptance
+
+The assisted review release has a bounded finish line: complete #132's required
+CI, run one consolidated native acceptance pass, and keep fixes for failures in
+that closeout PR. Additional detector heuristics are not release requirements for
+this assisted version. Code/tests are not a substitute for the pending native pass.
+
+The native acceptance pass must verify correction/save/restart/restoration, manual
+and confirmed music-only display, current language labels, copy/share output,
+bounded listening and review shortcuts, local analysis/cancellation, and selected-
+segment cloud approval/cancellation without uploading real audio. Original audio,
+raw/canonical transcripts and existing review history must survive. A live cloud
+provider round trip remains a separate unverified check requiring explicit upload
+approval; approval/cancellation checks do not establish provider success.
+
+Automatic music/non-speech suppression and a calibrated percentage of transcript
+accuracy remain unfinished. The current classifier cannot reliably separate the
+reviewed violin from quiet speech-over-violin using these scores. Finishing that
+feature requires independent reviewed held-out data, a demonstrated speech-
+preservation signal and explicit false-suppression/recall results before enablement.
+The existing fixtures and safeguards do not provide a defensible completion date.
+
+This distinction must remain visible in issue #123 and release reporting: assisted
+review can finish after acceptance; automatic suppression is not delivered by
+renaming an inconclusive result or adding more preservation tests. Native acceptance
+and installation are currently pending following the user's explicit deferral.
+
 The broad benchmark template's music-only entry remains unfilled. A separate small
 set now includes four user-listening-approved fixtures plus clearly labelled speech
 and synthetic mixture challenges. See the hashes, licenses and review statuses in

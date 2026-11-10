@@ -60,14 +60,14 @@ import Testing
         }
         #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: covered, completed: false).outcome == .inconclusive)
         #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: [], completed: true).outcome == .inconclusive)
-        #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: [window(0, 3)], completed: true).outcome == .inconclusive)
+        #expect(MusicOnlyAssessment.evaluate(duration: 4, windows: [window(0, 4)], completed: true).outcome == .inconclusive)
         let excessive = Array(repeating: window(0, 3), count: MusicOnlyAssessment.maximumWindows + 1)
         let result = MusicOnlyAssessment.evaluate(duration: 3, windows: excessive, completed: true)
         #expect(result.outcome == .inconclusive && result.windows.count == MusicOnlyAssessment.maximumWindows)
     }
 
     @Test func silenceNoiseAndOneWeakWindowCannotBecomeMusicOnly() {
-        for music in [0.0, 0.5, 0.949] {
+        for music in [0.0, 0.5, 0.849] {
             var windows = covered
             windows[2] = window(1, 2, music: music)
             #expect(MusicOnlyAssessment.evaluate(duration: 3, windows: windows, completed: true).outcome == .inconclusive)
@@ -100,7 +100,7 @@ import Testing
         #expect(!report.assessment.automaticSuppressionAllowed)
         #expect(!report.assessment.windows.isEmpty)
         #expect(report.assessment.windows.allSatisfy {
-            $0.start >= 0 && $0.end <= 3 && $0.end > $0.start && $0.end - $0.start <= 1.000_001
+            $0.start >= 0 && $0.end <= 3 && $0.end > $0.start && $0.end - $0.start <= 3.000_001
         })
         #expect(report.assessment.windows.map(\.start).min() == 0)
         #expect(report.assessment.windows.map(\.end).max() == 3)

@@ -43,7 +43,7 @@ frames/channel, model, approval time and audio/response SHA-256 hashes; credenti
 are excluded. **Reveal cloud response** opens the evidence folder. The selected
 audio clip itself is temporary. A failed/cancelled attempt retains its available
 evidence, and repeating an operation ID is refused. Accepted corrections carry the
-evidence reference in v3 review metadata; v1/v2 files remain readable. Prior
+evidence reference in v4 review metadata; v1/v2/v3 files remain readable. Prior
 revisions and raw recognition remain recoverable outside disposable-artifact cleanup.
 
 Focused tests use synthetic audio and injected transports, with zero billed API

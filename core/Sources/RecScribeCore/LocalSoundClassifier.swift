@@ -10,6 +10,8 @@ public enum LocalSoundClassifier {
         public let classifier: String
         public let windowSeconds: Double
         public let overlap: Double
+        public let minimumMusicScore: Double
+        public let maximumVoiceScore: Double
         public let assessment: MusicOnlyAssessment
     }
 
@@ -31,43 +33,56 @@ public enum LocalSoundClassifier {
               file.processingFormat.sampleRate == Double(layout.rate) else {
             throw CoreFailure("Acoustic input format changed")
         }
-        let request = try SNClassifySoundRequest(classifierIdentifier: .version1)
-        guard MusicOnlyAssessment.requiredLabels.isSubset(of: Set(request.knownClassifications)) else {
-            throw CoreFailure("Acoustic classifier taxonomy is unsupported")
-        }
-        request.windowDuration = CMTime(seconds: 1, preferredTimescale: 16_000)
-        request.overlapFactor = 0.5
-        let observer = Observer()
-        let analyzer = SNAudioStreamAnalyzer(format: file.processingFormat)
-        try analyzer.add(request, withObserver: observer)
-        defer { analyzer.removeAllRequests() }
-        var position: AVAudioFramePosition = 0
-        while position < file.length {
-            try checkpoint()
-            // The framework may retain a buffer until asynchronous analysis finishes.
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 4096) else {
-                throw CoreFailure("Cannot allocate acoustic analysis buffer")
+        func analyze(from first: Int64, frames: Int64) throws -> [MusicOnlyAssessment.Window] {
+            let request = try SNClassifySoundRequest(classifierIdentifier: .version1)
+            guard MusicOnlyAssessment.requiredLabels.isSubset(of: Set(request.knownClassifications)) else {
+                throw CoreFailure("Acoustic classifier taxonomy is unsupported")
             }
-            try file.read(into: buffer, frameCount: AVAudioFrameCount(min(4096, file.length - position)))
-            guard buffer.frameLength > 0 else { throw CoreFailure("Truncated acoustic input") }
-            analyzer.analyze(buffer, atAudioFramePosition: position)
-            position += AVAudioFramePosition(buffer.frameLength)
-            if observer.state.withLock({ $0.failed }) { throw CoreFailure("Acoustic classifier failed") }
-        }
-        analyzer.completeAnalysis()
-        while !observer.state.withLock({ $0.completed || $0.failed }) {
+            request.windowDuration = CMTime(seconds: 3, preferredTimescale: 16_000)
+            request.overlapFactor = 2.0 / 3.0
+            let observer = Observer(offset: Double(first) / Double(layout.rate))
+            let analyzer = SNAudioStreamAnalyzer(format: file.processingFormat)
+            try analyzer.add(request, withObserver: observer)
+            defer { analyzer.removeAllRequests() }
+            file.framePosition = first
+            var position: AVAudioFramePosition = 0
+            while position < frames {
+                try checkpoint()
+                // The framework may retain a buffer until asynchronous analysis finishes.
+                guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 4096) else {
+                    throw CoreFailure("Cannot allocate acoustic analysis buffer")
+                }
+                try file.read(into: buffer, frameCount: AVAudioFrameCount(min(4096, frames - position)))
+                guard buffer.frameLength > 0 else { throw CoreFailure("Truncated acoustic input") }
+                analyzer.analyze(buffer, atAudioFramePosition: position)
+                position += AVAudioFramePosition(buffer.frameLength)
+                if observer.state.withLock({ $0.failed }) { throw CoreFailure("Acoustic classifier failed") }
+            }
+            analyzer.completeAnalysis()
+            while !observer.state.withLock({ $0.completed || $0.failed }) {
+                try checkpoint()
+                _ = observer.terminal.wait(timeout: .now() + 0.05)
+            }
             try checkpoint()
-            _ = observer.terminal.wait(timeout: .now() + 0.05)
+            let state = observer.state.withLock { $0 }
+            guard !state.failed, state.completed else { throw CoreFailure("Acoustic classifier failed") }
+            return state.windows
+        }
+        var windows = try analyze(from: 0, frames: layout.frames)
+        // SoundAnalysis omits an unfinished final window. Analyze the last three
+        // seconds separately, without padding or borrowing neighbouring audio.
+        if (windows.map(\.end).max() ?? 0) < duration - 0.000_001 {
+            let tailFrames = Int64(layout.rate) * 3
+            windows += try analyze(from: layout.frames - tailFrames, frames: tailFrames)
         }
         try checkpoint()
-        let state = observer.state.withLock { $0 }
-        guard !state.failed else { throw CoreFailure("Acoustic classifier failed") }
         guard try WAVAudio.hash(source, check: checkpoint) == digest else {
             throw CoreFailure("Acoustic input changed during analysis")
         }
-        return Report(sourceSHA256: digest, classifier: "SoundAnalysis.version1", windowSeconds: 1,
-                      overlap: 0.5, assessment: .evaluate(duration: duration, windows: state.windows,
-                                                       completed: state.completed))
+        return Report(sourceSHA256: digest, classifier: "SoundAnalysis.version1", windowSeconds: 3,
+                      overlap: 2.0 / 3.0, minimumMusicScore: MusicOnlyAssessment.minimumMusicScore,
+                      maximumVoiceScore: MusicOnlyAssessment.maximumVoiceScore,
+                      assessment: .evaluate(duration: duration, windows: windows, completed: true))
     }
 
     private final class Observer: NSObject, SNResultsObserving, Sendable {
@@ -78,6 +93,8 @@ public enum LocalSoundClassifier {
         }
         let state = Mutex(State())
         let terminal = DispatchSemaphore(value: 0)
+        let offset: Double
+        init(offset: Double) { self.offset = offset }
 
         func request(_ request: SNRequest, didProduce result: any SNResult) {
             guard let result = result as? SNClassificationResult else {
@@ -88,8 +105,8 @@ public enum LocalSoundClassifier {
             for label in MusicOnlyAssessment.requiredLabels {
                 scores[label] = result.classification(forIdentifier: label)?.confidence
             }
-            let window = MusicOnlyAssessment.Window(start: result.timeRange.start.seconds,
-                                                    end: CMTimeRangeGetEnd(result.timeRange).seconds, scores: scores)
+            let window = MusicOnlyAssessment.Window(start: offset + result.timeRange.start.seconds,
+                                                    end: offset + CMTimeRangeGetEnd(result.timeRange).seconds, scores: scores)
             state.withLock {
                 guard !$0.failed, !$0.completed else { return }
                 guard $0.windows.count < MusicOnlyAssessment.maximumWindows else { $0.failed = true; return }

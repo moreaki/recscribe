@@ -35,8 +35,11 @@ import RecScribeCore
             guard let cli = Bundle.main.executableURL else { throw CoreFailure("Cannot locate the native CLI executable") }
             let work = Task.detached(priority: .utility) {
                 if let experiment = arguments.experiment {
+                    let transcriptionCLI = arguments.transcriptionCLI.map { URL(fileURLWithPath: $0) } ?? cli
                     return try BenchmarkExperiment.run(manifest: source, configuration: URL(fileURLWithPath: experiment),
-                        output: URL(fileURLWithPath: output), cli: cli, dryRun: arguments.dryRun)
+                        output: URL(fileURLWithPath: output), cli: transcriptionCLI, dryRun: arguments.dryRun,
+                        resumeFrom: arguments.resumeFrom.map { URL(fileURLWithPath: $0) }, resumeSHA256: arguments.resumeSHA256,
+                        coordinator: arguments.transcriptionCLI == nil && arguments.resumeFrom == nil ? nil : cli)
                 }
                 return try CorpusBenchmark.run(manifest: source, output: URL(fileURLWithPath: output), cli: cli,
                     whisper: arguments.whisper.map { URL(fileURLWithPath: $0) },
@@ -114,6 +117,7 @@ import RecScribeCore
         let source: String
         var output: String?, model: String?, target: String?
         var whisper: String?, verificationModel: String?, vad: String?, experiment: String?, whisperProfile: String?
+        var resumeFrom: String?, resumeSHA256: String?, transcriptionCLI: String?
         var language = "auto", profile = "fast"
         var threads = NativeWhisperEngine.Policy.defaultThreads
         var diarize = false
@@ -138,6 +142,9 @@ import RecScribeCore
                     switch flag {
                     case "--whisper-profile": whisperProfile = value
                     case "--experiment": experiment = value
+                    case "--resume-from": resumeFrom = value
+                    case "--resume-sha256": resumeSHA256 = value
+                    case "--transcription-cli": transcriptionCLI = value
                     case "--output": output = value
                     case "--model": model = value
                     case "--whisper-cli": whisper = value
@@ -172,6 +179,12 @@ import RecScribeCore
                 throw CoreFailure("An experiment supplies its own binaries, models, threads and profiles")
             }
             guard command == "benchmark" || experiment == nil else { throw CoreFailure("--experiment is only for benchmark") }
+            guard (resumeFrom == nil && resumeSHA256 == nil && transcriptionCLI == nil) || (command == "benchmark" && experiment != nil) else {
+                throw CoreFailure("Checkpoint/retained transcription CLI options require benchmark --experiment")
+            }
+            guard (resumeFrom == nil) == (resumeSHA256 == nil), resumeFrom == nil || !dryRun else {
+                throw CoreFailure("Resume requires --resume-from and --resume-sha256, without --dry-run")
+            }
             guard command == "benchmark" || !dryRun else { throw CoreFailure("--dry-run is only for benchmark") }
             if command == "benchmark" {
                 guard provider == nil, !cloudConsent, !keyStdin, !summary, verificationModel == nil, vad == nil,
@@ -189,6 +202,7 @@ import RecScribeCore
     recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]
       [--whisper-cli /path/to/whisper-cli --model /path/to/model.bin --threads 1..4]
       [--experiment /path/to/experiment.json] [--whisper-profile /path/to/profile.json]
+      [--resume-from PRIOR_MATRIX_DIRECTORY --resume-sha256 SHA256 --transcription-cli /path/to/retained/recscribe-text]
     recscribe-text transcribe recording.wav|session.recscribe.json --output NEW_JOB
       --whisper-cli /path/to/whisper-cli --model /path/to/ggml-model.bin
       [--source-language auto|de-CH|en] [--threads 1..4] [--local-only]

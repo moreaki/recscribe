@@ -5,6 +5,7 @@ import Observation
 @MainActor @Observable
 final class TranscriptReviewState {
     private(set) var checked: Set<String> = []
+    private(set) var corrections: [String: TranscriptCorrection] = [:]
     private(set) var context: TranscriptReviewContext?
     private(set) var loading = false
     private(set) var saving = false
@@ -17,7 +18,7 @@ final class TranscriptReviewState {
 
     func reset() {
         saveTask?.cancel(); saveTask = nil
-        generation = UUID(); context = nil; checked = []
+        generation = UUID(); context = nil; checked = []; corrections = [:]
         loading = false; saving = false; error = nil
     }
 
@@ -27,11 +28,12 @@ final class TranscriptReviewState {
         loading = true
         defer { if generation == token { loading = false } }
         do {
-            let context = try TranscriptReviewContext(job: job, document: document)
-            let checked = try await store.load(context)
+            var context = try TranscriptReviewContext(job: job, document: document)
+            let snapshot = try await store.loadSnapshot(context)
             try Task.checkCancellation()
             guard generation == token else { return }
-            self.context = context; self.checked = checked
+            context.corrections = snapshot.corrections
+            self.context = context; self.checked = snapshot.checked; self.corrections = snapshot.corrections
         } catch is CancellationError { }
         catch {
             if generation == token && !Task.isCancelled { self.error = "Could not load review status. " + error.localizedDescription }
@@ -50,6 +52,28 @@ final class TranscriptReviewState {
             } catch is CancellationError { }
             catch {
                 if self?.generation == token { self?.error = "Review change was not saved. " + error.localizedDescription }
+            }
+            if self?.generation == token { self?.saving = false; self?.saveTask = nil }
+        }
+    }
+
+    func setCorrection(_ correction: TranscriptCorrection?, for segmentID: String) {
+        guard let context, context.segmentIDs.contains(segmentID), !loading, !saving else { return }
+        let token = generation
+        saving = true; error = nil
+        saveTask = Task { [weak self, store] in
+            do {
+                let result = try await store.setCorrection(correction, for: segmentID, in: context)
+                try Task.checkCancellation()
+                if self?.generation == token {
+                    var nextContext = context
+                    nextContext.corrections = result.corrections
+                    self?.context = nextContext
+                    self?.checked = result.checked; self?.corrections = result.corrections
+                }
+            } catch is CancellationError { }
+            catch {
+                if self?.generation == token { self?.error = "Correction was not saved. " + error.localizedDescription }
             }
             if self?.generation == token { self?.saving = false; self?.saveTask = nil }
         }

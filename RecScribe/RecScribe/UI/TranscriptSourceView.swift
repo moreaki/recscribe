@@ -9,6 +9,7 @@ struct TranscriptSourceView: View {
     let recording: Bool
     @Bindable var playback: SessionPlayback
     @Binding var pendingSeekSeconds: Double?
+    @Binding var pendingPassage: PlaybackPolicy.Passage?
     @State private var loadedEntry: SessionEntry?
     @State private var error: String?
     @State private var wavDuration: Double?
@@ -28,6 +29,7 @@ struct TranscriptSourceView: View {
         recording: Bool,
         playback: SessionPlayback,
         pendingSeekSeconds: Binding<Double?> = .constant(nil),
+        pendingPassage: Binding<PlaybackPolicy.Passage?> = .constant(nil),
         sourceAvailabilityChanged: @escaping (Bool) -> Void = { _ in },
         playbackAvailabilityChanged: @escaping (Bool) -> Void = { _ in },
         focusLayout: Bool = false
@@ -38,6 +40,7 @@ struct TranscriptSourceView: View {
         self.recording = recording
         self.playback = playback
         self._pendingSeekSeconds = pendingSeekSeconds
+        self._pendingPassage = pendingPassage
         self.sourceAvailabilityChanged = sourceAvailabilityChanged
         self.playbackAvailabilityChanged = playbackAvailabilityChanged
         self.focusLayout = focusLayout
@@ -123,6 +126,14 @@ struct TranscriptSourceView: View {
             catch { self.error = error.localizedDescription }
         }
         .onChange(of: library.deletionSources) { _, _ in if library.isDeleting(source) { playback.stop() } }
+        .onChange(of: pendingPassage) { _, passage in
+            guard let passage else { return }
+            pendingPassage = nil
+            guard canPlay else { return }
+            pendingSeekSeconds = nil
+            if let entry { playback.play(entry, passage: passage) }
+            else { playback.playFile(source, passage: passage) }
+        }
         .onChange(of: pendingSeekSeconds) { _, target in
             guard let target, !recording, !library.isDeleting(source) else { return }
             if playback.player != nil, playback.phase != .failed {

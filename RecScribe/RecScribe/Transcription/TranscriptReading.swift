@@ -63,7 +63,7 @@ nonisolated enum TranscriptReading {
         for group in document.readingGroups {
             var reasons = Set(group.segments.flatMap { $0.reviewReasons ?? [] })
             if group.segments.contains(where: \.needsReview), reasons.isEmpty { reasons.insert("verify_against_audio") }
-            if !group.isShared(in: document) { reasons.insert("overlapping_channel_variants") }
+            if !group.isShared(in: document, originalRecognition: true) { reasons.insert("overlapping_channel_variants") }
             if !reasons.isEmpty {
                 items.append(ReviewItem(id: "passage-\(group.id)", groupID: group.id,
                     title: "\(group.timing) · \(group.channels)", reasons: reasons.sorted(), segmentIDs: group.segments.map(\.id)))
@@ -139,12 +139,13 @@ nonisolated enum TranscriptReading {
         }
 
         /// Equal cleaned text must not hide conflicting raw ASR or different timing.
-        func isShared(in document: TranscriptPreview) -> Bool {
+        func isShared(in document: TranscriptPreview, originalRecognition: Bool = false) -> Bool {
             if segments.count <= 1 { return true }
             let first = segments[0]
             return segments.allSatisfy {
                 $0.startMs == first.startMs && $0.endMs == first.endMs && $0.sourceText == first.sourceText
-                    && document.displayedText($0) == document.displayedText(first)
+                    && (originalRecognition ? document.originalDisplayedText($0) == document.originalDisplayedText(first)
+                        : document.displayedText($0) == document.displayedText(first))
             }
         }
     }

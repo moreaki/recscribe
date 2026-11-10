@@ -2,23 +2,57 @@ import CryptoKit
 import Darwin
 import Foundation
 
-/// Acknowledgements are personal metadata, never changes to canonical evidence.
+nonisolated struct TranscriptCorrection: Codable, Equatable, Sendable {
+    enum Kind: String, Codable, Sendable { case text, musicOnly }
+    let kind: Kind
+    let text: String?
+    var cloud: SegmentCloudReference? = nil
+    static let musicOnly = Self(kind: .musicOnly, text: nil)
+    static let maximumTextBytes = 65_536
+    var valid: Bool {
+        switch kind {
+        case .musicOnly: text == nil && cloud == nil
+        case .text: text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
+        }
+    }
+    var displayedText: String { kind == .musicOnly ? "[Music only]" : text ?? "" }
+}
+
+nonisolated struct TranscriptReviewSnapshot: Equatable, Sendable {
+    var checked: Set<String> = []
+    var corrections: [String: TranscriptCorrection] = [:]
+}
+
+/// Review metadata and manual corrections never rewrite canonical evidence.
 nonisolated struct TranscriptReviewContext: Equatable, Sendable {
     let job: URL
     let revision: String
     let keys: Set<String>
+    let segmentIDs: Set<String>
+    let reviewKeysBySegment: [String: String]
+    let globalKeys: Set<String>
+    var corrections: [String: TranscriptCorrection]
 
     init(job: URL, document: TranscriptPreview) throws {
         let items = document.reviewItems
         guard job.isFileURL, let revision = document.revision,
               Set(document.segments.map(\.id)).count == document.segments.count,
               Set(items.map(\.key)).count == items.count,
-              items.count <= TranscriptReviewStore.maximumItems else {
+              items.count <= TranscriptReviewStore.maximumItems,
+              document.segments.count <= TranscriptReviewStore.maximumItems,
+              document.segments.allSatisfy({ !$0.id.isEmpty && $0.id.utf8.count <= 1_024 }) else {
             throw SessionError.invalid("Review status requires a saved transcript with unique source identifiers and at most 10,000 review items")
         }
         self.job = job.standardizedFileURL
         self.revision = revision
         self.keys = Set(items.map(\.key))
+        self.segmentIDs = Set(document.segments.map(\.id))
+        self.globalKeys = Set(items.filter { $0.groupID == nil }.map(\.key))
+        self.corrections = document.corrections
+        let byGroup = Dictionary(uniqueKeysWithValues: items.compactMap { item in item.groupID.map { ($0, item.key) } })
+        self.reviewKeysBySegment = Dictionary(uniqueKeysWithValues: document.readingGroups.flatMap { group in
+            group.segments.compactMap { segment in byGroup[group.id].map { (segment.id, $0) } }
+        })
     }
 }
 
@@ -28,21 +62,50 @@ actor TranscriptReviewStore {
     nonisolated static let maximumBytes = 1_024 * 1_024
     private let root: URL
     private struct Record: Codable {
-        var version = 1
+        var version = 3
         let revision: String
         let checked: Set<String>
+        var corrections: [String: TranscriptCorrection]?
     }
 
     init(root: URL) { self.root = root }
 
     func load(_ context: TranscriptReviewContext) throws -> Set<String> {
+        try loadSnapshot(context).checked
+    }
+
+    func loadSnapshot(_ context: TranscriptReviewContext) throws -> TranscriptReviewSnapshot {
         try validateRevision(context)
-        return try read(context).intersection(context.keys)
+        return try read(context)
     }
 
     func setChecked(_ key: String, checked: Bool, in context: TranscriptReviewContext) throws -> Set<String> {
+        try update(context) { next in
+            guard context.keys.contains(key), next.corrections == context.corrections else {
+                throw SessionError.invalid("This passage changed. Reload it before marking it checked.")
+            }
+            if checked { next.checked.insert(key) } else { next.checked.remove(key) }
+        }.checked
+    }
+
+    func setCorrection(_ correction: TranscriptCorrection?, for segmentID: String,
+                       in context: TranscriptReviewContext) throws -> TranscriptReviewSnapshot {
+        guard context.segmentIDs.contains(segmentID), correction?.valid != false else {
+            throw SessionError.invalid("Choose a passage and enter nonempty text of at most 64 KB, or mark it music only.")
+        }
+        return try update(context) { next in
+            guard next.corrections[segmentID] == context.corrections[segmentID] else {
+                throw SessionError.invalid("This passage was edited elsewhere. Reload before saving your correction.")
+            }
+            next.corrections[segmentID] = correction
+            next.checked.subtract(context.globalKeys)
+            if let key = context.reviewKeysBySegment[segmentID] { next.checked.remove(key) }
+        }
+    }
+
+    private func update(_ context: TranscriptReviewContext,
+                        change: (inout TranscriptReviewSnapshot) throws -> Void) throws -> TranscriptReviewSnapshot {
         try Task.checkCancellation()
-        guard context.keys.contains(key) else { throw SessionError.invalid("This review item is no longer available") }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let info = try root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
         guard info.isDirectory == true, info.isSymbolicLink != true else { throw SessionError.invalid("Review storage is not a regular directory") }
@@ -53,9 +116,9 @@ actor TranscriptReviewStore {
         defer { Darwin.close(lock) }
         guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { throw SessionError.invalid("Review status is in use. Try again.") }
         try validateRevision(context)
-        var next = try read(context).intersection(context.keys)
-        if checked { next.insert(key) } else { next.remove(key) }
-        let data = try JSONEncoder().encode(Record(revision: context.revision, checked: next))
+        var next = try read(context)
+        try change(&next)
+        let data = try JSONEncoder().encode(Record(revision: context.revision, checked: next.checked, corrections: next.corrections))
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         try Task.checkCancellation()
         try data.write(to: url, options: .atomic)
@@ -69,16 +132,19 @@ actor TranscriptReviewStore {
         }
     }
 
-    private func location(_ context: TranscriptReviewContext) -> URL {
+    private func location(_ context: TranscriptReviewContext, legacy: Bool = false) -> URL {
         let key = SHA256.hash(data: Data(context.job.path.utf8)).map { String(format: "%02x", $0) }.joined()
-        return root.appendingPathComponent(key + ".json")
+        return root.appendingPathComponent(key + (legacy ? "" : "-" + context.revision) + ".json")
     }
 
-    private func read(_ context: TranscriptReviewContext) throws -> Set<String> {
+    private func read(_ context: TranscriptReviewContext) throws -> TranscriptReviewSnapshot {
         try Task.checkCancellation()
-        let descriptor = Darwin.open(location(context).path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        var descriptor = Darwin.open(location(context).path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        if descriptor < 0, errno == ENOENT {
+            descriptor = Darwin.open(location(context, legacy: true).path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        }
         guard descriptor >= 0 else {
-            if errno == ENOENT { return [] }
+            if errno == ENOENT { return .init() }
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
         let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
@@ -91,12 +157,21 @@ actor TranscriptReviewStore {
         let data = try file.read(upToCount: Self.maximumBytes + 1) ?? Data()
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         let record = try JSONDecoder().decode(Record.self, from: data)
-        guard record.version == 1, record.checked.count <= Self.maximumItems,
+        let corrections = record.corrections ?? [:]
+        guard [1, 2, 3].contains(record.version), record.version != 1 || corrections.isEmpty,
+              record.version == 1 || record.corrections != nil,
+              record.version == 3 || corrections.values.allSatisfy({ $0.cloud == nil }),
+              record.checked.count <= Self.maximumItems, corrections.count <= Self.maximumItems,
+              corrections.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 1_024 && $0.value.valid }),
               record.revision.count == 64, record.revision.allSatisfy(\.isHexDigit),
               record.checked.allSatisfy({ $0.count == 64 && $0.allSatisfy(\.isHexDigit) }) else {
             throw SessionError.invalid("Saved review status has an unsupported format")
         }
         try Task.checkCancellation()
-        return record.revision == context.revision ? record.checked : []
+        guard record.revision == context.revision else { return .init() }
+        guard Set(corrections.keys).isSubset(of: context.segmentIDs) else {
+            throw SessionError.invalid("Saved corrections reference unavailable passages")
+        }
+        return .init(checked: record.checked.intersection(context.keys), corrections: corrections)
     }
 }

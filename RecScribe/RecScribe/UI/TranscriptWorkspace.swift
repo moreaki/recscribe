@@ -156,6 +156,7 @@ struct TranscriptWorkspace: View {
     @Environment(\.studioNavigation) private var navigation
     @State private var playback: SessionPlayback
     @State private var pendingSeekSeconds: Double?
+    @State private var pendingPassage: PlaybackPolicy.Passage?
     @State private var section: Section
     @State private var document: TranscriptPreview?
     @State private var error: String?
@@ -172,6 +173,7 @@ struct TranscriptWorkspace: View {
     @State private var reviewItemID: String?
     @State private var contentWidth: CGFloat = 1_000
     @State private var review = TranscriptReviewState()
+    @State private var cloud = SegmentCloudState()
     @State private var documentReload = 0
     @FocusState private var inspectorTrigger: InspectorTab?
     private enum InspectorTab: String, CaseIterable, Hashable { case review = "Review", details = "Details" }
@@ -190,6 +192,11 @@ struct TranscriptWorkspace: View {
     private var source: URL? {
         if section == .live { return live.sourceURL }
         return document?.sourceURL ?? library.studioSource
+    }
+    private var cloudUnavailable: Bool {
+        library.recordingActive || library.liveWorkActive || library.busy
+            || source.map { library.isDeleting($0) } == true
+            || navigation.map { $0.mode != .studio } == true
     }
     enum Section: String, WorkspaceTab {
         case live = "Live", transcript = "Transcript", summary = "Summary", review = "Review"
@@ -222,7 +229,8 @@ struct TranscriptWorkspace: View {
             if document != nil, let job = displayedJob {
                 Button(section == .summary ? "Generate summary" : "Improve text", systemImage: "sparkles") {
                     library.requestTextProcessing(job, summary: section == .summary, sourceName: source?.lastPathComponent)
-                }
+                }.disabled(review.loading || review.context == nil || !review.corrections.isEmpty)
+                    .help(review.corrections.isEmpty ? "Process this transcript" : "AI processing of manually corrected text is not available yet. Your saved corrections are preserved.")
             }
             Divider()
             Button("AI & transcription settings", systemImage: "slider.horizontal.3") {
@@ -244,6 +252,7 @@ struct TranscriptWorkspace: View {
                         detail: document?.recognitionLabel ?? "Full recording",
                         recording: library.recordingActive, playback: playback,
                         pendingSeekSeconds: $pendingSeekSeconds,
+                        pendingPassage: $pendingPassage,
                         sourceAvailabilityChanged: { sourceAvailable = $0 },
                         playbackAvailabilityChanged: { playbackAvailable = $0 },
                         focusLayout: true)
@@ -273,7 +282,7 @@ struct TranscriptWorkspace: View {
                             Button("Copy plain text") { copyToPasteboard(document.reviewPlainText, format: "review notes") }
                         }.disabled(document.reviewPlainText.isEmpty)
                         if !markdown.isEmpty { ShareLink(item: markdown) { Label("Share…", systemImage: "square.and.arrow.up") } }
-                    }
+                    }.disabled(review.loading || review.context == nil)
                     Button("Details", systemImage: "info.circle") { inspector = .details; showsInspector = true }
                         .labelStyle(.iconOnly).help("Recording and transcript details")
                         .focused($inspectorTrigger, equals: .details)
@@ -311,7 +320,8 @@ struct TranscriptWorkspace: View {
                             inspector = .review; showsInspector = true
                         },
                         followPlayback: $followAudio,
-                        checkedReviewGroupIDs: Set(reviewItems.filter { review.checked.contains($0.key) }.compactMap(\.groupID))
+                        checkedReviewGroupIDs: Set(reviewItems.filter { review.checked.contains($0.key) }.compactMap(\.groupID)),
+                        review: review, cloud: cloud
                     ).overlay(alignment: .topTrailing) { processingMenu }
 
                 } else if section == .summary, let notes = document.summary?.notes, !notes.isEmpty {
@@ -334,7 +344,15 @@ struct TranscriptWorkspace: View {
                 if source == nil { Button("Choose recording / import…") { AppWindow.open(.recordings, using: openWindow, navigation: navigation) } }
                 Spacer(minLength: 0)
             }
-            if let message = error ?? library.errorMessage {
+            if cloud.busy || cloud.preparing {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text(cloud.preparing ? "Checking selected passage…" : "Re-recognizing selected passage…").font(.caption)
+                    Button("Cancel re-recognition") { cloud.cancel() }
+                }
+            }
+            if let notice = cloud.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
+            if let message = error ?? cloud.error ?? review.error ?? library.errorMessage {
                 Text(message).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -477,6 +495,8 @@ struct TranscriptWorkspace: View {
                                             systemImage: review.checked.contains(item.key) ? "arrow.uturn.backward" : "checkmark") {
                                             review.setChecked(item, checked: !review.checked.contains(item.key))
                                         }.buttonStyle(.borderedProminent)
+                                            .keyboardShortcut("k", modifiers: [.command, .option])
+                                            .help("Mark checked or reopen item (⌥⌘K)")
                                             .disabled(review.context == nil || review.loading || review.saving)
                                         if review.saving { ProgressView().controlSize(.small).accessibilityLabel("Saving review status") }
                                     }
@@ -484,8 +504,10 @@ struct TranscriptWorkspace: View {
                                     if let next = nextItems.first(where: { !review.checked.contains($0.key) }) {
                                         Button("Next unchecked item", systemImage: "arrow.right") { selectReviewItem(next) }
                                             .buttonStyle(.borderless).font(.caption)
+                                            .keyboardShortcut("n", modifiers: [.command, .option])
+                                            .help("Next unchecked item (⌥⌘N)")
                                     }
-                                    Text("Checked records your review of this version. It does not certify accuracy or change original flags, text or exports. A changed transcript requires a new review.")
+                                    Text("Checked records your review of this version. Editing or restoring a passage reopens its review. Original recognition and flags are preserved.")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading).id(item.id)
                             }
@@ -510,6 +532,15 @@ struct TranscriptWorkspace: View {
             }
             .inspectorColumnWidth(min: 280, ideal: 340, max: 440).background(WorkspaceStyle.background)
         }
+        .confirmationDialog("Send this passage to OpenAI?", isPresented: Binding(
+            get: { cloud.pending != nil }, set: { if !$0 { cloud.dismissApproval() } }), titleVisibility: .visible) {
+                Button("Approve passage upload") { cloud.approve() }
+                Button("Keep audio local", role: .cancel) { cloud.dismissApproval() }
+            } message: {
+                if let selection = cloud.pending {
+                    Text("\(selection.source.lastPathComponent)\n\(selection.timing) · Channel \(selection.channel + 1)\nModel: \(SegmentCloudRecognition.model)\nDestination: api.openai.com/v1/audio/transcriptions\nOnly this selected channel and time range are uploaded as a mono WAV (\(selection.audioBytes) bytes), without neighbouring audio or transcript context. Audio leaves this Mac; API charges and OpenAI retention policies apply. One request per approval. Original recognition is preserved; compare the returned text before choosing Use this recognition.")
+                }
+            }
         .confirmationDialog("Send transcript text to OpenAI?", isPresented: Binding(
             get: { library.pendingTextRequest != nil }, set: { if !$0 { library.pendingTextRequest = nil } })) {
                 Button("Send text and process") { library.confirmTextProcessing() }
@@ -551,8 +582,16 @@ struct TranscriptWorkspace: View {
                 playback.stop(); section = .transcript
             }
         }
-        .onDisappear { review.reset() }
+        .onDisappear { review.reset(); cloud.reset() }
+        .onChange(of: cloudUnavailable, initial: true) { _, blocked in
+            cloud.setBlocked(blocked)
+        }
+        .onChange(of: review.corrections) { _, corrections in
+            if let document { self.document = document.applying(corrections) }
+        }
         .task(id: "\(displayedJob?.path ?? ""):\(waitingForDocument):\(documentReload)") {
+            cloud.reset()
+            pendingPassage = nil
             document = nil
             error = nil
             review.reset()
@@ -566,6 +605,7 @@ struct TranscriptWorkspace: View {
                 if section == .live { section = .transcript }
                 await review.load(job: job, document: result)
                 try Task.checkCancellation()
+                document = result.applying(review.corrections)
                 if reviewItemID == nil { reviewItemID = uncheckedItems.first?.id ?? reviewItems.first?.id }
             } catch is CancellationError { }
             catch { if !Task.isCancelled { self.error = error.localizedDescription } }
@@ -592,15 +632,21 @@ struct TranscriptWorkspace: View {
                     Divider()
                     Text(source.channels).font(.subheadline.weight(.semibold))
                     Text(source.timing).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(segment.confidenceLabel).font(.callout)
+                    Text("Model confidence is not a measured probability that these words are correct. Music can produce confident errors.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Text("Original recognition").font(.caption).foregroundStyle(.secondary)
                     MarkdownReadingText(text: segment.sourceText)
                     if document.displayedText(segment) != segment.sourceText {
                         Text("Displayed text").font(.caption).foregroundStyle(.secondary)
                         MarkdownReadingText(text: document.displayedText(segment))
                     }
-                    if let start = source.startSeconds {
-                        Button("Listen to passage", systemImage: "play") { pendingSeekSeconds = start }
+                    TranscriptSegmentEditor(segment: segment, document: document, review: review, showsOriginal: false, cloud: cloud)
+                    if let start = segment.startMs, let end = segment.endMs,
+                       let passage = PlaybackPolicy.Passage(start: Double(start) / 1_000, end: Double(end) / 1_000) {
+                        Button("Listen to passage", systemImage: "play") { pendingPassage = passage }
                             .disabled(!playbackAvailable)
+                            .help("Play this time range and stop at its end")
                     }
                     Text(segment.id).font(.caption.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
                 }
@@ -619,6 +665,10 @@ private struct TranscriptSummaryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
                 Text("Draft summary").font(.caption).foregroundStyle(.secondary)
+                if !document.corrections.isEmpty {
+                    Label(TranscriptPreview.summaryCorrectionWarning, systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(.orange)
+                }
                 ForEach(notes.indices, id: \.self) { index in
                     VStack(alignment: .leading, spacing: 12) {
                         MarkdownReadingText(text: notes[index].text, font: .title3)

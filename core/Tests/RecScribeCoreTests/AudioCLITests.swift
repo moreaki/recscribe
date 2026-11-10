@@ -60,7 +60,9 @@ import Testing
         let output = root.appendingPathComponent("job")
         let args = try RecScribeTextCLI.Arguments(arguments(source,output,binary,model))
         let task = Task { try await RecScribeTextCLI.run(args) }
-        try await expectEventually { FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-0.json").path) }
+        // Utility-worker setup can exceed five seconds on a contended CI host.
+        // Match the bounded startup window in CLISignalCancellationTests.
+        try await expectEventually(timeout: .seconds(15)) { FileManager.default.fileExists(atPath: output.appendingPathComponent("asr-channel-0.json").path) }
         task.cancel()
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(try AudioFixture.read(output,"manifest.json")["state"] == "cancelled")

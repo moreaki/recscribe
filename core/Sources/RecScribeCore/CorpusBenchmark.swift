@@ -1,54 +1,6 @@
 import Darwin
 import Foundation
 
-/// Engine-independent lexical scores. These do not measure speaker or semantic accuracy.
-public enum TranscriptAccuracy {
-    static func normalized(_ text: String) -> String {
-        let folded = text.precomposedStringWithCanonicalMapping.folding(
-            options: .caseInsensitive,
-            locale: Locale(identifier: "en_US_POSIX")
-        )
-        let scalars = folded.unicodeScalars.map {
-            CharacterSet.alphanumerics.contains($0) || $0 == "_" ? $0 : " "
-        }
-        return String(String.UnicodeScalarView(scalars))
-            .split(whereSeparator: \.isWhitespace)
-            .joined(separator: " ")
-    }
-
-    static func distance<T: Equatable>(_ reference: [T], _ hypothesis: [T]) -> Int {
-        var previous = Array(0...hypothesis.count)
-        for (i, token) in reference.enumerated() {
-            var current = [i + 1]
-            for (j, other) in hypothesis.enumerated() {
-                let substitution = previous[j] + (token == other ? 0 : 1)
-                current.append(min(current[j] + 1, previous[j + 1] + 1, substitution))
-            }
-            previous = current
-        }
-        return previous.last!
-    }
-
-    public static func score(reference: String, hypothesis: String) -> JSONValue {
-        let ref = normalized(reference)
-        let hyp = normalized(hypothesis)
-        let words = ref.split(separator: " ")
-        let chars = Array(ref.unicodeScalars.filter { $0 != " " })
-        let wordErrors = distance(words, hyp.split(separator: " "))
-        let charErrors = distance(chars, Array(hyp.unicodeScalars.filter { $0 != " " }))
-        return [
-            "wer": words.isEmpty ? nil : .number(Double(wordErrors) / Double(words.count)),
-            "cer": chars.isEmpty ? nil : .number(Double(charErrors) / Double(chars.count)),
-            "word_errors": .integer(Int64(wordErrors)),
-            "reference_words": .integer(Int64(words.count)),
-            "character_errors": .integer(Int64(charErrors)),
-            "reference_characters": .integer(Int64(chars.count)),
-            "false_speech_words": words.isEmpty ? .integer(Int64(hyp.split(separator: " ").count)) : nil,
-            "normalization": "swift-nfc-casefold-alphanumeric-v1; punctuation to spaces, collapsed whitespace; CER omits spaces"
-        ]
-    }
-}
-
 /// Each measured case launches the native CLI in a fresh process. No downloads or providers.
 public enum CorpusBenchmark {
     public enum Policy {
@@ -63,31 +15,28 @@ public enum CorpusBenchmark {
         model: URL?,
         threads: Int,
         dryRun: Bool,
-        timeout: TimeInterval = Policy.caseTimeout
+        timeout: TimeInterval = Policy.caseTimeout,
+        sourceLanguage: String? = nil,
+        caseIDs: Set<String>? = nil,
+        whisperProfile: URL? = nil,
+        externalCheck: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }
     ) throws -> JSONValue {
         guard NativeWhisperEngine.Policy.threadRange.contains(threads), timeout > 0 else {
             throw CoreFailure("Choose a supported thread budget and positive case timeout")
         }
-        let data = try Data(contentsOf: manifest)
+        let data = try read(manifest, maximum: 4 * 1_024 * 1_024)
         let document = try JSONDecoder().decode(JSONValue.self, from: data)
-        guard document["schema_version"] == "1.0", let cases = document["cases"].array else {
-            throw CoreFailure("Expected corpus schema_version 1.0 and cases array")
-        }
-        var ids = Set<String>()
-        for item in cases {
-            guard let id = item["id"].string,
-                  !id.isEmpty,
-                  id.range(of: "^[a-zA-Z0-9_-]+$", options: .regularExpression) != nil,
-                  ids.insert(id).inserted,
-                  item["category"].string != nil else {
-                throw CoreFailure("Corpus cases need unique safe IDs and a category")
-            }
+        let allCases = try CorpusManifest.validate(document)
+        let cases = allCases.filter { caseIDs == nil || caseIDs!.contains($0["id"].string!) }
+        if let caseIDs, Set(cases.compactMap { $0["id"].string }) != caseIDs {
+            throw CoreFailure("Unknown benchmark case selection")
         }
         try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
         guard mkdir(output.path, 0o700) == 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
 
+        let runnerHash = try WAVAudio.hash(cli, check: externalCheck)
         var results: [JSONValue] = []
         func persist() throws -> JSONValue {
             #if arch(arm64)
@@ -100,12 +49,15 @@ public enum CorpusBenchmark {
             let report: JSONValue = [
                 "schema_version": "1.0",
                 "manifest_sha256": .string(TextJob.hash(data)),
+                "corpus_version": document["corpus_version"],
+                "runner_sha256": .string(runnerHash),
                 "machine": [
                     "os": .string(ProcessInfo.processInfo.operatingSystemVersionString),
                     "architecture": .string(architecture),
                     "processors": .integer(Int64(ProcessInfo.processInfo.processorCount))
                 ],
-                "results": .array(results)
+                "results": .array(results),
+                "aggregation": TranscriptAccuracy.aggregate(results)
             ]
             try TextJob.write(report.encoded(), named: "results.json", in: output)
             return report
@@ -117,9 +69,12 @@ public enum CorpusBenchmark {
             var row: JSONValue = [
                 "id": .string(id),
                 "category": item["category"],
+                "language": item["language"], "conditions": item["conditions"],
+                "task": item["task"], "split": item["split"],
                 "status": "pending_corpus"
             ]
             let check: @Sendable () throws -> Void = {
+                try externalCheck()
                 let cancelMarker = output.appendingPathComponent("cancel.request").path
                 if Task.isCancelled || FileManager.default.fileExists(atPath: cancelMarker) {
                     if FileManager.default.fileExists(atPath: job.path) {
@@ -130,42 +85,32 @@ public enum CorpusBenchmark {
             }
             do {
                 try check()
-                if let audio = item["audio"].string,
-                   let reference = item["reference"].string,
-                   let digest = item["sha256"].string,
-                   !(item["license"].string ?? "").isEmpty {
-                    func resolve(_ path: String) -> URL {
-                        if path.hasPrefix("/") {
-                            return URL(fileURLWithPath: path)
-                        }
-                        return manifest.deletingLastPathComponent().appendingPathComponent(path).standardizedFileURL
-                    }
-                    let source = resolve(audio)
-                    let truth = resolve(reference)
-                    if FileManager.default.fileExists(atPath: source.path),
-                       FileManager.default.fileExists(atPath: truth.path) {
-                        guard try WAVAudio.hash(source, check: check) == digest else {
-                            throw CoreFailure("Audio checksum mismatch: \(id)")
-                        }
+                let eligibility = try CorpusManifest.eligibility(item, manifest: manifest,
+                    schemaVersion: document["schema_version"].string!, check: check)
+                row["status"] = .string(eligibility.status)
+                row["readiness_reason"] = eligibility.reason.map(JSONValue.string) ?? .null
+                if let source = eligibility.audio, let truth = eligibility.reference, eligibility.status == "ready" {
                         if dryRun {
                             row["status"] = "ready"
                         } else {
                             guard let whisper, let model else {
                                 throw CoreFailure("A measured run requires --whisper-cli and --model")
                             }
+                            row["artifact_metrics"] = try WhisperBenchmarkMetrics.artifact(model, check: check)
                             let timing = output.appendingPathComponent("\(id).time.txt")
                             let started = ContinuousClock.now
+                            var command = [
+                                "-l", "-o", timing.path, cli.path, "transcribe", source.path,
+                                "--output", job.path,
+                                "--source-language", sourceLanguage ?? item["language"].string ?? "auto",
+                                "--whisper-cli", whisper.path, "--model", model.path,
+                                "--threads", String(threads), "--local-only"
+                            ]
+                            if let whisperProfile { command += ["--whisper-profile", whisperProfile.path] }
+                            row["command"] = .array((["/usr/bin/time"] + command).map(JSONValue.string))
                             _ = try AudioChildProcess.run(
                                 URL(fileURLWithPath: "/usr/bin/time"),
-                                [
-                                    "-l", "-o", timing.path, cli.path, "transcribe", source.path,
-                                    "--output", job.path,
-                                    "--source-language", item["language"].string ?? "auto",
-                                    "--whisper-cli", whisper.path,
-                                    "--model", model.path,
-                                    "--threads", String(threads),
-                                    "--local-only"
-                                ],
+                                command,
                                 directory: output,
                                 log: output.appendingPathComponent("\(id).log"),
                                 timeout: timeout,
@@ -173,15 +118,12 @@ public enum CorpusBenchmark {
                             )
                             let elapsed = started.duration(to: .now)
                             let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
-                            let transcriptData = try Data(contentsOf: job.appendingPathComponent("transcript.json"))
+                            let transcriptData = try read(job.appendingPathComponent("transcript.json"), maximum: TextJob.maximumTranscriptBytes)
                             let transcript = try CanonicalTranscript(JSONDecoder().decode(JSONValue.self, from: transcriptData))
                             let value = transcript.value
-                            let hypothesis = (value["segments"].array ?? []).compactMap { $0["source_text"].string }.joined(separator: " ")
-                            let score = TranscriptAccuracy.score(
-                                reference: try String(contentsOf: truth, encoding: .utf8),
-                                hypothesis: hypothesis
-                            )
-                            row = .object((row.object ?? [:]).merging(score.object ?? [:]) { _, new in new })
+                            let selectedChannel = value["source"]["channels_bit_identical"] == true ? JSONValue.integer(0) : item["source_channel"]
+                            let selected = (value["segments"].array ?? []).filter { item["source_channel"].integer == nil || $0["channel"] == selectedChannel }
+                            let hypothesis = selected.compactMap { $0["source_text"].string }.joined(separator: " ")
                             let timingText = try String(contentsOf: timing, encoding: .utf8)
                             let rss = timingText.split(separator: "\n")
                                 .first { $0.contains("maximum resident set size") }?
@@ -192,16 +134,29 @@ public enum CorpusBenchmark {
                             row["status"] = value["status"]
                             row["wall_seconds"] = .number(seconds)
                             row["real_time_factor"] = duration > 0 ? .number(seconds / (duration / 1000)) : nil
+                            row["source_audio_seconds"] = duration > 0 ? .number(duration / 1_000) : nil
+                            row["end_to_end_audio_seconds_per_second"] = duration > 0 && seconds > 0 ? .number(duration / 1_000 / seconds) : nil
                             row["peak_rss_bytes"] = rss.map(JSONValue.integer) ?? .null
+                            row["hypothesis_sha256"] = .string(TextJob.hash(Data(hypothesis.utf8)))
                             row["memory_method"] = "macOS time -l; maximum process RSS, not summed concurrent memory"
-                            row["source_sha256"] = .string(digest)
-                            row["reference_sha256"] = .string(try WAVAudio.hash(truth, check: check))
+                            row["source_sha256"] = eligibility.audioSHA256.map(JSONValue.string) ?? .null
+                            row["reference_sha256"] = eligibility.referenceSHA256.map(JSONValue.string) ?? .null
                             row["engine_passes"] = value["processing"]["engine_passes"]
+                            row["engine_runtime_measurements"] = try WhisperBenchmarkMetrics.retainedPasses(value["processing"]["engine_passes"], job: job, check: check)
                             row["threads"] = .integer(Int64(threads))
+                            let referenceData = try read(truth, maximum: TranscriptAccuracy.maximumScoringTextBytes)
+                            guard TextJob.hash(referenceData) == eligibility.referenceSHA256,
+                                  try WAVAudio.hash(source, check: check) == eligibility.audioSHA256,
+                                  let referenceText = String(data: referenceData, encoding: .utf8) else {
+                                throw CoreFailure("Corpus input changed during recognition or reference is not UTF-8")
+                            }
+                            let score = try TranscriptAccuracy.checkedScore(reference: referenceText, hypothesis: hypothesis,
+                                policy: try TranscriptAccuracy.policy(for: item, schemaVersion: document["schema_version"].string!),
+                                durationSeconds: duration > 0 ? duration / 1_000 : nil, check: check)
+                            row = .object((row.object ?? [:]).merging(score.object ?? [:]) { _, new in new })
                             let reviewedCount = (value["segments"].array ?? []).filter { $0["needs_review"] == true }.count
                             row["reviewed_segments"] = .integer(Int64(reviewedCount))
                         }
-                    }
                 }
             } catch is CancellationError {
                 row["status"] = "cancelled"
@@ -223,5 +178,12 @@ public enum CorpusBenchmark {
             throw CoreFailure("Benchmark cases failed; inspect results.json and retained logs")
         }
         return report
+    }
+
+    private static func read(_ url: URL, maximum: Int) throws -> Data {
+        let file = try FileHandle(forReadingFrom: url); defer { try? file.close() }
+        let bytes = try file.read(upToCount: maximum + 1) ?? Data()
+        guard bytes.count <= maximum else { throw CoreFailure("Benchmark input exceeds its bounded size limit") }
+        return bytes
     }
 }

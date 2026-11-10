@@ -15,6 +15,16 @@ a revision alone does not authenticate a binary; reports identify that limit.
 The current runner drives that binary's unchanged `transcribe` command and scores
 its preserved canonical outputs with the selected versioned scoring policy.
 
+Retain the complete SwiftPM product: copy its generated runtime resource bundle
+alongside the executable under `Build/Products`, and hash those resources in the
+build receipt. For the macOS Swift build system this includes
+`RecScribeCore_RecScribeCore.bundle`; other SwiftPM build systems may use a
+`.resources` directory. Verify the schema bytes against that source revision and
+run the frozen renderer fixture with the staged executable before inference.
+Successful compilation or an executable hash alone does not establish that a
+copied CLI has all its required resources. Preserve incomplete staging attempts
+and their failed raw jobs when correcting packaging.
+
 The control arguments remain `-tp 0 -mc 0`, without added search, fallback or VAD
 overrides. Upstream defaults are version-specific: this is not a claim of greedy
 search or disabled temperature fallback. The final pipeline skips exact digital

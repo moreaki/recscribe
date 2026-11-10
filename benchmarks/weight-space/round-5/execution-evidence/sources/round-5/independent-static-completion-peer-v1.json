@@ -1,0 +1,41 @@
+{
+  "schema_version": "round5-independent-static-completion-peer-v1",
+  "status": "passed",
+  "created_utc": "2026-11-09T20:57:32.302462+00:00",
+  "completion": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-completion.receipt.v1.json",
+    "sha256": "15f5713bd1eb28b2b30f632942d600edc211ca84152de4c1e3f9c5349bde8de7",
+    "bytes": 2891
+  },
+  "independent_command_peer": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-command-peer-v1.json",
+    "sha256": "cf80ed7a1b7fd8de807fdac0cc8e17649e90a65b26b144b56233c77a9cdfd413",
+    "bytes": 1901
+  },
+  "one_recorded_actual_payload_worker_launch": true,
+  "all_command_source_bounds_and_closed_guard_checks_passed": true,
+  "outer_verifier_archived_after_completion_not_prospectively_frozen": true,
+  "metadata_alias_failure_preserved": true,
+  "verified_history_metadata": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "sha256": "ae8bc670161f50563be5ebccdbb7aca16df6df048a22a19559d2e9cf270c3289",
+      "bytes": 3509
+    },
+    {
+      "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/benchmark/20261109-215326-issue-112-r5-independent-static-audit-2764eb05/console.log",
+      "sha256": "79e45f6f4f49ca86808e607f094eeef2bdec37bc0eb191aa1f1379cd0982863f",
+      "bytes": 516
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission.v1.json",
+      "sha256": "a6c014a7cbe8e48936d02f6c28d24682628341163477a2c5d7e9e22dee01cf7f",
+      "bytes": 3139
+    }
+  ],
+  "model_audio_reference_payloads_opened": false,
+  "native_model_initialization_or_recognition_executed": false,
+  "quality_acceptance": "PENDING",
+  "native_compatibility": "PENDING_ACTUAL_MODEL_LOAD",
+  "resource_acceptance": "NOT_EVALUATED"
+}

@@ -1,0 +1,47 @@
+{
+  "freeze": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+    "sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8"
+  },
+  "worker_command": [
+    "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+    "preflight",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts",
+    "--freeze",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+    "--freeze-sha256",
+    "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8"
+  ],
+  "command": [
+    "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/run-guard.py",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts",
+    "--log",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.guard.v1.jsonl",
+    "--timeout",
+    "600",
+    "--poll-seconds",
+    "1",
+    "--probe-timeout",
+    "2",
+    "--foreign-cpu-limit",
+    "1000",
+    "--",
+    "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+    "preflight",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts",
+    "--freeze",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+    "--freeze-sha256",
+    "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8"
+  ],
+  "model_payloads_read": false
+}

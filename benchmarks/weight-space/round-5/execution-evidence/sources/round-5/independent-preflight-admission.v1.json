@@ -1,0 +1,65 @@
+{
+  "schema_version": "round5-independent-preflight-admission-v1",
+  "status": "passed",
+  "operation_freeze": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+    "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720"
+  },
+  "smoke_guard": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke.guard.v1.jsonl",
+    "sha256": "4136df13b6dbd430ecca7210ac32d084211bf8381baf5a2a04bd41187c3ba3f2",
+    "bytes": 1319
+  },
+  "smoke_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-v1/audit.json",
+    "sha256": "3bfdd8f20b9e2c5b50125e12199a6d4631c6c61baff1ddf2f65677dc1fcbd0cb",
+    "bytes": 6355
+  },
+  "metadata_cli_exitcode": 0,
+  "model_payload_open_attempts": 0,
+  "fixed_model_payload_paths_denied": 11,
+  "source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "bytes": 31566
+  },
+  "actual_command": [
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1",
+    "--log",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+    "--timeout",
+    "600",
+    "--poll-seconds",
+    "1",
+    "--probe-timeout",
+    "2",
+    "--foreign-cpu-limit",
+    "1000",
+    "--",
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "--family-seal",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+    "--family-seal-sha256",
+    "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+    "--expected-source-sha256",
+    "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1"
+  ],
+  "recognition_or_model_initialization": false,
+  "prior_admission_verifier_packaging_failure": {
+    "console": {
+      "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/benchmark/20261109-215326-issue-112-r5-independent-static-audit-2764eb05/console.log",
+      "sha256": "79e45f6f4f49ca86808e607f094eeef2bdec37bc0eb191aa1f1379cd0982863f",
+      "bytes": 516
+    },
+    "payload_worker_launched": false,
+    "cause": "Verifier did not apply pinned guard argv[0] canonicalization; corrected exactly to existing7697 semantics, no audit source or freeze change"
+  }
+}

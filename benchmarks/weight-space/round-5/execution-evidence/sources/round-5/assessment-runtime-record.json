@@ -1,0 +1,62 @@
+{
+  "runner_sha256": "5190e4d3849b8f5aa37ef7031d9557d6ebd17866c798b9c6412cba64b587c1c4",
+  "files": [
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+      "sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+      "bytes": 658608
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml-base.0.27.0.dylib",
+      "sha256": "4b83a188ddd93a32003edbe342aeae7e3726b7aed2c2e7774642f80fb4855d7f",
+      "bytes": 508720
+    },
+    {
+      "path": "/opt/homebrew/Cellar/libomp/23.1.4/lib/libomp.dylib",
+      "sha256": "432b8d15fc1b2431f937bba89796a32daaa2dd464eda12a744d9cb2818842477",
+      "bytes": 725984
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml.0.27.0.dylib",
+      "sha256": "eea477583ec2610f261a08e80f07593d6fceaa30418d7ae95e385e2cda5d9b74",
+      "bytes": 60128
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-blas.so",
+      "sha256": "bc7cdf71b25a4ef01387c2a0f218fe995d2c70869df03ae8921e6bde3da57214",
+      "bytes": 58752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m1.so",
+      "sha256": "3146b7ad6d6602df9c6b05407b1b30479cea77383be9dbf72a2865841d28a05c",
+      "bytes": 572240
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m2_m3.so",
+      "sha256": "dc13929118733f01625f7ea1beec95b43ff3143a87a44cd0b16824cf08cdff7e",
+      "bytes": 588768
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m4.so",
+      "sha256": "d90161124de31c08897872eafa7e3ddc3b43a713e184cef59c8af002bf2161bf",
+      "bytes": 588752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-metal.so",
+      "sha256": "0e7f450879c116699bee6c3bbc3a8630d01d6e4e74e9f918af6dd6b1c7facffa",
+      "bytes": 5565024
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libparakeet.1.9.5.dylib",
+      "sha256": "16ed9f49842cde9371fc605e0d6a7ad1dae5b8d8df9c97c72bce2f3c663ca0e6",
+      "bytes": 168960
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libwhisper.1.9.5.dylib",
+      "sha256": "a2972b454e49de7c83036eed4adbd06d8271f6f7c87b14e679d035d898d3ed4d",
+      "bytes": 418032
+    }
+  ],
+  "source_inventory_sha256": "613c51c18f4d7600db8be5156996057f9bb49eb40586b231a29ae561245a149d",
+  "scope": "Metadata only; no model/text/audio paths followed by assessment"
+}

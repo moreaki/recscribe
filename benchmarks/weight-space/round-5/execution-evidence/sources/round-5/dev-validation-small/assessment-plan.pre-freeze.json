@@ -1,0 +1,786 @@
+{
+  "schema_version": "mlp-permutation-assessment-plan-v1",
+  "stage": "development",
+  "split": "development",
+  "repetitions": 1,
+  "language_modes": [
+    "known"
+  ],
+  "cases": [
+    {
+      "id": "fleurs-de-de-dev-1102762088904212127",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "f532290d8aa6f7c87250a41b3a9f35014c503531e1efdefc4882a04b13c70841",
+      "reference_sha256": "6c279e3e406d0fbbdeccad5f1323bfb7c4b11c47e8663c40a5d2403be7b86c50",
+      "source_id": "fleurs:de_de:dev:1102762088904212127.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-1108348186858654553",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "512a784c1f723b24fca725dbafa3956e5eb2602fa7cedbd5b8d75eca0462a91c",
+      "reference_sha256": "4cf3963f7fe93137eb82ca23466cb84531590305fb2fc398603e43041532d546",
+      "source_id": "fleurs:de_de:dev:1108348186858654553.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11083586197548566977",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "95bf63485ff0899685a78845dd8d0780ec3a299f0782b0dfca8101c975ac358b",
+      "reference_sha256": "5e146f57306c529553bb3d759d8fd5276d60bb6adb8167df5a2a2469ab31b9b6",
+      "source_id": "fleurs:de_de:dev:11083586197548566977.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11118548002773045079",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "478de6fe20f41e2b348459124f59f4aee44afe308ed8659d1b00e1cd4d7491b5",
+      "reference_sha256": "1323bf2e11b71adf66103d7b57c8e0c80dc585478c99c700c1d1904b76d18bf2",
+      "source_id": "fleurs:de_de:dev:11118548002773045079.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11133747371053969443",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "f35e4d4b1bf42c0e27a459df0a9f39f18fe4beb0911918e581a630f6adf775a8",
+      "reference_sha256": "49c990f69e262b9967ea396e0d592b2ab93c9355900b6cd653f0e2b7093c63bc",
+      "source_id": "fleurs:de_de:dev:11133747371053969443.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11139677518531751191",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "dd372de59b17d5cdb60692f06545f472e905deb82e6878fdc932756012b18464",
+      "reference_sha256": "8c26172b6e3f09e171eb07b2edf147315ca0ad033dae785f3f254ed6851728f9",
+      "source_id": "fleurs:de_de:dev:11139677518531751191.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11142047888179315819",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "9638cb29dd95115a640db9d2da43814ea9fc927bae7f1bebf82229782bd9428f",
+      "reference_sha256": "ecddeb0e3dd9e083ebe44163fdb2adba1b4aaa5a69befe4111c629e97913b0dc",
+      "source_id": "fleurs:de_de:dev:11142047888179315819.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-dev-11142258417176039254",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "66f1b5f06ae22c429f6dea1f301b15edd8e9deb5f16cf07c4fa2c5ac761b0b86",
+      "reference_sha256": "a988eb4580d586da7f1a2daa06c562f0c4db7641c30912bbcd522d1e445470f2",
+      "source_id": "fleurs:de_de:dev:11142258417176039254.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-11260516818449932039",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "33fcea9151a7be1389121a6725c3204af01d9986662c63da5c08ba4260c76a37",
+      "reference_sha256": "fa9eb70d2612d20974aa63ee446f439ab4e4da163e05e8e9375e0e121449b1ad",
+      "source_id": "fleurs:fr_fr:dev:11260516818449932039.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-11268749000541560281",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "d00b3e2df819db2e48fbe5a4a1362dfa5c30a00ee60dd5f819f0928431882626",
+      "reference_sha256": "2f41be9c1d305296ddf9e5a4a90447849432655759d8b5f751569e040d258955",
+      "source_id": "fleurs:fr_fr:dev:11268749000541560281.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-11357826383234870444",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "831567e18168c44008900c9948ac3eb7e6e9451057c17a68624e0416a11243b9",
+      "reference_sha256": "a318271dfcb37f9c901fd3633ab7994f8ba6957102e45407020a342513fd1b49",
+      "source_id": "fleurs:fr_fr:dev:11357826383234870444.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-11432635460748117065",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "577726edb8d7a8c7053de5eba91a4a971140048e1dc38571f506e4680fc6abc2",
+      "reference_sha256": "d30fbb36570a347c42110df51d0aa6c66fbdda94f97deeabfc86efbefd91d232",
+      "source_id": "fleurs:fr_fr:dev:11432635460748117065.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-11562112963864972357",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "2a201b313fc226fe920490ad923e26b35a530deae79a679807310996b9060a0e",
+      "reference_sha256": "72bf288a6c3d861c68223f51bf5c364b3ece7ad0631c4ed902477d14ee2d5083",
+      "source_id": "fleurs:fr_fr:dev:11562112963864972357.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-115842053593505063",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "bcfb4f2b2603ec0052b4ad2b84a72aecac5720ece6aff16aad910ee3fc747a81",
+      "reference_sha256": "9604e8d552a59cbb581834babe8e15114561eea9e2f510eb2e6b76185a0df1a1",
+      "source_id": "fleurs:fr_fr:dev:115842053593505063.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-12003500929711524882",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "f220fd5274fc382184feee6d123821569c5d17cb8babaac321a6b0f8332cc0d7",
+      "reference_sha256": "c6a6024fe51e3483938cbda54bf33aa8945b1e4eceb9d68ab6589645853dc89b",
+      "source_id": "fleurs:fr_fr:dev:12003500929711524882.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-dev-1208718371230058980",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "013569cfd237816cc68300d83bdb5282d406aa771cbab91e50bfdd4240579dd3",
+      "reference_sha256": "3ac10080385ca1d4baff3715e866460798776ec8215aee7caf1ac075f7983ef2",
+      "source_id": "fleurs:fr_fr:dev:1208718371230058980.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10840157898193044128",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "d71a53f909c074a89fea4d75129766579e324819f27a1eeca08644e85f2c48fe",
+      "reference_sha256": "8d0b19fec2bd0c7e0cfd644af01134ae09a7680e95527de746f28d2e4d29b528",
+      "source_id": "fleurs:it_it:dev:10840157898193044128.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-1085913794569000829",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "f9873cafe8db853e837af7d0417de54cc0af7abf4cdc2fa03f924e4f64ceb5dd",
+      "reference_sha256": "0e2fee9cbca299089124d208190e9a05becdf788e0f957f3d2c24d426988f252",
+      "source_id": "fleurs:it_it:dev:1085913794569000829.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10870103013578612360",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "8e626264dc0a6327bcb8d9d09e6fec57bfcb94f38d0d0a5904a5729197e05ca7",
+      "reference_sha256": "9f3a43fdd9f7a71a7d447d2eddd886e085e56d58baba5ff57069f2bc6a2ed1d5",
+      "source_id": "fleurs:it_it:dev:10870103013578612360.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10885857103325931877",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "3649da59f740ad4d8a6026cdfcc3fb1adc550ae1a667f646463aca8a75bbe57e",
+      "reference_sha256": "b6dc67a1d6655233fc997d6ea853a351260d62885f149093eda22410fea0b454",
+      "source_id": "fleurs:it_it:dev:10885857103325931877.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10887869216507576611",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "7afa1b2467247e09f7b1712a855480e28ad2df155036316ce8218494a9f590f3",
+      "reference_sha256": "d9ea98ab27e73f7633679b1ba5acbfd8396120860c225bc76a23fe1e1336972b",
+      "source_id": "fleurs:it_it:dev:10887869216507576611.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10901090821029750626",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "330fc5426178ab004ed8f5ceba9ca36f4f821328785455779dd7b09ca7019292",
+      "reference_sha256": "3e648511a6fc24abf853a07c9160cc781dd5baaafc663d9626d404f8353f5fc7",
+      "source_id": "fleurs:it_it:dev:10901090821029750626.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-10906175833006160564",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "83323be1ea76dfdb5e0dfa4d384ea566b1b022aa0c50ee7230e040af8b7433d7",
+      "reference_sha256": "370b82aae8142107167f83dfe5cf6fd9b66c3d42fac210b28cb80859c1144916",
+      "source_id": "fleurs:it_it:dev:10906175833006160564.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-dev-11031504174622469612",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "648bf4f3ca8d6adccef54ec8603b61bda700b8a6e85c694bf84c2573cdd89519",
+      "reference_sha256": "b996e2bd80546233fff83bbd0ee3d8a646e6860493e7b5e2d783bc91ebf66e30",
+      "source_id": "fleurs:it_it:dev:11031504174622469612.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-10805693277239677928",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "eee780d37c85907944a822299fa6edf342160d9caf6bcdabea1493e56130c40c",
+      "reference_sha256": "3e819e899c17d5354f106eaefffda16ba6b6d64d218e758479c259843bc910f1",
+      "source_id": "fleurs:en_us:dev:10805693277239677928.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-10807778671969097912",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "20aa95d09d3d943819f8b38dd08e5bff23aec7a8f1ed47fc248db94217151fa3",
+      "reference_sha256": "92e6f5606a43cab3256a5e295f00cdf44c5d8a0fc628d907ca1bd090f6fc6dc7",
+      "source_id": "fleurs:en_us:dev:10807778671969097912.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-10846227846460802233",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "7ec102059e704433fe5ae77904ef458f270eca8716fc614bfde0debada44aafc",
+      "reference_sha256": "5f3b6f629805e6bb4612103b3a7533e8e617ef9bb0e60ff24043961be40704a7",
+      "source_id": "fleurs:en_us:dev:10846227846460802233.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-10885549230041454053",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "2602edd6b32764f8444ec42f9fec0fd4eebcf2b0a1d49c078dd7a92145abff2e",
+      "reference_sha256": "5b10d72a451d38bf171ee5f19c860c8dacf13fc523ef632e5b8d9f8d0515e754",
+      "source_id": "fleurs:en_us:dev:10885549230041454053.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-10927605878527486298",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "bb9287bec6ef4261ac5383424b58d51b43a7741415f2acd72a70dd5129dcdf13",
+      "reference_sha256": "e91691c09f75d7378460ef4546be012de01cab59d98b6448705bc024c775b998",
+      "source_id": "fleurs:en_us:dev:10927605878527486298.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-11030046932175288954",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "277e15084da248ba054ed1dce70110d650e029d4adddb5cc32b99a33b98f0c81",
+      "reference_sha256": "86f42c4d04d6fdc160e7c200d508808aec0eae9a519ef19171f8560c38166b89",
+      "source_id": "fleurs:en_us:dev:11030046932175288954.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-1105184381995491301",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "1615ab47765b731c77d814f1e613ec391e991a444b1cd1753469cc8eb542344c",
+      "reference_sha256": "642a5abf9eb98595458eb52a2be93417739074eadf997a8299ddf311de074c49",
+      "source_id": "fleurs:en_us:dev:1105184381995491301.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-dev-11119334765887977448",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "bee66a7f7cf44dabb473c2198f6feefb84ffc06ba8ba4744b28964fa38c8be8e",
+      "reference_sha256": "7d8772f772f1a626f15f50178c3af88025057c223b9ba537fa7d4c6d7e4f64d4",
+      "source_id": "fleurs:en_us:dev:11119334765887977448.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-1169715995831709235",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "462aadb37071e2da71d67c3d170920e7845c8082ced1dc45d011b9e94e65e1ed",
+      "reference_sha256": "61642fdef62531e284a97d897e517774eda685578ff8522ec3ac3f2c9137b81b",
+      "source_id": "fleurs:ar_eg:dev:1169715995831709235.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-11724837325067372053",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "5fbb220ac07b36ab0d1a9691e4bd95674799a7f6be579185052901742d14b72b",
+      "reference_sha256": "9c3f5daab162851fb042528d1787110c608a13b7df8944400fd2ab409c77d546",
+      "source_id": "fleurs:ar_eg:dev:11724837325067372053.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-11838596984743387888",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "c41bdfdbc795f1fc42cc45831297bbb22d87f2d1e4f83fb4daa7c7a29dd4c2ee",
+      "reference_sha256": "d74586f7181033f7a43dd2911222867660e74f4b5651077b32627fcfe558fdff",
+      "source_id": "fleurs:ar_eg:dev:11838596984743387888.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-11861021959448587043",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "bce978cd39c3862314da8b39ab83881e2a5242bb823f6d7c669d29f98bf3ebf0",
+      "reference_sha256": "b09e5ee6d74fb0d71a65c22eff73bf7a91f6341c9125e431d54627d4ef6d8138",
+      "source_id": "fleurs:ar_eg:dev:11861021959448587043.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-11947262846818846680",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "c0d76eef88342fc66eb79abd3ef157fb0f087ef32c69a80a51f2e761a9347603",
+      "reference_sha256": "d6a1cd6abff8493fb5da23ef987fa6d13a2c1cbad7088ad2bf555f7abc7932bf",
+      "source_id": "fleurs:ar_eg:dev:11947262846818846680.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-12054654535155256918",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "b42317e20ff12ebb412dc2a2f9c26b6b2a589d512267f77b3c0a274feaf2bc49",
+      "reference_sha256": "d4af3171420e7f7ca00b547665c1efa5c24eb15d2136198e475490bff38a900c",
+      "source_id": "fleurs:ar_eg:dev:12054654535155256918.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-12066372341526081615",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "e23ff25692b5553f82e12f32b1483d3109ff6f37c92d17b7e7dd5552000591c9",
+      "reference_sha256": "456d0a4747f0e8b76d979577b2cadf4faabfe11d7b5e88e86f2b2e0ce1ad1b26",
+      "source_id": "fleurs:ar_eg:dev:12066372341526081615.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-dev-1209317508727391337",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "c5c4212d3b3736a69572165d3052e4848f71569c6bc8396bb2a24d6f67afb72e",
+      "reference_sha256": "a11d4ee4b4a961526c366645a06b42c0017110b92968d24c61fb259aa4de108d",
+      "source_id": "fleurs:ar_eg:dev:1209317508727391337.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11428443160573858127",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "39c97fd60715e3c1e1a0699670b2b3e5c15dd67f9fd8dd45cf76425ab30edc6a",
+      "reference_sha256": "373699f901324910c9f44b8613789a347155ff2631c8e667c433b906feabafdf",
+      "source_id": "fleurs:cmn_hans_cn:dev:11428443160573858127.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11554468137048990068",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "7a877f8e9a50c7bce1ffcf85f78e1e57d94eb9a94dd769e6ffa6aba7fa6d003c",
+      "reference_sha256": "71fb4408b8158211b5888cf9619dcab1f89cf565fbfcdfab538143f9e0ff4ab5",
+      "source_id": "fleurs:cmn_hans_cn:dev:11554468137048990068.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11588356629622749646",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "db433415728e35f5306536735e42521d2738fe5d575af26bfbabea7b676ee706",
+      "reference_sha256": "50b8214721005757a72ee09924a3f2d4006a6f0531a141681cbfb15c60e9d99b",
+      "source_id": "fleurs:cmn_hans_cn:dev:11588356629622749646.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11595834040520631107",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "22d1c3ce197a1ee3ea9804b9e8fa3da6ef3c500369a7ee788a6fc1ffd5bf0552",
+      "reference_sha256": "5241e29815480b1c4c4f80599ec3d8fdf8e2a9110ea9b79bacc2a740c58d9b73",
+      "source_id": "fleurs:cmn_hans_cn:dev:11595834040520631107.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11635592428808064812",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "006351b78f1c2d0141a2bb36f2ce54e375276ab2322ff5be18fefe0d6cbb93eb",
+      "reference_sha256": "08c4ae4bfec08c8b2ed33d34a01e7ff011c4c1cf01fd766c48eeeaba4a7b310d",
+      "source_id": "fleurs:cmn_hans_cn:dev:11635592428808064812.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11760420660270846757",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "13571a3b877b5265aa6bc0780d46a43a47ddfe00e99d6dad34efdeca9d9d4a54",
+      "reference_sha256": "127209ec1d263a6f6387f830b57f9074aec9a0d7b446ec3d99f2bbe8dcd87046",
+      "source_id": "fleurs:cmn_hans_cn:dev:11760420660270846757.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11788433184081135999",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "bbb60f9fb598ad687ae89423fe4f6125435be34bb2ea531b0980dadbfe40917c",
+      "reference_sha256": "0edce717c43a18e705012dec8af4c3a454824696b6e9d64740cb159b379149a2",
+      "source_id": "fleurs:cmn_hans_cn:dev:11788433184081135999.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-dev-11869603144267061918",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "a405218982497f26b01955cc85f1b257dbf55c45521281e9ccbd0cd945d7bcd6",
+      "reference_sha256": "01acc2699bce9910d1081278c809c8109ce2db5deccf3019322e6732837e78d2",
+      "source_id": "fleurs:cmn_hans_cn:dev:11869603144267061918.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11216944941977308634",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "e8748b5580b455cc64141063faeba1dee75ddf89163be33fb50a6257f268cd11",
+      "reference_sha256": "90e0392049f5c56a8bd100a4d89f47ada664c63371894ebda8759f7f6f943d24",
+      "source_id": "fleurs:es_419:dev:11216944941977308634.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11246039338847509796",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "5d8c0a79e2e319399a7ef532b366af744be181d0edfb74a1f00614898543d031",
+      "reference_sha256": "3f1adbbf9d9d9a20130c7422e5fdae28def89fc75b1bd6a4299b0babc5adce9d",
+      "source_id": "fleurs:es_419:dev:11246039338847509796.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-1140674312787437347",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "5e07602c1c87bd6ede08ae0c1eb6d4fbae5b1e464e34ef2bd347d6205080c068",
+      "reference_sha256": "c2b400c7a08cbc30a66f020d242630906fba5ac71c69e0e08c0381d56750e2d1",
+      "source_id": "fleurs:es_419:dev:1140674312787437347.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11588863747163776837",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "b953fe17f4be143bf31a9a02e0ef42a589d5627438c54c19bf914c9c7b3fece4",
+      "reference_sha256": "90e4fb091beda650086c50edf1b9c58b5bb1f6e509a8db59e86020d56f175350",
+      "source_id": "fleurs:es_419:dev:11588863747163776837.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11618430784665893761",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "1b516b1f175e76f89d4fe93e327fa2113f880a0d9eac4a1882f0171fbf89805d",
+      "reference_sha256": "ddd9701440314e648bbffad0ba6e743f847dd6d9d4c052da3cf58498fc2106fc",
+      "source_id": "fleurs:es_419:dev:11618430784665893761.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11628447209919953063",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "d05be32a2dbbaef3bbe81c0857fe71a0919b9e2f6d49c9fa605b34ac6d0e951d",
+      "reference_sha256": "5370238de228c927372f21b51dfda836a0b348bf2bb3df38c7e985196997a306",
+      "source_id": "fleurs:es_419:dev:11628447209919953063.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11796734010502049729",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "1f63039e9e8b6ba512cc6f9078503b10a69184832f16ef70ebb923cc39e93120",
+      "reference_sha256": "1f5e9513cd570850270e662738ed7d5ea5a038905e14eb51870b20b2a7de91ec",
+      "source_id": "fleurs:es_419:dev:11796734010502049729.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-dev-11846542323156006694",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "ac7339ea6c70213d75a3d989852c319e338a679d8acb7071ca8f584c4f5a99b4",
+      "reference_sha256": "f1882bfe67f8d580a580aa4a06918ef9708d4a97d3c7461d91c8272dc4a9e1e1",
+      "source_id": "fleurs:es_419:dev:11846542323156006694.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11132459245063364782",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "cec86a61573aeb58d52abac327199335d81ea31f10f15006b7b926693f40fc06",
+      "reference_sha256": "a42f268f2970bb12b5b997a0748f26657bd7f2244b5aa2020a26e58646dc1a9e",
+      "source_id": "fleurs:pt_br:dev:11132459245063364782.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11193159258989471636",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "1b5181b755b16705796c0fb9797ca145beb041e4133ff5e547d86094502511ad",
+      "reference_sha256": "3072a45c134677620ea06b796e40b3e4e1b6bbd090bf49f174d0bf629eaf201b",
+      "source_id": "fleurs:pt_br:dev:11193159258989471636.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11267891273569506653",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "970e90cc8d56a1000fd6e8c64feb0bc59749f73f26d88c1b24d2f9e8b473598d",
+      "reference_sha256": "0aecf931a314f050170edb140b2f26ac8a26f4c00043388415a0c74bc137d404",
+      "source_id": "fleurs:pt_br:dev:11267891273569506653.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11278916061079989542",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "7dbfb10a7a7a34d9cee2ae27ed54746620be9ed816f7bd63e0ce474b1c55b0fa",
+      "reference_sha256": "3598c5c5e297af102c82ce5e3fece663fe057141238b0dce6efa2e41e2c3d45a",
+      "source_id": "fleurs:pt_br:dev:11278916061079989542.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11296799965122436324",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "780843f1fb59977d4e7128feeaa2bf0da6dc764471a649ab33ff36d4f4b595b0",
+      "reference_sha256": "c7119ce8467670ca8f0cbaea38d46d1a3daa10e5615c379197e794d441f880a5",
+      "source_id": "fleurs:pt_br:dev:11296799965122436324.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11300549843206521668",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "3dead5a106e23f5a7164024bde0ae0fe2840ffa1350b7cd8e9ae9692c6679594",
+      "reference_sha256": "1ee7a4f177529dc52ba7dafff76c50ecc4b37bf4551cd9bb2101353231f5ffd3",
+      "source_id": "fleurs:pt_br:dev:11300549843206521668.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11336492390727033871",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "08d3b63cab566e11c154bf987310c79ed20fe16580ccbbfb29a2f3587919c815",
+      "reference_sha256": "60eb9330e92a71ade054d4ed09881cb1af1834d9c4e420dcacf4612d208fcf6f",
+      "source_id": "fleurs:pt_br:dev:11336492390727033871.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-dev-11418592154298278484",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "6b4ca5fc24d4d17e2724296d726529ca50c13e6e851eeac42f1bc8ec899f5c49",
+      "reference_sha256": "909bb7533c29957115dbdd4e6a27afcc61ffae61f2f324aab032c7182e51031f",
+      "source_id": "fleurs:pt_br:dev:11418592154298278484.wav",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-045e0e0f-79c7-4eb5-b43f-3989e7b5bafb",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "3290cfcb5ed8e06addacbb46bc1d9cd62412f350310c4c07c668aaf914da0f7c",
+      "reference_sha256": "c56bdc779516ec7ae52f55ef0a5ad09feb937307fb26db7b7f5b72259070138e",
+      "source_id": "all-swiss-dialects:v1:045e0e0f-79c7-4eb5-b43f-3989e7b5bafb.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-0539459c-1155-48f7-8b2e-8eac26493572",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "cb0f05c52d9ff11ea93765183696dd7e7dad572a6a48db24c421e0ae5802a340",
+      "reference_sha256": "050660f8f83a8e674f4f16917221a5d82f3b21e1e198dc5f5ba7dce43e596e0d",
+      "source_id": "all-swiss-dialects:v1:0539459c-1155-48f7-8b2e-8eac26493572.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-05977be1-df46-4a6e-a3f8-6d3aaa735f41",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "bca5cc0f7885bde59df1aa8b90afd0c695fe4bd0af9d08e3ede3a1b4cf58ba4a",
+      "reference_sha256": "3df45918ce6de031a34c5148708bc7b50f8e018bed862328de22d74e3feed40a",
+      "source_id": "all-swiss-dialects:v1:05977be1-df46-4a6e-a3f8-6d3aaa735f41.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-05bf6cc8-0ada-4a23-b58a-3037cc5cdb74",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "eee0d635354002de66be57fb825a813f85498b33632ffdb751f3774fb96586e1",
+      "reference_sha256": "b8b8884be18af40b200ac731c19bf8c827e0c76dadd07099f7240d8742c247e4",
+      "source_id": "all-swiss-dialects:v1:05bf6cc8-0ada-4a23-b58a-3037cc5cdb74.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-0609ad5d-bcf4-4a63-86c2-a8aa45fac047",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "e77f161c3d976d6d4af0c8b3c9bea9052fbc0b0208ef6cddbd295a5328a66e58",
+      "reference_sha256": "35cd86a35789534de2c222fb80f18f9b44ed72535f974df03e3bb173f8f00682",
+      "source_id": "all-swiss-dialects:v1:0609ad5d-bcf4-4a63-86c2-a8aa45fac047.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-067c27b8-3aa4-4d8c-a532-fbea8dc3ffe9",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "32054cfe21b58bd2ca1fad82dabc8bff811b8810d98f09c27457da7aa1f7c089",
+      "reference_sha256": "1c100a183c2e4c1bb28831d5155c03995b1cceff73c68e03e6fb1da02d34969c",
+      "source_id": "all-swiss-dialects:v1:067c27b8-3aa4-4d8c-a532-fbea8dc3ffe9.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-0695b8d5-8d8a-4873-a669-93960e07916f",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "df8d203b51b22be30f8fdd358df36e36320a33c556d3d08bcdb3c6dde50c0d94",
+      "reference_sha256": "9ef7289b93c577fcd3c659b15d3c5a77e947ddd4364e00df3f1f74699608235d",
+      "source_id": "all-swiss-dialects:v1:0695b8d5-8d8a-4873-a669-93960e07916f.flac",
+      "code_switches": []
+    },
+    {
+      "id": "all-swiss-dialects-v1-06b54ea5-4e7c-4856-b044-e9da47fe2e33",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "8291e4f467518ab37d7b9f361c6e85c5640f350e13f559eb1e7c00cd45a25454",
+      "reference_sha256": "b4e4d0f5e7a9c06dbc6dbd64c50c785b0d03696980e1a724405e11f78229f6b9",
+      "source_id": "all-swiss-dialects:v1:06b54ea5-4e7c-4856-b044-e9da47fe2e33.flac",
+      "code_switches": []
+    }
+  ],
+  "partition": {
+    "id": "small",
+    "kind": "family",
+    "arms": {
+      "original": {
+        "id": "small",
+        "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+        "model_file_bytes": 487601967
+      },
+      "permuted_f16": {
+        "id": "small-permuted-f16",
+        "sha256": "09e7e4687e38d0ab60f344dca293c8e0b5e95faf3eced146524a1910acb8bc79",
+        "model_file_bytes": 487601967
+      },
+      "plain_q4": {
+        "id": "small-plain-q4",
+        "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+        "model_file_bytes": 145458015
+      },
+      "permuted_q4": {
+        "id": "small-permuted-q4",
+        "sha256": "3a290b18bddef45344e566e4e7aa501eccfaab3e461e1788a8b97e41cc8d5dd0",
+        "model_file_bytes": 145458015
+      }
+    },
+    "comparison_ids": {
+      "permuted_f16": "small-permuted-f16-vs-original",
+      "plain_q4": "small-plain-q4-vs-original",
+      "permuted_q4": "small-permuted-q4-vs-original"
+    }
+  },
+  "permutation": {
+    "version": "whisper-mlp-permutation-v1",
+    "recipe_sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122"
+  },
+  "quantization": {
+    "format": "q4_0",
+    "ftype": 2,
+    "quantizer_sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd"
+  },
+  "execution": {
+    "profile_id": "current-defaults",
+    "profile_sha256": "4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857",
+    "runtime_settings_sha256": "cdd7cdc0076480723ee4be3cf4d5d2f417ffb7c6ce44fcaeaed517c164048169",
+    "vad_model_sha256": null,
+    "runner_sha256": "5190e4d3849b8f5aa37ef7031d9557d6ebd17866c798b9c6412cba64b587c1c4",
+    "whisper_binary_sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+    "threads": 2,
+    "corpus_sha256": "391a617b78be66f699f685136bf68694311a0015e50ba22bfda78b2aba0ad811",
+    "configuration_sha256": "49ccbf5ca99344dfefe83627a401bc43f1f5643331d154a79b0e71f8e400f654"
+  },
+  "runtime_record": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/assessment-runtime-record.json",
+    "sha256": "56dbc00ba70248662d2c1d1d9ca94f1700baa18fa030a436a53b0f0fa3cc9728"
+  }
+}

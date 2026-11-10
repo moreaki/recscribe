@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "baseline_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4",
+  "baseline_cli": "/Users/moreaki/Dev/recscribe/Build/Products/WhisperControl-c214a8e/recscribe-text",
+  "baseline_cli_sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6",
+  "whisper_cli": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+  "split": "development",
+  "threads": 2,
+  "repetitions": 1,
+  "language_modes": [
+    "known"
+  ],
+  "paths": [
+    "final"
+  ],
+  "capture_inactive": true,
+  "workload_attestation": "Campaign requires separate fresh native UI idle/live-off attestation verified by the sealed coordinator before its first launch. Serial nice10, per-stage exact guard7697, active/uncertain capture or known competing work cancels owned research; foreign CPU1000%. Shared desktop resources uncontrolled.",
+  "freeze": null,
+  "profiles": [
+    {
+      "id": "current-defaults",
+      "kind": "candidate",
+      "source_revision": "a55b9ef1c3a5ab4ede43659e8c35c89001d0fc0f",
+      "settings": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/current-defaults.json"
+    }
+  ],
+  "models": [
+    {
+      "id": "tiny",
+      "kind": "pretrained",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-tiny.bin",
+      "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+      "download_artifact": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-tiny.bin",
+      "download_artifact_sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+      "profiles": [
+        "current-defaults"
+      ],
+      "checkpoint": "Fixed R5 original; retained original multilingual parent",
+      "precision": "GGML original F16/F32 layout"
+    }
+  ],
+  "comparisons": [],
+  "measurement_tier": "quality_only_shared_desktop",
+  "resource_gate_status": "not_evaluated_uncontrolled_desktop_load",
+  "foreign_cpu_guard_raw_percent": 1000
+}

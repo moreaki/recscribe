@@ -1,0 +1,20 @@
+{
+  "state": "NOT_STARTED_OPERATIONAL_DEFERRAL",
+  "freeze_sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8",
+  "archived": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.guard.jsonl",
+      "sha256": "277351691cc7935e25390e2d814e02721b06486c6ac78e7e9cf4e95877abd167",
+      "bytes": 1258
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.launch.json",
+      "sha256": "853205e46ee5516b8b0600808c60ed08bcf26eb224bd23f593a417bec915aff1",
+      "bytes": 2167
+    }
+  ],
+  "reason": "competing_test_build_or_asr",
+  "worker_started": false,
+  "model_payloads_read": false,
+  "export_retry": false
+}

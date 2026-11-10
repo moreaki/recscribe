@@ -1,0 +1,42 @@
+{
+  "schema_version": "round5-reporting-cli-write-smoke-v1",
+  "status": "FAILED_MODEL_FREE_REPORTING_SMOKE",
+  "synthetic_only": true,
+  "model_initialization_asr_or_quantization_executed": false,
+  "source_files": {
+    "summarize-round5-v1.py": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+    "project-round5-report-v1.py": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4"
+  },
+  "fixture_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/packaged-smoke.receipt.json",
+    "sha256": "78717e710d0c1d900ce92a632cd5ad98ce3eb88752b24c749233c33dfed97f68"
+  },
+  "results": [
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py",
+        "--family-seal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/pre-inference-family-seal.json",
+        "--family-seal-sha256",
+        "7491d44e974f577593700a6b7c95b787bfef1c0fae0bcf9acf5fcb62061c8f64",
+        "--journal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/serial.events.jsonl",
+        "--journal-sha256",
+        "d66878782b99314c550b2d080a83e94050a30456c5e46818ca393cab2a344921",
+        "--admission-capsule",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/inference-launch.freeze.v1.json",
+        "--admission-capsule-sha256",
+        "c56bfb04f8fa8f77a095956baf2d326e5fe49bb3412bcde1421a347c141228c2",
+        "--expected-source-sha256",
+        "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/reporting-cli-summary"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py\", line 377, in <module>\n    if __name__=='__main__': main()\n                             ~~~~^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py\", line 366, in main\n    value=build(reader,family,events,Path(a.admission_capsule),ADMISSION)\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py\", line 335, in build\n    stages=[read_stage(reader,family,s,e,bindings.get(s['id']),held,analyzer,terminal) for s,e in zip(family['stages'],assessed)]\n            ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py\", line 278, in read_stage\n    require(guards and guards[0].get('event')=='starting' and guards[0].get('foreign_cpu_limit')==1000\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        and guards[0].get('timeout_seconds')==stage['guard_timeout_seconds']\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        and not any(x.get('event') in {'owned_group_signal','owned_cli_signal','cancel_requested','interrupted','cancelled'} for x in guards),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        'Capture/cancel/signal/guard policy differs')\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/summarize-round5-v1.py\", line 36, in require\n    if not ok: raise ValueError(message)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: Capture/cancel/signal/guard policy differs\n"
+    }
+  ]
+}

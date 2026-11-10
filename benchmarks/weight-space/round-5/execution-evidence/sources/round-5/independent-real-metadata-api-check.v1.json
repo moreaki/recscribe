@@ -1,0 +1,143 @@
+{
+  "schema_version": "round5-prospective-independent-audit-metadata-api-v1",
+  "status": "PASSED_ACTUAL_METADATA_API_ONLY",
+  "family_sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+  "auditor_source_sha256": "ed5c685d8efc526ee6b768fd9b361c9600f2ceb0c7da3d0e4e319e376783f14a",
+  "stage_preplans": 15,
+  "case_evidence_descriptors": 216,
+  "admission_and_independent_native_static_receipts": "PENDING_ACTUAL_EXECUTION",
+  "quality_outcomes_or_raw_payloads_read": false,
+  "source_version_scoring_or_gates_changed": false,
+  "input_metadata": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "bytes": 152231
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/corpus-source-receipt.json",
+      "sha256": "0f52ead3769649b25d2ce46b67ac2c217626b54e4c02ddaf5b2df15d958a9803",
+      "bytes": 4759
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Corpora/round5-corpus-final-20261109-v1/integrity.metadata-only.json",
+      "sha256": "3970e89096c81d788277abbd75a9ff58ea39426b11fdb9e99cca67cffb63f496",
+      "bytes": 326986
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/acquisition.freeze.v2.json",
+      "sha256": "81dd7f7162780944dafa17aba1a3e9d9dc15b63a1326a5d2b48d5e894e313349",
+      "bytes": 14317
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/acquisition.stop.v1.json",
+      "sha256": "01e6c140070028ab4c09cded13446ce013af081d723396112e95670b98f1b74e",
+      "bytes": 4800
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/swiss-completion.freeze.v1.json",
+      "sha256": "027639b866cc7843e95786ffee44a08c05b8b61262525ed453bdfa0f11900680",
+      "bytes": 11056
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Corpora/round5-swiss-completion-20261109-v1/completion.json",
+      "sha256": "c149806f9b7cadfc0a7fe7899bfe2deb8ae612d3c775c49effefd1c7e2cc52b9",
+      "bytes": 15213
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Corpora/round5-corpus-final-20261109-v1/assembly.receipt.json",
+      "sha256": "82bfc5e2e780fab44ca8dbf56c6e9a280c9be53cb337ad7a42141a4d1c539195",
+      "bytes": 4921
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/corpus-integrity.guard.v1.jsonl",
+      "sha256": "c03d9436cb1444c57d5c161caa2fd2c7e58c9cd5df2668685ed3c4ee33c62999",
+      "bytes": 1137
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-family.receipt.json",
+      "sha256": "bacbe4e60ca30c494953d3aad13b5035302d92d89081dd524c18f45afba08b62",
+      "bytes": 78854
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-execution-identities.json",
+      "sha256": "613c51c18f4d7600db8be5156996057f9bb49eb40586b231a29ae561245a149d",
+      "bytes": 15575
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "0f8fedd392046c16d9a2a31282fb9c70d5aa9a04c8a506ccc6b4a607b694c9a1",
+      "bytes": 5493
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/assessment-plan.pre-freeze.json",
+      "sha256": "9036002995cac5ee79d666bb2ae2de24f88f7ae94b517c53ad7e0cad5aade9e5",
+      "bytes": 5494
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/assessment-plan.pre-freeze.json",
+      "sha256": "a7c2db3b29966336d0b5a14ad24e91b8c394892a7b08bce91f72209bff865214",
+      "bytes": 6283
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "d77f20daee5c88144df9f85a732ec461807ec15b991f9c8dd93759c4bbdbc9f5",
+      "bytes": 6357
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "5f86f148ff166fa5571548a062ba6d7257abc9c98ce766aafdc69c3e233d73d1",
+      "bytes": 5503
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "27aa7bc3e9080660302a91ebf10c0fcf80d74ea20e8ed60e929a6c1678ab28cc",
+      "bytes": 32587
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "sha256": "9ee7c18bdca76495d308ec3ec24fd16a7961babbe2b977ac8acd6c76b8236890",
+      "bytes": 32588
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "sha256": "0afd87758fecf9db2387d8da541368450ffea81e196be9b0660ed75fab964d1b",
+      "bytes": 33377
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "aa9390cc1f0f485eb8bb09504c936c22e3adac28abc893494e6eb6c0ab22bc08",
+      "bytes": 33451
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "9e9ca305c96c983f083f4ae2deec3d5d2a6dba3e43117d1fdbe1f9155133c6e0",
+      "bytes": 32597
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "1365488ceecbfc44a0137c15240728616ac6468b29cd6a7d4bb1c74f81772894",
+      "bytes": 63939
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "sha256": "4aea46968d0e81e8ceb8892eb635c42ba8262bc14cb8f94df3c701a8e2019bdb",
+      "bytes": 63940
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "sha256": "edd69e80c48725cf09a9a5f34504e7be17494b34258101c23788e4406d42ae94",
+      "bytes": 64729
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "3c15c87aee6174510f9a1f1cf2d7a41fafb99f7b8cf8120da80847f3218315e2",
+      "bytes": 64803
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "d357be1233ec4db9915bfa4b088d381b8f9d98d51ef34f153c7ef1807fe250a2",
+      "bytes": 63949
+    }
+  ]
+}

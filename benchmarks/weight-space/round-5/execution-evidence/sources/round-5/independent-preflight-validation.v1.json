@@ -1,0 +1,28 @@
+{
+  "schema_version": "round5-independent-preflight-validation-v1",
+  "status": "passed",
+  "tests": 9,
+  "duration_seconds": 0.012,
+  "source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "bytes": 31566
+  },
+  "test_source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-preflight-v1.py",
+    "sha256": "6e1b9c6d62233e56dfb6e285fd1e053211b93530bf82f04c2f60b4fe315bb12b",
+    "bytes": 8948
+  },
+  "console": {
+    "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/test/20261109-215042-issue-112-r5-independent-preflight-pinned-contracts-57b4dc56/console.log",
+    "sha256": "203e8d11dc9529763cb172c4d4acdffe3b67db7d123ed6f2223ef9c377a8923b",
+    "bytes": 107
+  },
+  "pin_at_start": true,
+  "independent_source_peer": {
+    "agent": "matrix_lineage",
+    "source_sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "status": "PASS"
+  },
+  "real_payload_or_nn_execution": false
+}

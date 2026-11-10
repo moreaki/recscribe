@@ -1,0 +1,35 @@
+{
+  "schema_version": "round5-derived-preservation-summary-v1",
+  "derived": true,
+  "derived_after_evaluation": true,
+  "not_a_byte_copy_of_authoritative_receipt": true,
+  "authoritative_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation-v1/preservation.json",
+    "sha256": "09b6bc398b71d6e65b6fb9daea5217e6faa7e4e056c13d4d764300b5b59b5592",
+    "bytes": 25480854
+  },
+  "authoritative_closed_guard": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation-v1.guard.jsonl",
+    "sha256": "06e7fb44f817d40d4a1490c87fa2b03c409adc129db80417c10e6d004d28d9aa",
+    "bytes": 2219
+  },
+  "operation_freeze_sha256": "f0ffd6b79e228c9e7924a7c6ac9fb1116b59e6f529ea0b5d797894a4959eb4be",
+  "source_sha256": "2f2024d457a2f1d9c0bbc05770335c3f9c5094725bff0be61fd16171cc02f8e2",
+  "receipt_sha256": "09b6bc398b71d6e65b6fb9daea5217e6faa7e4e056c13d4d764300b5b59b5592",
+  "guard_sha256": "06e7fb44f817d40d4a1490c87fa2b03c409adc129db80417c10e6d004d28d9aa",
+  "frozen_inputs": 1097,
+  "retained_outputs": 72974,
+  "source_case_coverage": {
+    "fresh_cases": 216,
+    "panel_cases": 9,
+    "distinct_source_cases": 225,
+    "panel_inventory_sha256": "333f078def76a476926a009a452a156717ba4e3b705e1dac9fc51c44b435ab11",
+    "panel_pending": [],
+    "complete_panel_payload_evidence": true
+  },
+  "payload_paths_reopened_here": false,
+  "status": "PASS_OPAQUE_INPUT_AND_RETAINED_OUTPUT_HASHES",
+  "authoritative_actual_bytes_read": 9385587339,
+  "actual_byte_count_basis": "Authoritative top-level count reported by root; full25MB authority retained externally and already hash-validated by frozen numeric audit",
+  "inventories_or_raw_payloads_redistributed": false
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "round5-source-publication-plan-v2",
+  "created_utc": "2026-11-09T21:26:52.790049+00:00",
+  "status": "PREPARED_NOT_PUBLISHED",
+  "manifest": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+    "sha256": "8f030e693968f3b9ed091a0d1f0e428976bc4b0480582d13f94c19dcb436d619",
+    "bytes": 90562
+  },
+  "archive_destination": "PENDING_ROOT_REVIEW_NO_REPOSITORY_WRITE_AUTHORIZED_HERE",
+  "exact_source_bytes_required": true,
+  "source_tree_revision": "e03c5caa9d428c4b0964a6aedcfe167aa68bc76a",
+  "actual_code_aliases_and_failed_histories_preserved": true,
+  "postlaunch_verifier_prospective_freeze_claim": false,
+  "scope_extensions_require_new_plan": true,
+  "blocked_until": [
+    "All15 stage_assessed records and exactly one final serial_finished verified from the actual campaign",
+    "Root supplies finished actual summary/projection/independent numeric and opaque-preservation evidence descriptors",
+    "Archive targets and hashes reviewed; each copied source checked again; publication performed separately"
+  ],
+  "excluded": [
+    "Model and native binary payloads",
+    "Original/prepared audio and audio fixtures",
+    "Reference and transcript payloads",
+    "Corpus manifests and raw source data",
+    "Synthetic or actual numeric CSVs",
+    "Current or future campaign outcome files not explicitly supplied after completion",
+    "Unselected file types including Swift and requirements.txt; frozen hashes remain reference-only"
+  ],
+  "claims": "Source/provenance preparation only. No quality, latency, native compatibility, controlled resources or product/default acceptance.",
+  "repository_writes_performed": false,
+  "source_or_evidence_bytes_rewritten": false,
+  "recognition_or_model_initialization": false,
+  "previous_plan": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-plan.v1.json",
+    "sha256": "f1b3b709ae08a8efa96a5013f31a7617cb89b6fffc5e5c7d2ec2059f3b1097ae",
+    "bytes": 1847
+  },
+  "revision_scope": "Add explicit phase claims to excluded external references; no source-byte selection, source hashes or execution changed"
+}

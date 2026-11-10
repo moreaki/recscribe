@@ -1,0 +1,223 @@
+{
+  "schema_version": "round5-independent-native-admission-peer-v1",
+  "created_utc": "2026-11-10T00:23:35.153648+00:00",
+  "status": "PASS_METADATA_BINDINGS_NOT_CAMPAIGN_COMPLETION",
+  "admission": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/inference-launch.freeze.v1.json",
+    "sha256": "28b7c9ee39f2def8e2ddfad970aea49a223e06fb7b1b227085dc7fb85fcc521e"
+  },
+  "native_closure_peer": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-load-closure-peer.v1.json",
+    "sha256": "7353560e36448f8d3c875c9f1b8b82f5fff0c63fa43c09de98486eaba2328ff8"
+  },
+  "frozen_worker_argv_and_idle_placeholder_exact": true,
+  "native_launch_and_closed_guard_bound": true,
+  "all_foreknown_source_freezes_before_initialization": true,
+  "native_static_worker_prospectively_frozen": true,
+  "outer_verifier_ae8_archived_postlaunch_not_retrospectively_prospective": true,
+  "original_family_and11model_descriptors_unchanged": true,
+  "original_c214_control_unchanged_descriptor": true,
+  "panel9_preservation_complete": true,
+  "full_ci_passed_evidence_bound": true,
+  "quality_grid_planned": 4554,
+  "peer_quality_outcomes_read": false,
+  "peer_model_or_binary_payloads_read": false,
+  "peer_asr_or_model_initialization": false,
+  "actual_campaign_execution_or_completion_verified_here": false,
+  "later_lock_alone_requires_new_idle_check": false,
+  "product_native_v2_approval": "PENDING",
+  "controlled_resources": "NOT_EVALUATED",
+  "source_metadata_bytes_read": 954597,
+  "inputs": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/inference-launch.freeze.v1.json",
+      "sha256": "28b7c9ee39f2def8e2ddfad970aea49a223e06fb7b1b227085dc7fb85fcc521e",
+      "bytes": 13580
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "bytes": 152231
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-family.receipt.json",
+      "sha256": "bacbe4e60ca30c494953d3aad13b5035302d92d89081dd524c18f45afba08b62",
+      "bytes": 78854
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/corpus-source-receipt.json",
+      "sha256": "0f52ead3769649b25d2ce46b67ac2c217626b54e4c02ddaf5b2df15d958a9803",
+      "bytes": 4759
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-execution-identities.json",
+      "sha256": "613c51c18f4d7600db8be5156996057f9bb49eb40586b231a29ae561245a149d",
+      "bytes": 15575
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-and-quality-launch-plan.freeze.v1.json",
+      "sha256": "92f403c91f72e1fd6dcf51c924b33774f9b26e3f47f48525d686d8da5cea2de2",
+      "bytes": 7521
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-tools.freeze.v1.json",
+      "sha256": "4c8f824de05f7a016838f8e020169942c9b55b57bb6d0478b0d4a9c738951b59",
+      "bytes": 1461
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-reporting-tools.freeze.v1.json",
+      "sha256": "1322966de1b7b8a7b963bf81d6830ee3d28fe93ad63f91cd84db31a939c9d662",
+      "bytes": 3387
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation.freeze.v1.json",
+      "sha256": "f0ffd6b79e228c9e7924a7c6ac9fb1116b59e6f529ea0b5d797894a4959eb4be",
+      "bytes": 3763
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-final-audit-tools.freeze.v1.json",
+      "sha256": "d3da8987dffca7e99ce5ebe4c4f710ca9904106973ced6f64a566985a90b24b6",
+      "bytes": 4038
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1/audit.json",
+      "sha256": "809fa23bb9ec04cdc8841fb9eec7f24a1891898c8d852df5beec25c4f88cb7a2",
+      "bytes": 214139
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+      "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720",
+      "bytes": 4846
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+      "sha256": "c92687e1103522c2b2fde04e7a8168241e2c6f59b909e5d0dd2d6eb028b4777a",
+      "bytes": 1291
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-command-peer-v1.json",
+      "sha256": "cf80ed7a1b7fd8de807fdac0cc8e17649e90a65b26b144b56233c77a9cdfd413",
+      "bytes": 1901
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-source-payloads-v1/inventory.json",
+      "sha256": "333f078def76a476926a009a452a156717ba4e3b705e1dac9fc51c44b435ab11",
+      "bytes": 32595
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-source-payloads-v1.guard.jsonl",
+      "sha256": "a83242a13424dfd52c960b3d8d91c4799746b61c14cf1728e98d54a23a6a9c1c",
+      "bytes": 1286
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/audit.v2.json",
+      "sha256": "35861dc1b76e3069586bb67a3b7a36fa7573c2ea8e0e0978e4daaec5fc8b5729",
+      "bytes": 10934
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "sha256": "c7031e68e5e32eb96330b99fc1551eace8c9bc58f1c095c298476cb009c67c4a",
+      "bytes": 13093
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-source-payloads.operation.freeze.v1.json",
+      "sha256": "bb34d96c41ae26277c0641d8f5fb146271d9592c4dc2ff21608cd13fd6aad955",
+      "bytes": 1944
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-check-v1.py",
+      "sha256": "ad8fe2a089b1f6d6fcf23b611429766448eeefb30f7841ec7f3b086d0f580b3a",
+      "bytes": 19412
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-native-load-check-v1.py",
+      "sha256": "e679507494d53da2b630aafbf009274d0e2ff070ef969a2e4d37e1b66b94fa58",
+      "bytes": 11444
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-postrun-preservation-v1.py",
+      "sha256": "2f2024d457a2f1d9c0bbc05770335c3f9c5094725bff0be61fd16171cc02f8e2",
+      "bytes": 22543
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-final-numeric-gates-v1.py",
+      "sha256": "3037f1ee5b352cacbe5fd4060b0c1e20616799ae540b025353a2bdae8e6be872",
+      "bytes": 100146
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/summarize-round5-v1.py",
+      "sha256": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+      "bytes": 30305
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/project-round5-report-v1.py",
+      "sha256": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+      "bytes": 23246
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/inventory-panel-payloads-v1.py",
+      "sha256": "216fac39277717883457d7f0dcf3b6dbaefcb8219f07921074e8d3382350ed83",
+      "bytes": 7140
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+      "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+      "bytes": 31566
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-completion.receipt.v1.json",
+      "sha256": "15f5713bd1eb28b2b30f632942d600edc211ca84152de4c1e3f9c5349bde8de7",
+      "bytes": 2891
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-completion-peer-v1.json",
+      "sha256": "7a320ebe5d722462c57148756dd9be5006b3f121eba049c23fb6929cf3bb5fee",
+      "bytes": 2058
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load.launch.v1.json",
+      "sha256": "d1c192e67b0885cbdaa6638ef6cf6bc5d9d957552d5ee1740c519f6ebb7d6d7b",
+      "bytes": 3631
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/installed-app-identity-only.v1.json",
+      "sha256": "3ddfe7854c1dac2c1f113e4b5157ff39fda9f7af417ac8e33dcc82050e13660a",
+      "bytes": 1692
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-idle-attestation.json",
+      "sha256": "e9edb4c2af2e83783ffa9de3715c628ab010ad8ff154b875978fdad0711f93fb",
+      "bytes": 889
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/receipt.json",
+      "sha256": "de507d7193bf38ceec04649941428d8b0d098a090e1338fcccb6e5f5f20647bb",
+      "bytes": 23312
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load.guard.v1.jsonl",
+      "sha256": "37366880f806c3ec1dc448e51ac7c697ece4a25b163ea65cfe41217d190c505b",
+      "bytes": 1660
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-load-closure-peer.v1.json",
+      "sha256": "7353560e36448f8d3c875c9f1b8b82f5fff0c63fa43c09de98486eaba2328ff8",
+      "bytes": 8124
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-remaining.py",
+      "sha256": "a0498b4768b8cad28288704ef885c6d47df7f1f549b379e985ead83e3486fdd6",
+      "bytes": 19324
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/seal-heldout.py",
+      "sha256": "b6bb5cb8b9bd955150cab192b644bb070407e5b1fe14cfc263ddaa4c025e84b7",
+      "bytes": 56493
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "schema_version": "mlp-permutation-assessment-plan-v1",
+  "stage": "panel",
+  "split": "development",
+  "repetitions": 3,
+  "language_modes": [
+    "known",
+    "auto"
+  ],
+  "cases": [
+    {
+      "id": "all-swiss-dialects-v1-000c8b7e-b222-4d8b-b701-0740a7c20500",
+      "language": "de-CH",
+      "task": "standard_rendering",
+      "source_channel": 0,
+      "source_sha256": "7890c29a8c87d0bbd00dd388841d579eb386ba9d426fe78f19c638c1a8fde3ba",
+      "reference_sha256": "78ae63bd4b9cb96351b818d55c7380a4768f28370e95a3a1aeb84707f38b0c99",
+      "source_id": "all-swiss-dialects:v1:000c8b7e-b222-4d8b-b701-0740a7c20500.flac",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-de-de-10013061249039105343",
+      "language": "de",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "dd55a706d23ba5d87e0f7c4d5dd540849363d8a2ec9e05036fc6cf483100ef25",
+      "reference_sha256": "c1b4671958e2484e10fb3a2a4dd10f8e6e10a4505c5d444a41a7955cbc21114d",
+      "source_id": "fleurs:de_de:train:10013061249039105343.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-fr-fr-10008051639162028459",
+      "language": "fr",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "f728a248d0eb200d4c82aac8e06cc94b08b447c64a604ba4a5de2f75d5aef926",
+      "reference_sha256": "1fcaedb511e2bbf2125f58027893e76304b85ca75dcc40a648b908028c705615",
+      "source_id": "fleurs:fr_fr:train:10008051639162028459.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-it-it-10006672303518507506",
+      "language": "it",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "724f12440267e70fffe223332f233c11f18e25070375bd8b9ce87dbd0c64259f",
+      "reference_sha256": "78eaef25de7b935c2ad5e523c30c648cb25f73e65790ccf3fd1c95734ebb5101",
+      "source_id": "fleurs:it_it:train:10006672303518507506.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-en-us-10004088536354799741",
+      "language": "en",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "2de941b272900944012ee79951f7dda8fb6f0a0ea45914d838a3a9e5c693ef7d",
+      "reference_sha256": "8e3510c541812d00cfad289b397d40354e282af89bda550b3218e5d7504d8491",
+      "source_id": "fleurs:en_us:train:10004088536354799741.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-ar-eg-10002899498199807056",
+      "language": "ar",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "eb9e17eef4eabcdab2d98d93b46f53ef269d2ac6c3f8dc344e068a29b5377b53",
+      "reference_sha256": "b1963b953e288fb3c416fdc11dad3bc5886aaf118963dca3115d1d5810e40f63",
+      "source_id": "fleurs:ar_eg:train:10002899498199807056.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-cmn-hans-cn-10009480476880474721",
+      "language": "zh",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "ec89d71e690cd72697a22a3acb688f9220700dc4f5ef49d5b5026b533fd5f830",
+      "reference_sha256": "cb0e8ce75ee43f3066bfabbb498d5626947047f19f0ba7c1841ce5489904b1d8",
+      "source_id": "fleurs:cmn_hans_cn:train:10009480476880474721.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-es-419-10005668950815513748",
+      "language": "es",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "9582c62627809d0405127f11faf4463023b8caeec055005fe5c9c695dcb9288c",
+      "reference_sha256": "86a7f5a84c6a74e35626d967c2d2eba2423e09796d9a609612784313bb478ae8",
+      "source_id": "fleurs:es_419:train:10005668950815513748.wav",
+      "code_switches": []
+    },
+    {
+      "id": "fleurs-pt-br-10009971053374752024",
+      "language": "pt",
+      "task": "transcription",
+      "source_channel": 0,
+      "source_sha256": "953df6cbc60f860d919dfef5073628ddf416fb5afb91a3f22bdccacaf0a29246",
+      "reference_sha256": "2eee12cc40908bc8f9a3b859231d4a61eb57e8899529ffa3d84f56761532e7b3",
+      "source_id": "fleurs:pt_br:train:10009971053374752024.wav",
+      "code_switches": []
+    }
+  ],
+  "partition": {
+    "id": "base",
+    "kind": "reference",
+    "model": {
+      "id": "base",
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+      "model_file_bytes": 147951465
+    }
+  },
+  "permutation": {
+    "version": "whisper-mlp-permutation-v1",
+    "recipe_sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122"
+  },
+  "quantization": {
+    "format": "q4_0",
+    "ftype": 2,
+    "quantizer_sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd"
+  },
+  "execution": {
+    "profile_id": "current-defaults",
+    "profile_sha256": "4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857",
+    "runtime_settings_sha256": "cdd7cdc0076480723ee4be3cf4d5d2f417ffb7c6ce44fcaeaed517c164048169",
+    "vad_model_sha256": null,
+    "runner_sha256": "5190e4d3849b8f5aa37ef7031d9557d6ebd17866c798b9c6412cba64b587c1c4",
+    "whisper_binary_sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+    "threads": 2,
+    "corpus_sha256": "e561a9f75ac9aeed50ebc884013f87556ec7c2d277672f1251d2b90e8c19c182",
+    "configuration_sha256": "d92ecb10806a6faf17689b8dcf79ecd840edc58974151892aa9ec6abcb591625"
+  },
+  "runtime_record": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/assessment-runtime-record.json",
+    "sha256": "56dbc00ba70248662d2c1d1d9ca94f1700baa18fa030a436a53b0f0fa3cc9728"
+  }
+}

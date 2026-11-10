@@ -1,0 +1,58 @@
+{
+  "schema_version": "round5-independent-preflight-closed-guard-verification-v1",
+  "created_utc": "2026-11-09T20:56:30.344190+00:00",
+  "status": "PASSED_STATIC_ONLY",
+  "operation_freeze": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+    "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720",
+    "bytes": 4846
+  },
+  "actual_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1/audit.json",
+    "sha256": "809fa23bb9ec04cdc8841fb9eec7f24a1891898c8d852df5beec25c4f88cb7a2",
+    "bytes": 214139
+  },
+  "actual_guard": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+    "sha256": "c92687e1103522c2b2fde04e7a8168241e2c6f59b909e5d0dd2d6eb028b4777a",
+    "bytes": 1291
+  },
+  "actual_command_equals_original_frozen_command_after_exact_guard_canonicalization": true,
+  "canonicalization": {
+    "argv0": "Path.expanduser().resolve(strict=True)",
+    "output": "Path.expanduser().resolve",
+    "all_other_argv": "EXACT"
+  },
+  "guard_child_nice": 10,
+  "actual_guard_clean_closed": true,
+  "actual_payload_worker_launches": 1,
+  "prelaunch_admission": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission.v1.json",
+    "sha256": "a6c014a7cbe8e48936d02f6c28d24682628341163477a2c5d7e9e22dee01cf7f",
+    "bytes": 3139
+  },
+  "executed_outer_verifier_source_archive": {
+    "descriptor": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "sha256": "ae8bc670161f50563be5ebccdbb7aca16df6df048a22a19559d2e9cf270c3289",
+      "bytes": 3509
+    },
+    "archive_timing": "POST_LAUNCH_AND_POST_COMPLETION",
+    "prospectively_frozen": false,
+    "scope": "Outer metadata admission verifier only; actual worker/source/argv/bounds were prospectively frozen in operation_freeze"
+  },
+  "original_metadata_only_failure": {
+    "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/benchmark/20261109-215326-issue-112-r5-independent-static-audit-2764eb05/console.log",
+    "sha256": "79e45f6f4f49ca86808e607f094eeef2bdec37bc0eb191aa1f1379cd0982863f",
+    "bytes": 516
+  },
+  "read_budget_debit": 29657483377,
+  "models_verified": 11,
+  "native_files_verified": 11,
+  "bound_files_verified": 589,
+  "recognition_or_model_initialization": false,
+  "quality_acceptance": "PENDING",
+  "native_compatibility": "PENDING_ACTUAL_MODEL_LOAD",
+  "resource_acceptance": "NOT_EVALUATED",
+  "panel_original_provenance_scope": "Separate root-approved supplemental corpus audit"
+}

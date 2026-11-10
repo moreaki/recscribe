@@ -1,0 +1,34 @@
+{
+  "schema_version": "round5-native-load-tools-freeze-v1",
+  "created_utc": "2026-11-09T20:37:03.070115+00:00",
+  "sources": {
+    "native-load-check-v1.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-check-v1.py",
+      "sha256": "ad8fe2a089b1f6d6fcf23b611429766448eeefb30f7841ec7f3b086d0f580b3a",
+      "bytes": 19412
+    },
+    "test-native-load-check-v1.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-native-load-check-v1.py",
+      "sha256": "e679507494d53da2b630aafbf009274d0e2ff070ef969a2e4d37e1b66b94fa58",
+      "bytes": 11444
+    }
+  },
+  "dynamic_cli_pins": true,
+  "before_any_actual_model_initialization": true,
+  "fresh_native_idle_admission_required": true,
+  "same_campaign_later_lock_requires_another_admission": false,
+  "actual_model_initialization_or_asr_executed": false,
+  "focused_synthetic_contracts_passed": 8,
+  "total_timeout_seconds": 600,
+  "per_load_timeout_seconds": 60,
+  "threads": 2,
+  "language": "auto",
+  "flash_attention": true,
+  "derived_artifact_count": 6,
+  "expected_native_exit": 11,
+  "existing_empty_audio_fixture": true,
+  "expected_asr_calls": 0,
+  "asr_call_count_interpretation": "Pinned native control flow before whisper_full_parallel; printed max(1,actual) counters are not actual call-count measurements",
+  "quality_grid_cells_added": 0,
+  "default_promotion": false
+}

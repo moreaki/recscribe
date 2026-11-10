@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "baseline_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4",
+  "baseline_cli": "/Users/moreaki/Dev/recscribe/Build/Products/WhisperControl-c214a8e/recscribe-text",
+  "baseline_cli_sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6",
+  "whisper_cli": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+  "split": "held_out",
+  "threads": 2,
+  "repetitions": 1,
+  "language_modes": [
+    "known",
+    "auto"
+  ],
+  "paths": [
+    "final"
+  ],
+  "capture_inactive": true,
+  "workload_attestation": "Campaign requires separate fresh native UI idle/live-off attestation verified by the sealed coordinator before its first launch. Serial nice10, per-stage exact guard7697, active/uncertain capture or known competing work cancels owned research; foreign CPU1000%. Shared desktop resources uncontrolled.",
+  "freeze": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/freeze.json",
+  "profiles": [
+    {
+      "id": "current-defaults",
+      "kind": "candidate",
+      "source_revision": "a55b9ef1c3a5ab4ede43659e8c35c89001d0fc0f",
+      "settings": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/current-defaults.json"
+    }
+  ],
+  "models": [
+    {
+      "id": "small",
+      "kind": "pretrained",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "download_artifact": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+      "download_artifact_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "profiles": [
+        "current-defaults"
+      ],
+      "checkpoint": "Fixed R5 original; retained original multilingual parent",
+      "precision": "GGML original F16/F32 layout"
+    },
+    {
+      "id": "small-permuted-f16",
+      "kind": "conversion_control",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+      "sha256": "09e7e4687e38d0ab60f344dca293c8e0b5e95faf3eced146524a1910acb8bc79",
+      "download_artifact": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+      "download_artifact_sha256": "09e7e4687e38d0ab60f344dca293c8e0b5e95faf3eced146524a1910acb8bc79",
+      "profiles": [
+        "current-defaults"
+      ],
+      "checkpoint": "Fixed R5 permuted_f16; retained original multilingual parent",
+      "precision": "GGML original F16/F32 layout",
+      "baseline_model_id": "small",
+      "baseline_model_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "intervention_id": "small-permuted-f16"
+    },
+    {
+      "id": "small-plain-q4",
+      "kind": "compression",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/model.bin",
+      "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "download_artifact": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/model.bin",
+      "download_artifact_sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "profiles": [
+        "current-defaults"
+      ],
+      "checkpoint": "Fixed R5 plain_q4; retained original multilingual parent",
+      "precision": "GGML official q4_0",
+      "baseline_model_id": "small",
+      "baseline_model_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "intervention_id": "small-plain-q4"
+    },
+    {
+      "id": "small-permuted-q4",
+      "kind": "combined",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4/model.bin",
+      "sha256": "3a290b18bddef45344e566e4e7aa501eccfaab3e461e1788a8b97e41cc8d5dd0",
+      "download_artifact": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4/model.bin",
+      "download_artifact_sha256": "3a290b18bddef45344e566e4e7aa501eccfaab3e461e1788a8b97e41cc8d5dd0",
+      "profiles": [
+        "current-defaults"
+      ],
+      "checkpoint": "Fixed R5 permuted_q4; retained original multilingual parent",
+      "precision": "GGML official q4_0",
+      "baseline_model_id": "small",
+      "baseline_model_sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "intervention_id": "small-permuted-q4"
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "small-permuted-f16-vs-original",
+      "intervention": "conversion_control",
+      "baseline_model_id": "small",
+      "candidate_model_id": "small-permuted-f16",
+      "baseline_profile_id": "current-defaults",
+      "candidate_profile_id": "current-defaults"
+    },
+    {
+      "id": "small-plain-q4-vs-original",
+      "intervention": "compression",
+      "baseline_model_id": "small",
+      "candidate_model_id": "small-plain-q4",
+      "baseline_profile_id": "current-defaults",
+      "candidate_profile_id": "current-defaults"
+    },
+    {
+      "id": "small-permuted-q4-vs-original",
+      "intervention": "combined",
+      "baseline_model_id": "small",
+      "candidate_model_id": "small-permuted-q4",
+      "baseline_profile_id": "current-defaults",
+      "candidate_profile_id": "current-defaults"
+    }
+  ],
+  "measurement_tier": "quality_only_shared_desktop",
+  "resource_gate_status": "not_evaluated_uncontrolled_desktop_load",
+  "foreign_cpu_guard_raw_percent": 1000
+}

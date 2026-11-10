@@ -1,0 +1,64 @@
+{
+  "schema_version": "round5-reporting-cli-write-smoke-v1",
+  "status": "FAILED_MODEL_FREE_REPORTING_SMOKE",
+  "synthetic_only": true,
+  "model_initialization_asr_or_quantization_executed": false,
+  "source_files": {
+    "summarize-round5-v1.py": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+    "project-round5-report-v1.py": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4"
+  },
+  "fixture_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/packaged-smoke.receipt.json",
+    "sha256": "3801dedf74b352177f1525ab752e511665061e9db739db8d0619ad7eb966c3fa"
+  },
+  "results": [
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/summarize-round5-v1.py",
+        "--family-seal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/pre-inference-family-seal.json",
+        "--family-seal-sha256",
+        "afe2828a8bab613bbfcb03353a54c802a16171b71c8f38115f58ced6d2c1c253",
+        "--journal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/serial.events.jsonl",
+        "--journal-sha256",
+        "dd8079a1d77e85c018d4d9f14b8623e1fbbe5748f997203d568f74fcc2a3e0a5",
+        "--admission-capsule",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/inference-launch.freeze.v1.json",
+        "--admission-capsule-sha256",
+        "f7c5199dceeda0510c6f62d349adf5de187a82e111446ab6450fd54b7d43c308",
+        "--expected-source-sha256",
+        "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-summary"
+      ],
+      "returncode": 0,
+      "stdout": "{\"status\": \"COMPLETE_TERMINAL_ATTEMPTS_QUALITY_INCOMPLETE_NO_PROMOTION\", \"output\": \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-summary\", \"sha256\": \"84435faa151925adb4b24aa48c10ba9a4ac2eae1b7f4135442eb119b17317396\", \"default_promotion\": false}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/project-round5-report-v1.py",
+        "--summary",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-summary/summary.json",
+        "--summary-sha256",
+        "84435faa151925adb4b24aa48c10ba9a4ac2eae1b7f4135442eb119b17317396",
+        "--family-seal-sha256",
+        "afe2828a8bab613bbfcb03353a54c802a16171b71c8f38115f58ced6d2c1c253",
+        "--admission-capsule-sha256",
+        "f7c5199dceeda0510c6f62d349adf5de187a82e111446ab6450fd54b7d43c308",
+        "--expected-source-sha256",
+        "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-projection"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "ValueError: All11 artifact identities required\n"
+    }
+  ]
+}

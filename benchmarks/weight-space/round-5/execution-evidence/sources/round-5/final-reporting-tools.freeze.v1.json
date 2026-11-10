@@ -1,0 +1,76 @@
+{
+  "schema_version": "round5-final-reporting-tools-freeze-v1",
+  "created_utc": "2026-11-09T20:36:11.753313+00:00",
+  "sources": {
+    "summarize-round5-v1.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/summarize-round5-v1.py",
+      "sha256": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+      "bytes": 30305
+    },
+    "project-round5-report-v1.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/project-round5-report-v1.py",
+      "sha256": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+      "bytes": 23246
+    },
+    "test-round5-report-v1.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-round5-report-v1.py",
+      "sha256": "7104f61ea9a50fe13683094ae02ff4621277e2b07615335ab6a9755908b6d002",
+      "bytes": 12631
+    },
+    "smoke-reporting-cli-v2.py": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-reporting-cli-v2.py",
+      "sha256": "d72ebf068fe7ca960847529075da34411a3d77493ef8e4beae2610aac232812b",
+      "bytes": 4396
+    }
+  },
+  "dynamic_cli_pins": true,
+  "mandatory_all15_terminal_barrier": true,
+  "campaign_outcomes_read": false,
+  "frozen_before_any_quality_inference": true,
+  "default_promotion": false,
+  "scientific_method_scoring_or_gates_changed": false,
+  "explicit_runtime_bindings": [
+    "family-seal/path+sha256",
+    "admission-capsule/path+sha256",
+    "journal/path+sha256",
+    "executing-source-sha256",
+    "input-summary-sha256"
+  ],
+  "validation": {
+    "focused_report_contracts_passed": 9,
+    "actual_packaged_reporting_main_write_smoke": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "75d220893c4ee1e2fc7ed46097bc98f2f0b820efe4992246be3fc1558854b5a4",
+      "bytes": 4492
+    },
+    "synthetic_only": true,
+    "attempted_fixture_cells": 4554,
+    "failed_fixture_cells": 2,
+    "fixture_quality_cohorts": 495,
+    "fixture_model_modes": 55,
+    "real_model_initialization_asr_or_quantization_in_smoke": false
+  },
+  "retained_setup_failures": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "sha256": "67c07df714ef6c85dc5aa1e5f472ac36835a6af78c85065f8f47b7b48edd1e67",
+      "bytes": 4899
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "703a793c304c6d76935174dbdfecae333b0dea4b08c3d37386de377e77df948f",
+      "bytes": 4306
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "sha256": "cf594d93f568449cb6b4f6fd37183a4c1f7965d40cdeb8ced19f124326a0e797",
+      "bytes": 3644
+    }
+  ],
+  "pending": [
+    "Actual campaign inputs/admission/journal and outcomes",
+    "Independent postrun byte preservation/numeric gate provenance audit",
+    "Native/human v2 product acceptance",
+    "Controlled resource acceptance"
+  ]
+}

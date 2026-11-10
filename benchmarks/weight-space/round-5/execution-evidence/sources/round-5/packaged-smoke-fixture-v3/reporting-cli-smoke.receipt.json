@@ -1,0 +1,64 @@
+{
+  "schema_version": "round5-reporting-cli-write-smoke-v1",
+  "status": "PASSED_ACTUAL_REPORTING_MAINS_SYNTHETIC_ONLY",
+  "synthetic_only": true,
+  "model_initialization_asr_or_quantization_executed": false,
+  "source_files": {
+    "summarize-round5-v1.py": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+    "project-round5-report-v1.py": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4"
+  },
+  "fixture_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/packaged-smoke.receipt.json",
+    "sha256": "76e3089982a6cf3e236661b51b41deed3616be40b812de37c39e1d9493a5c937"
+  },
+  "results": [
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/summarize-round5-v1.py",
+        "--family-seal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/pre-inference-family-seal.json",
+        "--family-seal-sha256",
+        "02bddf6316f87a2ea9c915d21f3644665d878cd8b41736481ad994dd6adfb1f7",
+        "--journal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/serial.events.jsonl",
+        "--journal-sha256",
+        "c168a54a1aac7cc13a45e50cf925a3390d2b7d25e3dcf2bedc62d24d598e3c8f",
+        "--admission-capsule",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/inference-launch.freeze.v1.json",
+        "--admission-capsule-sha256",
+        "5d32f7d14e6b565677d0d90d95bdd469e3eb667c06ab8cb5001c4dfa48105928",
+        "--expected-source-sha256",
+        "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-summary"
+      ],
+      "returncode": 0,
+      "stdout": "{\"status\": \"COMPLETE_TERMINAL_ATTEMPTS_QUALITY_INCOMPLETE_NO_PROMOTION\", \"output\": \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-summary\", \"sha256\": \"fb5ac907a101a690dce9ce446a81e99994d27acc880ab42aa6969160aef7511f\", \"default_promotion\": false}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/project-round5-report-v1.py",
+        "--summary",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-summary/summary.json",
+        "--summary-sha256",
+        "fb5ac907a101a690dce9ce446a81e99994d27acc880ab42aa6969160aef7511f",
+        "--family-seal-sha256",
+        "02bddf6316f87a2ea9c915d21f3644665d878cd8b41736481ad994dd6adfb1f7",
+        "--admission-capsule-sha256",
+        "5d32f7d14e6b565677d0d90d95bdd469e3eb667c06ab8cb5001c4dfa48105928",
+        "--expected-source-sha256",
+        "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-projection"
+      ],
+      "returncode": 0,
+      "stdout": "{\"output\": \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-projection\", \"input_sha256\": \"fb5ac907a101a690dce9ce446a81e99994d27acc880ab42aa6969160aef7511f\", \"source_sha256\": \"6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4\", \"status\": \"PASSED_NUMERIC_PROJECTION_AUDIT_NO_ACCEPTANCE_CLAIM\", \"output_sha256\": {\"quality.csv\": \"eec25d45eb2c048928fdf14be31a74e98d96c29600b921a9337a424139a4a59f\", \"resources.csv\": \"ddb8c341a6c41189b3e6509e271abb7ac4906374a70d9a1554c28348ca1af74b\", \"macros.csv\": \"a56b89a3cedf4477a890db850082fd41bb4e5b778a33f90323ee176242c1540d\", \"report.md\": \"fbc114ac7a1d99ae56c6fee38694a84bac93716752f2447e81adb5bb9264ac94\", \"audit.json\": \"2c240607bcf6bd3ec96374a586c123ad0cbfb50db9dc69daaf3fb2f87dcba464\"}, \"default_promotion\": false}\n",
+      "stderr": ""
+    }
+  ]
+}

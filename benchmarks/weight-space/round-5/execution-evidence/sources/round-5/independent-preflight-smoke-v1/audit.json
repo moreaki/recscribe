@@ -1,0 +1,129 @@
+{
+  "schema_version": "round5-independent-pre-inference-audit-v1",
+  "created_utc": "2026-11-09T20:52:36.677947+00:00",
+  "audit_source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "bytes": 31566
+  },
+  "family": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+    "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e"
+  },
+  "sealer": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/seal-heldout.py",
+    "sha256": "b6bb5cb8b9bd955150cab192b644bb070407e5b1fe14cfc263ddaa4c025e84b7"
+  },
+  "stage_preplans_verified": 15,
+  "nonheld_assessor_plans_validated": 10,
+  "held_preplans_intentionally_without_final_freeze_links": 5,
+  "recognition_or_model_initialization_executed": false,
+  "held_reference_semantically_inspected": false,
+  "model_source_or_payload_writes": false,
+  "default_promotion": false,
+  "status": "PREFLIGHT_METADATA_ONLY_NO_MODEL_PAYLOAD",
+  "models_verified": 0,
+  "model_payloads_opened": false,
+  "direct_protected_bytes_read": 430370,
+  "conservative_helper_read_budget_debit": 536870912,
+  "total_read_budget_debit_bytes": 537301282,
+  "limits": {
+    "protected_read_bytes": 34359738368,
+    "seconds": 600,
+    "input_file_bytes": 4294967296,
+    "metadata_bytes": 8388608
+  },
+  "read_budget_scope": "Direct protected reads plus conservative upper bounds for pinned parser/constructor reads; system interpreter/library paging excluded",
+  "input_metadata": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+      "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+      "bytes": 31566
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "bytes": 152231
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/seal-heldout.py",
+      "sha256": "b6bb5cb8b9bd955150cab192b644bb070407e5b1fe14cfc263ddaa4c025e84b7",
+      "bytes": 56493
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/source.original.json",
+      "sha256": "421c664ac29bf1b2b60ac83419923f004cc449a07a6bcf64cb0b2c62f81b3bbb",
+      "bytes": 12666
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/source.original.json",
+      "sha256": "7d345be3afa3a3d16c3cde9f72e6fbd8b4514b0540a82b1b0f43985cc76e5b9f",
+      "bytes": 12666
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/source.original.json",
+      "sha256": "c9f2318e0cb12854889abd0e7c2df06ab9b47ef0d908d10b61ffe62fc5096e4b",
+      "bytes": 12667
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/source.original.json",
+      "sha256": "a5adbb49925c4d00c89e68c6e8e4b82ba34cdeb6ee591ba73006904b14eec349",
+      "bytes": 12676
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/source.original.json",
+      "sha256": "f5f47af72f72d39c366b2d10b6bbcb1fd3b8802ff66d8c2baac07a3f857db3a1",
+      "bytes": 12670
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/source.original.json",
+      "sha256": "167172b338c4b211a71a5df4c00f4b5cc21858a396fd0702c257764bb5d81c4b",
+      "bytes": 12672
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/source.original.json",
+      "sha256": "5292fc5cbe1eaa61326f2e2684f5e4a93af5977afb3fa4a3fec6ff7d524e1497",
+      "bytes": 12672
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/source.original.json",
+      "sha256": "1b57e3d3a7f02306c76f7a4e795b51fc63c379f971d20b583d761dc0b27f87f6",
+      "bytes": 12673
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/source.original.json",
+      "sha256": "414ecaa2dd72f430115ddc77b16b605530ed01ad372de2bc0094a5dbb24e45ab",
+      "bytes": 12682
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/source.original.json",
+      "sha256": "2b31d23ed44795ca96f49f64820ea08b9848e3d7e6f288e889792c1a66c45068",
+      "bytes": 12676
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/source.original.json",
+      "sha256": "8d4170d33b695ebcb88ffe8efeeaaa46a6059cdf7cea40b035a56491289ad511",
+      "bytes": 12669
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/source.original.json",
+      "sha256": "17ad875b1189eebe20e91b3dabc49c663d47fda880824d76f7ee736d729cd8f1",
+      "bytes": 12669
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/source.original.json",
+      "sha256": "84628b903cb43d6860fa106a64d423d1c43d9e32f8b9e8ef2eeb58e587edcf49",
+      "bytes": 12670
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/source.original.json",
+      "sha256": "82b3afe75e515f34a72b09653f79eb4b03f26bfa8c546bfa1464f315d2bc2267",
+      "bytes": 12679
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/source.original.json",
+      "sha256": "67e8841a812ecb1c258d2a1a8d47f1f68b73c9daedbaf6a003e7a26ca8bfbf64",
+      "bytes": 12673
+    }
+  ]
+}

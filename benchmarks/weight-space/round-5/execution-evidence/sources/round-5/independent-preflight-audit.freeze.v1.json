@@ -1,0 +1,108 @@
+{
+  "schema_version": "round5-independent-preflight-operation-freeze-v1",
+  "created_utc": "2026-11-09T20:52:25.315049+00:00",
+  "source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "bytes": 31566
+  },
+  "test_source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-preflight-v1.py",
+    "sha256": "6e1b9c6d62233e56dfb6e285fd1e053211b93530bf82f04c2f60b4fe315bb12b",
+    "bytes": 8948
+  },
+  "model_denial_smoke_launcher": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-launcher-v1.py",
+    "sha256": "22f5a773aac2b79817adf6888146f0f3a868ad1934c86baacfa205b363a0ebe2",
+    "bytes": 1295
+  },
+  "family": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+    "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+    "bytes": 152231
+  },
+  "guard": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+    "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+    "bytes": 21523
+  },
+  "validation": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-validation.v1.json",
+    "sha256": "71896694fc110ca8035bc210ae0c0af94508178a74ae5e57a049740fadcada92",
+    "bytes": 1194
+  },
+  "smoke_command": [
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-v1",
+    "--log",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke.guard.v1.jsonl",
+    "--timeout",
+    "600",
+    "--poll-seconds",
+    "1",
+    "--probe-timeout",
+    "2",
+    "--foreign-cpu-limit",
+    "1000",
+    "--",
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-launcher-v1.py",
+    "--family-seal",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+    "--family-seal-sha256",
+    "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+    "--expected-source-sha256",
+    "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-v1",
+    "--preflight-only"
+  ],
+  "actual_command": [
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1",
+    "--log",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+    "--timeout",
+    "600",
+    "--poll-seconds",
+    "1",
+    "--probe-timeout",
+    "2",
+    "--foreign-cpu-limit",
+    "1000",
+    "--",
+    "/opt/homebrew/opt/python@3.15/bin/python3.15",
+    "-B",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+    "--family-seal",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+    "--family-seal-sha256",
+    "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+    "--expected-source-sha256",
+    "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+    "--output",
+    "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1"
+  ],
+  "limits": {
+    "seconds": 600,
+    "protected_read_bytes": 34359738368,
+    "model_bytes": 4294967296,
+    "metadata_bytes": 8388608
+  },
+  "numerical_workers": 1,
+  "child_nice": 10,
+  "model_transformation_or_payload_write": false,
+  "native_model_initialization": false,
+  "recognition": false,
+  "quality_claim": false,
+  "selection_or_gate_change": false,
+  "status_required": "PASSED_STATIC_PROVENANCE_ONLY_NO_QUALITY_CLAIM",
+  "supplemental_panel_original_and_provenance_audit": "Separate root-approved corpus supplement; no scope claim here"
+}

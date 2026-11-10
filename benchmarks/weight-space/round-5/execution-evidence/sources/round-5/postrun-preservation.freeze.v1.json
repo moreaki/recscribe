@@ -1,0 +1,72 @@
+{
+  "schema_version": "round5-postrun-preservation-freeze-v1",
+  "source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-postrun-preservation-v1.py",
+    "sha256": "2f2024d457a2f1d9c0bbc05770335c3f9c5094725bff0be61fd16171cc02f8e2",
+    "bytes": 22543
+  },
+  "retained_core_source_sha256": "9ba1fdf806ce592dc21f052e386f0ebc2d410c7a58bb66e84262cf18bb82f8f9",
+  "limits": {
+    "seconds": 600,
+    "total_read_bytes": 34359738368,
+    "input_file_bytes": 4294967296,
+    "output_file_bytes": 67108864,
+    "input_files": 2048,
+    "output_files": 100000,
+    "directory_entries": 150000
+  },
+  "opaque_scope": "All frozen model/runtime/source inputs,216fresh source evidence plus explicit9panel supplement and all15matrix regular files; no semantic audio/ref/transcript/model decode.",
+  "validation": {
+    "actual_model_free_all_main_write_proof": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "sha256": "c7031e68e5e32eb96330b99fc1551eace8c9bc58f1c095c298476cb009c67c4a",
+      "bytes": 13093
+    },
+    "numeric_math_contracts": 19,
+    "preservation_contracts": 7,
+    "actual_cli_stopped_barrier_refusals": 2,
+    "real_metadata_api_only_proof": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-real-metadata-api-check.v1.json",
+      "sha256": "8605ad37a4db6a0e6cfd682c8bbcb12ce78f7214d48865aa8d9521840e514e61",
+      "bytes": 7397
+    },
+    "sources": {
+      "test-final-numeric-audit-v1.py": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-final-numeric-audit-v1.py",
+        "sha256": "bb5f3f8be49e702f0cd21f7f3a44dd8316d53f8e736c6721ae33f639a63123e2",
+        "bytes": 9553
+      },
+      "test-postrun-preservation-core-v1.py": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-postrun-preservation-core-v1.py",
+        "sha256": "6352c927d4a4ddc7a6f9d9eb0a0a1154dfdf1af13f4f792ff79d5fa920aed5af",
+        "bytes": 10202
+      },
+      "test-independent-cli-refusal-v1.py": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-cli-refusal-v1.py",
+        "sha256": "fb4d8d6f59d91fbcc6690796a0ff52a1c382e224edc12ebeb140c73ac45ed2b1",
+        "bytes": 3265
+      },
+      "enrich-audit-toy-v1.py": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/enrich-audit-toy-v1.py",
+        "sha256": "616b2f382ec293d3185bc8ea99d1483bd1dceb7aebb7ae1af969ee5b45e954e4",
+        "bytes": 13978
+      },
+      "smoke-independent-cli-v4.py": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-independent-cli-v4.py",
+        "sha256": "ea928ecb2e4aaa099389ad008b2dedd44cb13e99e307690635b6086acda72873",
+        "bytes": 6136
+      }
+    },
+    "peer_review": "Root normalized12scientificfunctions matchR4; mechanism final2f/3037source/API/IO/panel225narrowreview PASS. These are AI reviews, no native approval.",
+    "scope": "Synthetic CLI and source/metadata only. Actual NN/outcomes/payload post-run execution remains pending."
+  },
+  "created_utc": "2026-11-09T21:21:01.328774+00:00",
+  "dynamic_cli_pins": true,
+  "mandatory_all15_terminal_barrier": true,
+  "campaign_outcomes_read": false,
+  "actual_campaign_outcomes_read": false,
+  "frozen_before_any_quality_inference": true,
+  "default_promotion": false,
+  "scoring_or_quality_criteria_changed": false,
+  "model_selection_from_outcomes": false
+}

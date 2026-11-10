@@ -1,0 +1,619 @@
+{
+  "schema_version": "round5-native-load-only-v1",
+  "status": "passed",
+  "created_utc": "2026-11-10T00:18:28.098723+00:00",
+  "recognition_performed": false,
+  "quality_or_resource_acceptance_measured": false,
+  "quality_inference_grid_cells_added": 0,
+  "installed_app_changed": false,
+  "default_promotion": false,
+  "results": [
+    {
+      "model": {
+        "id": "small-permuted-f16",
+        "family": "small",
+        "role": "permuted_f16",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+        "sha256": "09e7e4687e38d0ab60f344dca293c8e0b5e95faf3eced146524a1910acb8bc79",
+        "bytes": 487601967
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/1-small-permuted-f16.log",
+        "sha256": "60b1b07c979ecbf52394c7c4a4f272c5597cd480c1670853c4047f22252ef7ac",
+        "bytes": 7082
+      },
+      "shutdown": {
+        "pid": 19093,
+        "pgid": 19093,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    },
+    {
+      "model": {
+        "id": "small-plain-q4",
+        "family": "small",
+        "role": "plain_q4",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/model.bin",
+        "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+        "bytes": 145458015
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/2-small-plain-q4.log",
+        "sha256": "75519de64b0fcc046beaba9df79fa18a5f97baaa7b51ecdd7fd8d9b3ae9427e4",
+        "bytes": 7078
+      },
+      "shutdown": {
+        "pid": 19096,
+        "pgid": 19096,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    },
+    {
+      "model": {
+        "id": "small-permuted-q4",
+        "family": "small",
+        "role": "permuted_q4",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4/model.bin",
+        "sha256": "3a290b18bddef45344e566e4e7aa501eccfaab3e461e1788a8b97e41cc8d5dd0",
+        "bytes": 145458015
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/3-small-permuted-q4.log",
+        "sha256": "c6cfa4f648e6653867986cb91ab0f823ac861eca52aa0dadfb7dd9761a19b8d9",
+        "bytes": 7081
+      },
+      "shutdown": {
+        "pid": 19104,
+        "pgid": 19104,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    },
+    {
+      "model": {
+        "id": "large-v3-turbo-permuted-f16",
+        "family": "large-v3-turbo",
+        "role": "permuted_f16",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/model.bin",
+        "sha256": "e0f1db9bdbe2d7188c3a388c65d197573ce9e8579c35cc47327a9e74fcbf5149",
+        "bytes": 1624555275
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/4-large-v3-turbo-permuted-f16.log",
+        "sha256": "97ab35fcacc320729ba18b077ef53eba0f6b35f259f3e54fd09e019b98104454",
+        "bytes": 7097
+      },
+      "shutdown": {
+        "pid": 19113,
+        "pgid": 19113,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    },
+    {
+      "model": {
+        "id": "large-v3-turbo-plain-q4",
+        "family": "large-v3-turbo",
+        "role": "plain_q4",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4/model.bin",
+        "sha256": "2ceb779ca61ce46ed6e9aa43c4a0f8a89a37f683df3c0ba3119238fcd5852155",
+        "bytes": 473992235
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/5-large-v3-turbo-plain-q4.log",
+        "sha256": "b9d660204aaa61f8d71629a5bc0d9bcbe4182bc239d11172a888c028df84912b",
+        "bytes": 7093
+      },
+      "shutdown": {
+        "pid": 19139,
+        "pgid": 19139,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    },
+    {
+      "model": {
+        "id": "large-v3-turbo-permuted-q4",
+        "family": "large-v3-turbo",
+        "role": "permuted_q4",
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_q4/model.bin",
+        "sha256": "67b3b14fa93b610f952ffe1e02a17c12a2f0b5be028227905319b8a74e1ceba8",
+        "bytes": 473992235
+      },
+      "command": [
+        "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "-m",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_q4/model.bin",
+        "-f",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+        "-t",
+        "2",
+        "-l",
+        "auto",
+        "-fa"
+      ],
+      "log": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/6-large-v3-turbo-permuted-q4.log",
+        "sha256": "cf85edc2397cdd08cff0c14c6e2f24817bf8dd9fc72e1b7a50326ea111f6ba10",
+        "bytes": 7096
+      },
+      "shutdown": {
+        "pid": 19153,
+        "pgid": 19153,
+        "sid": 18962,
+        "returncode": 11,
+        "cli_reaped": true,
+        "owned_group_present": false,
+        "signals": [],
+        "errors": []
+      },
+      "witness": {
+        "native_context_and_state_initialization": "observed",
+        "actual_selected_gpu_backend": "MTL0",
+        "use_gpu": true,
+        "flash_attention": true,
+        "threads_argument": 2,
+        "empty_input_read_failures": 1,
+        "inference_calls_from_pinned_control_flow": 0,
+        "actual_internal_run_counts_observable": false,
+        "printed_runs_note": "Pinned whisper_print_timings uses max(1,n); displayed1 is not an actual call count",
+        "displayed_compute_timings": {
+          "sample": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "encode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "decode": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "batchd": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          },
+          "prompt": {
+            "milliseconds": 0.0,
+            "displayed_runs": 1,
+            "milliseconds_per_displayed_run": 0.0
+          }
+        },
+        "quality_or_performance_measured": false
+      }
+    }
+  ],
+  "timeout_seconds": 600,
+  "per_load_timeout_seconds": 60,
+  "source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-check-v1.py",
+    "sha256": "ad8fe2a089b1f6d6fcf23b611429766448eeefb30f7841ec7f3b086d0f580b3a",
+    "bytes": 19412
+  },
+  "artifact_family": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-family.receipt.json",
+    "sha256": "bacbe4e60ca30c494953d3aad13b5035302d92d89081dd524c18f45afba08b62",
+    "bytes": 78854
+  },
+  "inventory": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-execution-identities.json",
+    "sha256": "613c51c18f4d7600db8be5156996057f9bb49eb40586b231a29ae561245a149d",
+    "bytes": 15575
+  },
+  "native_control_flow_sources": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-3/native/whisper.cpp/examples/cli/cli.cpp",
+      "sha256": "675b63066ed1f3364305af3cb2ea70e379396c1d6511f6358df867c163c98ff9",
+      "bytes": 64715
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-3/native/whisper.cpp/examples/common-whisper.cpp",
+      "sha256": "852fbc77d2461322a82b9c571cf4703bac3c78c5c51d3a90e80792ce0c04e313",
+      "bytes": 8141
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-3/native/whisper.cpp/src/whisper.cpp",
+      "sha256": "891168a838301bd2baa5e8b87422a854dafeeb7da914d40a2e4c6bf33ff448ed",
+      "bytes": 344329
+    }
+  ],
+  "native_files": [
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+      "sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+      "bytes": 658608
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml-base.0.27.0.dylib",
+      "sha256": "4b83a188ddd93a32003edbe342aeae7e3726b7aed2c2e7774642f80fb4855d7f",
+      "bytes": 508720
+    },
+    {
+      "path": "/opt/homebrew/Cellar/libomp/23.1.4/lib/libomp.dylib",
+      "sha256": "432b8d15fc1b2431f937bba89796a32daaa2dd464eda12a744d9cb2818842477",
+      "bytes": 725984
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml.0.27.0.dylib",
+      "sha256": "eea477583ec2610f261a08e80f07593d6fceaa30418d7ae95e385e2cda5d9b74",
+      "bytes": 60128
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-blas.so",
+      "sha256": "bc7cdf71b25a4ef01387c2a0f218fe995d2c70869df03ae8921e6bde3da57214",
+      "bytes": 58752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m1.so",
+      "sha256": "3146b7ad6d6602df9c6b05407b1b30479cea77383be9dbf72a2865841d28a05c",
+      "bytes": 572240
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m2_m3.so",
+      "sha256": "dc13929118733f01625f7ea1beec95b43ff3143a87a44cd0b16824cf08cdff7e",
+      "bytes": 588768
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m4.so",
+      "sha256": "d90161124de31c08897872eafa7e3ddc3b43a713e184cef59c8af002bf2161bf",
+      "bytes": 588752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-metal.so",
+      "sha256": "0e7f450879c116699bee6c3bbc3a8630d01d6e4e74e9f918af6dd6b1c7facffa",
+      "bytes": 5565024
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libparakeet.1.9.5.dylib",
+      "sha256": "16ed9f49842cde9371fc605e0d6a7ad1dae5b8d8df9c97c72bce2f3c663ca0e6",
+      "bytes": 168960
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libwhisper.1.9.5.dylib",
+      "sha256": "a2972b454e49de7c83036eed4adbd06d8271f6f7c87b14e679d035d898d3ed4d",
+      "bytes": 418032
+    }
+  ],
+  "selected_models": [
+    {
+      "id": "small-permuted-f16",
+      "family": "small",
+      "role": "permuted_f16",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+      "sha256": "09e7e4687e38d0ab60f344dca293c8e0b5e95faf3eced146524a1910acb8bc79",
+      "bytes": 487601967
+    },
+    {
+      "id": "small-plain-q4",
+      "family": "small",
+      "role": "plain_q4",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/model.bin",
+      "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "bytes": 145458015
+    },
+    {
+      "id": "small-permuted-q4",
+      "family": "small",
+      "role": "permuted_q4",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4/model.bin",
+      "sha256": "3a290b18bddef45344e566e4e7aa501eccfaab3e461e1788a8b97e41cc8d5dd0",
+      "bytes": 145458015
+    },
+    {
+      "id": "large-v3-turbo-permuted-f16",
+      "family": "large-v3-turbo",
+      "role": "permuted_f16",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/model.bin",
+      "sha256": "e0f1db9bdbe2d7188c3a388c65d197573ce9e8579c35cc47327a9e74fcbf5149",
+      "bytes": 1624555275
+    },
+    {
+      "id": "large-v3-turbo-plain-q4",
+      "family": "large-v3-turbo",
+      "role": "plain_q4",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4/model.bin",
+      "sha256": "2ceb779ca61ce46ed6e9aa43c4a0f8a89a37f683df3c0ba3119238fcd5852155",
+      "bytes": 473992235
+    },
+    {
+      "id": "large-v3-turbo-permuted-q4",
+      "family": "large-v3-turbo",
+      "role": "permuted_q4",
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_q4/model.bin",
+      "sha256": "67b3b14fa93b610f952ffe1e02a17c12a2f0b5be028227905319b8a74e1ceba8",
+      "bytes": 473992235
+    }
+  ],
+  "invalid_fixture": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/empty-invalid-audio.bin",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "method": "existing-empty-file; context/state init then expected read failure/continue/free/return11 before whisper_full_parallel",
+  "verified_derived_artifacts": 6,
+  "all_model_native_hashes_preserved": true,
+  "full_asr_operator_compatibility": "PENDING_CANONICAL_GRID",
+  "actual_internal_run_counts": "UNOBSERVABLE; pinned branch proves no inference calls"
+}

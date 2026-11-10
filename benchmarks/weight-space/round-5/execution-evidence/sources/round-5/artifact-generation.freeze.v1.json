@@ -1,0 +1,434 @@
+{
+  "schema_version": "round5-artifact-generation-freeze-v1",
+  "created_utc": "2026-11-09T20:23:40.547943+00:00",
+  "coordinator": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+    "sha256": "a5cd8ea32f8789e9ab8714d6dd0fe3de5c29d9a28eaf9a9b747cc10b59c76f7c",
+    "bytes": 26151
+  },
+  "source_revision": "e03c5caa9d428c4b0964a6aedcfe167aa68bc76a",
+  "source_repository": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe",
+  "source_archive": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1",
+  "source_files": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+      "bytes": 13998
+    }
+  ],
+  "tools": {
+    "operator": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597
+    },
+    "exporter": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418
+    },
+    "reused_q4_core": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229
+    },
+    "parser": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428
+    },
+    "guard": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523
+    },
+    "quantizer": {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-quantize",
+      "sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd",
+      "bytes": 150496
+    },
+    "python": {
+      "path": "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+      "sha256": "9520366c4a127326582aa17cbdcd95fe615ba8d2e6fc350af8dac328f204af2a",
+      "bytes": 34640
+    }
+  },
+  "native_files": [
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+      "sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+      "bytes": 658608
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml-base.0.27.0.dylib",
+      "sha256": "4b83a188ddd93a32003edbe342aeae7e3726b7aed2c2e7774642f80fb4855d7f",
+      "bytes": 508720
+    },
+    {
+      "path": "/opt/homebrew/Cellar/libomp/23.1.4/lib/libomp.dylib",
+      "sha256": "432b8d15fc1b2431f937bba89796a32daaa2dd464eda12a744d9cb2818842477",
+      "bytes": 725984
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/lib/libggml.0.27.0.dylib",
+      "sha256": "eea477583ec2610f261a08e80f07593d6fceaa30418d7ae95e385e2cda5d9b74",
+      "bytes": 60128
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-blas.so",
+      "sha256": "bc7cdf71b25a4ef01387c2a0f218fe995d2c70869df03ae8921e6bde3da57214",
+      "bytes": 58752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m1.so",
+      "sha256": "3146b7ad6d6602df9c6b05407b1b30479cea77383be9dbf72a2865841d28a05c",
+      "bytes": 572240
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m2_m3.so",
+      "sha256": "dc13929118733f01625f7ea1beec95b43ff3143a87a44cd0b16824cf08cdff7e",
+      "bytes": 588768
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-cpu-apple_m4.so",
+      "sha256": "d90161124de31c08897872eafa7e3ddc3b43a713e184cef59c8af002bf2161bf",
+      "bytes": 588752
+    },
+    {
+      "path": "/opt/homebrew/Cellar/ggml/0.27.0/libexec/libggml-metal.so",
+      "sha256": "0e7f450879c116699bee6c3bbc3a8630d01d6e4e74e9f918af6dd6b1c7facffa",
+      "bytes": 5565024
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libparakeet.1.9.5.dylib",
+      "sha256": "16ed9f49842cde9371fc605e0d6a7ad1dae5b8d8df9c97c72bce2f3c663ca0e6",
+      "bytes": 168960
+    },
+    {
+      "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/lib/libwhisper.1.9.5.dylib",
+      "sha256": "a2972b454e49de7c83036eed4adbd06d8271f6f7c87b14e679d035d898d3ed4d",
+      "bytes": 418032
+    }
+  ],
+  "protocol": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+    "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+    "bytes": 13998
+  },
+  "retained_original_inventory": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-4/pre-inference-family-seal.json",
+    "sha256": "8058f9785929639d70da620fd6f12841b3078aa17352f6d02b542b6a7f191fe2",
+    "bytes": 95277
+  },
+  "original_models": {
+    "tiny": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-tiny.bin",
+      "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+      "bytes": 77691713
+    },
+    "base": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-base.bin",
+      "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+      "bytes": 147951465
+    },
+    "small": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "bytes": 487601967
+    },
+    "large-v3-turbo": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-large-v3-turbo.bin",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "bytes": 1624555275
+    },
+    "large-v3": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Models/ggml-large-v3.bin",
+      "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "bytes": 3095033483
+    }
+  },
+  "prior_plain_q4_controls": {
+    "small": {
+      "sha256": "f6099c17a4305c6d173ef90ab6f15150dcbb85332b7831313bf36a378d7c5a85",
+      "bytes": 145458015
+    },
+    "large-v3-turbo": {
+      "sha256": "2ceb779ca61ce46ed6e9aa43c4a0f8a89a37f683df3c0ba3119238fcd5852155",
+      "bytes": 473992235
+    }
+  },
+  "runner": {
+    "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Products/WhisperWeightRound3-a55b9ef/recscribe-text",
+    "sha256": "5190e4d3849b8f5aa37ef7031d9557d6ebd17866c798b9c6412cba64b587c1c4",
+    "bytes": 1295088,
+    "source_revision": "a55b9ef1c3a5ab4ede43659e8c35c89001d0fc0f"
+  },
+  "baseline_control": {
+    "path": "/Users/moreaki/Dev/recscribe/Build/Products/WhisperControl-c214a8e/recscribe-text",
+    "sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6",
+    "bytes": 911168,
+    "source_revision": "c214a8ed03f972a5a9cab64105145a67371b97b4"
+  },
+  "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts",
+  "steps": [
+    {
+      "id": "small-permuted_f16",
+      "family": "small",
+      "role": "permuted_f16",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/small-permuted_f16.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+        "apply",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+        "--model-id",
+        "small",
+        "--sha256",
+        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16",
+        "--timeout",
+        "600"
+      ]
+    },
+    {
+      "id": "small-plain_q4",
+      "family": "small",
+      "role": "plain_q4",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/small-plain_q4.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+        "--model",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+        "--sha256",
+        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+        "--model-id",
+        "small",
+        "--role",
+        "plain_q4",
+        "--parent",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+        "--parent-sha256",
+        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4",
+        "--timeout",
+        "600"
+      ]
+    },
+    {
+      "id": "small-permuted_q4",
+      "family": "small",
+      "role": "permuted_q4",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/small-permuted_q4.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+        "--model",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/model.bin",
+        "--sha256",
+        "${small.permuted_f16.sha256}",
+        "--model-id",
+        "small",
+        "--role",
+        "permuted_q4",
+        "--parent",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-small.bin",
+        "--parent-sha256",
+        "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_q4",
+        "--timeout",
+        "600",
+        "--permutation-plan",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/permutation-plan.json",
+        "--permutation-plan-sha256",
+        "${small.permuted_f16.plan_sha256}",
+        "--permutation-audit",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-permuted_f16/permutation-audit.json",
+        "--permutation-audit-sha256",
+        "${small.permuted_f16.audit_sha256}",
+        "--plain-control",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/small-plain_q4/export-audit.json",
+        "--plain-control-sha256",
+        "${small.plain_q4.audit_sha256}"
+      ]
+    },
+    {
+      "id": "large-v3-turbo-permuted_f16",
+      "family": "large-v3-turbo",
+      "role": "permuted_f16",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/large-v3-turbo-permuted_f16.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+        "apply",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-large-v3-turbo.bin",
+        "--model-id",
+        "large-v3-turbo",
+        "--sha256",
+        "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16",
+        "--timeout",
+        "600"
+      ]
+    },
+    {
+      "id": "large-v3-turbo-plain_q4",
+      "family": "large-v3-turbo",
+      "role": "plain_q4",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/large-v3-turbo-plain_q4.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+        "--model",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-large-v3-turbo.bin",
+        "--sha256",
+        "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+        "--model-id",
+        "large-v3-turbo",
+        "--role",
+        "plain_q4",
+        "--parent",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-large-v3-turbo.bin",
+        "--parent-sha256",
+        "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4",
+        "--timeout",
+        "600"
+      ]
+    },
+    {
+      "id": "large-v3-turbo-permuted_q4",
+      "family": "large-v3-turbo",
+      "role": "permuted_q4",
+      "output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_q4",
+      "guard_log": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/large-v3-turbo-permuted_q4.guard.jsonl",
+      "timeout_seconds": 600,
+      "command_template": [
+        "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+        "--model",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/model.bin",
+        "--sha256",
+        "${large-v3-turbo.permuted_f16.sha256}",
+        "--model-id",
+        "large-v3-turbo",
+        "--role",
+        "permuted_q4",
+        "--parent",
+        "/Users/moreaki/Library/Application Support/RecScribe/Models/ggml-large-v3-turbo.bin",
+        "--parent-sha256",
+        "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_q4",
+        "--timeout",
+        "600",
+        "--permutation-plan",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/permutation-plan.json",
+        "--permutation-plan-sha256",
+        "${large-v3-turbo.permuted_f16.plan_sha256}",
+        "--permutation-audit",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-permuted_f16/permutation-audit.json",
+        "--permutation-audit-sha256",
+        "${large-v3-turbo.permuted_f16.audit_sha256}",
+        "--plain-control",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifacts/large-v3-turbo-plain_q4/export-audit.json",
+        "--plain-control-sha256",
+        "${large-v3-turbo.plain_q4.audit_sha256}"
+      ]
+    }
+  ],
+  "permutation_version": "whisper-mlp-permutation-v1",
+  "recipe_sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+  "quantization": {
+    "format": "q4_0",
+    "file_header_ftype": 2002,
+    "tensor_type": 2,
+    "quantizer_sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd"
+  },
+  "dependency_rule": "Only typed predecessor SHA slots are resolved from completed hash-bound audit outputs; no command or recipe selection",
+  "minimum_available_bytes_before_each_stage": 10737418240,
+  "observed_available_bytes_before_freeze": 67895894016,
+  "maximum_model_bytes": 4294967296,
+  "artifact_timeout_seconds": 600,
+  "guard_supervisor_seconds": 660,
+  "interrupt_cleanup_seconds": 60,
+  "generation_timeout_seconds": 4800,
+  "inventory_maximum_payload_read_bytes": 17179869184,
+  "inventory_output": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-inventory-v1",
+  "inventory_request": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-inventory.request.v1.json",
+  "numeric_workers": 1,
+  "numeric_environment": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1"
+  },
+  "host": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "uname": [
+      "Darwin",
+      "mac-studio.home",
+      "25.6.0",
+      "Darwin Kernel Version 25.6.0: Fri Jul 31 19:18:48 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6020",
+      "arm64",
+      "arm"
+    ],
+    "python": "3.15.0 (main, Oct  9 2026, 11:16:41) [Clang 21.0.0 (clang-2100.3.34.2)]",
+    "numpy": "2.5.4"
+  },
+  "training_used": false,
+  "fitting_used": false,
+  "recipe_search": false,
+  "quality_inference_executed": false,
+  "native_model_initialization_executed": false,
+  "native_idle_admission_required_before": "later model initialization or ASR; byte-only work uses capture guard",
+  "default_promotion": false
+}

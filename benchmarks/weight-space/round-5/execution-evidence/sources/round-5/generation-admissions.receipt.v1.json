@@ -1,0 +1,33 @@
+{
+  "schema_version": "round5-generation-admission-evidence-v1",
+  "state": "PASSED_MODEL_FREE_PACKAGED_PREFLIGHT",
+  "generation_freeze": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+    "sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8",
+    "bytes": 20872
+  },
+  "coordinator": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+    "sha256": "a5cd8ea32f8789e9ab8714d6dd0fe3de5c29d9a28eaf9a9b747cc10b59c76f7c",
+    "bytes": 26151
+  },
+  "preflight_launch": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.launch.v1.json",
+    "sha256": "e4bba0deb17f9f82f7ad9b7e3c4d4cd267daeafea1b309f6460cf8b18784ee0c",
+    "bytes": 2443
+  },
+  "preflight_guard": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.guard.v1.jsonl",
+    "sha256": "ecc7d4a21c4611631c7d0aae625e43ac6f53c0cdc668d09caecef17137251f94",
+    "bytes": 1174
+  },
+  "prior_operational_admission": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.receipt.json",
+    "sha256": "a37394a0ec1e21f8eb8c0f998b6241fe9737a2d0b0fe31e6fa9f5a96f690e663"
+  },
+  "model_payloads_read": false,
+  "native_model_initialization_executed": false,
+  "quality_inference_executed": false,
+  "guard_unchanged": true,
+  "default_promotion": false
+}

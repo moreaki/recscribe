@@ -1,0 +1,102 @@
+{
+  "schema_version": "round5-source-only-replay-addendum-staging-v1",
+  "created_utc": "2026-11-10T05:10:58.271514+00:00",
+  "status": "PASS_SIX_EXACT_SOURCE_FILES_NOT_PUBLICATION",
+  "phase_label": "POST_PUBLICATION_STAGING",
+  "phase_meaning": "Later source/publication preparation only; no actual public publication and no prospective scientific freeze claim",
+  "plan": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum.plan.v1.json",
+    "sha256": "a84be9bf770d1c4bde0d7ddfa857a7ecd3a53fbf46d291de7844bba1a41eff23",
+    "bytes": 4295
+  },
+  "copied_sources": [
+    {
+      "original_path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/scripts/quality/requirements.txt",
+      "sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+      "bytes": 159,
+      "addendum_relative_path": "round-5/quality/scripts/quality/requirements.txt",
+      "phase_claim": "EXISTING_E03_DEPENDENCY_SOURCE_NOT_NEW_SCIENTIFIC_CODE",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/quality/scripts/quality/requirements.txt",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-orchestration.py",
+      "sha256": "298eeacd5b50b540eae22a116a5355eea8da909b1ada239f03c212a21ffe85e4",
+      "bytes": 23614,
+      "addendum_relative_path": "round-5/test-orchestration.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/test-orchestration.py",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration.py",
+      "sha256": "968bd9ce50ebcc5254ce550f3cad7e7e039695ca1e5f433382628c4075059dad",
+      "bytes": 11436,
+      "addendum_relative_path": "round-5/smoke-packaged-orchestration.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/smoke-packaged-orchestration.py",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration-v7.py",
+      "sha256": "b3c69e82ba5cb6682e11b0a00e19a5c045051daeed3a93e96a5495cbb1e4d702",
+      "bytes": 8590,
+      "addendum_relative_path": "round-5/smoke-packaged-orchestration-v7.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/smoke-packaged-orchestration-v7.py",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.md",
+      "sha256": "673f92e1a857ad0eaa3f4fc3d457c1bd18bd5af2c60d0c5a44df3c54041e2ef9",
+      "bytes": 5879,
+      "addendum_relative_path": "README.replay-prerequisites.md",
+      "phase_claim": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/README.replay-prerequisites.md",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.json",
+      "sha256": "aef9c72ab6fa6fc875a42f842a1b99b70611301eef15604abab1dee03a2b2eb8",
+      "bytes": 41152,
+      "addendum_relative_path": "replay-prerequisites.json",
+      "phase_claim": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE",
+      "staged_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/replay-prerequisites.json",
+      "source_pre_copy_post_copy_hashes_equal": true,
+      "destination_hash_verified": true
+    }
+  ],
+  "original107_manifest": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+    "sha256": "8f030e693968f3b9ed091a0d1f0e428976bc4b0480582d13f94c19dcb436d619",
+    "bytes": 90562
+  },
+  "original107_staging_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/staging.receipt.json",
+    "sha256": "0a632042567e2a92274669a9bb56c74692d311531d0196f0993d121b3fdf982a",
+    "bytes": 99582
+  },
+  "original107_manifest_and_staging_unchanged": true,
+  "requirements_matches_e03": true,
+  "three_actual_synthetic_helper_pins_match": true,
+  "physical_source_metadata_bytes_read": 761462,
+  "limits": {
+    "read_bytes": 16777216,
+    "seconds": 60
+  },
+  "elapsed_seconds": 0.013980667106807232,
+  "nice": 10,
+  "original_source_mutation": false,
+  "checkout_writes": false,
+  "model_binary_audio_reference_transcript_raw_fixture_corpus_manifest_or_numeric_csv_opened": false,
+  "actual_quality_outcomes_opened": false,
+  "tests_builds_or_nn": false,
+  "publication_performed": false,
+  "public_Swift_nativeCPP_sources_linked_not_duplicated": true,
+  "future_actual_numeric_exports": "DEFERRED_SEPARATE_EXPLICIT_AUTHORIZATION_AFTER_FINAL_AUDIT_PASS"
+}

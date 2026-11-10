@@ -1,0 +1,2114 @@
+{
+  "schema_version": "round5-exact-source-publication-manifest-plan-v2",
+  "created_utc": "2026-11-09T21:26:52.790049+00:00",
+  "status": "PLANNED_ONLY_NOT_PUBLISHED_NOT_EVALUATION_COMPLETE",
+  "anchors": {
+    "pre-inference-family-seal.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "phase_claim": "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+    },
+    "artifact-generation.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+      "sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8",
+      "phase_claim": "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+    },
+    "independent-preflight-audit.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+      "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720",
+      "phase_claim": "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+    },
+    "independent-preflight-completion.receipt.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-completion.receipt.v1.json",
+      "sha256": "15f5713bd1eb28b2b30f632942d600edc211ca84152de4c1e3f9c5349bde8de7",
+      "phase_claim": "POST_STATIC_AUDIT_CLOSED_GUARD_EVIDENCE"
+    },
+    "final-reporting-tools.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-reporting-tools.freeze.v1.json",
+      "sha256": "1322966de1b7b8a7b963bf81d6830ee3d28fe93ad63f91cd84db31a939c9d662",
+      "phase_claim": "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+    },
+    "native-load-tools.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-tools.freeze.v1.json",
+      "sha256": "4c8f824de05f7a016838f8e020169942c9b55b57bb6d0478b0d4a9c738951b59",
+      "phase_claim": "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+    },
+    "postrun-preservation.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation.freeze.v1.json",
+      "sha256": "f0ffd6b79e228c9e7924a7c6ac9fb1116b59e6f529ea0b5d797894a4959eb4be",
+      "phase_claim": "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+    },
+    "independent-final-audit-tools.freeze.v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-final-audit-tools.freeze.v1.json",
+      "sha256": "d3da8987dffca7e99ce5ebe4c4f710ca9904106973ced6f64a566985a90b24b6",
+      "phase_claim": "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+    },
+    "independent-analysis-source-peer.v2.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-analysis-source-peer.v2.json",
+      "sha256": "a522c90128df46b2c130516b49da8787f32beacdb2453077bf70ecc0bec3530d",
+      "phase_claim": "SOURCE_REVIEW_BEFORE_ANY_QUALITY_INFERENCE_CLI_PROOF_THEN_PENDING"
+    },
+    "independent-static-completion-peer-v1.json": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-completion-peer-v1.json",
+      "sha256": "7a320ebe5d722462c57148756dd9be5006b3f121eba049c23fb6929cf3bb5fee",
+      "phase_claim": "INDEPENDENT_POST_STATIC_AUDIT_CLOSURE_PEER"
+    }
+  },
+  "entries": [
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+      "sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8",
+      "bytes": 20872,
+      "archive_relative_path": "round-5/artifact-generation.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/assessment-runtime-record.json",
+      "sha256": "56dbc00ba70248662d2c1d1d9ca94f1700baa18fa030a436a53b0f0fa3cc9728",
+      "bytes": 2451,
+      "archive_relative_path": "round-5/assessment-runtime-record.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_runtime_record"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/runtime_record"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-final-numeric-gates-v1.py",
+      "sha256": "3037f1ee5b352cacbe5fd4060b0c1e20616799ae540b025353a2bdae8e6be872",
+      "bytes": 100146,
+      "archive_relative_path": "round-5/audit-final-numeric-gates-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "independent-final-audit-tools.freeze.v1.json/source"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-postrun-preservation-v1.py",
+      "sha256": "2f2024d457a2f1d9c0bbc05770335c3f9c5094725bff0be61fd16171cc02f8e2",
+      "bytes": 22543,
+      "archive_relative_path": "round-5/audit-postrun-preservation-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/source",
+        "independent-final-audit-tools.freeze.v1.json/preservation_source"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/classify-native-output-failure-v2.py",
+      "sha256": "b5fa141cab70dce2401d095aacc3f4d192b92e157878afddfb72a4a4608bc353",
+      "bytes": 19059,
+      "archive_relative_path": "round-5/classify-native-output-failure-v2.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/failure_classifier"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/current-defaults.json",
+      "sha256": "4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857",
+      "bytes": 25,
+      "archive_relative_path": "round-5/current-defaults.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_profile"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/profile"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "sha256": "9ee7c18bdca76495d308ec3ec24fd16a7961babbe2b977ac8acd6c76b8236890",
+      "bytes": 32588,
+      "archive_relative_path": "round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-base/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/experiment.json",
+      "sha256": "f1bb2d724f9a67bbc9d917a7ec5ec26acf0042981fa329577298a90e117eba61",
+      "bytes": 1993,
+      "archive_relative_path": "round-5/dev-validation-base/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-base/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/source.original.json",
+      "sha256": "5292fc5cbe1eaa61326f2e2684f5e4a93af5977afb3fa4a3fec6ff7d524e1497",
+      "bytes": 12672,
+      "archive_relative_path": "round-5/dev-validation-base/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-base/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "aa9390cc1f0f485eb8bb09504c936c22e3adac28abc893494e6eb6c0ab22bc08",
+      "bytes": 33451,
+      "archive_relative_path": "round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3-turbo/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/experiment.json",
+      "sha256": "c9685a4b0315d62217b6147e4aaee68fcee4c6c4bffd1595beac6c7e7411e91c",
+      "bytes": 5821,
+      "archive_relative_path": "round-5/dev-validation-large-v3-turbo/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3-turbo/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/source.original.json",
+      "sha256": "414ecaa2dd72f430115ddc77b16b605530ed01ad372de2bc0094a5dbb24e45ab",
+      "bytes": 12682,
+      "archive_relative_path": "round-5/dev-validation-large-v3-turbo/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3-turbo/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "9e9ca305c96c983f083f4ae2deec3d5d2a6dba3e43117d1fdbe1f9155133c6e0",
+      "bytes": 32597,
+      "archive_relative_path": "round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/experiment.json",
+      "sha256": "6195651850894b068ff19c52bcc4fc6183198df383b7ce01ec0b073cd7baee6f",
+      "bytes": 2027,
+      "archive_relative_path": "round-5/dev-validation-large-v3/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/source.original.json",
+      "sha256": "2b31d23ed44795ca96f49f64820ea08b9848e3d7e6f288e889792c1a66c45068",
+      "bytes": 12676,
+      "archive_relative_path": "round-5/dev-validation-large-v3/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-large-v3/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "sha256": "0afd87758fecf9db2387d8da541368450ffea81e196be9b0660ed75fab964d1b",
+      "bytes": 33377,
+      "archive_relative_path": "round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-small/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/experiment.json",
+      "sha256": "49ccbf5ca99344dfefe83627a401bc43f1f5643331d154a79b0e71f8e400f654",
+      "bytes": 5578,
+      "archive_relative_path": "round-5/dev-validation-small/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-small/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/source.original.json",
+      "sha256": "1b57e3d3a7f02306c76f7a4e795b51fc63c379f971d20b583d761dc0b27f87f6",
+      "bytes": 12673,
+      "archive_relative_path": "round-5/dev-validation-small/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-small/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "27aa7bc3e9080660302a91ebf10c0fcf80d74ea20e8ed60e929a6c1678ab28cc",
+      "bytes": 32587,
+      "archive_relative_path": "round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-tiny/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/experiment.json",
+      "sha256": "87a4e8e68168760e998d0b6501196064b5ba575577ec709274c92f72b326887e",
+      "bytes": 1993,
+      "archive_relative_path": "round-5/dev-validation-tiny/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-tiny/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/source.original.json",
+      "sha256": "167172b338c4b211a71a5df4c00f4b5cc21858a396fd0702c257764bb5d81c4b",
+      "bytes": 12672,
+      "archive_relative_path": "round-5/dev-validation-tiny/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/dev-validation-tiny/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/enrich-audit-toy-v1.py",
+      "sha256": "616b2f382ec293d3185bc8ea99d1483bd1dceb7aebb7ae1af969ee5b45e954e4",
+      "bytes": 13978,
+      "archive_relative_path": "round-5/enrich-audit-toy-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "synthetic_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/sources/enrich-audit-toy-v1.py",
+        "independent-final-audit-tools.freeze.v1.json/validation/sources/enrich-audit-toy-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-reporting-tools.freeze.v1.json",
+      "sha256": "1322966de1b7b8a7b963bf81d6830ee3d28fe93ad63f91cd84db31a939c9d662",
+      "bytes": 3387,
+      "archive_relative_path": "round-5/final-reporting-tools.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+      "sha256": "a5cd8ea32f8789e9ab8714d6dd0fe3de5c29d9a28eaf9a9b747cc10b59c76f7c",
+      "bytes": 26151,
+      "archive_relative_path": "round-5/generate-artifacts-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/coordinator"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-admissions.receipt.v1.json",
+      "sha256": "0db73dde9e79e3bf2b1a976e259abc00485907598896bde74fab94e5c9792c55",
+      "bytes": 1615,
+      "archive_relative_path": "round-5/generation-admissions.receipt.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "PRE_EXPORT_ADMISSION_HISTORY_INCLUDING_NOT_STARTED_ATTEMPT"
+      ],
+      "bindings": [
+        "generation-admissions.receipt.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.launch.json",
+      "sha256": "853205e46ee5516b8b0600808c60ed08bcf26eb224bd23f593a417bec915aff1",
+      "bytes": 2167,
+      "archive_relative_path": "round-5/generation-preflight.not-started.attempt1.launch.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "retained_not_started_history"
+      ],
+      "phase_claims": [
+        "OPERATIONAL_ADMISSION_NOT_STARTED_NO_EXPORT_WORKER"
+      ],
+      "bindings": [
+        "generation-preflight.not-started.attempt1.launch.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.receipt.json",
+      "sha256": "a37394a0ec1e21f8eb8c0f998b6241fe9737a2d0b0fe31e6fa9f5a96f690e663",
+      "bytes": 829,
+      "archive_relative_path": "round-5/generation-preflight.not-started.attempt1.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "retained_not_started_history"
+      ],
+      "phase_claims": [
+        "OPERATIONAL_ADMISSION_NOT_STARTED_NO_EXPORT_WORKER"
+      ],
+      "bindings": [
+        "generation-preflight.not-started.attempt1.receipt.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+      "bytes": 13998,
+      "archive_relative_path": "round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/5",
+        "artifact-generation.freeze.v1.json/protocol"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523,
+      "archive_relative_path": "round-5/generation-source-v1/run-guard.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/4",
+        "artifact-generation.freeze.v1.json/tools/guard"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428,
+      "archive_relative_path": "round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/3",
+        "artifact-generation.freeze.v1.json/tools/parser"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597,
+      "archive_relative_path": "round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/0",
+        "artifact-generation.freeze.v1.json/tools/operator"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229,
+      "archive_relative_path": "round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/2",
+        "artifact-generation.freeze.v1.json/tools/reused_q4_core"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418,
+      "archive_relative_path": "round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ],
+      "bindings": [
+        "artifact-generation.freeze.v1.json/source_files/1",
+        "artifact-generation.freeze.v1.json/tools/exporter"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "sha256": "4aea46968d0e81e8ceb8892eb635c42ba8262bc14cb8f94df3c701a8e2019bdb",
+      "bytes": 63940,
+      "archive_relative_path": "round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-base/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/experiment.json",
+      "sha256": "550df377850308bf76c859db906e335ae83d80abc0050e564e9cbe11d0da6f21",
+      "bytes": 2109,
+      "archive_relative_path": "round-5/heldout-base/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-base/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/source.original.json",
+      "sha256": "17ad875b1189eebe20e91b3dabc49c663d47fda880824d76f7ee736d729cd8f1",
+      "bytes": 12669,
+      "archive_relative_path": "round-5/heldout-base/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-base/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "3c15c87aee6174510f9a1f1cf2d7a41fafb99f7b8cf8120da80847f3218315e2",
+      "bytes": 64803,
+      "archive_relative_path": "round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3-turbo/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/experiment.json",
+      "sha256": "314ea5b9751a30a6d5d59c94177d835301497706248ef9f417040a5e35392772",
+      "bytes": 5947,
+      "archive_relative_path": "round-5/heldout-large-v3-turbo/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3-turbo/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/source.original.json",
+      "sha256": "82b3afe75e515f34a72b09653f79eb4b03f26bfa8c546bfa1464f315d2bc2267",
+      "bytes": 12679,
+      "archive_relative_path": "round-5/heldout-large-v3-turbo/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3-turbo/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "d357be1233ec4db9915bfa4b088d381b8f9d98d51ef34f153c7ef1807fe250a2",
+      "bytes": 63949,
+      "archive_relative_path": "round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/experiment.json",
+      "sha256": "07e4fb52fea6f4ce1edd8fc80e36b36230ccc82c4acc6a4ede896987f0262b6f",
+      "bytes": 2147,
+      "archive_relative_path": "round-5/heldout-large-v3/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/source.original.json",
+      "sha256": "67e8841a812ecb1c258d2a1a8d47f1f68b73c9daedbaf6a003e7a26ca8bfbf64",
+      "bytes": 12673,
+      "archive_relative_path": "round-5/heldout-large-v3/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-large-v3/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "sha256": "edd69e80c48725cf09a9a5f34504e7be17494b34258101c23788e4406d42ae94",
+      "bytes": 64729,
+      "archive_relative_path": "round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-small/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/experiment.json",
+      "sha256": "b7bde24ab8e40707dce4af9a13728993d0e09ec0fa2cc442613cb7777a53a8d1",
+      "bytes": 5695,
+      "archive_relative_path": "round-5/heldout-small/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-small/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/source.original.json",
+      "sha256": "84628b903cb43d6860fa106a64d423d1c43d9e32f8b9e8ef2eeb58e587edcf49",
+      "bytes": 12670,
+      "archive_relative_path": "round-5/heldout-small/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-small/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "1365488ceecbfc44a0137c15240728616ac6468b29cd6a7d4bb1c74f81772894",
+      "bytes": 63939,
+      "archive_relative_path": "round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-tiny/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/experiment.json",
+      "sha256": "f8280eb549f67f34548b7514b53ef7e8fba4ffd21268a36693acca3316e2fe90",
+      "bytes": 2109,
+      "archive_relative_path": "round-5/heldout-tiny/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-tiny/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/source.original.json",
+      "sha256": "8d4170d33b695ebcb88ffe8efeeaaa46a6059cdf7cea40b035a56491289ad511",
+      "bytes": 12669,
+      "archive_relative_path": "round-5/heldout-tiny/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/heldout-tiny/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-analysis-source-peer.v2.json",
+      "sha256": "a522c90128df46b2c130516b49da8787f32beacdb2453077bf70ecc0bec3530d",
+      "bytes": 2136,
+      "archive_relative_path": "round-5/independent-analysis-source-peer.v2.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "SOURCE_REVIEW_BEFORE_ANY_QUALITY_INFERENCE_CLI_PROOF_THEN_PENDING"
+      ],
+      "bindings": [
+        "independent-analysis-source-peer.v2.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-final-audit-tools.freeze.v1.json",
+      "sha256": "d3da8987dffca7e99ce5ebe4c4f710ca9904106973ced6f64a566985a90b24b6",
+      "bytes": 4038,
+      "archive_relative_path": "round-5/independent-final-audit-tools.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "independent-final-audit-tools.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "sha256": "ae8bc670161f50563be5ebccdbb7aca16df6df048a22a19559d2e9cf270c3289",
+      "bytes": 3509,
+      "archive_relative_path": "round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "POST_LAUNCH_AND_POST_COMPLETION_ARCHIVE_NOT_PROSPECTIVELY_FROZEN"
+      ],
+      "bindings": [
+        "independent-preflight-admission-verifier.executed-inline-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission.v1.json",
+      "sha256": "a6c014a7cbe8e48936d02f6c28d24682628341163477a2c5d7e9e22dee01cf7f",
+      "bytes": 3139,
+      "archive_relative_path": "round-5/independent-preflight-admission.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "PRE_STATIC_AUDIT_ADMISSION_AND_PRIOR_METADATA_VERIFIER_FAILURE"
+      ],
+      "bindings": [
+        "independent-preflight-admission.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+      "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+      "bytes": 31566,
+      "archive_relative_path": "round-5/independent-preflight-audit-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ],
+      "bindings": [
+        "independent-preflight-audit.freeze.v1.json/source"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1/audit.json",
+      "sha256": "809fa23bb9ec04cdc8841fb9eec7f24a1891898c8d852df5beec25c4f88cb7a2",
+      "bytes": 214139,
+      "archive_relative_path": "round-5/independent-preflight-audit-v1/audit.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "ACTUAL_STATIC_WEIGHT_PROVENANCE_ONLY_NOT_SPEECH_QUALITY"
+      ],
+      "bindings": [
+        "independent-preflight-audit-v1/audit.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+      "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720",
+      "bytes": 4846,
+      "archive_relative_path": "round-5/independent-preflight-audit.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ],
+      "bindings": [
+        "independent-preflight-audit.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-completion.receipt.v1.json",
+      "sha256": "15f5713bd1eb28b2b30f632942d600edc211ca84152de4c1e3f9c5349bde8de7",
+      "bytes": 2891,
+      "archive_relative_path": "round-5/independent-preflight-completion.receipt.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "POST_STATIC_AUDIT_CLOSED_GUARD_EVIDENCE"
+      ],
+      "bindings": [
+        "independent-preflight-completion.receipt.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-launcher-v1.py",
+      "sha256": "22f5a773aac2b79817adf6888146f0f3a868ad1934c86baacfa205b363a0ebe2",
+      "bytes": 1295,
+      "archive_relative_path": "round-5/independent-preflight-smoke-launcher-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ],
+      "bindings": [
+        "independent-preflight-audit.freeze.v1.json/model_denial_smoke_launcher"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-v1/audit.json",
+      "sha256": "3bfdd8f20b9e2c5b50125e12199a6d4631c6c61baff1ddf2f65677dc1fcbd0cb",
+      "bytes": 6355,
+      "archive_relative_path": "round-5/independent-preflight-smoke-v1/audit.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "ACTUAL_METADATA_CLI_MODEL_OPENS_DENIED_NOT_INFERENCE"
+      ],
+      "bindings": [
+        "independent-preflight-smoke-v1/audit.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-validation.v1.json",
+      "sha256": "71896694fc110ca8035bc210ae0c0af94508178a74ae5e57a049740fadcada92",
+      "bytes": 1194,
+      "archive_relative_path": "round-5/independent-preflight-validation.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicit_prequality_execution_history"
+      ],
+      "phase_claims": [
+        "SYNTHETIC_CONTRACT_EVIDENCE_BEFORE_STATIC_AUDIT"
+      ],
+      "bindings": [
+        "independent-preflight-validation.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-real-metadata-api-check.v1.json",
+      "sha256": "8605ad37a4db6a0e6cfd682c8bbcb12ce78f7214d48865aa8d9521840e514e61",
+      "bytes": 7397,
+      "archive_relative_path": "round-5/independent-real-metadata-api-check.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicitly_synthetic_or_metadata_validation_receipt"
+      ],
+      "phase_claims": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/real_metadata_api_only_proof",
+        "independent-final-audit-tools.freeze.v1.json/validation/real_metadata_api_only_proof"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-completion-peer-v1.json",
+      "sha256": "7a320ebe5d722462c57148756dd9be5006b3f121eba049c23fb6929cf3bb5fee",
+      "bytes": 2058,
+      "archive_relative_path": "round-5/independent-static-completion-peer-v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "INDEPENDENT_POST_STATIC_AUDIT_CLOSURE_PEER"
+      ],
+      "bindings": [
+        "independent-static-completion-peer-v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-check-v1.py",
+      "sha256": "ad8fe2a089b1f6d6fcf23b611429766448eeefb30f7841ec7f3b086d0f580b3a",
+      "bytes": 19412,
+      "archive_relative_path": "round-5/native-load-check-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ],
+      "bindings": [
+        "native-load-tools.freeze.v1.json/sources/native-load-check-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-tools.freeze.v1.json",
+      "sha256": "4c8f824de05f7a016838f8e020169942c9b55b57bb6d0478b0d4a9c738951b59",
+      "bytes": 1461,
+      "archive_relative_path": "round-5/native-load-tools.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ],
+      "bindings": [
+        "native-load-tools.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "sha256": "67c07df714ef6c85dc5aa1e5f472ac36835a6af78c85065f8f47b7b48edd1e67",
+      "bytes": 4899,
+      "archive_relative_path": "round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "retained_failed_metadata_cli_history"
+      ],
+      "phase_claims": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/retained_setup_failures/0"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "sha256": "cf594d93f568449cb6b4f6fd37183a4c1f7965d40cdeb8ced19f124326a0e797",
+      "bytes": 3644,
+      "archive_relative_path": "round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "retained_failed_metadata_cli_history"
+      ],
+      "phase_claims": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/retained_setup_failures/2"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "75d220893c4ee1e2fc7ed46097bc98f2f0b820efe4992246be3fc1558854b5a4",
+      "bytes": 4492,
+      "archive_relative_path": "round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicitly_synthetic_or_metadata_validation_receipt"
+      ],
+      "phase_claims": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/validation/actual_packaged_reporting_main_write_smoke"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "sha256": "c7031e68e5e32eb96330b99fc1551eace8c9bc58f1c095c298476cb009c67c4a",
+      "bytes": 13093,
+      "archive_relative_path": "round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "explicitly_synthetic_or_metadata_validation_receipt"
+      ],
+      "phase_claims": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/actual_model_free_all_main_write_proof",
+        "independent-final-audit-tools.freeze.v1.json/validation/actual_model_free_all_main_write_proof"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/assessment-plan.pre-freeze.json",
+      "sha256": "9036002995cac5ee79d666bb2ae2de24f88f7ae94b517c53ad7e0cad5aade9e5",
+      "bytes": 5494,
+      "archive_relative_path": "round-5/panel-base/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-base/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/experiment.json",
+      "sha256": "d92ecb10806a6faf17689b8dcf79ecd840edc58974151892aa9ec6abcb591625",
+      "bytes": 2005,
+      "archive_relative_path": "round-5/panel-base/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-base/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/source.original.json",
+      "sha256": "7d345be3afa3a3d16c3cde9f72e6fbd8b4514b0540a82b1b0f43985cc76e5b9f",
+      "bytes": 12666,
+      "archive_relative_path": "round-5/panel-base/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-base/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "d77f20daee5c88144df9f85a732ec461807ec15b991f9c8dd93759c4bbdbc9f5",
+      "bytes": 6357,
+      "archive_relative_path": "round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3-turbo/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/experiment.json",
+      "sha256": "8874ee9c5dac5a96ade025dd3395aa76d14c8c8ba0382a626c7e362704e0d76d",
+      "bytes": 5833,
+      "archive_relative_path": "round-5/panel-large-v3-turbo/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3-turbo/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/source.original.json",
+      "sha256": "a5adbb49925c4d00c89e68c6e8e4b82ba34cdeb6ee591ba73006904b14eec349",
+      "bytes": 12676,
+      "archive_relative_path": "round-5/panel-large-v3-turbo/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3-turbo/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "5f86f148ff166fa5571548a062ba6d7257abc9c98ce766aafdc69c3e233d73d1",
+      "bytes": 5503,
+      "archive_relative_path": "round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/experiment.json",
+      "sha256": "f12a414148b677b78917654a1ae23ef8e65b4509a39ae8cb06a3e204e4a3e3c9",
+      "bytes": 2039,
+      "archive_relative_path": "round-5/panel-large-v3/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/source.original.json",
+      "sha256": "f5f47af72f72d39c366b2d10b6bbcb1fd3b8802ff66d8c2baac07a3f857db3a1",
+      "bytes": 12670,
+      "archive_relative_path": "round-5/panel-large-v3/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-large-v3/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/assessment-plan.pre-freeze.json",
+      "sha256": "a7c2db3b29966336d0b5a14ad24e91b8c394892a7b08bce91f72209bff865214",
+      "bytes": 6283,
+      "archive_relative_path": "round-5/panel-small/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-small/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/experiment.json",
+      "sha256": "0923790e589ac8b304fa635bba2b2a6a0eae0969e5868ced666a9aa7129c876f",
+      "bytes": 5590,
+      "archive_relative_path": "round-5/panel-small/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-small/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/source.original.json",
+      "sha256": "c9f2318e0cb12854889abd0e7c2df06ab9b47ef0d908d10b61ffe62fc5096e4b",
+      "bytes": 12667,
+      "archive_relative_path": "round-5/panel-small/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-small/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "0f8fedd392046c16d9a2a31282fb9c70d5aa9a04c8a506ccc6b4a607b694c9a1",
+      "bytes": 5493,
+      "archive_relative_path": "round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_assessment_pre_freeze_plan"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-tiny/assessment_pre_freeze_plan"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/experiment.json",
+      "sha256": "4bd150b66400eeac2f93ed68b3ec449ba19a09b66e45baa10e489b258a40486f",
+      "bytes": 2005,
+      "archive_relative_path": "round-5/panel-tiny/experiment.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_configuration"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-tiny/configuration"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/source.original.json",
+      "sha256": "421c664ac29bf1b2b60ac83419923f004cc449a07a6bcf64cb0b2c62f81b3bbb",
+      "bytes": 12666,
+      "archive_relative_path": "round-5/panel-tiny/source.original.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_stage_source_snapshot"
+      ],
+      "phase_claims": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "family/stages/panel-tiny/source_snapshot"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation.freeze.v1.json",
+      "sha256": "f0ffd6b79e228c9e7924a7c6ac9fb1116b59e6f529ea0b5d797894a4959eb4be",
+      "bytes": 3763,
+      "archive_relative_path": "round-5/postrun-preservation.freeze.v1.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "bytes": 152231,
+      "archive_relative_path": "round-5/pre-inference-family-seal.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_anchor_or_peer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/prepare-source-publication-plan-v1.py",
+      "sha256": "05feb5d8bde14f61c1ba9616fb0d1884fa26ee972c574ea0b3e1ccf8b5ca4f9b",
+      "bytes": 13866,
+      "archive_relative_path": "round-5/prepare-source-publication-plan-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "publication_plan_generator"
+      ],
+      "phase_claims": [
+        "CURRENT_PLAN_PREPARATION_NOT_PART_OF_FROZEN_SCIENTIFIC_EXECUTION"
+      ],
+      "bindings": [
+        "self"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/project-round5-report-v1.py",
+      "sha256": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+      "bytes": 23246,
+      "archive_relative_path": "round-5/project-round5-report-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/sources/project-round5-report-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/benchmarks/weight-space-round5-protocol.md",
+      "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+      "bytes": 13998,
+      "archive_relative_path": "round-5/quality/benchmarks/weight-space-round5-protocol.md",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/sources/benchmarks/weight-space-round5-protocol.md"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/assess-affine-pilot.py",
+      "sha256": "44e8c0c6f5cbae36c829bcebf4609272d5a514a86b2b4744333ba93c1474ce53",
+      "bytes": 33792,
+      "archive_relative_path": "round-5/quality/scripts/quality/assess-affine-pilot.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools",
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/affine_helpers",
+        "pre-inference-family-seal.json/sources/scripts/quality/assess-affine-pilot.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/assess-mlp-permutation.py",
+      "sha256": "d3615feca949ffccc7d7db2609c263f65e15ef9ace3b38fb962b63e3a348c3ec",
+      "bytes": 47077,
+      "archive_relative_path": "round-5/quality/scripts/quality/assess-mlp-permutation.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools",
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/assessor",
+        "pre-inference-family-seal.json/sources/scripts/quality/assess-mlp-permutation.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428,
+      "archive_relative_path": "round-5/quality/scripts/quality/ggml_weights.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools",
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/ggml_parser",
+        "pre-inference-family-seal.json/sources/scripts/quality/ggml_weights.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597,
+      "archive_relative_path": "round-5/quality/scripts/quality/mlp-permute.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/sources/scripts/quality/mlp-permute.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229,
+      "archive_relative_path": "round-5/quality/scripts/quality/quantize-attention-rotation.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/sources/scripts/quality/quantize-attention-rotation.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418,
+      "archive_relative_path": "round-5/quality/scripts/quality/quantize-mlp-permutation.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/sources/scripts/quality/quantize-mlp-permutation.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/report-pilot.py",
+      "sha256": "121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059",
+      "bytes": 37161,
+      "archive_relative_path": "round-5/quality/scripts/quality/report-pilot.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools",
+        "family_sources"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/reporter",
+        "pre-inference-family-seal.json/sources/scripts/quality/report-pilot.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "703a793c304c6d76935174dbdfecae333b0dea4b08c3d37386de377e77df948f",
+      "bytes": 4306,
+      "archive_relative_path": "round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "retained_failed_metadata_cli_history"
+      ],
+      "phase_claims": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/retained_setup_failures/1"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523,
+      "archive_relative_path": "round-5/run-guard.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/guard"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-remaining.py",
+      "sha256": "a0498b4768b8cad28288704ef885c6d47df7f1f549b379e985ead83e3486fdd6",
+      "bytes": 19324,
+      "archive_relative_path": "round-5/run-remaining.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/coordinator"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/seal-heldout.py",
+      "sha256": "b6bb5cb8b9bd955150cab192b644bb070407e5b1fe14cfc263ddaa4c025e84b7",
+      "bytes": 56493,
+      "archive_relative_path": "round-5/seal-heldout.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "family_tools"
+      ],
+      "phase_claims": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "pre-inference-family-seal.json/tools/sealer"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-independent-cli-v4.py",
+      "sha256": "ea928ecb2e4aaa099389ad008b2dedd44cb13e99e307690635b6086acda72873",
+      "bytes": 6136,
+      "archive_relative_path": "round-5/smoke-independent-cli-v4.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "synthetic_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/sources/smoke-independent-cli-v4.py",
+        "independent-final-audit-tools.freeze.v1.json/validation/sources/smoke-independent-cli-v4.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-reporting-cli-v2.py",
+      "sha256": "d72ebf068fe7ca960847529075da34411a3d77493ef8e4beae2610aac232812b",
+      "bytes": 4396,
+      "archive_relative_path": "round-5/smoke-reporting-cli-v2.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/sources/smoke-reporting-cli-v2.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/summarize-round5-v1.py",
+      "sha256": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+      "bytes": 30305,
+      "archive_relative_path": "round-5/summarize-round5-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/sources/summarize-round5-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-final-numeric-audit-v1.py",
+      "sha256": "bb5f3f8be49e702f0cd21f7f3a44dd8316d53f8e736c6721ae33f639a63123e2",
+      "bytes": 9553,
+      "archive_relative_path": "round-5/test-final-numeric-audit-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "synthetic_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/sources/test-final-numeric-audit-v1.py",
+        "independent-final-audit-tools.freeze.v1.json/validation/sources/test-final-numeric-audit-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-cli-refusal-v1.py",
+      "sha256": "fb4d8d6f59d91fbcc6690796a0ff52a1c382e224edc12ebeb140c73ac45ed2b1",
+      "bytes": 3265,
+      "archive_relative_path": "round-5/test-independent-cli-refusal-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "synthetic_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/sources/test-independent-cli-refusal-v1.py",
+        "independent-final-audit-tools.freeze.v1.json/validation/sources/test-independent-cli-refusal-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-preflight-v1.py",
+      "sha256": "6e1b9c6d62233e56dfb6e285fd1e053211b93530bf82f04c2f60b4fe315bb12b",
+      "bytes": 8948,
+      "archive_relative_path": "round-5/test-independent-preflight-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ],
+      "bindings": [
+        "independent-preflight-audit.freeze.v1.json/test_source"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-native-load-check-v1.py",
+      "sha256": "e679507494d53da2b630aafbf009274d0e2ff070ef969a2e4d37e1b66b94fa58",
+      "bytes": 11444,
+      "archive_relative_path": "round-5/test-native-load-check-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ],
+      "bindings": [
+        "native-load-tools.freeze.v1.json/sources/test-native-load-check-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-postrun-preservation-core-v1.py",
+      "sha256": "6352c927d4a4ddc7a6f9d9eb0a0a1154dfdf1af13f4f792ff79d5fa920aed5af",
+      "bytes": 10202,
+      "archive_relative_path": "round-5/test-postrun-preservation-core-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "synthetic_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "postrun-preservation.freeze.v1.json/validation/sources/test-postrun-preservation-core-v1.py",
+        "independent-final-audit-tools.freeze.v1.json/validation/sources/test-postrun-preservation-core-v1.py"
+      ]
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-round5-report-v1.py",
+      "sha256": "7104f61ea9a50fe13683094ae02ff4621277e2b07615335ab6a9755908b6d002",
+      "bytes": 12631,
+      "archive_relative_path": "round-5/test-round5-report-v1.py",
+      "copy_exact_bytes_after_final_barrier": true,
+      "content_rewrite_authorized": false,
+      "roles": [
+        "frozen_executed_or_validation_source"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ],
+      "bindings": [
+        "final-reporting-tools.freeze.v1.json/sources/test-round5-report-v1.py"
+      ]
+    }
+  ],
+  "external_reference_only": [
+    {
+      "original_path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/benchmark/20261109-215326-issue-112-r5-independent-static-audit-2764eb05/console.log",
+      "sha256": "79e45f6f4f49ca86808e607f094eeef2bdec37bc0eb191aa1f1379cd0982863f",
+      "bytes_from_descriptor": 516,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "closure/original_metadata_only_failure",
+        "admission/prior_failure/console"
+      ],
+      "phase_claims": [
+        "PRE_STATIC_AUDIT_METADATA_VERIFIER_FAILURE_BEFORE_PAYLOAD_WORKER_LAUNCH"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+      "sha256": "c92687e1103522c2b2fde04e7a8168241e2c6f59b909e5d0dd2d6eb028b4777a",
+      "bytes_from_descriptor": 1291,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "closure/actual_guard"
+      ],
+      "phase_claims": [
+        "ACTUAL_STATIC_AUDIT_CLOSED_GUARD_AFTER_SINGLE_PAYLOAD_WORKER"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/BenchmarkExperiment.swift",
+      "sha256": "b738ffc42763001f00d82266f40f06256f58a5fb2aa297df3671c95463a03b7a",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/BenchmarkExperiment.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/CorpusBenchmark.swift",
+      "sha256": "b5e8de00cfdde4163faea565942c286e6154c6006d61431bf50bfa81ba54ca64",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/CorpusBenchmark.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/CorpusManifest.swift",
+      "sha256": "e7098689da9e3283b4aa8ad146b6b17a04887f74cd0612839b2ca4a06c98083b",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/CorpusManifest.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/NativeWhisperEngine.swift",
+      "sha256": "89d40ac088c3d68ff15381c05dcb47caf8b85f0f6cb5feb8e3a6bf62aaef2985",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/NativeWhisperEngine.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/TranscriptAccuracy.swift",
+      "sha256": "defebc2f9aa0f5da23db491cd8fd1b1a43edda910db3968b0918cf13654ef442",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/TranscriptAccuracy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperDecodingProfile.swift",
+      "sha256": "24cd905ab858cf94f466e8cf11f83e6345e1ea2b5c8e3979f8406399a121ecda",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperDecodingProfile.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperLanguagePolicy.swift",
+      "sha256": "453ef98963996649ee431fee717e5cecc29710d4e399383283af0b337a628aec",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperLanguagePolicy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperSpeechPolicy.swift",
+      "sha256": "b7f906d0f2d2f4142c7e2a90a014fb7ebebf376c2b9dfe896f684b5154585086",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperSpeechPolicy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/requirements.txt",
+      "sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/scripts/quality/requirements.txt"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+      "sha256": "9520366c4a127326582aa17cbdcd95fe615ba8d2e6fc350af8dac328f204af2a",
+      "bytes_from_descriptor": 34640,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "artifact-generation.freeze.v1.json/tools/python"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_GENERATION_DEPENDENCY_HASH_ONLY_NOT_ARCHIVED_BYTES"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-quantize",
+      "sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd",
+      "bytes_from_descriptor": 150496,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "artifact-generation.freeze.v1.json/tools/quantizer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_GENERATION_DEPENDENCY_HASH_ONLY_NOT_ARCHIVED_BYTES"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    }
+  ],
+  "source_bytes_verified_now": 2539053,
+  "metadata_or_source_files_selected": 107,
+  "physical_file_copy_or_publication_performed": false,
+  "quality_outcomes_read": false,
+  "model_audio_reference_transcript_payloads_read": false,
+  "numeric_csvs_read_or_copied": false,
+  "postlaunch_archive_label": "POST_LAUNCH_AND_POST_COMPLETION_ARCHIVE_NOT_PROSPECTIVELY_FROZEN",
+  "source_layout": "Retain round-5 relative layout, exact bytes, original absolute path and SHA. No portability or relocation equivalence claim.",
+  "frozen_inputs_unchanged": true,
+  "future_actual_evidence": "PENDING_ALL15_TERMINAL_AND_ROOT_SUPPLIED_EXPLICIT_DESCRIPTORS",
+  "previous_manifest": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v1.json",
+    "sha256": "6e7fea2cfa14098e6cec149295993dc8871c9c0ead244d88a3c219ffe03f15a8",
+    "bytes": 86407
+  },
+  "revision_scope": "Add explicit phase claims to excluded external references; no source-byte selection, source hashes or execution changed"
+}

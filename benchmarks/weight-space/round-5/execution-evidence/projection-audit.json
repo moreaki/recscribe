@@ -1,0 +1,85 @@
+{
+  "schema_version": "round5-report-projection-v1",
+  "created_utc": "2026-11-10T05:11:38.384731+00:00",
+  "input_summary": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-summary-v1/summary.json",
+    "sha256": "4a77268a0e8e11fac2cc4242cce896cbec857a32784d4a9d42de3364066f842b",
+    "bytes": 7357641
+  },
+  "projection_source": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/project-round5-report-v1.py",
+    "sha256": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+    "bytes": 23246
+  },
+  "formatter_sha256": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+  "frozen_family_sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+  "admission_sha256": "28b7c9ee39f2def8e2ddfad970aea49a223e06fb7b1b227085dc7fb85fcc521e",
+  "status": "PASSED_NUMERIC_PROJECTION_AUDIT_NO_ACCEPTANCE_CLAIM",
+  "summary_status": "COMPLETE_TERMINAL_ATTEMPTS_NO_PROMOTION",
+  "all_terminal_attempts": true,
+  "complete_quality_coverage": true,
+  "coverage": {
+    "planned_cells": 4554,
+    "attempted_cells": 4554,
+    "completed_cells": 4554,
+    "failed_cells": 0,
+    "planned_native_parent_pairs": 2484,
+    "completed_native_parent_pairs": 2484,
+    "pending_native_parent_pairs": 0,
+    "planned_assessor_derived_q4_pairs": 828,
+    "completed_assessor_derived_q4_pairs": 828,
+    "pending_assessor_derived_q4_pairs": 0,
+    "runtime_reference_placeholders": 1242
+  },
+  "artifacts": 11,
+  "language_cohorts": 495,
+  "canonical_model_modes": 55,
+  "checks": [
+    "count/denominator rates",
+    "edit-count sums",
+    "full-planned null coverage",
+    "CER9/WER8 macros",
+    "canonical source versus repeated timing denominators",
+    "artifact identity/file bytes",
+    "resource distribution shape/counts"
+  ],
+  "frozen_family_conclusions": [
+    {
+      "family": "small",
+      "decision": "REJECT",
+      "frozen_heldout_mode_decisions": {
+        "known": "reject",
+        "auto": "reject"
+      },
+      "all_three_repeat_panel_controls_observed": true,
+      "complete_counted_family_quality": true,
+      "development_performance_is_not_a_new_gate": true,
+      "default_promotion": false
+    },
+    {
+      "family": "large-v3-turbo",
+      "decision": "REJECT",
+      "frozen_heldout_mode_decisions": {
+        "known": "reject",
+        "auto": "reject"
+      },
+      "all_three_repeat_panel_controls_observed": true,
+      "complete_counted_family_quality": true,
+      "development_performance_is_not_a_new_gate": true,
+      "default_promotion": false
+    }
+  ],
+  "resource_acceptance": "UNCONTROLLED / NOT EVALUATED",
+  "native_review": "PENDING",
+  "product_acceptance": "PENDING",
+  "raw_reference_audio_model_paths_followed": false,
+  "rescoring_performed": false,
+  "new_gates_or_statistical_claims": false,
+  "default_promotion": false,
+  "output_sha256": {
+    "quality.csv": "6973285fde4aa8d5caf14456336ba66a99e9f65dec038dc3897fe2d7821c020e",
+    "resources.csv": "48f6ae113d517d62c66fa479c24670d2b6ad307b0a6e8e772506e3f6f3beb6c9",
+    "macros.csv": "8d82928ea84283c74ec2f2d1802ef5b6a4e82eae5e13d94541abccf7c487cf9c",
+    "report.md": "11e5145e69834e11c4e6b9ce906f8bc15e1d294a8a8bb7b7a8b13a146a90b26b"
+  }
+}

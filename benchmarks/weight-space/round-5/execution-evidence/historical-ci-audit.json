@@ -1,0 +1,330 @@
+{
+  "schema_version": "recscribe-completed-ci-evidence-v1",
+  "status": "passed",
+  "head_sha": "59a1b7fabb9d28157c5c01ad51dbf926883cbce3",
+  "run_id": 42692826227,
+  "run_url": "https://github.com/moreaki/recscribe/actions/runs/42692826227",
+  "created_utc": "2026-11-09T21:15:24.754486+00:00",
+  "one_new_authorized_completion_checkpoint": true,
+  "no_polls_or_ci_reruns": true,
+  "jobs": {
+    "jobs": [
+      {
+        "id": 129416769605,
+        "name": "Unit tests",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 42692826227,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Classify complete change set",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Select pinned compiler",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Retired-reference boundary",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Native core and frozen contracts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Offline Whisper quality tooling",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Verify PCM storage ownership and sanitizer evidence checks",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Focused presentation contracts",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 9
+          },
+          {
+            "name": "Functional app contracts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Thread Sanitizer",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Export result summaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify focused test completion",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Reject sanitizer diagnostics and incomplete runs",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31
+          }
+        ]
+      },
+      {
+        "id": 129416770258,
+        "name": "Release build",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 42692826227,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Select pinned compiler",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Compile optimized application",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          }
+        ]
+      }
+    ]
+  },
+  "artifact_provider_digest_verified": true,
+  "summaries": [
+    {
+      "tests": 87,
+      "suites": 15,
+      "seconds": 13.434
+    },
+    {
+      "tests": 461,
+      "suites": 86,
+      "seconds": 177.691
+    },
+    {
+      "tests": 461,
+      "suites": 86,
+      "seconds": 527.275
+    }
+  ],
+  "functional": {
+    "result": "Passed",
+    "passedTests": 458,
+    "skippedTests": 3,
+    "failedTests": 0,
+    "totalTestCount": 461,
+    "runtimeWarnings": [],
+    "testFailures": []
+  },
+  "tsan": {
+    "result": "Passed",
+    "passedTests": 458,
+    "skippedTests": 3,
+    "failedTests": 0,
+    "totalTestCount": 461,
+    "runtimeWarnings": [],
+    "testFailures": []
+  },
+  "matching_three_existing_skips": [
+    "signedProductAllowsAudioInputUnderTheHardenedRuntime()",
+    "\"Signed Data Protection Keychain round trip\"",
+    "localSyntheticSpeechUsesNativePreparationAndWhisper()"
+  ],
+  "parameterized_device_counts_match": true,
+  "native_supervision": {
+    "command": [
+      "xcrun",
+      "swift",
+      "test",
+      "--package-path",
+      "core"
+    ],
+    "command_returncode": 0,
+    "complete_suite_required": true,
+    "elapsed_seconds": 86.67344241699999,
+    "events": [
+      {
+        "command": [
+          "xcrun",
+          "swift",
+          "test",
+          "--package-path",
+          "core"
+        ],
+        "elapsed_seconds": 0.02613374999998541,
+        "event": "started",
+        "pid": 2419,
+        "timeout_seconds": 240
+      }
+    ],
+    "exit_code": 0,
+    "log_bytes": 20624,
+    "native_summary_tests_passed": 87,
+    "owned_group_reaped": true,
+    "quiet_seconds": 60,
+    "reason": null,
+    "retry_performed": false,
+    "sampler_cleanup_reserve_seconds": 2,
+    "sampler_total_seconds": 10,
+    "schema_version": "native-core-supervision-v1",
+    "signal": null,
+    "timeout_seconds": 240
+  },
+  "python_suite_counts_in_log_order": [
+    7,
+    11,
+    8,
+    31,
+    256,
+    12,
+    7
+  ],
+  "classification_lines": [
+    "2026-11-09T20:25:40.7575330Z CI scope: full \u2014 File creation/deletion/type change"
+  ],
+  "release_build_succeeded": true,
+  "problems": [],
+  "files": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/TestResults-functional.json",
+      "bytes": 1293,
+      "sha256": "6d311f3219464437ea9c3ddfbba15e6888596e6e2ecbeea344e994a6713c3e4b"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/TestResults-tsan.log",
+      "bytes": 833931,
+      "sha256": "cf9cb97e8cb426fd625193bc506be999222a942460f16a2ad7bff5d720f8d701"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/TestResults.json",
+      "bytes": 1294,
+      "sha256": "8161e78d9e6af51e372ef1efe0bd7315ceff21fb4d6a845d94074c76159b93cc"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/api.json",
+      "bytes": 6078,
+      "sha256": "52292bae2d89ec38b33ea7d7e01d0f96bd1f1b45842dbd28f3d4811c2a650b1c"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/artifact-members.json",
+      "bytes": 510218,
+      "sha256": "9abcfbdab9b19c2639d8ec186ff9d861ef1a7f0cb8a640ccfe62e854ff94a0c5"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/native-core-supervision.json",
+      "bytes": 807,
+      "sha256": "4c61594f0e3609b6e645959cd72a92b8127d2e289522e14c8cacdab07114f544"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/native-core.log",
+      "bytes": 20624,
+      "sha256": "1b4b32ba78b5db03a4c772ffa1e6d1b30dda4f4435514621ba280ed1c2f9f0ee"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/release-build.log",
+      "bytes": 218420,
+      "sha256": "c9b21bd86b42b2a7da5d3672d7a32221254bddc0d182be9ac0b6f85b673838e2"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/test-results.zip",
+      "bytes": 3979831,
+      "sha256": "761647a7366f62bbfe11568401781255b227bb90e75b9876a9fc7c34d6586af3"
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/unit-tests.log",
+      "bytes": 2125583,
+      "sha256": "9a42851e173a3fa50923ad88a77139c7ad116eebba59f9224cf9c632e86c7882"
+    }
+  ],
+  "sanitizer_evidence_gate_source": {
+    "path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/scripts/check-sanitizer-results.py",
+    "sha256": "4179a279d03b2ea8207059d6e481ecb73ab19dae93db01d4af162ed59d798299"
+  },
+  "managed_run": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/logs/20261109-221414-issue-112-r5-ci-complete-audit-6a2253be",
+  "native_teardown_fix_scope": "Bounds the sampled test cleanup wait; this pass does not prove the underlying Foundation/test-host hang cause.",
+  "capture_note": "Two shell-only artifact-download setup attempts stalled before managed output and were terminated only after owned SID/PGID checks. One prior download link returned HTTPError (its specific cause was not retained); the same immutable artifact was retained after refreshing only its download link. No CI jobs, tests, ASR or model initialization were dispatched or retried; failed R5 e03 and earlier CI evidence remains retained.",
+  "supersedes_capture_narrative_only": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/audit.json",
+    "sha256": "30e5a11747f454c350a927612663ca4d74a0c5a055584bc4c6bfcd6d424dd1ae"
+  }
+}

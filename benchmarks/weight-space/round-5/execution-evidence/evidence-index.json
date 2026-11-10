@@ -1,0 +1,1801 @@
+{
+  "schema_version": "round5-curated-public-evidence-index-v1",
+  "created_utc": "2026-11-10T05:27:12.815022+00:00",
+  "derived_curated_index": true,
+  "status": "ACTUAL_FINAL_EVIDENCE_AUDITED_BOTH_FAMILIES_REJECT",
+  "execution_receipt_sha256": "c7c6780a698200d822d1e2c9939c0a986dd705cd67483eb8a28a92a7f37efecb",
+  "projection_audit_sha256": "3f083903834968ecaffd1c6ca1e1c7aa48ea5d70828c9413eea00a23cf011274",
+  "numeric_receipt_sha256": "0febe2bf7408603c16a0459ad79a344af232d472d9efb63607078a74664097fe",
+  "protected_external_authorities_not_copied": {
+    "summary": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-summary-v1/summary.json",
+      "sha256": "4a77268a0e8e11fac2cc4242cce896cbec857a32784d4a9d42de3364066f842b",
+      "bytes": 7357641
+    },
+    "preservation": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation-v1/preservation.json",
+      "sha256": "09b6bc398b71d6e65b6fb9daea5217e6faa7e4e056c13d4d764300b5b59b5592",
+      "bytes": 25480854
+    },
+    "final_journal": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/serial.events.jsonl",
+      "sha256": "8b12c097e3362070bbae032d20fec4b1abf7a3bfb0fb3c8590f96aca2bb5b8d2",
+      "bytes": 71813
+    },
+    "original_manifest": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+      "sha256": "8f030e693968f3b9ed091a0d1f0e428976bc4b0480582d13f94c19dcb436d619",
+      "bytes": 90562
+    }
+  },
+  "coverage": {
+    "planned_cells": 4554,
+    "attempted_cells": 4554,
+    "completed_cells": 4554,
+    "failed_cells": 0,
+    "planned_native_parent_pairs": 2484,
+    "completed_native_parent_pairs": 2484,
+    "pending_native_parent_pairs": 0,
+    "planned_assessor_derived_q4_pairs": 828,
+    "completed_assessor_derived_q4_pairs": 828,
+    "pending_assessor_derived_q4_pairs": 0,
+    "runtime_reference_placeholders": 1242
+  },
+  "checks": {
+    "native_counted_rates": 21420,
+    "gates": 327,
+    "gates_true": 278,
+    "quality_cohorts": 495,
+    "resource_cohorts": 495,
+    "macro_rows": 55,
+    "gates_false": 49
+  },
+  "family_conclusions": [
+    {
+      "family": "small",
+      "decision": "REJECT",
+      "frozen_heldout_mode_decisions": {
+        "known": "reject",
+        "auto": "reject"
+      },
+      "all_three_repeat_panel_controls_observed": true,
+      "complete_counted_family_quality": true,
+      "development_performance_is_not_a_new_gate": true,
+      "default_promotion": false
+    },
+    {
+      "family": "large-v3-turbo",
+      "decision": "REJECT",
+      "frozen_heldout_mode_decisions": {
+        "known": "reject",
+        "auto": "reject"
+      },
+      "all_three_repeat_panel_controls_observed": true,
+      "complete_counted_family_quality": true,
+      "development_performance_is_not_a_new_gate": true,
+      "default_promotion": false
+    }
+  ],
+  "source_counts": {
+    "original107": 107,
+    "separate_replay_addendum": 6,
+    "post_inference_execution_driver": 1
+  },
+  "entries": [
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/quality.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/quality.csv",
+      "sha256": "6973285fde4aa8d5caf14456336ba66a99e9f65dec038dc3897fe2d7821c020e",
+      "bytes": 99699,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/quality.csv",
+      "role": "actual_frozen_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/resources.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/resources.csv",
+      "sha256": "48f6ae113d517d62c66fa479c24670d2b6ad307b0a6e8e772506e3f6f3beb6c9",
+      "bytes": 196085,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/resources.csv",
+      "role": "actual_frozen_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/macros.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/macros.csv",
+      "sha256": "8d82928ea84283c74ec2f2d1802ef5b6a4e82eae5e13d94541abccf7c487cf9c",
+      "bytes": 6660,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/macros.csv",
+      "role": "actual_frozen_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/report.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/report.md",
+      "sha256": "11e5145e69834e11c4e6b9ce906f8bc15e1d294a8a8bb7b7a8b13a146a90b26b",
+      "bytes": 46884,
+      "target": "benchmarks/weight-space-round5-measurements-2026-11-10.md",
+      "role": "verbatim_frozen_measurements",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/native-load-observations.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/native-load-observations.csv",
+      "sha256": "1dcd1b17750d20bff0586d892aa28718d60c77274b75a000c8db7a84ee18f2fd",
+      "bytes": 133517,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/native-load-observations.csv",
+      "role": "actual_independent_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-quality-headlines.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-quality-headlines.csv",
+      "sha256": "89dab40b0aad2c8ff66fa3faca7553acda86065d0d9dc4aff7a36a0394b1ca59",
+      "bytes": 2767,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/heldout-quality-headlines.csv",
+      "role": "actual_independent_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-resource-headlines.csv",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-resource-headlines.csv",
+      "sha256": "e16ea82093959bde966023d9eee30fa066bf2da19b8d9bfb6b84db16d1fcf224",
+      "bytes": 5363,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/heldout-resource-headlines.csv",
+      "role": "actual_independent_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/gate-headlines.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/gate-headlines.json",
+      "sha256": "6795449707a73db82b232845bf15a4e2a71dcc4dd7ee3b9bc2341eaca9415296",
+      "bytes": 15497,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/gate-headlines.json",
+      "role": "actual_independent_numeric_export",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/receipt.json",
+      "sha256": "0febe2bf7408603c16a0459ad79a344af232d472d9efb63607078a74664097fe",
+      "bytes": 63753,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/numeric-audit.receipt.json",
+      "role": "actual_small_receipt",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/audit.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1/audit.json",
+      "sha256": "3f083903834968ecaffd1c6ca1e1c7aa48ea5d70828c9413eea00a23cf011274",
+      "bytes": 3306,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/projection-audit.json",
+      "role": "actual_small_receipt",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-execution.v1/execution.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-execution.v1/execution.receipt.json",
+      "sha256": "c7c6780a698200d822d1e2c9939c0a986dd705cd67483eb8a28a92a7f37efecb",
+      "bytes": 19538,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/execution.receipt.json",
+      "role": "actual_small_receipt",
+      "phase": "POST_ALL15_AND_INDEPENDENT_AUDIT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation-v1.guard.jsonl",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation-v1.guard.jsonl",
+      "sha256": "06e7fb44f817d40d4a1490c87fa2b03c409adc129db80417c10e6d004d28d9aa",
+      "bytes": 2219,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/guards/postrun.guard.jsonl",
+      "role": "actual_closed_guard",
+      "phase": "POST_ALL15_ANALYSIS"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-summary-v1.guard.jsonl",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-summary-v1.guard.jsonl",
+      "sha256": "43bd6beee2ceb16398192da7715c427c2f5edfabddec4c70a237d2a7223656c0",
+      "bytes": 1754,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/guards/summary.guard.jsonl",
+      "role": "actual_closed_guard",
+      "phase": "POST_ALL15_ANALYSIS"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1.guard.jsonl",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-retained-projection-v1.guard.jsonl",
+      "sha256": "9398b2cbcc0f4076f4865313e77af6fdde69666ccc72ac1109520db9dd6ffc86",
+      "bytes": 1470,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/guards/projection.guard.jsonl",
+      "role": "actual_closed_guard",
+      "phase": "POST_ALL15_ANALYSIS"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1.guard.jsonl",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1.guard.jsonl",
+      "sha256": "63969b97d1f83c5e9db9d89f75bedce7ed0b59c0a7c2fe6d97fb95bd32e3f9e9",
+      "bytes": 4186,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/guards/numeric.guard.jsonl",
+      "role": "actual_closed_guard",
+      "phase": "POST_ALL15_ANALYSIS"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/receipt.json",
+      "sha256": "de507d7193bf38ceec04649941428d8b0d098a090e1338fcccb6e5f5f20647bb",
+      "bytes": 23312,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/native-load.receipt.json",
+      "role": "selected_small_actual_or_peer_evidence",
+      "phase": "ACTUAL_PHASE_RETAINED_IN_RECEIPT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-load-closure-peer.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-load-closure-peer.v1.json",
+      "sha256": "7353560e36448f8d3c875c9f1b8b82f5fff0c63fa43c09de98486eaba2328ff8",
+      "bytes": 8124,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/native-load-peer.json",
+      "role": "selected_small_actual_or_peer_evidence",
+      "phase": "ACTUAL_PHASE_RETAINED_IN_RECEIPT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-admission-peer.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-native-admission-peer.v1.json",
+      "sha256": "178f703df9354595f6072eb3811c774def47e1d18c74f11a695fe394636ca2b6",
+      "bytes": 11266,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/admission-peer.json",
+      "role": "selected_small_actual_or_peer_evidence",
+      "phase": "ACTUAL_PHASE_RETAINED_IN_RECEIPT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/audit.v2.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/ci/current-59a1b7f-completion-v1/audit.v2.json",
+      "sha256": "35861dc1b76e3069586bb67a3b7a36fa7573c2ea8e0e0978e4daaec5fc8b5729",
+      "bytes": 10934,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/historical-ci-audit.json",
+      "role": "selected_small_actual_or_peer_evidence",
+      "phase": "ACTUAL_PHASE_RETAINED_IN_RECEIPT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-headline-resource-spotcheck-v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-headline-resource-spotcheck-v1.json",
+      "sha256": "c2035cf827fb989e5405f0e529279e83c02f3c4e206ab87e753853a8c3efd4db",
+      "bytes": 5185,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/headline-resource-peer.json",
+      "role": "selected_small_actual_or_peer_evidence",
+      "phase": "ACTUAL_PHASE_RETAINED_IN_RECEIPT"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/execute-final-recipe-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/execute-final-recipe-v1.py",
+      "sha256": "6559612fb8dcea9db6b5d260effe5a5453a7c8a7a334d37d632840a9788f2df1",
+      "bytes": 8585,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/post-inference-execution/execute-final-recipe-v1.py",
+      "role": "actual_final_execution_driver",
+      "phase": "POST_INFERENCE_EXECUTION_SOURCE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/artifact-generation.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/artifact-generation.freeze.v1.json",
+      "sha256": "ddfbcf7fe06028af11c8d4b302d602d512b21c43bc3b6bf1e3721a8328f902d8",
+      "bytes": 20872,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/artifact-generation.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/assessment-runtime-record.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/assessment-runtime-record.json",
+      "sha256": "56dbc00ba70248662d2c1d1d9ca94f1700baa18fa030a436a53b0f0fa3cc9728",
+      "bytes": 2451,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/assessment-runtime-record.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/audit-final-numeric-gates-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-final-numeric-gates-v1.py",
+      "sha256": "3037f1ee5b352cacbe5fd4060b0c1e20616799ae540b025353a2bdae8e6be872",
+      "bytes": 100146,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/audit-final-numeric-gates-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/audit-postrun-preservation-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/audit-postrun-preservation-v1.py",
+      "sha256": "2f2024d457a2f1d9c0bbc05770335c3f9c5094725bff0be61fd16171cc02f8e2",
+      "bytes": 22543,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/audit-postrun-preservation-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/classify-native-output-failure-v2.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/classify-native-output-failure-v2.py",
+      "sha256": "b5fa141cab70dce2401d095aacc3f4d192b92e157878afddfb72a4a4608bc353",
+      "bytes": 19059,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/classify-native-output-failure-v2.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/current-defaults.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/current-defaults.json",
+      "sha256": "4fde2c62eaeb82fe10581324384d0af72f965f0cc1d8375b234453bbd24c1857",
+      "bytes": 25,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/current-defaults.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "sha256": "9ee7c18bdca76495d308ec3ec24fd16a7961babbe2b977ac8acd6c76b8236890",
+      "bytes": 32588,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-base/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-base/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/experiment.json",
+      "sha256": "f1bb2d724f9a67bbc9d917a7ec5ec26acf0042981fa329577298a90e117eba61",
+      "bytes": 1993,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-base/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-base/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-base/source.original.json",
+      "sha256": "5292fc5cbe1eaa61326f2e2684f5e4a93af5977afb3fa4a3fec6ff7d524e1497",
+      "bytes": 12672,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-base/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "aa9390cc1f0f485eb8bb09504c936c22e3adac28abc893494e6eb6c0ab22bc08",
+      "bytes": 33451,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3-turbo/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/experiment.json",
+      "sha256": "c9685a4b0315d62217b6147e4aaee68fcee4c6c4bffd1595beac6c7e7411e91c",
+      "bytes": 5821,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3-turbo/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3-turbo/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3-turbo/source.original.json",
+      "sha256": "414ecaa2dd72f430115ddc77b16b605530ed01ad372de2bc0094a5dbb24e45ab",
+      "bytes": 12682,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3-turbo/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "9e9ca305c96c983f083f4ae2deec3d5d2a6dba3e43117d1fdbe1f9155133c6e0",
+      "bytes": 32597,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/experiment.json",
+      "sha256": "6195651850894b068ff19c52bcc4fc6183198df383b7ce01ec0b073cd7baee6f",
+      "bytes": 2027,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-large-v3/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-large-v3/source.original.json",
+      "sha256": "2b31d23ed44795ca96f49f64820ea08b9848e3d7e6f288e889792c1a66c45068",
+      "bytes": 12676,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-large-v3/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "sha256": "0afd87758fecf9db2387d8da541368450ffea81e196be9b0660ed75fab964d1b",
+      "bytes": 33377,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-small/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-small/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/experiment.json",
+      "sha256": "49ccbf5ca99344dfefe83627a401bc43f1f5643331d154a79b0e71f8e400f654",
+      "bytes": 5578,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-small/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-small/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-small/source.original.json",
+      "sha256": "1b57e3d3a7f02306c76f7a4e795b51fc63c379f971d20b583d761dc0b27f87f6",
+      "bytes": 12673,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-small/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "27aa7bc3e9080660302a91ebf10c0fcf80d74ea20e8ed60e929a6c1678ab28cc",
+      "bytes": 32587,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-tiny/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-tiny/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/experiment.json",
+      "sha256": "87a4e8e68168760e998d0b6501196064b5ba575577ec709274c92f72b326887e",
+      "bytes": 1993,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-tiny/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/dev-validation-tiny/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/dev-validation-tiny/source.original.json",
+      "sha256": "167172b338c4b211a71a5df4c00f4b5cc21858a396fd0702c257764bb5d81c4b",
+      "bytes": 12672,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/dev-validation-tiny/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/enrich-audit-toy-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/enrich-audit-toy-v1.py",
+      "sha256": "616b2f382ec293d3185bc8ea99d1483bd1dceb7aebb7ae1af969ee5b45e954e4",
+      "bytes": 13978,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/enrich-audit-toy-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/final-reporting-tools.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-reporting-tools.freeze.v1.json",
+      "sha256": "1322966de1b7b8a7b963bf81d6830ee3d28fe93ad63f91cd84db31a939c9d662",
+      "bytes": 3387,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/final-reporting-tools.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generate-artifacts-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generate-artifacts-v1.py",
+      "sha256": "a5cd8ea32f8789e9ab8714d6dd0fe3de5c29d9a28eaf9a9b747cc10b59c76f7c",
+      "bytes": 26151,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generate-artifacts-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-admissions.receipt.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-admissions.receipt.v1.json",
+      "sha256": "0db73dde9e79e3bf2b1a976e259abc00485907598896bde74fab94e5c9792c55",
+      "bytes": 1615,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-admissions.receipt.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PRE_EXPORT_ADMISSION_HISTORY_INCLUDING_NOT_STARTED_ATTEMPT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-preflight.not-started.attempt1.launch.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.launch.json",
+      "sha256": "853205e46ee5516b8b0600808c60ed08bcf26eb224bd23f593a417bec915aff1",
+      "bytes": 2167,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-preflight.not-started.attempt1.launch.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "OPERATIONAL_ADMISSION_NOT_STARTED_NO_EXPORT_WORKER"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-preflight.not-started.attempt1.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-preflight.not-started.attempt1.receipt.json",
+      "sha256": "a37394a0ec1e21f8eb8c0f998b6241fe9737a2d0b0fe31e6fa9f5a96f690e663",
+      "bytes": 829,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-preflight.not-started.attempt1.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "OPERATIONAL_ADMISSION_NOT_STARTED_NO_EXPORT_WORKER"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+      "bytes": 13998,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/benchmarks/weight-space-round5-protocol.md",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/run-guard.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/run-guard.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/scripts/quality/ggml_weights.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/scripts/quality/mlp-permute.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/scripts/quality/quantize-attention-rotation.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/generation-source-v1/scripts/quality/quantize-mlp-permutation.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_BYTE_EXPORTS"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "sha256": "4aea46968d0e81e8ceb8892eb635c42ba8262bc14cb8f94df3c701a8e2019bdb",
+      "bytes": 63940,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-base/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-base/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/experiment.json",
+      "sha256": "550df377850308bf76c859db906e335ae83d80abc0050e564e9cbe11d0da6f21",
+      "bytes": 2109,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-base/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-base/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-base/source.original.json",
+      "sha256": "17ad875b1189eebe20e91b3dabc49c663d47fda880824d76f7ee736d729cd8f1",
+      "bytes": 12669,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-base/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "3c15c87aee6174510f9a1f1cf2d7a41fafb99f7b8cf8120da80847f3218315e2",
+      "bytes": 64803,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3-turbo/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/experiment.json",
+      "sha256": "314ea5b9751a30a6d5d59c94177d835301497706248ef9f417040a5e35392772",
+      "bytes": 5947,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3-turbo/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3-turbo/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3-turbo/source.original.json",
+      "sha256": "82b3afe75e515f34a72b09653f79eb4b03f26bfa8c546bfa1464f315d2bc2267",
+      "bytes": 12679,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3-turbo/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "d357be1233ec4db9915bfa4b088d381b8f9d98d51ef34f153c7ef1807fe250a2",
+      "bytes": 63949,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/experiment.json",
+      "sha256": "07e4fb52fea6f4ce1edd8fc80e36b36230ccc82c4acc6a4ede896987f0262b6f",
+      "bytes": 2147,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-large-v3/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-large-v3/source.original.json",
+      "sha256": "67e8841a812ecb1c258d2a1a8d47f1f68b73c9daedbaf6a003e7a26ca8bfbf64",
+      "bytes": 12673,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-large-v3/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "sha256": "edd69e80c48725cf09a9a5f34504e7be17494b34258101c23788e4406d42ae94",
+      "bytes": 64729,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-small/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-small/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/experiment.json",
+      "sha256": "b7bde24ab8e40707dce4af9a13728993d0e09ec0fa2cc442613cb7777a53a8d1",
+      "bytes": 5695,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-small/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-small/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-small/source.original.json",
+      "sha256": "84628b903cb43d6860fa106a64d423d1c43d9e32f8b9e8ef2eeb58e587edcf49",
+      "bytes": 12670,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-small/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "1365488ceecbfc44a0137c15240728616ac6468b29cd6a7d4bb1c74f81772894",
+      "bytes": 63939,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-tiny/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-tiny/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/experiment.json",
+      "sha256": "f8280eb549f67f34548b7514b53ef7e8fba4ffd21268a36693acca3316e2fe90",
+      "bytes": 2109,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-tiny/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/heldout-tiny/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/heldout-tiny/source.original.json",
+      "sha256": "8d4170d33b695ebcb88ffe8efeeaaa46a6059cdf7cea40b035a56491289ad511",
+      "bytes": 12669,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/heldout-tiny/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-analysis-source-peer.v2.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-analysis-source-peer.v2.json",
+      "sha256": "a522c90128df46b2c130516b49da8787f32beacdb2453077bf70ecc0bec3530d",
+      "bytes": 2136,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-analysis-source-peer.v2.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "SOURCE_REVIEW_BEFORE_ANY_QUALITY_INFERENCE_CLI_PROOF_THEN_PENDING"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-final-audit-tools.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-final-audit-tools.freeze.v1.json",
+      "sha256": "d3da8987dffca7e99ce5ebe4c4f710ca9904106973ced6f64a566985a90b24b6",
+      "bytes": 4038,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-final-audit-tools.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "sha256": "ae8bc670161f50563be5ebccdbb7aca16df6df048a22a19559d2e9cf270c3289",
+      "bytes": 3509,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-admission-verifier.executed-inline-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "POST_LAUNCH_AND_POST_COMPLETION_ARCHIVE_NOT_PROSPECTIVELY_FROZEN"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-admission.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-admission.v1.json",
+      "sha256": "a6c014a7cbe8e48936d02f6c28d24682628341163477a2c5d7e9e22dee01cf7f",
+      "bytes": 3139,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-admission.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PRE_STATIC_AUDIT_ADMISSION_AND_PRIOR_METADATA_VERIFIER_FAILURE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-audit-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1.py",
+      "sha256": "29ea8a94041c42d897c6dff0996e66800627ca6e2a1f479886817bcddccb431c",
+      "bytes": 31566,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-audit-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-audit-v1/audit.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit-v1/audit.json",
+      "sha256": "809fa23bb9ec04cdc8841fb9eec7f24a1891898c8d852df5beec25c4f88cb7a2",
+      "bytes": 214139,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-audit-v1/audit.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "ACTUAL_STATIC_WEIGHT_PROVENANCE_ONLY_NOT_SPEECH_QUALITY"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-audit.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.freeze.v1.json",
+      "sha256": "baa9a4bccdc58d4b28fa17a12e6e4f90a8c00bd7107975f587afe975ca59a720",
+      "bytes": 4846,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-audit.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-completion.receipt.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-completion.receipt.v1.json",
+      "sha256": "15f5713bd1eb28b2b30f632942d600edc211ca84152de4c1e3f9c5349bde8de7",
+      "bytes": 2891,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-completion.receipt.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "POST_STATIC_AUDIT_CLOSED_GUARD_EVIDENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-smoke-launcher-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-launcher-v1.py",
+      "sha256": "22f5a773aac2b79817adf6888146f0f3a868ad1934c86baacfa205b363a0ebe2",
+      "bytes": 1295,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-smoke-launcher-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-smoke-v1/audit.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-smoke-v1/audit.json",
+      "sha256": "3bfdd8f20b9e2c5b50125e12199a6d4631c6c61baff1ddf2f65677dc1fcbd0cb",
+      "bytes": 6355,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-smoke-v1/audit.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "ACTUAL_METADATA_CLI_MODEL_OPENS_DENIED_NOT_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-preflight-validation.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-validation.v1.json",
+      "sha256": "71896694fc110ca8035bc210ae0c0af94508178a74ae5e57a049740fadcada92",
+      "bytes": 1194,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-preflight-validation.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "SYNTHETIC_CONTRACT_EVIDENCE_BEFORE_STATIC_AUDIT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-real-metadata-api-check.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-real-metadata-api-check.v1.json",
+      "sha256": "8605ad37a4db6a0e6cfd682c8bbcb12ce78f7214d48865aa8d9521840e514e61",
+      "bytes": 7397,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-real-metadata-api-check.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/independent-static-completion-peer-v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-static-completion-peer-v1.json",
+      "sha256": "7a320ebe5d722462c57148756dd9be5006b3f121eba049c23fb6929cf3bb5fee",
+      "bytes": 2058,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/independent-static-completion-peer-v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "INDEPENDENT_POST_STATIC_AUDIT_CLOSURE_PEER"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/native-load-check-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-check-v1.py",
+      "sha256": "ad8fe2a089b1f6d6fcf23b611429766448eeefb30f7841ec7f3b086d0f580b3a",
+      "bytes": 19412,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/native-load-check-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/native-load-tools.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-tools.freeze.v1.json",
+      "sha256": "4c8f824de05f7a016838f8e020169942c9b55b57bb6d0478b0d4a9c738951b59",
+      "bytes": 1461,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/native-load-tools.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "sha256": "67c07df714ef6c85dc5aa1e5f472ac36835a6af78c85065f8f47b7b48edd1e67",
+      "bytes": 4899,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/packaged-smoke-fixture-v1/reporting-cli-smoke.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "sha256": "cf594d93f568449cb6b4f6fd37183a4c1f7965d40cdeb8ced19f124326a0e797",
+      "bytes": 3644,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/packaged-smoke-fixture-v2/reporting-cli-smoke.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "75d220893c4ee1e2fc7ed46097bc98f2f0b820efe4992246be3fc1558854b5a4",
+      "bytes": 4492,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/packaged-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "sha256": "c7031e68e5e32eb96330b99fc1551eace8c9bc58f1c095c298476cb009c67c4a",
+      "bytes": 13093,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/packaged-smoke-fixture-v7/independent-all-main-cli-smoke-v4.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "VALIDATION_ONLY_NOT_ACTUAL_SPEECH_QUALITY"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-base/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/assessment-plan.pre-freeze.json",
+      "sha256": "9036002995cac5ee79d666bb2ae2de24f88f7ae94b517c53ad7e0cad5aade9e5",
+      "bytes": 5494,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-base/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-base/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/experiment.json",
+      "sha256": "d92ecb10806a6faf17689b8dcf79ecd840edc58974151892aa9ec6abcb591625",
+      "bytes": 2005,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-base/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-base/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-base/source.original.json",
+      "sha256": "7d345be3afa3a3d16c3cde9f72e6fbd8b4514b0540a82b1b0f43985cc76e5b9f",
+      "bytes": 12666,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-base/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "sha256": "d77f20daee5c88144df9f85a732ec461807ec15b991f9c8dd93759c4bbdbc9f5",
+      "bytes": 6357,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3-turbo/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3-turbo/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/experiment.json",
+      "sha256": "8874ee9c5dac5a96ade025dd3395aa76d14c8c8ba0382a626c7e362704e0d76d",
+      "bytes": 5833,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3-turbo/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3-turbo/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3-turbo/source.original.json",
+      "sha256": "a5adbb49925c4d00c89e68c6e8e4b82ba34cdeb6ee591ba73006904b14eec349",
+      "bytes": 12676,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3-turbo/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "sha256": "5f86f148ff166fa5571548a062ba6d7257abc9c98ce766aafdc69c3e233d73d1",
+      "bytes": 5503,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/experiment.json",
+      "sha256": "f12a414148b677b78917654a1ae23ef8e65b4509a39ae8cb06a3e204e4a3e3c9",
+      "bytes": 2039,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-large-v3/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-large-v3/source.original.json",
+      "sha256": "f5f47af72f72d39c366b2d10b6bbcb1fd3b8802ff66d8c2baac07a3f857db3a1",
+      "bytes": 12670,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-large-v3/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-small/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/assessment-plan.pre-freeze.json",
+      "sha256": "a7c2db3b29966336d0b5a14ad24e91b8c394892a7b08bce91f72209bff865214",
+      "bytes": 6283,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-small/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-small/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/experiment.json",
+      "sha256": "0923790e589ac8b304fa635bba2b2a6a0eae0969e5868ced666a9aa7129c876f",
+      "bytes": 5590,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-small/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-small/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-small/source.original.json",
+      "sha256": "c9f2318e0cb12854889abd0e7c2df06ab9b47ef0d908d10b61ffe62fc5096e4b",
+      "bytes": 12667,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-small/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "sha256": "0f8fedd392046c16d9a2a31282fb9c70d5aa9a04c8a506ccc6b4a607b694c9a1",
+      "bytes": 5493,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-tiny/assessment-plan.pre-freeze.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-tiny/experiment.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/experiment.json",
+      "sha256": "4bd150b66400eeac2f93ed68b3ec449ba19a09b66e45baa10e489b258a40486f",
+      "bytes": 2005,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-tiny/experiment.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/panel-tiny/source.original.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/panel-tiny/source.original.json",
+      "sha256": "421c664ac29bf1b2b60ac83419923f004cc449a07a6bcf64cb0b2c62f81b3bbb",
+      "bytes": 12666,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/panel-tiny/source.original.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/postrun-preservation.freeze.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/postrun-preservation.freeze.v1.json",
+      "sha256": "f0ffd6b79e228c9e7924a7c6ac9fb1116b59e6f529ea0b5d797894a4959eb4be",
+      "bytes": 3763,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/postrun-preservation.freeze.v1.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/pre-inference-family-seal.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/pre-inference-family-seal.json",
+      "sha256": "ca33f8896168838829dc36151de6b7a206f329db28ac0fcb610152d49bdeb60e",
+      "bytes": 152231,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/pre-inference-family-seal.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/prepare-source-publication-plan-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/prepare-source-publication-plan-v1.py",
+      "sha256": "05feb5d8bde14f61c1ba9616fb0d1884fa26ee972c574ea0b3e1ccf8b5ca4f9b",
+      "bytes": 13866,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/prepare-source-publication-plan-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "CURRENT_PLAN_PREPARATION_NOT_PART_OF_FROZEN_SCIENTIFIC_EXECUTION"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/project-round5-report-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/project-round5-report-v1.py",
+      "sha256": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4",
+      "bytes": 23246,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/project-round5-report-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/benchmarks/weight-space-round5-protocol.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/benchmarks/weight-space-round5-protocol.md",
+      "sha256": "dbe41cac8d1d2d77205ce8e32b6c50bd164b684d4993f11b2274a7913a1af0a6",
+      "bytes": 13998,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/benchmarks/weight-space-round5-protocol.md",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/assess-affine-pilot.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/assess-affine-pilot.py",
+      "sha256": "44e8c0c6f5cbae36c829bcebf4609272d5a514a86b2b4744333ba93c1474ce53",
+      "bytes": 33792,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/assess-affine-pilot.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/assess-mlp-permutation.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/assess-mlp-permutation.py",
+      "sha256": "d3615feca949ffccc7d7db2609c263f65e15ef9ace3b38fb962b63e3a348c3ec",
+      "bytes": 47077,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/assess-mlp-permutation.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/ggml_weights.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/ggml_weights.py",
+      "sha256": "11c0c7ddda3d81a90c47b58a4b82415f9764f51eed7b2c5302fdc0784c34e4c3",
+      "bytes": 34428,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/ggml_weights.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/mlp-permute.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/mlp-permute.py",
+      "sha256": "0a33ffab0c343b88e1cffa3e571619b414148d4b88673b69fa77386124087122",
+      "bytes": 20597,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/mlp-permute.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/quantize-attention-rotation.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/quantize-attention-rotation.py",
+      "sha256": "bf3f2ef5e00a4c06ef7fd4912c46dd2a0d50f7a381d45fff7cef6c5fae93c4e0",
+      "bytes": 39229,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/quantize-attention-rotation.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/quantize-mlp-permutation.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/quantize-mlp-permutation.py",
+      "sha256": "eca16247e3855bd5948e01378a4d56fe08c3b2613c824cc2fa17f1f25766e9f4",
+      "bytes": 34418,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/quantize-mlp-permutation.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/quality/scripts/quality/report-pilot.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/report-pilot.py",
+      "sha256": "121b097f00eff413a47b940ef71a91db55270a42e545ebdd919f97de3e169059",
+      "bytes": 37161,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/quality/scripts/quality/report-pilot.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "sha256": "703a793c304c6d76935174dbdfecae333b0dea4b08c3d37386de377e77df948f",
+      "bytes": 4306,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/reporting-smoke-fixture-v3/reporting-cli-smoke.receipt.json",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAILED_SYNTHETIC_SETUP_NO_ACTUAL_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/run-guard.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-guard.py",
+      "sha256": "7697f60e8a2c0aa150b598afe2e8c552435e1d8a4cb2f99489c9fa10de0dc56c",
+      "bytes": 21523,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/run-guard.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/run-remaining.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/run-remaining.py",
+      "sha256": "a0498b4768b8cad28288704ef885c6d47df7f1f549b379e985ead83e3486fdd6",
+      "bytes": 19324,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/run-remaining.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/seal-heldout.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/seal-heldout.py",
+      "sha256": "b6bb5cb8b9bd955150cab192b644bb070407e5b1fe14cfc263ddaa4c025e84b7",
+      "bytes": 56493,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/seal-heldout.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "FAMILY_BOUND_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/smoke-independent-cli-v4.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-independent-cli-v4.py",
+      "sha256": "ea928ecb2e4aaa099389ad008b2dedd44cb13e99e307690635b6086acda72873",
+      "bytes": 6136,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/smoke-independent-cli-v4.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/smoke-reporting-cli-v2.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-reporting-cli-v2.py",
+      "sha256": "d72ebf068fe7ca960847529075da34411a3d77493ef8e4beae2610aac232812b",
+      "bytes": 4396,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/smoke-reporting-cli-v2.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/summarize-round5-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/summarize-round5-v1.py",
+      "sha256": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+      "bytes": 30305,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/summarize-round5-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-final-numeric-audit-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-final-numeric-audit-v1.py",
+      "sha256": "bb5f3f8be49e702f0cd21f7f3a44dd8316d53f8e736c6721ae33f639a63123e2",
+      "bytes": 9553,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-final-numeric-audit-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-independent-cli-refusal-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-cli-refusal-v1.py",
+      "sha256": "fb4d8d6f59d91fbcc6690796a0ff52a1c382e224edc12ebeb140c73ac45ed2b1",
+      "bytes": 3265,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-independent-cli-refusal-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-independent-preflight-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-independent-preflight-v1.py",
+      "sha256": "6e1b9c6d62233e56dfb6e285fd1e053211b93530bf82f04c2f60b4fe315bb12b",
+      "bytes": 8948,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-independent-preflight-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ACTUAL_STATIC_AUDIT"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-native-load-check-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-native-load-check-v1.py",
+      "sha256": "e679507494d53da2b630aafbf009274d0e2ff070ef969a2e4d37e1b66b94fa58",
+      "bytes": 11444,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-native-load-check-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_NATIVE_MODEL_INITIALIZATION"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-postrun-preservation-core-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-postrun-preservation-core-v1.py",
+      "sha256": "6352c927d4a4ddc7a6f9d9eb0a0a1154dfdf1af13f4f792ff79d5fa920aed5af",
+      "bytes": 10202,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-postrun-preservation-core-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/round-5/test-round5-report-v1.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-round5-report-v1.py",
+      "sha256": "7104f61ea9a50fe13683094ae02ff4621277e2b07615335ab6a9755908b6d002",
+      "bytes": 12631,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/sources/round-5/test-round5-report-v1.py",
+      "role": "original107_exact_source_or_metadata",
+      "phase": [
+        "PROSPECTIVE_BEFORE_ANY_QUALITY_INFERENCE"
+      ]
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+      "sha256": "8f030e693968f3b9ed091a0d1f0e428976bc4b0480582d13f94c19dcb436d619",
+      "bytes": 90562,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/source-manifest.json",
+      "role": "exact_original107_manifest",
+      "phase": "PRE_PUBLICATION_SOURCE_PLAN"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-plan.v2.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-plan.v2.json",
+      "sha256": "e58271336e0ca3d8911e9d6c7bd5a82bf651e3047a45102541dfd8656a9146fb",
+      "bytes": 2248,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/source-publication-plan.json",
+      "role": "exact_original107_plan",
+      "phase": "PRE_PUBLICATION_SOURCE_PLAN"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/quality/scripts/quality/requirements.txt",
+      "original_path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/scripts/quality/requirements.txt",
+      "sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+      "bytes": 159,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/round-5/quality/scripts/quality/requirements.txt",
+      "role": "separate_replay_addendum_source",
+      "phase": "EXISTING_E03_DEPENDENCY_SOURCE_NOT_NEW_SCIENTIFIC_CODE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/test-orchestration.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-orchestration.py",
+      "sha256": "298eeacd5b50b540eae22a116a5355eea8da909b1ada239f03c212a21ffe85e4",
+      "bytes": 23614,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/round-5/test-orchestration.py",
+      "role": "separate_replay_addendum_source",
+      "phase": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/smoke-packaged-orchestration.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration.py",
+      "sha256": "968bd9ce50ebcc5254ce550f3cad7e7e039695ca1e5f433382628c4075059dad",
+      "bytes": 11436,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/round-5/smoke-packaged-orchestration.py",
+      "role": "separate_replay_addendum_source",
+      "phase": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/round-5/smoke-packaged-orchestration-v7.py",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration-v7.py",
+      "sha256": "b3c69e82ba5cb6682e11b0a00e19a5c045051daeed3a93e96a5495cbb1e4d702",
+      "bytes": 8590,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/round-5/smoke-packaged-orchestration-v7.py",
+      "role": "separate_replay_addendum_source",
+      "phase": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/README.replay-prerequisites.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.md",
+      "sha256": "673f92e1a857ad0eaa3f4fc3d457c1bd18bd5af2c60d0c5a44df3c54041e2ef9",
+      "bytes": 5879,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/README.replay-prerequisites.md",
+      "role": "separate_replay_addendum_source",
+      "phase": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/replay-prerequisites.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.json",
+      "sha256": "aef9c72ab6fa6fc875a42f842a1b99b70611301eef15604abab1dee03a2b2eb8",
+      "bytes": 41152,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/replay-prerequisites.json",
+      "role": "separate_replay_addendum_source",
+      "phase": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/addendum.receipt.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum-v1/addendum.receipt.json",
+      "sha256": "6f7ed329b61097663c8e88334fa03ce8b3d78d661c7f7d93057bf561a5730df5",
+      "bytes": 6065,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/addendum.receipt.json",
+      "role": "exact_replay_addendum_receipt",
+      "phase": "POST_PUBLICATION_STAGING_NOT_SCIENTIFIC_FREEZE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum.plan.v1.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-addendum.plan.v1.json",
+      "sha256": "a84be9bf770d1c4bde0d7ddfa857a7ecd3a53fbf46d291de7844bba1a41eff23",
+      "bytes": 4295,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/replay-addendum/addendum.plan.json",
+      "role": "exact_replay_addendum_plan",
+      "phase": "POST_PUBLICATION_STAGING_NOT_SCIENTIFIC_FREEZE"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v2/weight-space-round5-report-2026-11-10.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v2/weight-space-round5-report-2026-11-10.md",
+      "sha256": "d302b246ab1b3ec51fe85c7544e04f8a2347cb830a224e604007f89816c876ce",
+      "bytes": 12026,
+      "target": "benchmarks/weight-space-round5-report-2026-11-10.md",
+      "role": "curated_human_report",
+      "phase": "DERIVED_POST_EVALUATION_PRESENTATION_NOT_AUTHORITATIVE_RESCORING",
+      "previous_public_sha256": "0de35100c313716504ef103d64e942a903324c88fd6d3d8c7e5c4054c7af29c6",
+      "curated_revision_scope": "Root-requested prose precision/readability only; numerical tables unchanged"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v1/preservation-summary.json",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v1/preservation-summary.json",
+      "sha256": "873115da495747a5239e846c3545bd5763d96700eb005dc655f197a51f309efa",
+      "bytes": 1792,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/preservation-summary.derived.json",
+      "role": "compact_derived_preservation_summary",
+      "phase": "DERIVED_POST_EVALUATION_PRESENTATION_NOT_AUTHORITATIVE_RESCORING"
+    },
+    {
+      "source_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v2/README.md",
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v2/README.md",
+      "sha256": "d1845ac5178cecd2de0502a975d2608ea3e17899528a38e8d06c4fccd3834432",
+      "bytes": 4038,
+      "target": "benchmarks/weight-space/round-5/execution-evidence/README.md",
+      "role": "curated_archive_readme",
+      "phase": "DERIVED_POST_EVALUATION_PRESENTATION_NOT_AUTHORITATIVE_RESCORING",
+      "previous_public_sha256": "52e218252cd53055de04d907d269c9ae0aa1174d6ec8b7369b17a55125f91a9d",
+      "curated_revision_scope": "Root-requested prose precision/readability only; numerical tables unchanged"
+    }
+  ],
+  "source_plan_excluded_references_unopened": [
+    {
+      "original_path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/Build/Artifacts/benchmark/20261109-215326-issue-112-r5-independent-static-audit-2764eb05/console.log",
+      "sha256": "79e45f6f4f49ca86808e607f094eeef2bdec37bc0eb191aa1f1379cd0982863f",
+      "bytes_from_descriptor": 516,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "closure/original_metadata_only_failure",
+        "admission/prior_failure/console"
+      ],
+      "phase_claims": [
+        "PRE_STATIC_AUDIT_METADATA_VERIFIER_FAILURE_BEFORE_PAYLOAD_WORKER_LAUNCH"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/independent-preflight-audit.guard.v1.jsonl",
+      "sha256": "c92687e1103522c2b2fde04e7a8168241e2c6f59b909e5d0dd2d6eb028b4777a",
+      "bytes_from_descriptor": 1291,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "closure/actual_guard"
+      ],
+      "phase_claims": [
+        "ACTUAL_STATIC_AUDIT_CLOSED_GUARD_AFTER_SINGLE_PAYLOAD_WORKER"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/BenchmarkExperiment.swift",
+      "sha256": "b738ffc42763001f00d82266f40f06256f58a5fb2aa297df3671c95463a03b7a",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/BenchmarkExperiment.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/CorpusBenchmark.swift",
+      "sha256": "b5e8de00cfdde4163faea565942c286e6154c6006d61431bf50bfa81ba54ca64",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/CorpusBenchmark.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/CorpusManifest.swift",
+      "sha256": "e7098689da9e3283b4aa8ad146b6b17a04887f74cd0612839b2ca4a06c98083b",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/CorpusManifest.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/NativeWhisperEngine.swift",
+      "sha256": "89d40ac088c3d68ff15381c05dcb47caf8b85f0f6cb5feb8e3a6bf62aaef2985",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/NativeWhisperEngine.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/TranscriptAccuracy.swift",
+      "sha256": "defebc2f9aa0f5da23db491cd8fd1b1a43edda910db3968b0918cf13654ef442",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/TranscriptAccuracy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperDecodingProfile.swift",
+      "sha256": "24cd905ab858cf94f466e8cf11f83e6345e1ea2b5c8e3979f8406399a121ecda",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperDecodingProfile.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperLanguagePolicy.swift",
+      "sha256": "453ef98963996649ee431fee717e5cecc29710d4e399383283af0b337a628aec",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperLanguagePolicy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/core/Sources/RecScribeCore/WhisperSpeechPolicy.swift",
+      "sha256": "b7f906d0f2d2f4142c7e2a90a014fb7ebebf376c2b9dfe896f684b5154585086",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/core/Sources/RecScribeCore/WhisperSpeechPolicy.swift"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/quality/scripts/quality/requirements.txt",
+      "sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+      "bytes_from_descriptor": null,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "pre-inference-family-seal.json/sources/scripts/quality/requirements.txt"
+      ],
+      "phase_claims": [
+        "FAMILY_FROZEN_SOURCE_HASH_REFERENCE_EXCLUDED_BY_EXPLICIT_FILE_TYPE_SCOPE"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/bin/python3.15",
+      "sha256": "9520366c4a127326582aa17cbdcd95fe615ba8d2e6fc350af8dac328f204af2a",
+      "bytes_from_descriptor": 34640,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "artifact-generation.freeze.v1.json/tools/python"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_GENERATION_DEPENDENCY_HASH_ONLY_NOT_ARCHIVED_BYTES"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    },
+    {
+      "original_path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-quantize",
+      "sha256": "2efffddc246a52e7ba9a81145926d07e7f1c5fc7ba56a95586602a12ec5e00bd",
+      "bytes_from_descriptor": 150496,
+      "disposition": "REFERENCE_ONLY_NOT_OPENED_OR_COPIED",
+      "reason": "Outside explicit .py/.md/.json source scope",
+      "bindings": [
+        "artifact-generation.freeze.v1.json/tools/quantizer"
+      ],
+      "phase_claims": [
+        "PROSPECTIVE_GENERATION_DEPENDENCY_HASH_ONLY_NOT_ARCHIVED_BYTES"
+      ],
+      "copy_exact_bytes_after_final_barrier": false,
+      "hash_reference_claim": "Retained descriptor pin; excluded bytes were not opened or rehashed by this source plan"
+    }
+  ],
+  "all_original_sources_and_numeric_exports_copied_exact": true,
+  "no_raw_speech_or_models_redistributed": true,
+  "source_absolute_path_metadata_preserved": true,
+  "source_copying_did_not_execute_archived_programs": true,
+  "measurement_appendix_verbatim_sha256": "11e5145e69834e11c4e6b9ce906f8bc15e1d294a8a8bb7b7a8b13a146a90b26b",
+  "historical_ci": {
+    "head": "59a1b7fabb9d28157c5c01ad51dbf926883cbce3",
+    "run_url": "https://github.com/moreaki/recscribe/actions/runs/42692826227",
+    "audit_sha256": "35861dc1b76e3069586bb67a3b7a36fa7573c2ea8e0e0978e4daaec5fc8b5729",
+    "new_publication_head_ci": "PENDING_REQUIRED_FULL_CI"
+  },
+  "product_native_v2_approval": "PENDING",
+  "controlled_resources": "UNCONTROLLED / NOT EVALUATED",
+  "default_promotion": false,
+  "index_self_hash_excluded_to_avoid_circularity": true,
+  "curated_revision": 2,
+  "previous_curated_index": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/publication-draft-v1/evidence-index.json",
+    "sha256": "c19f1db24a862ba6a59c69482cd5adba16fadc12b4c2ad01e91f401e4055d41e"
+  },
+  "hardware_identity_source": {
+    "actual_gpu_name": "MTL0 (Apple M2 Ultra)",
+    "source_log": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/native-load-v1/1-small-permuted-f16.log",
+      "sha256": "60b1b07c979ecbf52394c7c4a4f272c5597cd480c1670853c4047f22252ef7ac",
+      "bytes": 7082
+    },
+    "source_was_native_empty_input_load_only_not_actual_speech": true
+  },
+  "curated_revision_scope": "Precise Swiss rendering, per-family panel counts, scripts/canton metadata, actual recorded GPU name, pre-existing a55 vs c214/e03/59a attribution and spacing. No scores, gates, frozen source or export bytes changed."
+}

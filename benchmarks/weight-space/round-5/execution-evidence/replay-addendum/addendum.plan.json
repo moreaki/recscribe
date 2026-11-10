@@ -1,0 +1,79 @@
+{
+  "schema_version": "round5-source-only-replay-addendum-plan-v1",
+  "created_utc": "2026-11-10T05:10:58.267229+00:00",
+  "phase_label": "POST_PUBLICATION_STAGING",
+  "meaning": "Later source/publication preparation only; no actual public publication and no prospective scientific freeze claim",
+  "original107_manifest": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-archive.manifest.v2.json",
+    "sha256": "8f030e693968f3b9ed091a0d1f0e428976bc4b0480582d13f94c19dcb436d619",
+    "bytes": 90562
+  },
+  "original107_plan": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-plan.v2.json",
+    "sha256": "e58271336e0ca3d8911e9d6c7bd5a82bf651e3047a45102541dfd8656a9146fb",
+    "bytes": 2248
+  },
+  "original107_staging_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/source-publication-staging-v1/staging.receipt.json",
+    "sha256": "0a632042567e2a92274669a9bb56c74692d311531d0196f0993d121b3fdf982a",
+    "bytes": 99582
+  },
+  "fixture_source_pin_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v7/packaged-smoke-v7.receipt.json",
+    "sha256": "3c15907d1d42a50d0f44379f41bc6f2cc35e783adfbab50dea26d9a41bb50c45",
+    "bytes": 4609
+  },
+  "requirements_git_revision": "e03c5caa9d428c4b0964a6aedcfe167aa68bc76a",
+  "requirements_git_blob_sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+  "entries": [
+    {
+      "original_path": "/Users/moreaki/.codex/worktrees/swiss-written-corpus/recscribe/scripts/quality/requirements.txt",
+      "sha256": "f4e6651e94c3a988d2a41f2f4a0e2b45aa14686f595c641b598daf389c77dd97",
+      "bytes": 159,
+      "addendum_relative_path": "round-5/quality/scripts/quality/requirements.txt",
+      "phase_claim": "EXISTING_E03_DEPENDENCY_SOURCE_NOT_NEW_SCIENTIFIC_CODE"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/test-orchestration.py",
+      "sha256": "298eeacd5b50b540eae22a116a5355eea8da909b1ada239f03c212a21ffe85e4",
+      "bytes": 23614,
+      "addendum_relative_path": "round-5/test-orchestration.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration.py",
+      "sha256": "968bd9ce50ebcc5254ce550f3cad7e7e039695ca1e5f433382628c4075059dad",
+      "bytes": 11436,
+      "addendum_relative_path": "round-5/smoke-packaged-orchestration.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/smoke-packaged-orchestration-v7.py",
+      "sha256": "b3c69e82ba5cb6682e11b0a00e19a5c045051daeed3a93e96a5495cbb1e4d702",
+      "bytes": 8590,
+      "addendum_relative_path": "round-5/smoke-packaged-orchestration-v7.py",
+      "phase_claim": "ACTUAL_SYNTHETIC_VALIDATION_DEPENDENCY_RECEIPT_PINNED_NOT_ASR"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.md",
+      "sha256": "673f92e1a857ad0eaa3f4fc3d457c1bd18bd5af2c60d0c5a44df3c54041e2ef9",
+      "bytes": 5879,
+      "addendum_relative_path": "README.replay-prerequisites.md",
+      "phase_claim": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE"
+    },
+    {
+      "original_path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/replay-prerequisites-v2.json",
+      "sha256": "aef9c72ab6fa6fc875a42f842a1b99b70611301eef15604abab1dee03a2b2eb8",
+      "bytes": 41152,
+      "addendum_relative_path": "replay-prerequisites.json",
+      "phase_claim": "POST_PUBLICATION_STAGING_DOCUMENTATION_NOT_SCIENTIFIC_FREEZE"
+    }
+  ],
+  "scope": "Six exact source/documentation files only; no raw fixtures or scientific output data",
+  "limits": {
+    "read_bytes": 16777216,
+    "seconds": 60
+  },
+  "nice": 10,
+  "publication_performed": false
+}

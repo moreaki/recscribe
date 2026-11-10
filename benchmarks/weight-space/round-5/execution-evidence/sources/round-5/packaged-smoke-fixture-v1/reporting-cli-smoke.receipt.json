@@ -1,0 +1,42 @@
+{
+  "schema_version": "round5-reporting-cli-write-smoke-v1",
+  "status": "FAILED_MODEL_FREE_REPORTING_SMOKE",
+  "synthetic_only": true,
+  "model_initialization_asr_or_quantization_executed": false,
+  "source_files": {
+    "summarize-round5-v1.py": "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+    "project-round5-report-v1.py": "6d97d220e67ed2ea583b921c60b0624b4e4e950a6ac13071adc4317c630077d4"
+  },
+  "fixture_receipt": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/packaged-smoke.receipt.json",
+    "sha256": "58285a668fc5aef47af5f35da4340751aa73192dc6e0a1cc7bb6c8931d8c1384"
+  },
+  "results": [
+    {
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "-B",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py",
+        "--family-seal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/pre-inference-family-seal.json",
+        "--family-seal-sha256",
+        "5293dfcb2516afef42f2703f0a6330ce6f6ab7cace9bf1eabcbac336c16a626f",
+        "--journal",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/serial.events.jsonl",
+        "--journal-sha256",
+        "489940f398212dea814369291303bfd23e5d09832da858f9dfb96ccaa206e8ab",
+        "--admission-capsule",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/inference-launch.freeze.v1.json",
+        "--admission-capsule-sha256",
+        "4b338aae9bc77011d819ed649c3351fc627bc19641cd1adc40ef7c5c50f288ea",
+        "--expected-source-sha256",
+        "89400055507fa0e0a0f07e2352b53d5a5548a6fbf173c46cab672bd7e1663f81",
+        "--output",
+        "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/reporting-cli-summary"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 377, in <module>\n    if __name__=='__main__': main()\n                             ~~~~^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 366, in main\n    value=build(reader,family,events,Path(a.admission_capsule),ADMISSION)\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 330, in build\n    launch=admission(reader,admission_path,admission_sha,events)\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 155, in admission\n    guard=value['native_load_guard'];guards,_=reader.jsonl(guard['path'],guard['sha256']);end=guards[-1]\n                                              ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 64, in jsonl\n    raw,digest=self.raw(path,expected,MAX_SMALL);values=[decode(x) for x in raw.splitlines() if x.strip()]\n                                                         ~~~~~~^^^\n  File \"/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/packaged-smoke-fixture-v1/summarize-round5-v1.py\", line 74, in decode\n    return json.loads(raw,object_pairs_hook=fields,parse_float=number,\n           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        parse_constant=lambda _:(_ for _ in ()).throw(ValueError('Nonfinite JSON')))\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/lib/python3.15/json/__init__.py\", line 386, in loads\n    return cls(**kw).decode(s)\n           ~~~~~~~~~~~~~~~~^^^\n  File \"/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/lib/python3.15/json/decoder.py\", line 358, in decode\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\n               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.15/3.15.0_1/Frameworks/Python.framework/Versions/3.15/lib/python3.15/json/decoder.py\", line 374, in raw_decode\n    obj, end = self.scan_once(s, idx)\n               ~~~~~~~~~~~~~~^^^^^^^^\njson.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n"
+    }
+  ]
+}

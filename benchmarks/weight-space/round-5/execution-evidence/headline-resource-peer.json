@@ -1,0 +1,105 @@
+{
+  "schema_version": "round5-independent-headline-resource-spotcheck-v1",
+  "status": "passed",
+  "created_utc": "2026-11-10T05:18:39.029915+00:00",
+  "numeric_authority_sha256": "0febe2bf7408603c16a0459ad79a344af232d472d9efb63607078a74664097fe",
+  "inputs": [
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/native-load-observations.csv",
+      "sha256": "1dcd1b17750d20bff0586d892aa28718d60c77274b75a000c8db7a84ee18f2fd",
+      "bytes": 133517
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-quality-headlines.csv",
+      "sha256": "89dab40b0aad2c8ff66fa3faca7553acda86065d0d9dc4aff7a36a0394b1ca59",
+      "bytes": 2767
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/heldout-resource-headlines.csv",
+      "sha256": "e16ea82093959bde966023d9eee30fa066bf2da19b8d9bfb6b84db16d1fcf224",
+      "bytes": 5363
+    },
+    {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/112/round-5/final-independent-numeric-audit-v1/gate-headlines.json",
+      "sha256": "6795449707a73db82b232845bf15a4e2a71dcc4dd7ee3b9bc2341eaca9415296",
+      "bytes": 15497
+    }
+  ],
+  "heldout_macro_contrasts": [
+    {
+      "family": "small",
+      "mode": "known",
+      "cer_relative_gain_percent": -10.276510348741486,
+      "wer_relative_gain_percent": -3.0422320587907503,
+      "cer_original_delta_percentage_points": 1.112127630358889,
+      "wer_original_delta_percentage_points": 2.1410193350419076,
+      "conventional_file_saving_percent": 70.16869806843908,
+      "additional_ai_file_saving_bytes": 0,
+      "decision": "reject",
+      "descriptive_f16_different_hypothesis_pairs": 3,
+      "descriptive_f16_status": "inconclusive_no_promotion",
+      "descriptive_identity_is_not_a_new_veto": true
+    },
+    {
+      "family": "small",
+      "mode": "auto",
+      "cer_relative_gain_percent": -7.073631970455141,
+      "wer_relative_gain_percent": -3.910321770902425,
+      "cer_original_delta_percentage_points": 1.5039316754137098,
+      "wer_original_delta_percentage_points": 2.6402141820628415,
+      "conventional_file_saving_percent": 70.16869806843908,
+      "additional_ai_file_saving_bytes": 0,
+      "decision": "reject",
+      "descriptive_f16_different_hypothesis_pairs": 3,
+      "descriptive_f16_status": "inconclusive_no_promotion",
+      "descriptive_identity_is_not_a_new_veto": true
+    },
+    {
+      "family": "large-v3-turbo",
+      "mode": "known",
+      "cer_relative_gain_percent": -0.6890169984044237,
+      "wer_relative_gain_percent": 1.7586824291747405,
+      "cer_original_delta_percentage_points": -0.07209104459660262,
+      "wer_original_delta_percentage_points": -0.16081266878642392,
+      "conventional_file_saving_percent": 70.8232620770629,
+      "additional_ai_file_saving_bytes": 0,
+      "decision": "reject",
+      "descriptive_f16_different_hypothesis_pairs": 2,
+      "descriptive_f16_status": "inconclusive_no_promotion",
+      "descriptive_identity_is_not_a_new_veto": true
+    },
+    {
+      "family": "large-v3-turbo",
+      "mode": "auto",
+      "cer_relative_gain_percent": -0.6890169984044237,
+      "wer_relative_gain_percent": 1.7586824291747405,
+      "cer_original_delta_percentage_points": -0.07209104459660262,
+      "wer_original_delta_percentage_points": -0.16081266878642392,
+      "conventional_file_saving_percent": 70.8232620770629,
+      "additional_ai_file_saving_bytes": 0,
+      "decision": "reject",
+      "descriptive_f16_different_hypothesis_pairs": 2,
+      "descriptive_f16_status": "inconclusive_no_promotion",
+      "descriptive_identity_is_not_a_new_veto": true
+    }
+  ],
+  "headline_quality_rows": 22,
+  "headline_resource_rows": 22,
+  "native_load_rows": 495,
+  "resource_rss_and_workload_ratio_rows_checked": 22,
+  "upstream_load_unit_conversions_checked": 1485,
+  "held_unique_audio_seconds": 1646.561,
+  "unique_held_sources": 144,
+  "same_sources_reused_across_models_and_modes": true,
+  "resource_acceptance": "UNCONTROLLED / NOT EVALUATED",
+  "wall_scope": "Outer CLI setup/inspection/load/inference/rendering, not isolated decode or first-result latency",
+  "rss_scope": "Maximum process RSS in bytes/MiB, not summed concurrency or total unified GPU memory",
+  "load_scope": "Upstream reported model-load timer only, not full initialization/warmup/first-result latency",
+  "pooled_medians_scope": "Individual 144 jobs; not medians of per-language medians",
+  "panel_scope": "Strict all-three-repeat panel passes; known label bookkeeping is neutral N/A; later descriptive differences preserved",
+  "cross_date_utc_chronology_verified": true,
+  "raw_audio_reference_transcript_model_paths_followed": false,
+  "rescoring_or_gate_redefinition_performed": false,
+  "controlled_speedup_or_product_claim": false,
+  "managed_run": "/Users/moreaki/.codex/worktrees/whisper-research-sync/recscribe/Build/Artifacts/logs/20261110-061839-issue-112-r5-headline-resource-peer-ccb51000"
+}

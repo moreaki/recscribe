@@ -19,6 +19,7 @@ public enum CorpusBenchmark {
         sourceLanguage: String? = nil,
         caseIDs: Set<String>? = nil,
         whisperProfile: URL? = nil,
+        resourcesOnly: Bool = false,
         externalCheck: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }
     ) throws -> JSONValue {
         guard NativeWhisperEngine.Policy.threadRange.contains(threads), timeout > 0 else {
@@ -50,6 +51,7 @@ public enum CorpusBenchmark {
                 "schema_version": "1.0",
                 "manifest_sha256": .string(TextJob.hash(data)),
                 "corpus_version": document["corpus_version"],
+                "measurement_scope": resourcesOnly ? "resources_only" : "quality_and_resources",
                 "runner_sha256": .string(runnerHash),
                 "machine": [
                     "os": .string(ProcessInfo.processInfo.operatingSystemVersionString),
@@ -57,7 +59,7 @@ public enum CorpusBenchmark {
                     "processors": .integer(Int64(ProcessInfo.processInfo.processorCount))
                 ],
                 "results": .array(results),
-                "aggregation": TranscriptAccuracy.aggregate(results)
+                "aggregation": resourcesOnly ? ["status": "UNMEASURED; resource-only probe"] : TranscriptAccuracy.aggregate(results)
             ]
             try TextJob.write(report.encoded(), named: "results.json", in: output)
             return report
@@ -85,11 +87,11 @@ public enum CorpusBenchmark {
             }
             do {
                 try check()
-                let eligibility = try CorpusManifest.eligibility(item, manifest: manifest,
-                    schemaVersion: document["schema_version"].string!, check: check)
+                let eligibility = try resourcesOnly ? CorpusManifest.resourceEligibility(item, manifest: manifest, check: check) :
+                    CorpusManifest.eligibility(item, manifest: manifest, schemaVersion: document["schema_version"].string!, check: check)
                 row["status"] = .string(eligibility.status)
                 row["readiness_reason"] = eligibility.reason.map(JSONValue.string) ?? .null
-                if let source = eligibility.audio, let truth = eligibility.reference, eligibility.status == "ready" {
+                if let source = eligibility.audio, eligibility.status == "ready", resourcesOnly || eligibility.reference != nil {
                         if dryRun {
                             row["status"] = "ready"
                         } else {
@@ -144,16 +146,25 @@ public enum CorpusBenchmark {
                             row["engine_passes"] = value["processing"]["engine_passes"]
                             row["engine_runtime_measurements"] = try WhisperBenchmarkMetrics.retainedPasses(value["processing"]["engine_passes"], job: job, check: check)
                             row["threads"] = .integer(Int64(threads))
-                            let referenceData = try read(truth, maximum: TranscriptAccuracy.maximumScoringTextBytes)
-                            guard TextJob.hash(referenceData) == eligibility.referenceSHA256,
-                                  try WAVAudio.hash(source, check: check) == eligibility.audioSHA256,
-                                  let referenceText = String(data: referenceData, encoding: .utf8) else {
-                                throw CoreFailure("Corpus input changed during recognition or reference is not UTF-8")
+                            if resourcesOnly {
+                                guard try WAVAudio.hash(source, check: check) == eligibility.audioSHA256 else {
+                                    throw CoreFailure("Resource input changed during recognition")
+                                }
+                                row["measurement_scope"] = "resources_only"
+                                row["quality_status"] = "UNMEASURED; resource-only probe, references were not read"
+                                row["scoring_version"] = "unscored-resources-v1"
+                            } else {
+                                let referenceData = try read(eligibility.reference!, maximum: TranscriptAccuracy.maximumScoringTextBytes)
+                                guard TextJob.hash(referenceData) == eligibility.referenceSHA256,
+                                      try WAVAudio.hash(source, check: check) == eligibility.audioSHA256,
+                                      let referenceText = String(data: referenceData, encoding: .utf8) else {
+                                    throw CoreFailure("Corpus input changed during recognition or reference is not UTF-8")
+                                }
+                                let score = try TranscriptAccuracy.checkedScore(reference: referenceText, hypothesis: hypothesis,
+                                    policy: try TranscriptAccuracy.policy(for: item, schemaVersion: document["schema_version"].string!),
+                                    durationSeconds: duration > 0 ? duration / 1_000 : nil, check: check)
+                                row = .object((row.object ?? [:]).merging(score.object ?? [:]) { _, new in new })
                             }
-                            let score = try TranscriptAccuracy.checkedScore(reference: referenceText, hypothesis: hypothesis,
-                                policy: try TranscriptAccuracy.policy(for: item, schemaVersion: document["schema_version"].string!),
-                                durationSeconds: duration > 0 ? duration / 1_000 : nil, check: check)
-                            row = .object((row.object ?? [:]).merging(score.object ?? [:]) { _, new in new })
                             let reviewedCount = (value["segments"].array ?? []).filter { $0["needs_review"] == true }.count
                             row["reviewed_segments"] = .integer(Int64(reviewedCount))
                         }

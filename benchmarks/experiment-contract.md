@@ -1,7 +1,7 @@
 # No-retraining experiment contract
 
 Use the existing `recscribe-text benchmark` command for single runs or a serial
-matrix. No weights, original audio, manifests or raw transcripts are modified.
+matrix. No original weights, audio, manifests or raw transcripts are modified.
 The corpus/scoring contract is [corpus-contract.md](corpus-contract.md).
 
 ## Reproduce the untouched control

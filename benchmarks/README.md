@@ -1,5 +1,10 @@
 # Local engine benchmarks
 
+For the prospective 30% size gate, explicit resource-only measurements and public
+audio/subtitle preparation, see [quantized evaluation](quantized-evaluation.md).
+Preparation metadata, file-size passes and output consistency do not approve
+reference quality or select a default.
+
 The checked-in corpus manifest is a preparation template, not measured accuracy.
 It covers Swiss German, German, French, Italian, English, Arabic, Chinese, Spanish
 and Portuguese, plus pending adverse-condition/non-speech cases. Swiss German

@@ -36,6 +36,49 @@ region-remapped, ambiguous, overlapping, decoder-padding-adjusted or otherwise
 unsupported mappings are blocked, with a reason to retain in the review backlog.
 Do not trim times or assign full-entry tokens to changed reference boundaries.
 
+### Explicit source-EOF frame views
+
+For a retained `recscribe.frame-exact-review-mapping.v1` sidecar, opt in when
+preparing a **new version-2 packet**:
+
+```sh
+python3 scripts/work-artifacts.py run --label accuracy-frame-review scratch -- \
+  python3 scripts/quality/reference-review.py prepare \
+  --manifest /absolute/protected/corpus.json --case ORIGINAL_CASE_ID \
+  --job /absolute/protected/MATCHING_JOB \
+  --scoring-policy unicode-nfc-apostrophe-v2 \
+  --frame-mapping /absolute/protected/mappings/CH01.json \
+  --output /absolute/protected/NEW_FRAME_PACKET.json
+```
+
+This narrow path supports mono 16-bit, 16 kHz source views where the final decoder
+end exceeds physical EOF by less than 10ms and equals its next 10ms tick. Original
+canonical `decoder_padding_beyond_source` provenance must corroborate that end.
+It rejects overlaps, other timing adjustments and lexical tokens outside the
+source frames. Only a zero-length decoder end marker may lie past physical EOF.
+Every view's frame bounds, WAV/PCM hashes and bytes are checked against original
+audio; source, raw, canonical, index and job-manifest hashes are revalidated.
+Existing strict version-1 preparation remains unchanged. This is not a general
+boundary-shifting or forced-alignment adapter.
+
+All lexical, alignment, identity and permission decisions still start pending.
+Each segment additionally needs **`frameAlignment` approval** with a named
+reviewer, timezone-qualified time and actual alignment evidence. The approval
+must retain the prepared mapping hash, view hash, start/end frames and sample
+rate exactly. Ordinary alignment approval or a Gemini proposal does not satisfy
+this separate gate, including for non-speech exclusions. CH12's two views each
+need their own approval. Do not mark unknown identities or permissions approved.
+
+Export snapshots both the reviewed packet and exact mapping sidecar. Each row
+retains the **unmodified original decoder entry**, including token probabilities,
+token offsets and decoder-duration features. Separate `sourceFrameEvidence`
+records the approved physical reference bounds and alignment evidence; it never
+relabels those raw token timestamps as newly aligned times. No raw/canonical
+file or original mapping is rewritten. View PCM and all evidence are rechecked
+on audit/export, and every existing permission, grouping, gap, scope, partition
+and asset-identity gate still applies. Research export remains unavailable while
+any required approval or identity is missing.
+
 Every approval starts **pending**, with empty evidence and reviewer fields,
 regardless of corpus `reviewed` or job `completed_with_review`. The published
 reference is preserved as an unapproved proposal; segment references start empty.

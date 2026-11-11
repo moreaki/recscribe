@@ -135,6 +135,44 @@ public enum CorpusManifest {
                            audio: source, reference: truth, audioSHA256: actualAudio, referenceSHA256: actualReference)
     }
 
+    /// Explicit timing-only admission. This never approves a reference or v2 corpus.
+    public static func resourceEligibility(_ item: JSONValue, manifest: URL,
+                                          check: @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> Eligibility {
+        try check()
+        guard let path = item["audio"].string, let digest = item["sha256"].string,
+              isSHA256(digest), nonempty(item["license"]) else {
+            return Eligibility(status: "pending_corpus", reason: "Resource probe needs audio, SHA-256 and source-use evidence",
+                               audio: nil, reference: nil, audioSHA256: nil, referenceSHA256: nil)
+        }
+        let source = path.hasPrefix("/") ? URL(fileURLWithPath: path) : manifest.deletingLastPathComponent().appendingPathComponent(path).standardizedFileURL
+        guard FileManager.default.isReadableFile(atPath: source.path) else {
+            return Eligibility(status: "pending_corpus", reason: "Resource-probe audio is unavailable",
+                               audio: nil, reference: nil, audioSHA256: nil, referenceSHA256: nil)
+        }
+        let hash = try WAVAudio.hash(source, check: check)
+        guard hash == digest else { throw CoreFailure("Resource-probe audio checksum mismatch") }
+        let layout = try WAVAudio.layout(source, check: check)
+        guard layout.frames > 0 else { throw CoreFailure("Resource-probe audio has no frames") }
+        if let duration = item["duration_seconds"].double {
+            guard duration.isFinite, duration > 0,
+                  abs(duration - Double(layout.frames) / Double(layout.rate)) <= max(0.001, 1 / Double(layout.rate)) else {
+                throw CoreFailure("Resource-probe duration differs from original source frames")
+            }
+        }
+        if item["source_channel"] == "mix" {
+            return Eligibility(status: "unsupported", reason: "Derived live-mix replay is unavailable",
+                               audio: nil, reference: nil, audioSHA256: hash, referenceSHA256: nil)
+        }
+        guard item["source_channel"] == .null || item["source_channel"].integer != nil else {
+            throw CoreFailure("Resource-probe source channel must be an integer or pending null")
+        }
+        if let channel = item["source_channel"].integer, channel < 0 || channel >= Int64(layout.channels) {
+            throw CoreFailure("Resource-probe source channel is outside original WAV channels")
+        }
+        return Eligibility(status: "ready", reason: "Resource-only audio check; references and reviewed-v2 eligibility are not assessed",
+                           audio: source, reference: nil, audioSHA256: hash, referenceSHA256: nil)
+    }
+
     public static func isSafeID(_ value: String) -> Bool {
         !value.isEmpty && value.range(of: "^[a-zA-Z0-9_-]+$", options: .regularExpression) != nil
     }

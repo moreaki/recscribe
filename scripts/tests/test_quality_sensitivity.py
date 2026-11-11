@@ -58,6 +58,43 @@ def pcm(path):
 
 
 class QualitySensitivityTests(unittest.TestCase):
+    def test_fixed_noise_is_reproducible_time_aligned_and_records_achieved_snr(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source = root / "source.wav"
+            data = struct.pack("<16000h", *([1000, -1000] * 8000))
+            with wave.open(str(source), "wb") as stream:
+                stream.setparams((1, 2, 16000, 16000, "NONE", "not compressed")); stream.writeframes(data)
+            original = source.read_bytes()
+            reports = [sensitivity.add_white_noise(source, root / (str(i) + ".wav"), snr_db=10, seed=42,
+                budget=sensitivity.Budget()) for i in range(2)]
+            self.assertEqual(source.read_bytes(), original)
+            self.assertEqual(reports[0], reports[1])
+            self.assertEqual((root / "0.wav").read_bytes(), (root / "1.wav").read_bytes())
+            self.assertEqual(pcm(root / "0.wav")[0], 16000)
+            self.assertNotEqual(pcm(root / "0.wav")[1], data)
+            self.assertAlmostEqual(reports[0]["achieved_post_clipping_snr_db"], 10, delta=.2)
+            self.assertEqual(reports[0]["clipped_samples"], 0)
+            self.assertEqual(reports[0]["source_to_derived_offset_seconds"], 0)
+
+    def test_noise_refuses_undefined_snr_invalid_parameters_and_budget_exhaustion(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source = root / "source.wav"
+            with wave.open(str(source), "wb") as stream:
+                stream.setparams((1, 2, 16000, 16000, "NONE", "not compressed")); stream.writeframes(bytes(32000))
+            for snr, seed in [(10, 42), (float("nan"), 42), (41, 42), (10, -1), (10, True)]:
+                with self.assertRaises(ValueError):
+                    sensitivity.add_white_noise(source, root / "never.wav", snr_db=snr, seed=seed, budget=sensitivity.Budget())
+            self.assertFalse((root / "never.wav").exists())
+            with wave.open(str(source), "wb") as stream:
+                stream.setparams((1, 2, 16000, 16000, "NONE", "not compressed")); stream.writeframes(struct.pack("<16000h", *([32767] * 16000)))
+            with self.assertRaises(ValueError):
+                sensitivity.add_white_noise(source, root / "budget.wav", snr_db=10, seed=42, budget=sensitivity.Budget(maximum_bytes=1024))
+            result = sensitivity.add_white_noise(source, root / "clipped.wav", snr_db=0, seed=42, budget=sensitivity.Budget())
+            self.assertGreater(result["clipped_samples"], 0)
+            self.assertEqual(pcm(root / "clipped.wav")[0], 16000)
+
     def test_exact_prefix_and_signed_gain_preserve_originals_and_grouping(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

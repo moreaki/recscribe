@@ -124,10 +124,22 @@ public enum BenchmarkExperiment {
 
     /// Dry runs perform no engine calls. Unavailable cells stay explicit, without scores.
     public static func run(manifest: URL, configuration: URL, output: URL, cli: URL,
-                           dryRun: Bool, check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
+                           dryRun: Bool, resumeFrom: URL? = nil, resumeSHA256: String? = nil, coordinator: URL? = nil,
+                           check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
+        guard (resumeFrom == nil) == (resumeSHA256 == nil),
+              resumeSHA256.map({ $0.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil }) ?? true,
+              resumeFrom == nil || !dryRun else {
+            throw CoreFailure("Resume requires a measured checkpoint directory and its explicit SHA-256")
+        }
         let (configData, config) = try read(configuration)
         let (manifestData, corpus) = try read(manifest)
         let allCases = try CorpusManifest.validate(corpus)
+        let scope = config["measurement_scope"].string ?? "quality_and_resources"
+        guard ["quality_and_resources", "resources_only"].contains(scope),
+              config.object?["measurement_scope"] == nil || config["measurement_scope"].string != nil else {
+            throw CoreFailure("measurement_scope must be quality_and_resources or explicit resources_only")
+        }
+        let resourcesOnly = scope == "resources_only"
         guard config["schema_version"] == "1.0",
               let revision = config["baseline_revision"].string,
               revision.range(of: "^[0-9a-f]{40}$", options: .regularExpression) != nil,
@@ -246,7 +258,7 @@ public enum BenchmarkExperiment {
             "source_revision_verification": "Declared revisions; bind binary hashes to the retained build record",
             "configuration_sha256": .string(TextJob.hash(configData)), "corpus_sha256": .string(TextJob.hash(manifestData)),
             "corpus_version": corpus["corpus_version"], "host": host, "split": .string(split),
-            "threads": .integer(threads), "serial_jobs": true, "dry_run": .bool(dryRun),
+            "threads": .integer(threads), "serial_jobs": true, "dry_run": .bool(dryRun), "measurement_scope": .string(scope),
             "capture_inactive_attestation": config["capture_inactive"], "workload_attestation": config["workload_attestation"],
             "required_models_missing_from_plan": .array(requiredModels.filter { name in !models.contains { $0["id"] == .string(name) } }.map(JSONValue.string)),
             "limitations": ["Fresh processes do not establish cold filesystem caches", "Peak RSS excludes total unified GPU memory", "Live replay is unsupported until the real app replay adapter is integrated", "Human critical-content, semantic and timing review remain unmeasured"],
@@ -254,12 +266,17 @@ public enum BenchmarkExperiment {
             "freeze_sha256": freezeSnapshot.map { .string(TextJob.hash($0)) } ?? .null,
             "comparisons": .array(plan.comparisons)]
         metadata["whisper_binary_sha256"] = whisperHash.map(JSONValue.string) ?? .null
+        if let coordinator {
+            metadata["coordinator_sha256"] = .string(try WAVAudio.hash(coordinator, check: check))
+            metadata["coordinator_scope"] = "Matrix orchestration/scoring; runner_sha256 identifies the retained transcription executable"
+        }
         var readiness: [String: CorpusManifest.Eligibility] = [:]
         var corpusFailures: [String: String] = [:]
         for item in cases {
             let id = item["id"].string!
             do {
-                readiness[id] = try CorpusManifest.eligibility(item, manifest: manifest, schemaVersion: corpus["schema_version"].string!, check: check)
+                readiness[id] = try resourcesOnly ? CorpusManifest.resourceEligibility(item, manifest: manifest, check: check) :
+                    CorpusManifest.eligibility(item, manifest: manifest, schemaVersion: corpus["schema_version"].string!, check: check)
             } catch is CancellationError { throw CancellationError() }
             catch {
                 corpusFailures[id] = error.localizedDescription
@@ -330,19 +347,31 @@ public enum BenchmarkExperiment {
                     "baseline_runner_sha256": baselineHash.map(JSONValue.string) ?? .null, "source_revision": profile["source_revision"], "language_mode": mode, "path": path, "repeat": .integer(Int64(repeatIndex)),
                     "source_sha256": ready.audioSHA256.map(JSONValue.string) ?? .null,
                     "reference_sha256": ready.referenceSHA256.map(JSONValue.string) ?? .null,
-                    "scoring_policy": .string(try TranscriptAccuracy.policy(for: item, schemaVersion: corpus["schema_version"].string!).rawValue), "gaps": .array(gaps),
+                    "measurement_scope": .string(scope),
+                    "scoring_policy": resourcesOnly ? "unscored-resources-v1" : .string(try TranscriptAccuracy.policy(for: item, schemaVersion: corpus["schema_version"].string!).rawValue), "gaps": .array(gaps),
                     "readiness_reason": ready.reason.map(JSONValue.string) ?? .null,
                     "errors": .array(failures.map(JSONValue.string)),
                     "status": !failures.isEmpty ? "failed" : (gaps.isEmpty ? (dryRun ? "ready" : "queued") : "pending")])
             } } } } }
+        }
+        if let resumeFrom, let resumeSHA256 {
+            let checkpoint = try BenchmarkCheckpoint.load(directory: resumeFrom, expectedSHA256: resumeSHA256,
+                metadata: metadata, planned: rows, check: check)
+            try checkpoint.snapshot.write(to: output.appendingPathComponent("checkpoint.original.json"), options: .withoutOverwriting)
+            rows = checkpoint.rows
+            metadata["resume_provenance"] = checkpoint.provenance
+            metadata["resource_comparison_status"] = "UNCONTROLLED; continued calls span separate execution windows"
+            if let values = metadata["limitations"].array {
+                metadata["limitations"] = .array(values + ["Resumed invocations span separate execution windows; timing/RSS are uncontrolled"])
+            }
         }
         func persist() throws -> JSONValue {
             var report = metadata
             report["rows"] = .array(rows)
             report["repeat_summary"] = summarize(rows)
             report["paired_comparisons"] = paired(rows, specifications: plan.comparisons)
-            report["quality_aggregation"] = quality(rows)
-            report["quality_aggregation_selection"] = "Successful repeat 1 only; no fallback to later repeats. Repeated inference is not independent corpus data."
+            report["quality_aggregation"] = resourcesOnly ? ["status": "UNMEASURED; resource-only probe"] : quality(rows)
+            report["quality_aggregation_selection"] = resourcesOnly ? "No references read and no quality scores produced" : "Successful repeat 1 only; no fallback to later repeats. Repeated inference is not independent corpus data."
             try TextJob.write(report.encoded(), named: "matrix.json", in: output)
             return report
         }
@@ -358,6 +387,10 @@ public enum BenchmarkExperiment {
                 }
                 do {
                     try cancellation()
+                    // Persist before launching so a crash can never turn an
+                    // uncertain first attempt back into a schedulable queued cell.
+                    rows[index]["status"] = "running"
+                    _ = try persist()
                     let model = models.first { $0["id"] == row["model"] }!
                     let profile = profiles.first { $0["id"] == row["profile"] }!
                     let binary = profile["kind"] == "baseline" ? baselineCLI! : cli
@@ -379,7 +412,7 @@ public enum BenchmarkExperiment {
                         whisper: whisper, model: resolve(model["path"].string, relativeTo: configuration), threads: Int(threads), dryRun: false,
                         sourceLanguage: row["language_mode"] == "auto" ? "auto" : row["language"].string,
                         caseIDs: [row["id"].string!], whisperProfile: profileFiles[row["profile"].string!].map { _ in output.appendingPathComponent("profile-\(row["profile"].string!).json") },
-                        externalCheck: cancellation)
+                        resourcesOnly: resourcesOnly, externalCheck: cancellation)
                     let result = report["results"].array!.first!
                     rows[index]["measurement"] = result
                     guard result["source_sha256"] == row["source_sha256"],
@@ -489,6 +522,7 @@ public enum BenchmarkExperiment {
             let intervention = specification["intervention"].string ?? "runtime"
             var comparison: JSONValue = ["identity": .string(identity(row)), "candidate_profile": row["profile"],
                 "id": row["id"], "task": row["task"], "repeat": row["repeat"], "language_mode": row["language_mode"],
+                "measurement_scope": row["measurement_scope"],
                 "path": row["path"], "source_channel": row["source_channel"],
                 "candidate_model": row["model"], "candidate_model_sha256": row["model_sha256"],
                 "baseline_model": specification["baseline_model_id"] == .null ? (row["baseline_model_id"] == .null ? row["model"] : row["baseline_model_id"]) : specification["baseline_model_id"],
@@ -534,6 +568,10 @@ public enum BenchmarkExperiment {
                 }
             }
             comparison["status"] = "paired_exploratory"
+            if let before = control["measurement"]["hypothesis_sha256"].string,
+               let after = row["measurement"]["hypothesis_sha256"].string {
+                comparison["hypothesis_exact_match"] = .bool(before == after)
+            }
             for metric in ["wer", "cer", "word_insertions", "word_deletions", "character_insertions", "false_speech_characters", "wall_seconds", "real_time_factor", "peak_rss_bytes"] {
                 if let before = control["measurement"][metric].double, let after = row["measurement"][metric].double {
                     comparison[metric + "_delta"] = .number(after - before)

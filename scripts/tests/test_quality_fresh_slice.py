@@ -222,6 +222,30 @@ class QualityFreshSliceTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()), [])
             self.assertEqual(stereo.getvalue(), original)
 
+    def test_larger_prospective_caps_keep_defaults_and_enforce_remaining_network_bytes(self):
+        required = ["--output", "/tmp/new-corpus", "--exclude-manifest", "/tmp/prior.json"]
+        default = fresh.arguments(required)
+        self.assertEqual((default.archive_prefix_mib, default.max_network_mib), (32, 256))
+        larger = fresh.arguments(required + ["--archive-prefix-mib", "128", "--max-network-mib", "2048"])
+        plan = fresh.selection_plan(larger, fresh.Exclusions())
+        self.assertEqual(plan["archive_stream_cap_bytes"], 128 * 1024 * 1024)
+        self.assertEqual(plan["swiss_prefix_cap_bytes"], 128 * 1024 * 1024)
+        self.assertEqual(plan["network_cap_bytes"], 2048 * 1024 * 1024)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            acquisition = fresh.Acquisition(root, fresh.Exclusions(), maximum_network_bytes=2048 * 1024 * 1024,
+                                             archive_prefix_mib=128)
+            self.assertEqual(acquisition.maximum_archive_bytes, 128 * 1024 * 1024)
+            acquisition.network_bytes = acquisition.maximum_network_bytes - 2
+            source = io.BytesIO(b"abcdef")
+            self.assertEqual(acquisition.read(source, 99), b"ab")
+            with self.assertRaisesRegex(ValueError, "network budget"):
+                acquisition.read(source, 1)
+            self.assertEqual(source.tell(), 2)
+            for invalid in (0, 31, 129, True, 32.0):
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    fresh.Acquisition(root, fresh.Exclusions(), archive_prefix_mib=invalid)
+
     def test_version_helper_has_cancel_timeout_output_bounds_and_caches_success(self):
         with tempfile.TemporaryDirectory() as directory:
             acquisition = fresh.Acquisition(Path(directory).resolve(), fresh.Exclusions())
@@ -262,7 +286,7 @@ class QualityFreshSliceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "initial 256 or 512"):
                 fresh.Acquisition(root, fresh.Exclusions(), maximum_network_bytes=513 * 1024 * 1024)
 
-    def run_metadata_only_main(self, root, partial=False):
+    def run_metadata_only_main(self, root, partial=False, languages=None):
         prior = root / "prior-consumed-round2.json"
         prior.write_text(json.dumps({"cases": [{"id": "round2-old", "source_id": "round2:source", "reference": "/not/opened",
                                                 "reference_sha256": "old-reference", "speaker_ids": ["round2-speaker"]}]}))
@@ -279,6 +303,7 @@ class QualityFreshSliceTests(unittest.TestCase):
                 acquisition.cases += [{"id": f"fixture-{split}-de-CH-{n}", "language": "de-CH", "split": split, "reviewed": False} for n in range(count)]
         args = ["--output", str(output), "--exclude-manifest", str(prior), "--count", "8", "--heldout-count", "16",
                 "--corpus-version", "round3-corpus-20261106-v1", "--max-network-mib", "512", "--max-output-mib", "512"]
+        if languages is not None: args += ["--languages", languages]
         with patch.object(fresh.Acquisition, "fetch", return_value=b"fixture source metadata"), \
              patch.dict(fresh.SOURCE_HASHES, {"card": fresh.sha(b"fixture source metadata")}), \
              patch.object(fresh, "fleurs", side_effect=fleurs), patch.object(fresh, "swiss", side_effect=swiss), \
@@ -314,6 +339,18 @@ class QualityFreshSliceTests(unittest.TestCase):
             heldout = next(x for x in acquisition["manifests"] if x["split"] == "held_out")
             self.assertEqual((heldout["cases"], heldout["planned_cases"]), (143, 144))
             self.assertTrue((output / "held_out/NOT-FOR-DEVELOPMENT.txt").exists())
+
+    def test_swiss_only_completion_never_reacquires_other_languages_or_reduces_requested_counts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output, calls = self.run_metadata_only_main(Path(directory).resolve(), languages="de-CH")
+            self.assertEqual(calls, [("de-CH", 8, 16)])
+            plan = json.loads((output / "selection-plan.original.json").read_bytes())
+            self.assertEqual(plan["languages"], ["de-CH"])
+            self.assertEqual(plan["planned_cases"], {"development": 8, "held_out": 16})
+            self.assertFalse(json.loads((output / "held_out/manifest.exploratory.legacy.json").read_bytes())["frozen"])
+        for languages in ("", "en,en", "en,unknown", "en,"):
+            with self.subTest(languages=languages), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                fresh.arguments(["--output", "/tmp/new", "--exclude-manifest", "/tmp/prior", "--languages", languages])
 
 
 if __name__ == "__main__":

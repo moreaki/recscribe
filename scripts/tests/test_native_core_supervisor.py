@@ -51,6 +51,9 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
         self.assertEqual(supervisor.SAMPLER_TOTAL_SECONDS, 10)
         self.assertEqual(supervisor.SAMPLER_CLEANUP_SECONDS, 2)
         self.assertEqual(supervisor.SAMPLER_POLL_SECONDS, .1)
+        self.assertEqual(supervisor.POST_COMMAND_PROBE_ATTEMPTS, 3)
+        self.assertEqual(supervisor.POST_COMMAND_PROBE_TOTAL_SECONDS, 2)
+        self.assertEqual(supervisor.OWNERSHIP_PROBE_SECONDS, .5)
 
     @staticmethod
     def finished_sampler(pid=500):
@@ -342,14 +345,59 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
             self.assertTrue(supervisor.stop_owned(child, 200, lambda *a, **k:None))
         self.assertEqual(numbers, [signal.SIGTERM, signal.SIGKILL])
 
+    def test_post_command_probe_clamps_to_original_suite_deadline(self):
+        clock, timeouts, events = FakeClock(), [], []
+        def inventory(group, timeout):
+            self.assertEqual(group, 200)
+            timeouts.append(timeout); clock.value += timeout
+            raise supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, timeout)
+        with patch.object(supervisor.time, "monotonic", clock), \
+             patch.object(supervisor, "owned_processes", side_effect=inventory):
+            self.assertIsNone(supervisor.post_command_owned_processes(200,
+                lambda event, **fields: events.append(dict(event=event, **fields)), lambda:False, .6))
+        self.assertEqual(len(timeouts), 2)
+        self.assertAlmostEqual(timeouts[0], .5); self.assertAlmostEqual(timeouts[1], .1)
+        self.assertAlmostEqual(clock.value, .6)
+        self.assertEqual([e["attempt"] for e in events], [1, 2])
+
+    def test_post_command_probe_has_one_total_budget_and_only_resamples_timeouts(self):
+        clock, timeouts = FakeClock(), []
+        def inventory(group, timeout):
+            timeouts.append(timeout); clock.value += timeout
+            raise supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, timeout)
+        with patch.object(supervisor.time, "monotonic", clock), \
+             patch.object(supervisor, "POST_COMMAND_PROBE_TOTAL_SECONDS", .75), \
+             patch.object(supervisor, "owned_processes", side_effect=inventory):
+            with self.assertRaises(supervisor.subprocess.TimeoutExpired):
+                supervisor.post_command_owned_processes(200, lambda *a, **k:None, lambda:False, 240)
+        self.assertEqual(timeouts, [.5, .25]); self.assertEqual(clock.value, .75)
+        for error in (ValueError("Malformed snapshot"), OSError("Probe unavailable"),
+                      supervisor.subprocess.CalledProcessError(1, supervisor.OWNERSHIP_COMMAND)):
+            with self.subTest(error=type(error).__name__), \
+                 patch.object(supervisor, "owned_processes", side_effect=error) as probe:
+                with self.assertRaises(type(error)):
+                    supervisor.post_command_owned_processes(200, lambda *a, **k:None, lambda:False, float("inf"))
+                self.assertEqual(probe.call_count, 1)
+
     def execute_mock(self, *, canceled=False, timeout=False, returncode=37, output=b"",
-                     diagnostic_deadline=False, diagnostic_uncertain=False):
+                     diagnostic_deadline=False, diagnostic_uncertain=False, ownership_observations=None,
+                     cancel_during_probe=False):
         child = MagicMock(pid=200)
         child.stdout.fileno.return_value = 123
         child.returncode = returncode
         child.poll.return_value = returncode
         child.wait.return_value = returncode
         handlers = {}
+        observations = iter(ownership_observations) if ownership_observations is not None else None
+        self.ownership_probe_calls = []
+        def inventory(group, **kwargs):
+            self.ownership_probe_calls.append(dict(group=group, **kwargs))
+            if cancel_during_probe:
+                handlers[signal.SIGTERM](signal.SIGTERM, None)
+                raise supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, .5)
+            value = next(observations) if observations is not None else []
+            if isinstance(value, Exception): raise value
+            return value
         def register(number, handler):
             old = handlers.get(number);handlers[number] = handler;return old
         def launch(*args, **kwargs):
@@ -361,7 +409,7 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
         selector.__enter__.return_value = selector
         selector.select.return_value = [(SimpleNamespace(fd=123, fileobj=child.stdout), None)]
         clock = ([0,0,61]+[240]*30 if diagnostic_deadline else [0,0]+[61]*30 if diagnostic_uncertain
-                 else [0, 0, 241, 241] if timeout else [0]*30)
+                 else [0, 0, 241, 241] if timeout else [0]*100)
         with tempfile.TemporaryDirectory() as root, \
              patch.object(supervisor.signal, "signal", side_effect=register), \
              patch.object(supervisor.subprocess, "Popen", side_effect=launch), \
@@ -372,7 +420,7 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
              patch.object(supervisor.time, "monotonic", side_effect=clock), \
              patch.object(supervisor, "sample_owned", side_effect=ValueError("Uncertain sampler cleanup") if diagnostic_uncertain else None,
                           return_value=True) as diagnostic, \
-             patch.object(supervisor, "owned_processes", return_value=[]), \
+             patch.object(supervisor, "owned_processes", side_effect=inventory), \
              patch.object(supervisor, "stop_owned", return_value=True) as stop:
             result=supervisor.supervise(Path(root))
             record=json.loads((Path(root)/"native-core-supervision.json").read_text())
@@ -425,6 +473,59 @@ class NativeCoreSupervisorContracts(unittest.TestCase):
         result,record,_=self.execute_mock(returncode=0,output=b"Test run with 88 tests in 15 suites passed after 1 second.\n")
         self.assertEqual(result, 0)
         self.assertEqual(record["native_summary_tests_passed"], 88)
+
+    def test_post_success_transient_snapshot_timeout_recovers_without_relaunch_or_reset(self):
+        summary = b"Test run with 136 tests in 21 suites passed after 21 seconds.\n"
+        result, record, stops = self.execute_mock(returncode=0, output=summary,
+            ownership_observations=[supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, .5), []])
+        self.assertEqual(result, 0); self.assertIsNone(record["reason"])
+        self.assertEqual(record["native_summary_tests_passed"], 136)
+        self.assertTrue(record["owned_group_reaped"]); self.assertFalse(record["retry_performed"])
+        self.assertEqual(stops, 0)
+        self.assertEqual(len([e for e in record["events"] if e["event"] == "started"]), 1)
+        self.assertEqual(len(self.ownership_probe_calls), 2)  # EOF drain does not reset the observation budget
+        timeout = next(e for e in record["events"] if e["event"] == "ownership_probe_timeout")
+        self.assertEqual((timeout["phase"], timeout["command"], timeout["attempt"]),
+                         ("post_command", supervisor.OWNERSHIP_COMMAND, 1))
+        recovered = next(e for e in record["events"] if e["event"] == "ownership_probe_recovered")
+        self.assertEqual((recovered["attempt"], recovered["owned_process_count"]), (2, 0))
+
+    def test_persistent_post_success_snapshot_timeouts_still_fail_closed(self):
+        result, record, stops = self.execute_mock(returncode=0,
+            output=b"Test run with 136 tests passed after 21 seconds.\n",
+            ownership_observations=[supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, .5)] * 3)
+        self.assertEqual(result, 1); self.assertEqual(record["reason"], "supervisor_error")
+        self.assertEqual(record["native_summary_tests_passed"], 136)
+        self.assertEqual(len(self.ownership_probe_calls), 3); self.assertEqual(stops, 1)
+        self.assertEqual([e["attempt"] for e in record["events"] if e["event"] == "ownership_probe_timeout"], [1, 2, 3])
+        error = next(e for e in record["events"] if e["event"] == "supervisor_error")
+        self.assertEqual((error["phase"], error["command"], error["timeout_seconds"]),
+                         ("post_command_ownership", supervisor.OWNERSHIP_COMMAND, .5))
+
+    def test_recovered_snapshot_with_live_owned_descendants_is_never_success(self):
+        result, record, stops = self.execute_mock(returncode=0,
+            output=b"Test run with 136 tests passed after 21 seconds.\n",
+            ownership_observations=[supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, .5),
+                                    [dict(pid=201, parent=200, group=201, command="/owned/test.xctest")]])
+        self.assertEqual(result, 1); self.assertEqual(stops, 1)
+        self.assertEqual(record["reason"], "live_owned_descendants_after_command")
+        self.assertFalse(record["retry_performed"])
+
+    def test_cancellation_during_post_command_resampling_stops_before_another_probe(self):
+        result, record, stops = self.execute_mock(returncode=0,
+            output=b"Test run with 136 tests passed after 21 seconds.\n", cancel_during_probe=True)
+        self.assertEqual(result, 128 + signal.SIGTERM); self.assertEqual(record["reason"], "interrupted")
+        self.assertEqual(len(self.ownership_probe_calls), 1); self.assertEqual(stops, 1)
+
+    def test_recovered_snapshot_does_not_change_nonzero_or_missing_summary_gates(self):
+        for returncode, output, expected in ((37, b"Test run with 136 tests passed after 21 seconds.\n", 37),
+                                              (0, b"Build complete!\n", 1),
+                                              (0, b"Test run with 0 tests passed after 0 seconds.\n", 1)):
+            with self.subTest(returncode=returncode, output=output):
+                result, record, _ = self.execute_mock(returncode=returncode, output=output,
+                    ownership_observations=[supervisor.subprocess.TimeoutExpired(supervisor.OWNERSHIP_COMMAND, .5), []])
+                self.assertEqual(result, expected); self.assertEqual(record["command_returncode"], returncode)
+                self.assertFalse(record["retry_performed"])
 
 
 if __name__ == "__main__":unittest.main()

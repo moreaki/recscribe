@@ -5,6 +5,7 @@ Use through work-artifacts.py. This supervisor changes no test selection or
 acceptance: a timeout, interrupted run, live descendant or failed command fails.
 """
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,16 +23,21 @@ LOG_LIMIT = 32 * 1024 * 1024
 SAMPLER_TOTAL_SECONDS = 10
 SAMPLER_CLEANUP_SECONDS = 2
 SAMPLER_POLL_SECONDS = .1
+OWNERSHIP_PROBE_SECONDS = .5
+POST_COMMAND_PROBE_ATTEMPTS = 3
+POST_COMMAND_PROBE_TOTAL_SECONDS = 2
+OWNERSHIP_COMMAND = ["/bin/ps", "-axo", "pid=,ppid=,pgid=,comm="]
 COMMAND = ["xcrun", "swift", "test", "--package-path", "core"]
 PASS_SUMMARY = re.compile(rb"Test run with ([0-9]+) tests?(?: in [0-9]+ suites?)? passed after")
 
 
-def owned_processes(group):
+def owned_processes(group, timeout=OWNERSHIP_PROBE_SECONDS):
     """Include child process groups only inside the new, owned session."""
     if type(group) is not int or group <= 1 or group == os.getpgrp():
         raise ValueError("Invalid owned native test process group")
-    listing = subprocess.run(["/bin/ps", "-axo", "pid=,ppid=,pgid=,comm="],
-                             capture_output=True, text=True, timeout=.5, check=True)
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= OWNERSHIP_PROBE_SECONDS:
+        raise ValueError("Invalid bounded ownership probe timeout")
+    listing = subprocess.run(OWNERSHIP_COMMAND, capture_output=True, text=True, timeout=timeout, check=True)
     result = []
     for line in listing.stdout.splitlines():
         values = line.split(None, 3)
@@ -45,6 +51,47 @@ def owned_processes(group):
             continue
         result.append({"pid": pid, "parent": parent, "group": pgid, "command": values[3]})
     return result
+
+
+def post_command_owned_processes(group, note, interrupted, suite_deadline):
+    """Resample timed-out ownership observations, never the completed test run.
+
+    A valid fresh snapshot is still mandatory. None only hands an interruption
+    or the original suite deadline back to the supervisor's existing gates.
+    Sampler and cleanup inventory retain their original single-probe behavior.
+    """
+    deadline = min(time.monotonic() + POST_COMMAND_PROBE_TOTAL_SECONDS, suite_deadline)
+    for attempt in range(1, POST_COMMAND_PROBE_ATTEMPTS + 1):
+        now = time.monotonic()
+        if interrupted() or now >= suite_deadline:
+            return None
+        remaining = deadline - now
+        if remaining <= 0:
+            note("ownership_probe_deadline", phase="post_command", command=OWNERSHIP_COMMAND,
+                 attempt=attempt, total_budget_seconds=POST_COMMAND_PROBE_TOTAL_SECONDS)
+            raise subprocess.TimeoutExpired(OWNERSHIP_COMMAND, POST_COMMAND_PROBE_TOTAL_SECONDS)
+        timeout = min(OWNERSHIP_PROBE_SECONDS, remaining)
+        try:
+            members = owned_processes(group, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            note("ownership_probe_timeout", phase="post_command", command=OWNERSHIP_COMMAND,
+                 attempt=attempt, maximum_attempts=POST_COMMAND_PROBE_ATTEMPTS, timeout_seconds=timeout,
+                 total_budget_seconds=POST_COMMAND_PROBE_TOTAL_SECONDS)
+            if interrupted() or time.monotonic() >= suite_deadline:
+                return None
+            if attempt == POST_COMMAND_PROBE_ATTEMPTS or time.monotonic() >= deadline:
+                raise
+        else:
+            if interrupted() or time.monotonic() >= suite_deadline:
+                return None
+            if time.monotonic() >= deadline:
+                note("ownership_probe_deadline", phase="post_command", command=OWNERSHIP_COMMAND,
+                     attempt=attempt, total_budget_seconds=POST_COMMAND_PROBE_TOTAL_SECONDS)
+                raise subprocess.TimeoutExpired(OWNERSHIP_COMMAND, POST_COMMAND_PROBE_TOTAL_SECONDS)
+            if attempt > 1:
+                note("ownership_probe_recovered", phase="post_command", command=OWNERSHIP_COMMAND,
+                     attempt=attempt, owned_process_count=len(members))
+            return members
 
 
 def signal_owned(group, number):
@@ -234,6 +281,8 @@ def supervise(output):
     next_sample = started
     log_bytes = 0
     summary_tail = b""
+    phase = "launch"
+    post_command_verified = False
 
     def note(event, **details):
         value = {"event": event, "elapsed_seconds": time.monotonic() - started, **details}
@@ -252,6 +301,7 @@ def supervise(output):
                 ready.register(child.stdout, selectors.EVENT_READ)
                 eof = False
                 while True:
+                    phase = "supervision"
                     now = time.monotonic()
                     if requested["signal"] is not None:
                         reason = "interrupted"
@@ -260,6 +310,7 @@ def supervise(output):
                         reason = "timeout"
                         break
                     if not sampled and now >= next_sample and now - last_output >= QUIET_SECONDS:
+                        phase = "quiet_diagnostics"
                         sampled = sample_owned(group, output, note, lambda: requested["signal"] is not None, suite_deadline)
                         next_sample = time.monotonic() + 15
                         if requested["signal"] is not None:
@@ -287,18 +338,36 @@ def supervise(output):
                     if reason is not None:
                         break
                     if child.poll() is not None:
-                        members = owned_processes(group)
-                        if members:
-                            reason = "live_owned_descendants_after_command"
-                            break
+                        if not post_command_verified:
+                            phase = "post_command_ownership"
+                            members = post_command_owned_processes(group, note, lambda: requested["signal"] is not None, suite_deadline)
+                            if requested["signal"] is not None:
+                                reason = "interrupted"
+                                break
+                            if time.monotonic() >= suite_deadline:
+                                reason = "timeout"
+                                break
+                            if members is None:
+                                raise ValueError("Completed command ownership remains unverified")
+                            if members:
+                                reason = "live_owned_descendants_after_command"
+                                break
+                            # No session members remain to spawn another owned
+                            # child. Drain any buffered output without resetting
+                            # the finite post-command observation budget.
+                            post_command_verified = True
                         if eof:
                             break
                 if reason is None:
+                    phase = "post_command_wait"
                     child.wait(timeout=1)
                     cleaned = True
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         reason = "supervisor_error"
-        note("supervisor_error", error_type=type(error).__name__)
+        details = dict(phase=phase, error_type=type(error).__name__)
+        if isinstance(error, subprocess.TimeoutExpired):
+            details.update(command=error.cmd, timeout_seconds=error.timeout)
+        note("supervisor_error", **details)
     finally:
         try:
             if child is not None and not cleaned:
@@ -325,6 +394,8 @@ def supervise(output):
               "timeout_seconds": TIMEOUT_SECONDS, "quiet_seconds": QUIET_SECONDS,
               "sampler_total_seconds": SAMPLER_TOTAL_SECONDS,
               "sampler_cleanup_reserve_seconds": SAMPLER_CLEANUP_SECONDS,
+              "post_command_probe_maximum_attempts": POST_COMMAND_PROBE_ATTEMPTS,
+              "post_command_probe_total_budget_seconds": POST_COMMAND_PROBE_TOTAL_SECONDS,
               "reason": reason, "command_returncode": returncode, "exit_code": result,
               "owned_group_reaped": cleaned, "signal": requested["signal"], "events": events,
               "elapsed_seconds": time.monotonic() - started, "log_bytes": log_bytes,

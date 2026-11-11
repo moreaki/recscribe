@@ -29,6 +29,29 @@ import RecScribeCore
 
     static func run(_ arguments: Arguments) async throws {
         let source = URL(fileURLWithPath: arguments.source)
+        if arguments.command == "fit-accuracy" {
+            guard let output = arguments.output else { throw CoreFailure("fit-accuracy requires --output NEW_ARTIFACT.json") }
+            let work = Task.detached(priority: .utility) {
+                let fd = Darwin.open(source.path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW)
+                guard fd >= 0 else { throw CoreFailure("Accuracy dataset is unavailable") }
+                let file = FileHandle(fileDescriptor: fd, closeOnDealloc: true); defer { try? file.close() }
+                var info = stat()
+                guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
+                      info.st_size >= 0, info.st_size <= 16 * 1_024 * 1_024 else {
+                    throw CoreFailure("Accuracy dataset must be a regular file of at most 16 MiB")
+                }
+                let bytes = try file.read(upToCount: 16 * 1_024 * 1_024 + 1) ?? Data()
+                guard bytes.count <= 16 * 1_024 * 1_024 else { throw CoreFailure("Accuracy dataset exceeds 16 MiB") }
+                let dataset = try JSONDecoder().decode(PassageAccuracy.Dataset.self, from: bytes)
+                let artifact = try PassageAccuracy.fit(dataset)
+                let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                try Task.checkCancellation()
+                try encoder.encode(artifact).write(to: URL(fileURLWithPath: output), options: .withoutOverwriting)
+            }
+            try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            print("Research-only accuracy artifact saved; Studio percentages remain unavailable pending independent validation.")
+            return
+        }
         if arguments.command == "inspect-sound" {
             let work = Task.detached(priority: .utility) {
                 try LocalSoundClassifier.assess(source) { try Task.checkCancellation() }
@@ -135,8 +158,15 @@ import RecScribeCore
         var mode: TextMode = .verbatim
         var summary = false, cloudConsent = false, keyStdin = false, dryRun = false
         init(_ args: [String]) throws {
-            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark", "inspect-sound"].contains(args[0]) else { throw CoreFailure(usage) }
+            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark", "inspect-sound", "fit-accuracy"].contains(args[0]) else { throw CoreFailure(usage) }
             command = args[0]; source = args[1]
+            if command == "fit-accuracy" {
+                guard args.count == 4, args[2] == "--output", !args[3].isEmpty else {
+                    throw CoreFailure("fit-accuracy accepts only DATASET.json --output NEW_ARTIFACT.json; no inference, credentials or upload")
+                }
+                output = args[3]
+                return
+            }
             guard command != "inspect-sound" || args.count == 2 else {
                 throw CoreFailure("inspect-sound accepts only a mono WAV path; no recognition, credentials or cloud options")
             }
@@ -212,6 +242,7 @@ import RecScribeCore
         }
     }
     static let usage = """
+    recscribe-text fit-accuracy reviewed-passages.json --output NEW_RESEARCH_ARTIFACT.json
     recscribe-text inspect-sound passage.wav
     recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]
       [--whisper-cli /path/to/whisper-cli --model /path/to/model.bin --threads 1..4]

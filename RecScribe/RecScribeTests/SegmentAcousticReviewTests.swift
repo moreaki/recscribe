@@ -160,4 +160,196 @@ import Testing
         #expect(document.applying(review.corrections).text == document.text)
         #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.json")) == original)
     }
+
+    @Test func candidateStatusWithRetainedQuietVoiceEvidenceCannotChangeText() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job)
+        let original = try Data(contentsOf: f.job.appendingPathComponent("transcript.json"))
+        let worker = SegmentAcousticReview(root: f.evidence)
+        let state = SegmentAcousticState(analyze: { selection in
+            let candidate = try await worker.run(selection)
+            var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(candidate.report)) as? [String: Any])
+            var assessment = try #require(json["assessment"] as? [String: Any])
+            var voices = try #require(assessment["voiceGuardWindows"] as? [[String: Any]])
+            var scores = try #require(voices[0]["scores"] as? [String: Double])
+            scores["whispering"] = 0.2; voices[0]["scores"] = scores
+            assessment["voiceGuardWindows"] = voices; json["assessment"] = assessment
+            let report = try JSONDecoder().decode(LocalSoundClassifier.Report.self, from: JSONSerialization.data(withJSONObject: json))
+            return .init(selection: candidate.selection, report: report, reference: candidate.reference, evidence: candidate.evidence)
+        })
+        let review = TranscriptReviewState(store: .init(root: f.reviews))
+        await review.load(job: f.job, document: document)
+        state.request(job: f.job, document: document, segmentID: "music")
+        await waitUntil("inconsistent report arrived") { !state.busy }
+        let result = try #require(state.result)
+        #expect(result.report.assessment.outcome == .instrumentalMusicCandidate)
+        #expect(result.correction == nil)
+        state.confirmMusicOnly(in: review)
+        #expect(!state.busy && !review.saving && review.corrections.isEmpty)
+        #expect(document.applying(review.corrections).text == document.text)
+        #expect(try Data(contentsOf: f.job.appendingPathComponent("transcript.json")) == original)
+    }
+
+    @Test(arguments: ["mixed-18db", "ShortSpeechChallenges/piano-en-250ms-30db"])
+    func realMixedAndShortSpeechSourcesKeepTextLanguageAndOriginals(musicName: String) async throws {
+        let f = try Fixture(musicName: musicName); defer { try? FileManager.default.removeItem(at: f.root) }
+        let paths = [f.audio, f.job.appendingPathComponent("transcript.json"), f.job.appendingPathComponent("raw.json")]
+        let originals = try paths.map { try Data(contentsOf: $0) }
+        let document = try await TranscriptPreview.read(f.job)
+        let worker = SegmentAcousticReview(root: f.evidence)
+        let state = SegmentAcousticState(analyze: { try await worker.run($0) })
+        let review = TranscriptReviewState(store: .init(root: f.reviews))
+        await review.load(job: f.job, document: document)
+        state.request(job: f.job, document: document, segmentID: "music")
+        await waitUntil("mixed speech analysis completed") { !state.busy }
+        #expect(state.error == nil)
+        let result = try #require(state.result)
+        #expect(result.report.assessment.outcome == .voiceOrMixed && result.correction == nil)
+        state.confirmMusicOnly(in: review)
+        #expect(!state.busy && !review.saving && review.corrections.isEmpty)
+        let current = document.applying(review.corrections)
+        #expect(current.text == document.text && current.recognitionLabel == document.recognitionLabel)
+        #expect(!current.hasMusicOnlyPassages && current.languageLabel == document.languageLabel)
+        for markdown in [false, true] {
+            #expect(current.exportText(for: .transcript, markdown: markdown) == document.exportText(for: .transcript, markdown: markdown))
+        }
+        #expect(try paths.map { try Data(contentsOf: $0) } == originals)
+    }
+
+    @Test func automaticMusicIsReversiblePersistentAndNeverReappliedAfterRestoration() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let paths = [f.audio, f.job.appendingPathComponent("transcript.json"), f.job.appendingPathComponent("raw.json")]
+        let originals = try paths.map { try Data(contentsOf: $0) }
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let store = TranscriptReviewStore(root: f.reviews)
+        let review = TranscriptReviewState(store: store, automaticAnalyze: { try await worker.run($0, deadline: $1, automatic: true) })
+        await review.load(job: f.job, document: document)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("automatic scan finished") { !review.automaticBusy }
+        #expect(review.automaticRemaining == 0 && review.error == nil)
+        #expect(review.corrections["music"]?.automatic != nil && review.corrections["speech"] == nil)
+        #expect(document.applying(review.corrections).text.contains("[Music only]"))
+        #expect(document.applying(review.corrections).text.contains("Actual speech"))
+        #expect(!document.applying(review.corrections).recognitionLabel.contains("ja"))
+        #expect(!document.applying(review.corrections).exportText(for: .transcript, markdown: true).contains("Hallucinated words"))
+        #expect(try FileManager.default.contentsOfDirectory(at: f.evidence, includingPropertiesForKeys: nil).count == 1)
+        await review.load(job: f.job, document: document)
+        #expect(review.corrections["music"]?.automatic != nil)
+        review.setCorrection(nil, for: "music")
+        await waitUntil("original recognition restored") { !review.saving }
+        #expect(review.automaticDismissals.contains("music"))
+        await review.load(job: f.job, document: document)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("restoration respected on reopening") { !review.automaticBusy }
+        #expect(review.corrections.isEmpty && document.applying(review.corrections).text == document.text)
+        #expect(try paths.map { try Data(contentsOf: $0) } == originals)
+    }
+
+    @Test(arguments: ["violin", "mixed-18db", "ShortSpeechChallenges/piano-en-250ms-30db",
+                      "ViolinChallenges/violin-speech-en-30db"])
+    func automaticScanRetainsAmbiguousMusicAndQuietSpeech(musicName: String) async throws {
+        let f = try Fixture(musicName: musicName); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let review = TranscriptReviewState(store: .init(root: f.reviews), automaticAnalyze: { try await worker.run($0, deadline: $1, automatic: true) })
+        await review.load(job: f.job, document: document)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("automatic speech-preservation scan") { !review.automaticBusy }
+        #expect(review.corrections.isEmpty && review.automaticRemaining == 0)
+        #expect(document.applying(review.corrections).text == document.text)
+        #expect(!FileManager.default.fileExists(atPath: f.evidence.path))
+    }
+
+    @Test func automaticCancellationAndManualEditsRejectLateResults() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let ready = Mutex(false)
+        let review = TranscriptReviewState(store: .init(root: f.reviews), automaticAnalyze: { selection, _ in
+            let candidate = try await worker.run(selection)
+            ready.withLock { $0 = true }
+            try? await Task.sleep(for: .milliseconds(250)) // Deliberately return after cancellation.
+            return candidate
+        })
+        await review.load(job: f.job, document: document)
+        review.setAutomaticBlocked(true)
+        review.suppressMusicAutomatically(in: document)
+        #expect(!review.automaticBusy)
+        review.setAutomaticBlocked(false)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("late automatic result ready") { ready.withLock { $0 } }
+        review.stopAutomatic()
+        review.setCorrection(.init(kind: .text, text: "My quiet speech"), for: "music")
+        await waitUntil("manual edit saved") { !review.saving }
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!review.automaticBusy && review.corrections["music"]?.text == "My quiet speech")
+        await review.load(job: f.job, document: document)
+        #expect(review.corrections["music"]?.text == "My quiet speech" && review.automaticDismissals.contains("music"))
+    }
+
+    @Test(arguments: ["source", "report", "missing"])
+    func staleAutomaticEvidenceRestoresWordsWithoutDroppingManualCorrections(change: String) async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let selection = try await SegmentCloudSelection.prepare(job: f.job, document: document, segmentID: "music")
+        let candidate = try await worker.run(selection, automatic: true)
+        let store = TranscriptReviewStore(root: f.reviews)
+        var context = try TranscriptReviewContext(job: f.job, document: document)
+        let saved = try await store.suppressAutomatically(candidate, in: context)
+        context.corrections = saved.corrections
+        _ = try await store.setCorrection(.init(kind: .text, text: "Preserved manual speech"), for: "speech", in: context)
+        if change == "source" {
+            let file = try FileHandle(forWritingTo: f.audio); try file.seek(toOffset: 128); try file.write(contentsOf: Data([0, 0])); try file.close()
+        } else if change == "report" {
+            try Data("Invalid retained report".utf8).write(to: candidate.evidence.appendingPathComponent("report.json"))
+        } else { try FileManager.default.removeItem(at: candidate.evidence.appendingPathComponent("report.json")) }
+        let loaded = try await store.loadSnapshot(context)
+        #expect(loaded.corrections["music"] == nil && loaded.corrections["speech"]?.text == "Preserved manual speech")
+        #expect(document.applying(loaded.corrections).text.contains("Hallucinated words"))
+    }
+
+    @Test func anotherProcessManualEditOrCheckedReviewWinsOverAutomaticResults() async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let candidate = try await worker.run(SegmentCloudSelection.prepare(job: f.job, document: document, segmentID: "music"), automatic: true)
+        let context = try TranscriptReviewContext(job: f.job, document: document)
+        let store = TranscriptReviewStore(root: f.reviews)
+        _ = try await store.setCorrection(.init(kind: .text, text: "Newer speech correction"), for: "music", in: context)
+        let result = try await store.suppressAutomatically(candidate, in: context)
+        #expect(result.corrections["music"]?.text == "Newer speech correction")
+        var updated = context; updated.corrections = result.corrections
+        _ = try await store.setCorrection(nil, for: "music", in: updated)
+        #expect(try await store.suppressAutomatically(candidate, in: context).corrections["music"] == nil)
+        let checkedStore = TranscriptReviewStore(root: f.root.appendingPathComponent("CheckedReview"))
+        let key = try #require(context.reviewKeysBySegment["music"])
+        _ = try await checkedStore.setChecked(key, checked: true, in: context)
+        let checked = try await checkedStore.suppressAutomatically(candidate, in: context)
+        #expect(checked.corrections.isEmpty && checked.checked.contains(key))
+    }
+
+    @Test(arguments: [3_000, 8_000]) func automaticWorkBudgetPausesAndCanResume(milliseconds: Int) async throws {
+        let f = try Fixture(); defer { try? FileManager.default.removeItem(at: f.root) }
+        let canonical = f.job.appendingPathComponent("transcript.json")
+        var json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: canonical)) as? [String: Any])
+        json["segments"] = (0..<33).map { ReadingFixtures.segment("s\($0)", "Keep speech", channel: 0, start: 0, end: milliseconds) }
+        try JSONSerialization.data(withJSONObject: json).write(to: canonical)
+        let document = try await TranscriptPreview.read(f.job), worker = SegmentAcousticReview(root: f.evidence)
+        let speech = try await worker.run(SegmentCloudSelection.prepare(job: f.job, document: document, segmentID: "s0"))
+        // Use a non-candidate for cheap scheduling checks, with no writes or inference in the injected worker.
+        let voiceFile = try Fixture(musicName: "speech-en"); defer { try? FileManager.default.removeItem(at: voiceFile.root) }
+        let voiceDoc = try await TranscriptPreview.read(voiceFile.job)
+        let voice = try await worker.run(SegmentCloudSelection.prepare(job: voiceFile.job, document: voiceDoc, segmentID: "music"))
+        let calls = Mutex(0)
+        let review = TranscriptReviewState(store: .init(root: f.reviews), automaticAnalyze: { selection, _ in
+            calls.withLock { $0 += 1 }
+            return .init(selection: selection, report: voice.report, reference: speech.reference, evidence: f.evidence)
+        })
+        await review.load(job: f.job, document: document)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("automatic budget exhausted") { !review.automaticBusy }
+        let expected = milliseconds == 3_000 ? 32 : 15
+        #expect(calls.withLock { $0 } == expected && review.automaticRemaining == 33 - expected)
+        #expect(review.corrections.isEmpty && review.automaticNotice?.contains("paused") == true)
+        review.suppressMusicAutomatically(in: document)
+        await waitUntil("automatic scan resumed") { !review.automaticBusy }
+        #expect(calls.withLock { $0 } == min(33, expected * 2))
+    }
 }

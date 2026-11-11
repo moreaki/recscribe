@@ -38,11 +38,20 @@ public struct MusicOnlyAssessment: Codable, Equatable, Sendable {
     public let duration: Double
     public let windows: [Window]
     public let contextWindows: [Window]?
+    public let primaryCompleted: Bool?
+    public let contextCompleted: Bool?
     public let voiceGuardWindows: [Window]?
     public let voiceGuardCompleted: Bool?
     public var automaticSuppressionAllowed: Bool { false }
     public var musicOnlyConfirmationAllowed: Bool {
-        outcome == .instrumentalMusicCandidate && voiceGuardCompleted == true && voiceGuardWindows?.isEmpty == false
+        guard outcome == .instrumentalMusicCandidate, primaryCompleted == true,
+              voiceGuardCompleted == true, voiceGuardWindows?.isEmpty == false,
+              contextCompleted != false else { return false }
+        // Decoded status fields cannot overrule retained voice scores or coverage.
+        // Re-evaluate with current policy; this never promotes a stored non-candidate.
+        return Self.evaluate(duration: duration, windows: windows, completed: true,
+            contextWindows: contextWindows ?? [], contextCompleted: contextCompleted == true,
+            voiceGuardWindows: voiceGuardWindows ?? [], voiceGuardCompleted: true).outcome == .instrumentalMusicCandidate
     }
 
     public static func evaluate(duration: Double, windows: [Window], completed: Bool,
@@ -53,6 +62,8 @@ public struct MusicOnlyAssessment: Codable, Equatable, Sendable {
             let voices = Array(voiceGuardWindows.prefix(maximumWindows - primary.count))
             return Self(outcome: outcome, reason: reason, duration: duration, windows: primary,
                  contextWindows: contextWindows.isEmpty ? nil : Array(contextWindows.prefix(maximumWindows - primary.count - voices.count)),
+                 primaryCompleted: completed,
+                 contextCompleted: contextWindows.isEmpty && !contextCompleted ? nil : contextCompleted,
                  voiceGuardWindows: voiceGuardWindows.isEmpty ? nil : voices,
                  voiceGuardCompleted: voiceGuardWindows.isEmpty && !voiceGuardCompleted ? nil : voiceGuardCompleted)
         }
@@ -99,8 +110,9 @@ public struct MusicOnlyAssessment: Codable, Equatable, Sendable {
         }
         // If context evidence is present it must be complete, valid and voice-free,
         // even if the short-window music scores would pass on their own.
-        if !contextWindows.isEmpty {
-            guard duration >= 8, contextCompleted, contextWindows.count <= maximumWindows - windows.count - voiceGuardWindows.count,
+        if contextCompleted || !contextWindows.isEmpty {
+            guard duration >= 8, contextCompleted, !contextWindows.isEmpty,
+                  contextWindows.count <= maximumWindows - windows.count - voiceGuardWindows.count,
                   valid(contextWindows, maximumSeconds: 8),
                   contextWindows.allSatisfy({ abs($0.end - $0.start - 8) < 0.000_001 }),
                   coversPassage(contextWindows) else {

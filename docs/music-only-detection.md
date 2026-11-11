@@ -10,7 +10,8 @@ The first implementation is an offline evaluation API in `RecScribeCore`:
 `SoundAnalysis.version1` classifier on one already extracted mono PCM WAV passage.
 It does not upload audio, access credentials, download a model, rewrite recognition,
 or run in capture callbacks. Studio's Analyze sound locally action now uses it for
-one selected source/channel. It is not an automatic ASR suppression gate.
+one selected source/channel. The automatic Studio display layer described below
+also uses it; ASR output and canonical/raw recognition are still preserved.
 
 ## Evidence and preservation
 
@@ -40,8 +41,47 @@ one selected source/channel. It is not an automatic ASR suppression gate.
 - The original, one-second voice and optional eight-second context passes share
   one 512-observation budget and one cooperative deadline. Final windows stay
   entirely inside the selected passage; input bytes and channel bounds are unchanged.
-- `automaticSuppressionAllowed` is always false, including for candidates. Raw
-  transcripts and original audio must remain immutable in future integration.
+- The core assessment alone grants no suppression permission. Studio's automatic
+  layer additionally checks the full report policy, selected source identity and
+  retained evidence. Raw transcripts and original audio remain immutable.
+
+## Automatic Studio suppression
+
+Opening a saved transcript starts one local automatic music check when capture,
+background transcription and other passage analysis are idle. It replaces likely
+instrumental hallucinations in Studio and current copied/shared text with
+`[Music only]`, without deleting words from ASR evidence or changing the canonical
+transcript. It is labelled **automatically hidden**, separate from a user's Music
+only choice. **Restore original recognition** records a persistent dismissal for
+that transcript revision; reopening or continuing a scan cannot hide it again.
+Manual edits, manual restorations and already checked review items take priority.
+
+Only the existing strong three-second music rule plus the complete one-second
+voice guard can qualify. All 33 voice vetoes still apply. The violin/context hint,
+quiet/mixed speech, missing classes, malformed/unfinished evidence and analysis
+errors keep recognition. A full report policy envelope is required, not just a
+decoded candidate status or a model/language guess. No threshold was lowered.
+There is no claim that every arbitrary quiet utterance is detectable: these are
+development thresholds, not an independently validated speech-recall guarantee.
+
+Automatic work runs off the UI/capture path, one selected channel/passage at a time.
+An activation is bounded to 32 passages, 120 seconds of selected audio and a
+30-second cooperative deadline, in addition to the per-analysis limits. Unsupported
+durations remain visible. A paused run exposes **Continue music check**; **Stop
+automatic music check**, navigation, capture/background work and manual editing
+cancel further work and reject late results. Already completed saves remain.
+Negative/uncertain scans create no permanent report directories. Eligible music
+retains the original report, selected channel/time, hashes and source file identities.
+On reload missing/changed reports or source identities restore recognition instead
+of trusting a stale automatic decision. Manual corrections remain intact.
+
+Review metadata v5 reads v1–v4, stores automatic origin/evidence and manual
+dismissals, and retains the existing atomic locking and revision checks. Saved
+job exports remain immutable; current Studio copy/share reflects the overlays.
+The installed assisted candidate is not replaced automatically. User UI acceptance
+and independent held-out speech/music evaluation are still required before a
+release-level accuracy claim. See [manual cancellation steps](manual-sound-cancellation.md)
+and the [accuracy display/calculation proposal](transcript-accuracy-proposal.md).
 
 ### Longer context and the violin fixture
 
@@ -71,6 +111,17 @@ cannot offer music-only confirmation. Previously user-confirmed corrections are 
 rewritten or revoked. The nine short speech-source mixture fixtures are derived,
 unadjudicated development checks, not new listening approval or proof of whisper
 accuracy. Their #130 baseline already retained all cases; no accuracy gain is claimed.
+
+Confirmation eligibility re-evaluates retained scores, ranges and current policy;
+the stored `instrumentalMusicCandidate` status alone cannot authorize a correction.
+Primary and optional context completion are recorded explicitly. Missing completion,
+voice in any retained pass, missing classes, weak music, gaps, invalid timing or an
+exceeded observation budget deny confirmation even if decoded status says candidate.
+Older reports lacking these completion fields remain readable but cannot be newly
+confirmed. This does not rewrite earlier user-confirmed music-only annotations.
+The recheck is local, bounded by the existing observation limit, and runs no model,
+audio extraction, network request or file write. It strengthens evidence consistency;
+it does not establish a new measured detection-accuracy result.
 
 ## Studio confirmation and restoration
 
@@ -113,6 +164,33 @@ Apple describes speech, music and singing as potentially co-occurring classes:
 [Discover built-in sound classification in SoundAnalysis](https://developer.apple.com/videos/play/wwdc2021/10036/).
 
 ## Gate before production suppression
+
+### Delivery boundary and remaining acceptance
+
+The assisted review version shipped through #132 with full CI and a signed local
+candidate. Its acceptance observations and limitations are recorded in issue #123.
+Further UI acceptance belongs to the user; the agent does not run UI tests.
+
+The native acceptance pass must verify correction/save/restart/restoration, manual
+and confirmed music-only display, current language labels, copy/share output,
+bounded listening and review shortcuts, local analysis/cancellation, and selected-
+segment cloud approval/cancellation without uploading real audio. Original audio,
+raw/canonical transcripts and existing review history must survive. A live cloud
+provider round trip remains a separate unverified check requiring explicit upload
+approval; approval/cancellation checks do not establish provider success.
+
+Automatic Studio suppression now has an implementation under review. A calibrated
+percentage of transcript accuracy remains a proposal. The classifier cannot reliably separate the
+reviewed violin from quiet speech-over-violin using these scores. Finishing that
+feature requires independent reviewed held-out data, a demonstrated speech-
+preservation signal and explicit false-suppression/recall results before enablement.
+The existing fixtures and safeguards do not provide a defensible completion date.
+
+This distinction must remain visible in issue #123 and release reporting: assisted
+review can finish after acceptance; automatic suppression is not delivered by
+renaming an inconclusive result or adding more preservation tests. Automatic
+suppression keeps that result inconclusive; it does not promote violin using
+overlapping quiet-speech scores. Future candidate UI testing remains with the user.
 
 The broad benchmark template's music-only entry remains unfilled. A separate small
 set now includes four user-listening-approved fixtures plus clearly labelled speech

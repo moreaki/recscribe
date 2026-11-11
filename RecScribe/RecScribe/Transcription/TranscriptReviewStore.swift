@@ -8,12 +8,14 @@ nonisolated struct TranscriptCorrection: Codable, Equatable, Sendable {
     let text: String?
     var cloud: SegmentCloudReference? = nil
     var acoustic: SegmentAcousticReference? = nil
+    var automatic: AutomaticMusicEvidence? = nil
     static let musicOnly = Self(kind: .musicOnly, text: nil)
     static let maximumTextBytes = 65_536
     var valid: Bool {
         switch kind {
         case .musicOnly: text == nil && cloud == nil && acoustic?.valid != false
-        case .text: acoustic == nil && text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
+            && (automatic == nil || (automatic?.valid == true && acoustic != nil))
+        case .text: automatic == nil && acoustic == nil && text.map { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.utf8.count <= Self.maximumTextBytes } == true && cloud?.valid != false
         }
     }
     var displayedText: String { kind == .musicOnly ? "[Music only]" : text ?? "" }
@@ -22,6 +24,7 @@ nonisolated struct TranscriptCorrection: Codable, Equatable, Sendable {
 nonisolated struct TranscriptReviewSnapshot: Equatable, Sendable {
     var checked: Set<String> = []
     var corrections: [String: TranscriptCorrection] = [:]
+    var automaticDismissals: Set<String> = []
 }
 
 /// Review metadata and manual corrections never rewrite canonical evidence.
@@ -63,10 +66,11 @@ actor TranscriptReviewStore {
     nonisolated static let maximumBytes = 1_024 * 1_024
     private let root: URL
     private struct Record: Codable {
-        var version = 4
+        var version = 5
         let revision: String
         let checked: Set<String>
         var corrections: [String: TranscriptCorrection]?
+        var automaticDismissals: Set<String>?
     }
 
     init(root: URL) { self.root = root }
@@ -99,8 +103,37 @@ actor TranscriptReviewStore {
                 throw SessionError.invalid("This passage was edited elsewhere. Reload before saving your correction.")
             }
             next.corrections[segmentID] = correction
+            // Any manual choice, including restoring original words, takes
+            // precedence over subsequent automatic scans of this revision.
+            next.automaticDismissals.insert(segmentID)
             next.checked.subtract(context.globalKeys)
             if let key = context.reviewKeysBySegment[segmentID] { next.checked.remove(key) }
+        }
+    }
+
+    func suppressAutomatically(_ candidate: SegmentAcousticCandidate,
+                               in context: TranscriptReviewContext) throws -> TranscriptReviewSnapshot {
+        let selection = candidate.selection, id = selection.segmentID
+        guard context.job == selection.job, context.revision == selection.revision,
+              context.segmentIDs.contains(id), selection.baseline == nil,
+              candidate.reference.startMs == selection.startMs, candidate.reference.endMs == selection.endMs,
+              candidate.reference.channel == selection.channel,
+              candidate.reference.audioSHA256 == candidate.report.sourceSHA256,
+              AutomaticMusicEvidence.permits(candidate.report), let correction = candidate.correction else {
+            throw SessionError.invalid("Automatic music analysis no longer matches this passage")
+        }
+        try selection.validate()
+        let evidence = AutomaticMusicEvidence(candidate)
+        try evidence.validate(candidate.reference)
+        return try update(context) { next in
+            // Merge against disk under the same lock as manual saves. Never
+            // overwrite a newer edit, restoration or an already checked source.
+            guard next.corrections[id] == nil, !next.automaticDismissals.contains(id),
+                  context.reviewKeysBySegment[id].map({ !next.checked.contains($0) }) ?? true else { return }
+            var automatic = correction
+            automatic.automatic = evidence
+            next.corrections[id] = automatic
+            next.checked.subtract(context.globalKeys)
         }
     }
 
@@ -119,7 +152,8 @@ actor TranscriptReviewStore {
         try validateRevision(context)
         var next = try read(context)
         try change(&next)
-        let data = try JSONEncoder().encode(Record(revision: context.revision, checked: next.checked, corrections: next.corrections))
+        let data = try JSONEncoder().encode(Record(revision: context.revision, checked: next.checked,
+            corrections: next.corrections, automaticDismissals: next.automaticDismissals))
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         try Task.checkCancellation()
         try data.write(to: url, options: .atomic)
@@ -158,11 +192,15 @@ actor TranscriptReviewStore {
         let data = try file.read(upToCount: Self.maximumBytes + 1) ?? Data()
         guard data.count <= Self.maximumBytes else { throw SessionError.invalid("Saved review status is too large") }
         let record = try JSONDecoder().decode(Record.self, from: data)
-        let corrections = record.corrections ?? [:]
-        guard [1, 2, 3, 4].contains(record.version), record.version != 1 || corrections.isEmpty,
+        var corrections = record.corrections ?? [:]
+        let dismissals = record.automaticDismissals ?? []
+        guard [1, 2, 3, 4, 5].contains(record.version), record.version != 1 || corrections.isEmpty,
               record.version == 1 || record.corrections != nil,
               record.version >= 3 || corrections.values.allSatisfy({ $0.cloud == nil }),
-              record.version == 4 || corrections.values.allSatisfy({ $0.acoustic == nil }),
+              record.version >= 4 || corrections.values.allSatisfy({ $0.acoustic == nil }),
+              record.version >= 5 || (record.automaticDismissals == nil && corrections.values.allSatisfy({ $0.automatic == nil })),
+              dismissals.count <= Self.maximumItems,
+              dismissals.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 1_024 }),
               record.checked.count <= Self.maximumItems, corrections.count <= Self.maximumItems,
               corrections.allSatisfy({ !$0.key.isEmpty && $0.key.utf8.count <= 1_024 && $0.value.valid }),
               record.revision.count == 64, record.revision.allSatisfy(\.isHexDigit),
@@ -171,9 +209,26 @@ actor TranscriptReviewStore {
         }
         try Task.checkCancellation()
         guard record.revision == context.revision else { return .init() }
-        guard Set(corrections.keys).isSubset(of: context.segmentIDs) else {
+        guard Set(corrections.keys).union(dismissals).isSubset(of: context.segmentIDs) else {
             throw SessionError.invalid("Saved corrections reference unavailable passages")
         }
-        return .init(checked: record.checked.intersection(context.keys), corrections: corrections)
+        var checked = record.checked.intersection(context.keys)
+        for (id, correction) in corrections where correction.automatic != nil {
+            do {
+                guard correction.automatic!.segmentID == id, correction.automatic!.revision == context.revision else {
+                    throw SessionError.invalid("Automatic music evidence belongs to another passage")
+                }
+                try correction.automatic!.validate(correction.acoustic!)
+            }
+            catch is CancellationError { throw CancellationError() }
+            catch {
+                // Missing/stale evidence restores words, without disturbing manual
+                // corrections or rewriting canonical/raw recognition.
+                corrections.removeValue(forKey: id)
+                checked.subtract(context.globalKeys)
+                if let key = context.reviewKeysBySegment[id] { checked.remove(key) }
+            }
+        }
+        return .init(checked: checked, corrections: corrections, automaticDismissals: dismissals)
     }
 }

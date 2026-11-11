@@ -35,7 +35,9 @@ nonisolated struct SegmentAcousticReview: Sendable {
         self.root = root
     }
 
-    @concurrent func run(_ selection: SegmentCloudSelection) async throws -> SegmentAcousticCandidate {
+    @concurrent func run(_ selection: SegmentCloudSelection,
+                         deadline: ContinuousClock.Instant? = nil,
+                         automatic: Bool = false) async throws -> SegmentAcousticCandidate {
         guard selection.endMs - selection.startMs >= 3_000 else {
             throw SessionError.invalid("Local sound analysis needs a passage of at least three seconds.")
         }
@@ -44,8 +46,19 @@ nonisolated struct SegmentAcousticReview: Sendable {
         defer { try? FileManager.default.removeItem(at: temporary) }
         let audio = temporary.appendingPathComponent("passage.wav")
         try selection.copy(to: audio)
-        let report = try LocalSoundClassifier.assess(audio) { try Task.checkCancellation() }
+        let report = try LocalSoundClassifier.assess(audio) {
+            try Task.checkCancellation()
+            if let deadline, ContinuousClock.now >= deadline { throw CancellationError() }
+        }
         try selection.validate()
+        // Automatic scans retain reports only for eligible music. Ordinary speech
+        // must not create a new permanent evidence directory on every open.
+        if automatic, !AutomaticMusicEvidence.permits(report) {
+            return .init(selection: selection, report: report,
+                reference: .init(id: UUID(), classifier: report.classifier,
+                    startMs: selection.startMs, endMs: selection.endMs, channel: selection.channel,
+                    audioSHA256: report.sourceSHA256, reportSHA256: ""), evidence: root)
+        }
         let bytes = try JSONEncoder().encode(report)
         guard bytes.count <= 1_024 * 1_024 else { throw SessionError.invalid("Local sound evidence exceeds its limit") }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

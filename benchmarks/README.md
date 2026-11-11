@@ -116,6 +116,14 @@ pending. Accuracy uses repeat 1 only; inference repeats measure variability and
 do not multiply the number of independent speech samples. Chinese whitespace WER
 is not reported. No default model is selected by this pilot.
 
+The [fresh real-world confirmation](realworld-confirmation-results-2026-11-11.md)
+compares Large-v3 F16, Q4_0 and upstream Q5_0 with a separately pinned
+Qwen3-ASR/MLX adapter. It reports eight available language slices, preserves
+missing Arabic and the cancelled Italian first result, and keeps primary macros
+null. Q4 saves 71.27% of model-file bytes; multilingual default approval and
+controlled latency/memory remain pending. The separate Qwen comparison uses the
+unchanged native lexical scorer and makes no equivalent application/runtime claim.
+
 Use the [recording-priority worker guard](recording-priority-guard.md) for bounded
 offline jobs after a native idle/live-off check. It cancels only its verified
 owned work and retains incomplete evidence. The [research archive

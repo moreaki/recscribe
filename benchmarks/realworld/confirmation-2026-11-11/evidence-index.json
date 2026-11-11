@@ -1,0 +1,276 @@
+{
+  "schema_version": "realworld-confirmation-review-evidence-v1",
+  "created_utc": "2026-11-11T14:25:06.555409+00:00",
+  "protected_root": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1",
+  "copies": [
+    {
+      "path": "benchmarks/realworld/confirmation-2026-11-11/whisper-quality.md",
+      "sha256": "555e87b0d8c884703a6fd0468c21163a4def1ff1c7db7f0c2588a3887913153a",
+      "bytes": 10490,
+      "protected_original": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/native-confirmation-report-v1/report-v2.md",
+        "sha256": "9236d63816576cf42bda692a3f7618056d953d9284a5cecf8a04aaa1a9f2b479"
+      }
+    },
+    {
+      "path": "benchmarks/realworld/confirmation-2026-11-11/whisper-counts.json",
+      "sha256": "0918a50dad957c5af2568140d75cc27e0d277d5aa70533b88f60e451d13acea1",
+      "bytes": 118356,
+      "protected_original": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/native-confirmation-report-v1/native-counts.json",
+        "sha256": "0918a50dad957c5af2568140d75cc27e0d277d5aa70533b88f60e451d13acea1"
+      }
+    },
+    {
+      "path": "benchmarks/realworld/confirmation-2026-11-11/qwen-quality.md",
+      "sha256": "773b9a6e7a7b791854d39b1f49fee1a71868cb2f958584fabe7282edbde3c885",
+      "bytes": 7958,
+      "protected_original": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-descriptive-real-v1/report-v2.md",
+        "sha256": "7ecd5292fd215b77d2afae38c9576895c3cbb24fa77dd3b53d8effaa72fec4f3"
+      }
+    },
+    {
+      "path": "benchmarks/realworld/confirmation-2026-11-11/qwen-counts.json",
+      "sha256": "42527303b3fbbfcdecc2007a5cc172cd52c82cf39abe4c03bf8977c0e5804185",
+      "bytes": 297204,
+      "protected_original": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-descriptive-real-v1/descriptive-report.json",
+        "sha256": "42527303b3fbbfcdecc2007a5cc172cd52c82cf39abe4c03bf8977c0e5804185"
+      }
+    },
+    {
+      "path": "benchmarks/realworld-confirmation-results-2026-11-11.md",
+      "sha256": "c6249bac82d8edda98d644fde0a7be42b325988eeb080ac34a8d8269341b413e",
+      "bytes": 7750,
+      "protected_original": {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/realworld-combined-report-v1/draft.md",
+        "sha256": "3bbe475cd313f9851cceb35a64bac115e99de168518d136dc7d5d3745aa36aed"
+      }
+    }
+  ],
+  "protected_source_inputs": {
+    "schema_version": "realworld-combined-draft-source-inputs-v1",
+    "sources": [
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/native-confirmation-report-v1/report-v2.md",
+        "sha256": "9236d63816576cf42bda692a3f7618056d953d9284a5cecf8a04aaa1a9f2b479",
+        "bytes": 10382
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/native-confirmation-report-v1/native-counts.json",
+        "sha256": "0918a50dad957c5af2568140d75cc27e0d277d5aa70533b88f60e451d13acea1",
+        "bytes": 118356
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-descriptive-real-v1/report-v2.md",
+        "sha256": "7ecd5292fd215b77d2afae38c9576895c3cbb24fa77dd3b53d8effaa72fec4f3",
+        "bytes": 7855
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-descriptive-real-v1/descriptive-report.json",
+        "sha256": "42527303b3fbbfcdecc2007a5cc172cd52c82cf39abe4c03bf8977c0e5804185",
+        "bytes": 297204
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-count-facts-independent-v1/facts.json",
+        "sha256": "0d69d26c396c1f69c0bc0b1cc81157b3aad313ec4f594c1328f5ee48c2ab5618",
+        "bytes": 103240
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/qwen-collection-terminal-v1/receipt.json",
+        "sha256": "5ed7931ce8daff9b681b63d10eed406470da5c42efd5e27c826fc35d1023b03d",
+        "bytes": 8946
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/plans/qwen-inventory-v1/model.inventory.json",
+        "sha256": "e428bc679697673280baab352f70ba2c0464ec5b2d2ead311793ca75cbbd52f9",
+        "bytes": 3224
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/plans/qwen-inventory-v1/receipt.json",
+        "sha256": "95f4f05d120c34c4ea80a9733d7152f8eff54ab139ad37c3636ff6cfb800142e",
+        "bytes": 5799
+      }
+    ]
+  },
+  "corpus": {
+    "actual": {
+      "development": 16,
+      "held_out": 128,
+      "resource": 9
+    },
+    "required": {
+      "development": 18,
+      "held_out": 144,
+      "resource": 9
+    },
+    "missing_arabic": {
+      "development": 2,
+      "held_out": 16
+    },
+    "merge_receipt_sha256": "de95bdb92cfb25a643b645767d118423464c53f39b0b7d562fb4d187af81fdad"
+  },
+  "qwen_first_outcomes": {
+    "original_successes": 160,
+    "original_cancelled_index": 160,
+    "continuation_successes": 128,
+    "retries": 0,
+    "held_out_scored": 255,
+    "held_out_missing": 1,
+    "terminal_receipt_sha256": "8bf570ee1cb9e32135756f1f0a9412173189b85077febd7865978481d7339f2f",
+    "collection_receipt_sha256": "5ed7931ce8daff9b681b63d10eed406470da5c42efd5e27c826fc35d1023b03d"
+  },
+  "native_quality": {
+    "calls": 867,
+    "quality_calls": 864,
+    "warmups": 3,
+    "count_audit_sha256": "b4351f9a3491b599413dc8c3929ee25e84c62b2f80f5fbe19dd876bd729b4b90",
+    "dynamic_backend_preexecution_hash_coverage": "NOT_ESTABLISHED"
+  },
+  "controlled_resources": {
+    "status": "PENDING_UNSTARTED",
+    "plan_sha256": "d004b064983d6a535ed7dcc678c00659bbd27c4122d4d93fb5cc1381f72cc23b",
+    "planned_calls": 324,
+    "foreign_cpu_limit_percent": 50,
+    "absolute_deadline_utc": "2026-11-11T15:22:50.441789+00:00",
+    "admission_blockers_observed": [
+      "fileproviderd99.2%",
+      "Tresorit52.1%",
+      "Antigravity renderer57.4%"
+    ],
+    "acceptance": false
+  },
+  "primary_macros": null,
+  "quality_approval": false,
+  "default_changed": false,
+  "model_publication": false,
+  "raw_audio_or_transcripts_copied": false,
+  "preservation_postflight": {
+    "receipt": {
+      "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/validation/preservation-postflight-v1/receipt.json",
+      "sha256": "564e41e231c82398df64d57ebc76b6609c9d842638f48b6c3ce9c3e92eb4716d"
+    },
+    "status": "matched_declared_scope_with_pending_dimension",
+    "unique_paths_hashed": 16265,
+    "streamed_bytes_including_metadata_rechecks": 13249099638,
+    "refs_checked": 34,
+    "mismatches": [],
+    "pending": [
+      "Unlisted directory additions and interpreter aliases other than the explicitly pinned bin/python are not discovered; declared manifest files/target only"
+    ],
+    "elapsed_seconds": 12.571442083455622
+  },
+  "artifacts": {
+    "native_models": [
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Models/ggml-large-v3.bin",
+        "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+        "bytes": 3095033483
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-small-turbo-20261110-v1/large-v3-q4_0/model.bin",
+        "sha256": "e002bafb9831c78dcee921e152611fb7e4d9c70d60f9eb46401783d3f861e7c3",
+        "bytes": 889340843
+      },
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/artifacts-external-v2/large-v3-q5_0/model.bin",
+        "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+        "bytes": 1081140203
+      }
+    ],
+    "retained_binaries": [
+      {
+        "path": "/Users/moreaki/.codex/worktrees/whisper-research-sync/recscribe/Build/Products/WhisperQuantization-517d344-complete/recscribe-text",
+        "sha256": "b082ca6dddb9fc1d315d95cb4a9bcc5c06f1b49f94dc9b06b5ec5c32d897eaec",
+        "bytes": 1255728
+      },
+      {
+        "path": "/Users/moreaki/.codex/worktrees/whisper-research-sync/recscribe/Build/Products/WhisperCheckpoint-3fdad88-complete/recscribe-text",
+        "sha256": "b66705012e221e95326797f472cda04a3c051bf7949b44d1d5767558f6a22cc4",
+        "bytes": 1433248
+      },
+      {
+        "path": "/Users/moreaki/Dev/recscribe/Build/Products/WhisperControl-c214a8e/recscribe-text",
+        "sha256": "9788fa4e7e3af5ff802ba788f830bc1ebfc6da3b371ae685bc9bce10af7140d6",
+        "bytes": 911168
+      },
+      {
+        "path": "/opt/homebrew/Cellar/whisper.cpp/1.9.5/bin/whisper-cli",
+        "sha256": "e23dcdf55fdff2dfc085902b00cac93aba09e0373422e40ddd69d7c67d725f16",
+        "bytes": 658608
+      },
+      {
+        "path": "/Users/moreaki/.codex/worktrees/whisper-research-sync/recscribe/Build/Products/RealworldScorer-4c3be409/score-transcript",
+        "sha256": "6a0a8c371acb05f690c0a8565960d1c91b73ef5776b5267170b2e9ce591e177c",
+        "bytes": 219856
+      }
+    ],
+    "qwen_weights": [
+      {
+        "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/artifacts-external-v2/qwen3-asr-1.7b-8bit/model.safetensors",
+        "sha256": "bf304b009cc7eca79283056f787b44c952d24ac22cec787b39732bba3c23c13c",
+        "bytes": 2463307541
+      }
+    ],
+    "qwen_python": [
+      {
+        "path": "/opt/homebrew/Cellar/python@3.13/3.13.17/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+        "sha256": "c56037d55893ca607b42f85c7f1cae7f1c610849179c2e706e0c747e59091a1e",
+        "bytes": 34640
+      }
+    ]
+  },
+  "revisions": {
+    "untouched_reference_source": "c214a8ed03f972a5a9cab64105145a67371b97b4",
+    "retained_transcriber_source": "517d3440975bd6837c409e6a70c3a23081f947c6",
+    "execution_source": "b5442c96be0788476a2a52efe324c83fc08435b2",
+    "qwen_model": "mlx-community/Qwen3-ASR-1.7B-8bit@a8379a2e2f9e313c9292cdf1af4055ab56d50d55",
+    "qwen_runtime": "Neywa-Labs/mlx-audio@3e2368ef96e686ad6c2c8791272bd25617d3e71e",
+    "upstream_q5": "ggerganov/whisper.cpp@5359861c739e955e79d9a303bcbc70fb988958b1"
+  },
+  "runtime_context": {
+    "host": "Mac14,14 Apple M2 Ultra",
+    "cpu_cores": 24,
+    "gpu_cores": 60,
+    "memory_bytes": 68719476736,
+    "macos": "26.6.2 (25G83)",
+    "whisper_cpp": "1.9.5",
+    "whisper_backend": "Metal with BLAS/CPU support",
+    "qwen_backend": "MLX0.32.4 / MLX-Audio0.6.5",
+    "qwen_worker_python": "3.13.17",
+    "stdlib_supervisor_python": "3.15.0",
+    "internal_blas_openmp_thread_use": "NOT_MEASURED",
+    "full_actual_loaded_library_and_driver_hash_coverage": "NOT_ESTABLISHED"
+  },
+  "inference_settings": {
+    "settings_sha256": "10eec57017485d12366973a8a8df543f95f2644f2d50ff48e1cb1575961257b0",
+    "native": {
+      "requested_threads": 2,
+      "profile_schema": "1.0",
+      "tp": 0,
+      "mc": 0,
+      "added_vad": false,
+      "added_terms_or_prompt": false,
+      "language_modes": [
+        "known",
+        "auto"
+      ],
+      "path": "final",
+      "repeats": 1,
+      "inherited_fallback": true
+    },
+    "qwen": {
+      "temperature": 0,
+      "batch_size": 1,
+      "chunk_duration": 60,
+      "max_tokens": 1024,
+      "system_prompt": null,
+      "hotwords": null,
+      "language_modes": [
+        "known",
+        "auto"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4402 @@
+{
+  "schema_version": "realworld-native-count-audit-v2",
+  "quality_preservation": {
+    "version": "paired-quality-preservation-v1",
+    "status": "exploratory",
+    "policy": {
+      "schema_version": "1.0",
+      "languages": [
+        "de-CH",
+        "de",
+        "fr",
+        "it",
+        "en",
+        "ar",
+        "zh",
+        "es",
+        "pt"
+      ],
+      "primary_languages": [
+        "de",
+        "fr",
+        "it",
+        "en",
+        "ar",
+        "zh",
+        "es",
+        "pt"
+      ],
+      "word_metric_excluded_languages": [
+        "zh"
+      ],
+      "macro_cer_margin": 0.005,
+      "macro_wer_margin": 0.01,
+      "language_cer_margin": 0.01,
+      "language_wer_margin": 0.02,
+      "paired_sources_per_language": 16,
+      "bootstrap_draws": 2000,
+      "bootstrap_seed": 10410520261110,
+      "confidence": 0.95
+    },
+    "comparisons": [
+      {
+        "comparison_id": "large-v3-q4_0-vs-f16",
+        "baseline_model": "large-v3",
+        "candidate_model": "large-v3-q4_0",
+        "language_mode": "known",
+        "status": "pending",
+        "complete": false,
+        "languages": [
+          {
+            "language": "de-CH",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.006196746707978312,
+              "one_sided_upper_delta": 0.0074962518740629685,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 193,
+                "units": 1291,
+                "insertions": 55,
+                "deletions": 89,
+                "substitutions": 49
+              },
+              "candidate": {
+                "errors": 185,
+                "units": 1291,
+                "insertions": 46,
+                "deletions": 97,
+                "substitutions": 42
+              }
+            },
+            "wer": {
+              "point_delta": -0.00909090909090909,
+              "one_sided_upper_delta": 0.02,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 51,
+                "units": 220,
+                "insertions": 5,
+                "deletions": 9,
+                "substitutions": 37
+              },
+              "candidate": {
+                "errors": 49,
+                "units": 220,
+                "insertions": 3,
+                "deletions": 10,
+                "substitutions": 36
+              }
+            },
+            "resampling_seed": 14141797278771576215
+          },
+          {
+            "language": "de",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.004491858506457047,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 109,
+                "units": 1781,
+                "insertions": 16,
+                "deletions": 81,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 101,
+                "units": 1781,
+                "insertions": 15,
+                "deletions": 74,
+                "substitutions": 12
+              }
+            },
+            "wer": {
+              "point_delta": -0.003246753246753247,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 33,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 15,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 32,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 14,
+                "substitutions": 12
+              }
+            },
+            "resampling_seed": 1767069385087667530
+          },
+          {
+            "language": "fr",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              },
+              "candidate": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              }
+            },
+            "wer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              },
+              "candidate": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              }
+            },
+            "resampling_seed": 12866616453785336078
+          },
+          {
+            "language": "it",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0006788866259334691,
+              "one_sided_upper_delta": 0.0013956734124214933,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 611,
+                "units": 2946,
+                "insertions": 182,
+                "deletions": 264,
+                "substitutions": 165
+              },
+              "candidate": {
+                "errors": 613,
+                "units": 2946,
+                "insertions": 185,
+                "deletions": 263,
+                "substitutions": 165
+              }
+            },
+            "wer": {
+              "point_delta": 0.0018115942028985507,
+              "one_sided_upper_delta": 0.0052173913043478265,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 144,
+                "units": 552,
+                "insertions": 37,
+                "deletions": 50,
+                "substitutions": 57
+              },
+              "candidate": {
+                "errors": 145,
+                "units": 552,
+                "insertions": 38,
+                "deletions": 50,
+                "substitutions": 57
+              }
+            },
+            "resampling_seed": 14338625764326094395
+          },
+          {
+            "language": "en",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              },
+              "candidate": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              }
+            },
+            "wer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              },
+              "candidate": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              }
+            },
+            "resampling_seed": 3447657021274018482
+          },
+          {
+            "language": "ar",
+            "planned_source_units": 0,
+            "paired_source_units": 0,
+            "required_source_units": 16,
+            "completeness": "pending",
+            "cer": null,
+            "wer": null
+          },
+          {
+            "language": "zh",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00992063492063492,
+              "one_sided_upper_delta": 0.0023584905660377358,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 132,
+                "substitutions": 70
+              },
+              "candidate": {
+                "errors": 208,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 131,
+                "substitutions": 66
+              }
+            },
+            "wer": null,
+            "resampling_seed": 628255203061906580
+          },
+          {
+            "language": "es",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00038138825324180017,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 151,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 51,
+                "substitutions": 25
+              },
+              "candidate": {
+                "errors": 150,
+                "units": 2622,
+                "insertions": 79,
+                "deletions": 49,
+                "substitutions": 22
+              }
+            },
+            "wer": {
+              "point_delta": -0.005758157389635317,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 47,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 18
+              },
+              "candidate": {
+                "errors": 44,
+                "units": 521,
+                "insertions": 18,
+                "deletions": 12,
+                "substitutions": 14
+              }
+            },
+            "resampling_seed": 5498133160621019293
+          },
+          {
+            "language": "pt",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.008028545941123996,
+              "one_sided_upper_delta": 0.009554140127388535,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 174,
+                "units": 1121,
+                "insertions": 14,
+                "deletions": 131,
+                "substitutions": 29
+              },
+              "candidate": {
+                "errors": 165,
+                "units": 1121,
+                "insertions": 18,
+                "deletions": 121,
+                "substitutions": 26
+              }
+            },
+            "wer": {
+              "point_delta": -0.003676470588235294,
+              "one_sided_upper_delta": 0.017064846416382253,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 69,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 43,
+                "substitutions": 22
+              },
+              "candidate": {
+                "errors": 68,
+                "units": 272,
+                "insertions": 5,
+                "deletions": 42,
+                "substitutions": 21
+              }
+            },
+            "resampling_seed": 153591233113179044
+          }
+        ],
+        "primary_macro": {
+          "cer": null,
+          "wer": null
+        },
+        "aggregation": "Equal primary languages; corpus-weighted edit counts within each language; Swiss has a separate floor"
+      },
+      {
+        "comparison_id": "large-v3-q4_0-vs-f16",
+        "baseline_model": "large-v3",
+        "candidate_model": "large-v3-q4_0",
+        "language_mode": "auto",
+        "status": "fail_exploratory",
+        "complete": false,
+        "languages": [
+          {
+            "language": "de-CH",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.004647560030983733,
+              "one_sided_upper_delta": 0.031198686371100164,
+              "margin": 0.01,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 193,
+                "units": 1291,
+                "insertions": 55,
+                "deletions": 89,
+                "substitutions": 49
+              },
+              "candidate": {
+                "errors": 199,
+                "units": 1291,
+                "insertions": 35,
+                "deletions": 106,
+                "substitutions": 58
+              }
+            },
+            "wer": {
+              "point_delta": 0.022727272727272728,
+              "one_sided_upper_delta": 0.09340659340659341,
+              "margin": 0.02,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 51,
+                "units": 220,
+                "insertions": 5,
+                "deletions": 9,
+                "substitutions": 37
+              },
+              "candidate": {
+                "errors": 56,
+                "units": 220,
+                "insertions": 7,
+                "deletions": 10,
+                "substitutions": 39
+              }
+            },
+            "resampling_seed": 97520595549371686
+          },
+          {
+            "language": "de",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.004491858506457047,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 109,
+                "units": 1781,
+                "insertions": 16,
+                "deletions": 81,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 101,
+                "units": 1781,
+                "insertions": 15,
+                "deletions": 74,
+                "substitutions": 12
+              }
+            },
+            "wer": {
+              "point_delta": -0.003246753246753247,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 33,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 15,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 32,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 14,
+                "substitutions": 12
+              }
+            },
+            "resampling_seed": 17161327181998149427
+          },
+          {
+            "language": "fr",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              },
+              "candidate": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              }
+            },
+            "wer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              },
+              "candidate": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              }
+            },
+            "resampling_seed": 11584134158596072084
+          },
+          {
+            "language": "it",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0006788866259334691,
+              "one_sided_upper_delta": 0.0013971358714634998,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 611,
+                "units": 2946,
+                "insertions": 182,
+                "deletions": 264,
+                "substitutions": 165
+              },
+              "candidate": {
+                "errors": 613,
+                "units": 2946,
+                "insertions": 185,
+                "deletions": 263,
+                "substitutions": 165
+              }
+            },
+            "wer": {
+              "point_delta": 0.0018115942028985507,
+              "one_sided_upper_delta": 0.005008347245409015,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 144,
+                "units": 552,
+                "insertions": 37,
+                "deletions": 50,
+                "substitutions": 57
+              },
+              "candidate": {
+                "errors": 145,
+                "units": 552,
+                "insertions": 38,
+                "deletions": 50,
+                "substitutions": 57
+              }
+            },
+            "resampling_seed": 1958697638488239219
+          },
+          {
+            "language": "en",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              },
+              "candidate": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              }
+            },
+            "wer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              },
+              "candidate": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              }
+            },
+            "resampling_seed": 345528269349254293
+          },
+          {
+            "language": "ar",
+            "planned_source_units": 0,
+            "paired_source_units": 0,
+            "required_source_units": 16,
+            "completeness": "pending",
+            "cer": null,
+            "wer": null
+          },
+          {
+            "language": "zh",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00992063492063492,
+              "one_sided_upper_delta": 0.0023584905660377358,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 132,
+                "substitutions": 70
+              },
+              "candidate": {
+                "errors": 208,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 131,
+                "substitutions": 66
+              }
+            },
+            "wer": null,
+            "resampling_seed": 17494150240460268185
+          },
+          {
+            "language": "es",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00038138825324180017,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 151,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 51,
+                "substitutions": 25
+              },
+              "candidate": {
+                "errors": 150,
+                "units": 2622,
+                "insertions": 79,
+                "deletions": 49,
+                "substitutions": 22
+              }
+            },
+            "wer": {
+              "point_delta": -0.005758157389635317,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 47,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 18
+              },
+              "candidate": {
+                "errors": 44,
+                "units": 521,
+                "insertions": 18,
+                "deletions": 12,
+                "substitutions": 14
+              }
+            },
+            "resampling_seed": 9446692909464975045
+          },
+          {
+            "language": "pt",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.008028545941123996,
+              "one_sided_upper_delta": 0.011461318051575931,
+              "margin": 0.01,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 174,
+                "units": 1121,
+                "insertions": 14,
+                "deletions": 131,
+                "substitutions": 29
+              },
+              "candidate": {
+                "errors": 165,
+                "units": 1121,
+                "insertions": 18,
+                "deletions": 121,
+                "substitutions": 26
+              }
+            },
+            "wer": {
+              "point_delta": -0.003676470588235294,
+              "one_sided_upper_delta": 0.018656716417910446,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 69,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 43,
+                "substitutions": 22
+              },
+              "candidate": {
+                "errors": 68,
+                "units": 272,
+                "insertions": 5,
+                "deletions": 42,
+                "substitutions": 21
+              }
+            },
+            "resampling_seed": 15227871134536637960
+          }
+        ],
+        "primary_macro": {
+          "cer": null,
+          "wer": null
+        },
+        "aggregation": "Equal primary languages; corpus-weighted edit counts within each language; Swiss has a separate floor"
+      },
+      {
+        "comparison_id": "large-v3-upstream-q5_0-vs-f16",
+        "baseline_model": "large-v3",
+        "candidate_model": "large-v3-upstream-q5_0",
+        "language_mode": "known",
+        "status": "fail_exploratory",
+        "complete": false,
+        "languages": [
+          {
+            "language": "de-CH",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.005422153369481022,
+              "one_sided_upper_delta": -0.0007446016381236039,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 193,
+                "units": 1291,
+                "insertions": 55,
+                "deletions": 89,
+                "substitutions": 49
+              },
+              "candidate": {
+                "errors": 186,
+                "units": 1291,
+                "insertions": 54,
+                "deletions": 90,
+                "substitutions": 42
+              }
+            },
+            "wer": {
+              "point_delta": -0.022727272727272728,
+              "one_sided_upper_delta": -0.0043859649122807015,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 51,
+                "units": 220,
+                "insertions": 5,
+                "deletions": 9,
+                "substitutions": 37
+              },
+              "candidate": {
+                "errors": 46,
+                "units": 220,
+                "insertions": 4,
+                "deletions": 9,
+                "substitutions": 33
+              }
+            },
+            "resampling_seed": 11776813662719728309
+          },
+          {
+            "language": "de",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.0039303761931499155,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 109,
+                "units": 1781,
+                "insertions": 16,
+                "deletions": 81,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 102,
+                "units": 1781,
+                "insertions": 15,
+                "deletions": 75,
+                "substitutions": 12
+              }
+            },
+            "wer": {
+              "point_delta": -0.006493506493506494,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 33,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 15,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 31,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 14,
+                "substitutions": 11
+              }
+            },
+            "resampling_seed": 5767300554257209411
+          },
+          {
+            "language": "fr",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0005040322580645161,
+              "one_sided_upper_delta": 0.0015337423312883436,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              },
+              "candidate": {
+                "errors": 196,
+                "units": 1984,
+                "insertions": 44,
+                "deletions": 90,
+                "substitutions": 62
+              }
+            },
+            "wer": {
+              "point_delta": 0.0023752969121140144,
+              "one_sided_upper_delta": 0.007481296758104738,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              },
+              "candidate": {
+                "errors": 64,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 28
+              }
+            },
+            "resampling_seed": 15759479143037504269
+          },
+          {
+            "language": "it",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.004073319755600814,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 611,
+                "units": 2946,
+                "insertions": 182,
+                "deletions": 264,
+                "substitutions": 165
+              },
+              "candidate": {
+                "errors": 599,
+                "units": 2946,
+                "insertions": 170,
+                "deletions": 264,
+                "substitutions": 165
+              }
+            },
+            "wer": {
+              "point_delta": -0.0018115942028985507,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 144,
+                "units": 552,
+                "insertions": 37,
+                "deletions": 50,
+                "substitutions": 57
+              },
+              "candidate": {
+                "errors": 143,
+                "units": 552,
+                "insertions": 36,
+                "deletions": 50,
+                "substitutions": 57
+              }
+            },
+            "resampling_seed": 7169671711818159524
+          },
+          {
+            "language": "en",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0009727626459143969,
+              "one_sided_upper_delta": 0.002751031636863824,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              },
+              "candidate": {
+                "errors": 90,
+                "units": 2056,
+                "insertions": 28,
+                "deletions": 51,
+                "substitutions": 11
+              }
+            },
+            "wer": {
+              "point_delta": 0.002352941176470588,
+              "one_sided_upper_delta": 0.006507592190889371,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              },
+              "candidate": {
+                "errors": 31,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 10
+              }
+            },
+            "resampling_seed": 16694905449987026071
+          },
+          {
+            "language": "ar",
+            "planned_source_units": 0,
+            "paired_source_units": 0,
+            "required_source_units": 16,
+            "completeness": "pending",
+            "cer": null,
+            "wer": null
+          },
+          {
+            "language": "zh",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.014373716632443531,
+              "margin": 0.01,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 132,
+                "substitutions": 70
+              },
+              "candidate": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 10,
+                "deletions": 127,
+                "substitutions": 76
+              }
+            },
+            "wer": null,
+            "resampling_seed": 15509456904054541540
+          },
+          {
+            "language": "es",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00038138825324180017,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 151,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 51,
+                "substitutions": 25
+              },
+              "candidate": {
+                "errors": 150,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 50,
+                "substitutions": 25
+              }
+            },
+            "wer": {
+              "point_delta": -0.0019193857965451055,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 47,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 18
+              },
+              "candidate": {
+                "errors": 46,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 17
+              }
+            },
+            "resampling_seed": 1475451549831716856
+          },
+          {
+            "language": "pt",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.003568242640499554,
+              "one_sided_upper_delta": 0.00983284169124877,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 174,
+                "units": 1121,
+                "insertions": 14,
+                "deletions": 131,
+                "substitutions": 29
+              },
+              "candidate": {
+                "errors": 170,
+                "units": 1121,
+                "insertions": 13,
+                "deletions": 126,
+                "substitutions": 31
+              }
+            },
+            "wer": {
+              "point_delta": -0.003676470588235294,
+              "one_sided_upper_delta": 0.008032128514056224,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 69,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 43,
+                "substitutions": 22
+              },
+              "candidate": {
+                "errors": 68,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 41,
+                "substitutions": 23
+              }
+            },
+            "resampling_seed": 17741722743802289599
+          }
+        ],
+        "primary_macro": {
+          "cer": null,
+          "wer": null
+        },
+        "aggregation": "Equal primary languages; corpus-weighted edit counts within each language; Swiss has a separate floor"
+      },
+      {
+        "comparison_id": "large-v3-upstream-q5_0-vs-f16",
+        "baseline_model": "large-v3",
+        "candidate_model": "large-v3-upstream-q5_0",
+        "language_mode": "auto",
+        "status": "fail_exploratory",
+        "complete": false,
+        "languages": [
+          {
+            "language": "de-CH",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0077459333849728895,
+              "one_sided_upper_delta": 0.034990791896869246,
+              "margin": 0.01,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 193,
+                "units": 1291,
+                "insertions": 55,
+                "deletions": 89,
+                "substitutions": 49
+              },
+              "candidate": {
+                "errors": 203,
+                "units": 1291,
+                "insertions": 43,
+                "deletions": 119,
+                "substitutions": 41
+              }
+            },
+            "wer": {
+              "point_delta": -0.013636363636363636,
+              "one_sided_upper_delta": 0.013888888888888888,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 51,
+                "units": 220,
+                "insertions": 5,
+                "deletions": 9,
+                "substitutions": 37
+              },
+              "candidate": {
+                "errors": 48,
+                "units": 220,
+                "insertions": 3,
+                "deletions": 13,
+                "substitutions": 32
+              }
+            },
+            "resampling_seed": 17749092702633393286
+          },
+          {
+            "language": "de",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.0039303761931499155,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 109,
+                "units": 1781,
+                "insertions": 16,
+                "deletions": 81,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 102,
+                "units": 1781,
+                "insertions": 15,
+                "deletions": 75,
+                "substitutions": 12
+              }
+            },
+            "wer": {
+              "point_delta": -0.006493506493506494,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 33,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 15,
+                "substitutions": 12
+              },
+              "candidate": {
+                "errors": 31,
+                "units": 308,
+                "insertions": 6,
+                "deletions": 14,
+                "substitutions": 11
+              }
+            },
+            "resampling_seed": 9643849659596714979
+          },
+          {
+            "language": "fr",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0005040322580645161,
+              "one_sided_upper_delta": 0.001524390243902439,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 195,
+                "units": 1984,
+                "insertions": 49,
+                "deletions": 88,
+                "substitutions": 58
+              },
+              "candidate": {
+                "errors": 196,
+                "units": 1984,
+                "insertions": 44,
+                "deletions": 90,
+                "substitutions": 62
+              }
+            },
+            "wer": {
+              "point_delta": 0.0023752969121140144,
+              "one_sided_upper_delta": 0.007380073800738007,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 63,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 27
+              },
+              "candidate": {
+                "errors": 64,
+                "units": 421,
+                "insertions": 15,
+                "deletions": 21,
+                "substitutions": 28
+              }
+            },
+            "resampling_seed": 12843900394741350119
+          },
+          {
+            "language": "it",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.004073319755600814,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 611,
+                "units": 2946,
+                "insertions": 182,
+                "deletions": 264,
+                "substitutions": 165
+              },
+              "candidate": {
+                "errors": 599,
+                "units": 2946,
+                "insertions": 170,
+                "deletions": 264,
+                "substitutions": 165
+              }
+            },
+            "wer": {
+              "point_delta": -0.0018115942028985507,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 144,
+                "units": 552,
+                "insertions": 37,
+                "deletions": 50,
+                "substitutions": 57
+              },
+              "candidate": {
+                "errors": 143,
+                "units": 552,
+                "insertions": 36,
+                "deletions": 50,
+                "substitutions": 57
+              }
+            },
+            "resampling_seed": 3220491956304444893
+          },
+          {
+            "language": "en",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0009727626459143969,
+              "one_sided_upper_delta": 0.0026785714285714286,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 88,
+                "units": 2056,
+                "insertions": 29,
+                "deletions": 51,
+                "substitutions": 8
+              },
+              "candidate": {
+                "errors": 90,
+                "units": 2056,
+                "insertions": 28,
+                "deletions": 51,
+                "substitutions": 11
+              }
+            },
+            "wer": {
+              "point_delta": 0.002352941176470588,
+              "one_sided_upper_delta": 0.006355932203389831,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 30,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 9
+              },
+              "candidate": {
+                "errors": 31,
+                "units": 425,
+                "insertions": 8,
+                "deletions": 13,
+                "substitutions": 10
+              }
+            },
+            "resampling_seed": 12747789853706691448
+          },
+          {
+            "language": "ar",
+            "planned_source_units": 0,
+            "paired_source_units": 0,
+            "required_source_units": 16,
+            "completeness": "pending",
+            "cer": null,
+            "wer": null
+          },
+          {
+            "language": "zh",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": 0.0,
+              "one_sided_upper_delta": 0.014571948998178506,
+              "margin": 0.01,
+              "gate": "fail_exploratory",
+              "baseline": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 11,
+                "deletions": 132,
+                "substitutions": 70
+              },
+              "candidate": {
+                "errors": 213,
+                "units": 504,
+                "insertions": 10,
+                "deletions": 127,
+                "substitutions": 76
+              }
+            },
+            "wer": null,
+            "resampling_seed": 8402873497263390762
+          },
+          {
+            "language": "es",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.00038138825324180017,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 151,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 51,
+                "substitutions": 25
+              },
+              "candidate": {
+                "errors": 150,
+                "units": 2622,
+                "insertions": 75,
+                "deletions": 50,
+                "substitutions": 25
+              }
+            },
+            "wer": {
+              "point_delta": -0.0019193857965451055,
+              "one_sided_upper_delta": 0.0,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 47,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 18
+              },
+              "candidate": {
+                "errors": 46,
+                "units": 521,
+                "insertions": 17,
+                "deletions": 12,
+                "substitutions": 17
+              }
+            },
+            "resampling_seed": 7309119452237151981
+          },
+          {
+            "language": "pt",
+            "planned_source_units": 16,
+            "paired_source_units": 16,
+            "required_source_units": 16,
+            "completeness": "complete",
+            "cer": {
+              "point_delta": -0.003568242640499554,
+              "one_sided_upper_delta": 0.009174311926605505,
+              "margin": 0.01,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 174,
+                "units": 1121,
+                "insertions": 14,
+                "deletions": 131,
+                "substitutions": 29
+              },
+              "candidate": {
+                "errors": 170,
+                "units": 1121,
+                "insertions": 13,
+                "deletions": 126,
+                "substitutions": 31
+              }
+            },
+            "wer": {
+              "point_delta": -0.003676470588235294,
+              "one_sided_upper_delta": 0.007575757575757576,
+              "margin": 0.02,
+              "gate": "pass_exploratory",
+              "baseline": {
+                "errors": 69,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 43,
+                "substitutions": 22
+              },
+              "candidate": {
+                "errors": 68,
+                "units": 272,
+                "insertions": 4,
+                "deletions": 41,
+                "substitutions": 23
+              }
+            },
+            "resampling_seed": 11994037698556164905
+          }
+        ],
+        "primary_macro": {
+          "cer": null,
+          "wer": null
+        },
+        "aggregation": "Equal primary languages; corpus-weighted edit counts within each language; Swiss has a separate floor"
+      }
+    ],
+    "source_unit_independence": "Unknown speaker/session dependence; unadjusted descriptive intervals, not population equivalence",
+    "bootstrap_method": "Stratified source resampling with replacement; nearest-rank one-sided upper quantile; fixed SHA-derived cohort seeds",
+    "reference_review": "NOT_ASSESSED",
+    "product_acceptance": "NOT_AUTHORIZED; native/representative/reference/resource gates remain required"
+  },
+  "held_out_cohorts": [
+    {
+      "language": "de-CH",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 193,
+        "units": 1291,
+        "insertions": 55,
+        "deletions": 89,
+        "substitutions": 49,
+        "rate": 0.14949651432997677
+      },
+      "wer": {
+        "errors": 51,
+        "units": 220,
+        "insertions": 5,
+        "deletions": 9,
+        "substitutions": 37,
+        "rate": 0.2318181818181818
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 193,
+        "units": 1291,
+        "insertions": 55,
+        "deletions": 89,
+        "substitutions": 49,
+        "rate": 0.14949651432997677
+      },
+      "wer": {
+        "errors": 51,
+        "units": 220,
+        "insertions": 5,
+        "deletions": 9,
+        "substitutions": 37,
+        "rate": 0.2318181818181818
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 185,
+        "units": 1291,
+        "insertions": 46,
+        "deletions": 97,
+        "substitutions": 42,
+        "rate": 0.14329976762199845
+      },
+      "wer": {
+        "errors": 49,
+        "units": 220,
+        "insertions": 3,
+        "deletions": 10,
+        "substitutions": 36,
+        "rate": 0.22272727272727272
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 199,
+        "units": 1291,
+        "insertions": 35,
+        "deletions": 106,
+        "substitutions": 58,
+        "rate": 0.1541440743609605
+      },
+      "wer": {
+        "errors": 56,
+        "units": 220,
+        "insertions": 7,
+        "deletions": 10,
+        "substitutions": 39,
+        "rate": 0.2545454545454545
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 186,
+        "units": 1291,
+        "insertions": 54,
+        "deletions": 90,
+        "substitutions": 42,
+        "rate": 0.14407436096049575
+      },
+      "wer": {
+        "errors": 46,
+        "units": 220,
+        "insertions": 4,
+        "deletions": 9,
+        "substitutions": 33,
+        "rate": 0.20909090909090908
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 203,
+        "units": 1291,
+        "insertions": 43,
+        "deletions": 119,
+        "substitutions": 41,
+        "rate": 0.15724244771494966
+      },
+      "wer": {
+        "errors": 48,
+        "units": 220,
+        "insertions": 3,
+        "deletions": 13,
+        "substitutions": 32,
+        "rate": 0.21818181818181817
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 109,
+        "units": 1781,
+        "insertions": 16,
+        "deletions": 81,
+        "substitutions": 12,
+        "rate": 0.06120157215047726
+      },
+      "wer": {
+        "errors": 33,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 15,
+        "substitutions": 12,
+        "rate": 0.10714285714285714
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 109,
+        "units": 1781,
+        "insertions": 16,
+        "deletions": 81,
+        "substitutions": 12,
+        "rate": 0.06120157215047726
+      },
+      "wer": {
+        "errors": 33,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 15,
+        "substitutions": 12,
+        "rate": 0.10714285714285714
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 101,
+        "units": 1781,
+        "insertions": 15,
+        "deletions": 74,
+        "substitutions": 12,
+        "rate": 0.056709713644020214
+      },
+      "wer": {
+        "errors": 32,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 14,
+        "substitutions": 12,
+        "rate": 0.1038961038961039
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 101,
+        "units": 1781,
+        "insertions": 15,
+        "deletions": 74,
+        "substitutions": 12,
+        "rate": 0.056709713644020214
+      },
+      "wer": {
+        "errors": 32,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 14,
+        "substitutions": 12,
+        "rate": 0.1038961038961039
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 102,
+        "units": 1781,
+        "insertions": 15,
+        "deletions": 75,
+        "substitutions": 12,
+        "rate": 0.057271195957327346
+      },
+      "wer": {
+        "errors": 31,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 14,
+        "substitutions": 11,
+        "rate": 0.10064935064935066
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 102,
+        "units": 1781,
+        "insertions": 15,
+        "deletions": 75,
+        "substitutions": 12,
+        "rate": 0.057271195957327346
+      },
+      "wer": {
+        "errors": 31,
+        "units": 308,
+        "insertions": 6,
+        "deletions": 14,
+        "substitutions": 11,
+        "rate": 0.10064935064935066
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 195,
+        "units": 1984,
+        "insertions": 49,
+        "deletions": 88,
+        "substitutions": 58,
+        "rate": 0.09828629032258064
+      },
+      "wer": {
+        "errors": 63,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 27,
+        "rate": 0.1496437054631829
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 195,
+        "units": 1984,
+        "insertions": 49,
+        "deletions": 88,
+        "substitutions": 58,
+        "rate": 0.09828629032258064
+      },
+      "wer": {
+        "errors": 63,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 27,
+        "rate": 0.1496437054631829
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 195,
+        "units": 1984,
+        "insertions": 49,
+        "deletions": 88,
+        "substitutions": 58,
+        "rate": 0.09828629032258064
+      },
+      "wer": {
+        "errors": 63,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 27,
+        "rate": 0.1496437054631829
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 195,
+        "units": 1984,
+        "insertions": 49,
+        "deletions": 88,
+        "substitutions": 58,
+        "rate": 0.09828629032258064
+      },
+      "wer": {
+        "errors": 63,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 27,
+        "rate": 0.1496437054631829
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 196,
+        "units": 1984,
+        "insertions": 44,
+        "deletions": 90,
+        "substitutions": 62,
+        "rate": 0.09879032258064516
+      },
+      "wer": {
+        "errors": 64,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 28,
+        "rate": 0.15201900237529692
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 196,
+        "units": 1984,
+        "insertions": 44,
+        "deletions": 90,
+        "substitutions": 62,
+        "rate": 0.09879032258064516
+      },
+      "wer": {
+        "errors": 64,
+        "units": 421,
+        "insertions": 15,
+        "deletions": 21,
+        "substitutions": 28,
+        "rate": 0.15201900237529692
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 611,
+        "units": 2946,
+        "insertions": 182,
+        "deletions": 264,
+        "substitutions": 165,
+        "rate": 0.2073998642226748
+      },
+      "wer": {
+        "errors": 144,
+        "units": 552,
+        "insertions": 37,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.2608695652173913
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 611,
+        "units": 2946,
+        "insertions": 182,
+        "deletions": 264,
+        "substitutions": 165,
+        "rate": 0.2073998642226748
+      },
+      "wer": {
+        "errors": 144,
+        "units": 552,
+        "insertions": 37,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.2608695652173913
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 613,
+        "units": 2946,
+        "insertions": 185,
+        "deletions": 263,
+        "substitutions": 165,
+        "rate": 0.20807875084860827
+      },
+      "wer": {
+        "errors": 145,
+        "units": 552,
+        "insertions": 38,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.26268115942028986
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 613,
+        "units": 2946,
+        "insertions": 185,
+        "deletions": 263,
+        "substitutions": 165,
+        "rate": 0.20807875084860827
+      },
+      "wer": {
+        "errors": 145,
+        "units": 552,
+        "insertions": 38,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.26268115942028986
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 599,
+        "units": 2946,
+        "insertions": 170,
+        "deletions": 264,
+        "substitutions": 165,
+        "rate": 0.203326544467074
+      },
+      "wer": {
+        "errors": 143,
+        "units": 552,
+        "insertions": 36,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.25905797101449274
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 599,
+        "units": 2946,
+        "insertions": 170,
+        "deletions": 264,
+        "substitutions": 165,
+        "rate": 0.203326544467074
+      },
+      "wer": {
+        "errors": 143,
+        "units": 552,
+        "insertions": 36,
+        "deletions": 50,
+        "substitutions": 57,
+        "rate": 0.25905797101449274
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 88,
+        "units": 2056,
+        "insertions": 29,
+        "deletions": 51,
+        "substitutions": 8,
+        "rate": 0.042801556420233464
+      },
+      "wer": {
+        "errors": 30,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 9,
+        "rate": 0.07058823529411765
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 88,
+        "units": 2056,
+        "insertions": 29,
+        "deletions": 51,
+        "substitutions": 8,
+        "rate": 0.042801556420233464
+      },
+      "wer": {
+        "errors": 30,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 9,
+        "rate": 0.07058823529411765
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 88,
+        "units": 2056,
+        "insertions": 29,
+        "deletions": 51,
+        "substitutions": 8,
+        "rate": 0.042801556420233464
+      },
+      "wer": {
+        "errors": 30,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 9,
+        "rate": 0.07058823529411765
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 88,
+        "units": 2056,
+        "insertions": 29,
+        "deletions": 51,
+        "substitutions": 8,
+        "rate": 0.042801556420233464
+      },
+      "wer": {
+        "errors": 30,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 9,
+        "rate": 0.07058823529411765
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 90,
+        "units": 2056,
+        "insertions": 28,
+        "deletions": 51,
+        "substitutions": 11,
+        "rate": 0.04377431906614786
+      },
+      "wer": {
+        "errors": 31,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 10,
+        "rate": 0.07294117647058823
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 90,
+        "units": 2056,
+        "insertions": 28,
+        "deletions": 51,
+        "substitutions": 11,
+        "rate": 0.04377431906614786
+      },
+      "wer": {
+        "errors": 31,
+        "units": 425,
+        "insertions": 8,
+        "deletions": 13,
+        "substitutions": 10,
+        "rate": 0.07294117647058823
+      }
+    },
+    {
+      "language": "ar",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 16,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 213,
+        "units": 504,
+        "insertions": 11,
+        "deletions": 132,
+        "substitutions": 70,
+        "rate": 0.4226190476190476
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 213,
+        "units": 504,
+        "insertions": 11,
+        "deletions": 132,
+        "substitutions": 70,
+        "rate": 0.4226190476190476
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 208,
+        "units": 504,
+        "insertions": 11,
+        "deletions": 131,
+        "substitutions": 66,
+        "rate": 0.4126984126984127
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 208,
+        "units": 504,
+        "insertions": 11,
+        "deletions": 131,
+        "substitutions": 66,
+        "rate": 0.4126984126984127
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 213,
+        "units": 504,
+        "insertions": 10,
+        "deletions": 127,
+        "substitutions": 76,
+        "rate": 0.4226190476190476
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 213,
+        "units": 504,
+        "insertions": 10,
+        "deletions": 127,
+        "substitutions": 76,
+        "rate": 0.4226190476190476
+      },
+      "wer": null
+    },
+    {
+      "language": "es",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 151,
+        "units": 2622,
+        "insertions": 75,
+        "deletions": 51,
+        "substitutions": 25,
+        "rate": 0.057589626239511825
+      },
+      "wer": {
+        "errors": 47,
+        "units": 521,
+        "insertions": 17,
+        "deletions": 12,
+        "substitutions": 18,
+        "rate": 0.09021113243761997
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 151,
+        "units": 2622,
+        "insertions": 75,
+        "deletions": 51,
+        "substitutions": 25,
+        "rate": 0.057589626239511825
+      },
+      "wer": {
+        "errors": 47,
+        "units": 521,
+        "insertions": 17,
+        "deletions": 12,
+        "substitutions": 18,
+        "rate": 0.09021113243761997
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 150,
+        "units": 2622,
+        "insertions": 79,
+        "deletions": 49,
+        "substitutions": 22,
+        "rate": 0.057208237986270026
+      },
+      "wer": {
+        "errors": 44,
+        "units": 521,
+        "insertions": 18,
+        "deletions": 12,
+        "substitutions": 14,
+        "rate": 0.08445297504798464
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 150,
+        "units": 2622,
+        "insertions": 79,
+        "deletions": 49,
+        "substitutions": 22,
+        "rate": 0.057208237986270026
+      },
+      "wer": {
+        "errors": 44,
+        "units": 521,
+        "insertions": 18,
+        "deletions": 12,
+        "substitutions": 14,
+        "rate": 0.08445297504798464
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 150,
+        "units": 2622,
+        "insertions": 75,
+        "deletions": 50,
+        "substitutions": 25,
+        "rate": 0.057208237986270026
+      },
+      "wer": {
+        "errors": 46,
+        "units": 521,
+        "insertions": 17,
+        "deletions": 12,
+        "substitutions": 17,
+        "rate": 0.08829174664107485
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 150,
+        "units": 2622,
+        "insertions": 75,
+        "deletions": 50,
+        "substitutions": 25,
+        "rate": 0.057208237986270026
+      },
+      "wer": {
+        "errors": 46,
+        "units": 521,
+        "insertions": 17,
+        "deletions": 12,
+        "substitutions": 17,
+        "rate": 0.08829174664107485
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 174,
+        "units": 1121,
+        "insertions": 14,
+        "deletions": 131,
+        "substitutions": 29,
+        "rate": 0.15521855486173058
+      },
+      "wer": {
+        "errors": 69,
+        "units": 272,
+        "insertions": 4,
+        "deletions": 43,
+        "substitutions": 22,
+        "rate": 0.2536764705882353
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 174,
+        "units": 1121,
+        "insertions": 14,
+        "deletions": 131,
+        "substitutions": 29,
+        "rate": 0.15521855486173058
+      },
+      "wer": {
+        "errors": 69,
+        "units": 272,
+        "insertions": 4,
+        "deletions": 43,
+        "substitutions": 22,
+        "rate": 0.2536764705882353
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 165,
+        "units": 1121,
+        "insertions": 18,
+        "deletions": 121,
+        "substitutions": 26,
+        "rate": 0.1471900089206066
+      },
+      "wer": {
+        "errors": 68,
+        "units": 272,
+        "insertions": 5,
+        "deletions": 42,
+        "substitutions": 21,
+        "rate": 0.25
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 165,
+        "units": 1121,
+        "insertions": 18,
+        "deletions": 121,
+        "substitutions": 26,
+        "rate": 0.1471900089206066
+      },
+      "wer": {
+        "errors": 68,
+        "units": 272,
+        "insertions": 5,
+        "deletions": 42,
+        "substitutions": 21,
+        "rate": 0.25
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 170,
+        "units": 1121,
+        "insertions": 13,
+        "deletions": 126,
+        "substitutions": 31,
+        "rate": 0.15165031222123104
+      },
+      "wer": {
+        "errors": 68,
+        "units": 272,
+        "insertions": 4,
+        "deletions": 41,
+        "substitutions": 23,
+        "rate": 0.25
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 16,
+      "required_source_cases": 16,
+      "observed_first_cells": 16,
+      "completed_first_cells": 16,
+      "status_counts": {
+        "completed_with_review": 16
+      },
+      "cer": {
+        "errors": 170,
+        "units": 1121,
+        "insertions": 13,
+        "deletions": 126,
+        "substitutions": 31,
+        "rate": 0.15165031222123104
+      },
+      "wer": {
+        "errors": 68,
+        "units": 272,
+        "insertions": 4,
+        "deletions": 41,
+        "substitutions": 23,
+        "rate": 0.25
+      }
+    }
+  ],
+  "development_cohorts": [
+    {
+      "language": "de-CH",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 74,
+        "units": 229,
+        "insertions": 27,
+        "deletions": 42,
+        "substitutions": 5,
+        "rate": 0.3231441048034934
+      },
+      "wer": {
+        "errors": 18,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 6,
+        "rate": 0.42857142857142855
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 74,
+        "units": 229,
+        "insertions": 27,
+        "deletions": 42,
+        "substitutions": 5,
+        "rate": 0.3231441048034934
+      },
+      "wer": {
+        "errors": 18,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 6,
+        "rate": 0.42857142857142855
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 75,
+        "units": 229,
+        "insertions": 21,
+        "deletions": 32,
+        "substitutions": 22,
+        "rate": 0.32751091703056767
+      },
+      "wer": {
+        "errors": 20,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 8,
+        "rate": 0.47619047619047616
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 75,
+        "units": 229,
+        "insertions": 21,
+        "deletions": 32,
+        "substitutions": 22,
+        "rate": 0.32751091703056767
+      },
+      "wer": {
+        "errors": 20,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 8,
+        "rate": 0.47619047619047616
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 74,
+        "units": 229,
+        "insertions": 27,
+        "deletions": 42,
+        "substitutions": 5,
+        "rate": 0.3231441048034934
+      },
+      "wer": {
+        "errors": 18,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 6,
+        "rate": 0.42857142857142855
+      }
+    },
+    {
+      "language": "de-CH",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 74,
+        "units": 229,
+        "insertions": 27,
+        "deletions": 42,
+        "substitutions": 5,
+        "rate": 0.3231441048034934
+      },
+      "wer": {
+        "errors": 18,
+        "units": 42,
+        "insertions": 5,
+        "deletions": 7,
+        "substitutions": 6,
+        "rate": 0.42857142857142855
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 7,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 7,
+        "substitutions": 0,
+        "rate": 0.09210526315789473
+      },
+      "wer": {
+        "errors": 2,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.11764705882352941
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 7,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 7,
+        "substitutions": 0,
+        "rate": 0.09210526315789473
+      },
+      "wer": {
+        "errors": 2,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.11764705882352941
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 14,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 13,
+        "substitutions": 1,
+        "rate": 0.18421052631578946
+      },
+      "wer": {
+        "errors": 5,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 4,
+        "substitutions": 1,
+        "rate": 0.29411764705882354
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 14,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 13,
+        "substitutions": 1,
+        "rate": 0.18421052631578946
+      },
+      "wer": {
+        "errors": 5,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 4,
+        "substitutions": 1,
+        "rate": 0.29411764705882354
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 7,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 7,
+        "substitutions": 0,
+        "rate": 0.09210526315789473
+      },
+      "wer": {
+        "errors": 2,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.11764705882352941
+      }
+    },
+    {
+      "language": "de",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 7,
+        "units": 76,
+        "insertions": 0,
+        "deletions": 7,
+        "substitutions": 0,
+        "rate": 0.09210526315789473
+      },
+      "wer": {
+        "errors": 2,
+        "units": 17,
+        "insertions": 0,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.11764705882352941
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "fr",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 357,
+        "insertions": 5,
+        "deletions": 6,
+        "substitutions": 0,
+        "rate": 0.03081232492997199
+      },
+      "wer": {
+        "errors": 4,
+        "units": 72,
+        "insertions": 2,
+        "deletions": 2,
+        "substitutions": 0,
+        "rate": 0.05555555555555555
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 286,
+        "units": 395,
+        "insertions": 16,
+        "deletions": 261,
+        "substitutions": 9,
+        "rate": 0.7240506329113924
+      },
+      "wer": {
+        "errors": 63,
+        "units": 83,
+        "insertions": 3,
+        "deletions": 58,
+        "substitutions": 2,
+        "rate": 0.7590361445783133
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 286,
+        "units": 395,
+        "insertions": 16,
+        "deletions": 261,
+        "substitutions": 9,
+        "rate": 0.7240506329113924
+      },
+      "wer": {
+        "errors": 63,
+        "units": 83,
+        "insertions": 3,
+        "deletions": 58,
+        "substitutions": 2,
+        "rate": 0.7590361445783133
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 97,
+        "units": 395,
+        "insertions": 40,
+        "deletions": 50,
+        "substitutions": 7,
+        "rate": 0.24556962025316456
+      },
+      "wer": {
+        "errors": 24,
+        "units": 83,
+        "insertions": 9,
+        "deletions": 15,
+        "substitutions": 0,
+        "rate": 0.2891566265060241
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 97,
+        "units": 395,
+        "insertions": 40,
+        "deletions": 50,
+        "substitutions": 7,
+        "rate": 0.24556962025316456
+      },
+      "wer": {
+        "errors": 24,
+        "units": 83,
+        "insertions": 9,
+        "deletions": 15,
+        "substitutions": 0,
+        "rate": 0.2891566265060241
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 286,
+        "units": 395,
+        "insertions": 16,
+        "deletions": 261,
+        "substitutions": 9,
+        "rate": 0.7240506329113924
+      },
+      "wer": {
+        "errors": 63,
+        "units": 83,
+        "insertions": 3,
+        "deletions": 58,
+        "substitutions": 2,
+        "rate": 0.7590361445783133
+      }
+    },
+    {
+      "language": "it",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 286,
+        "units": 395,
+        "insertions": 16,
+        "deletions": 261,
+        "substitutions": 9,
+        "rate": 0.7240506329113924
+      },
+      "wer": {
+        "errors": 63,
+        "units": 83,
+        "insertions": 3,
+        "deletions": 58,
+        "substitutions": 2,
+        "rate": 0.7590361445783133
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "en",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 1,
+        "units": 320,
+        "insertions": 0,
+        "deletions": 1,
+        "substitutions": 0,
+        "rate": 0.003125
+      },
+      "wer": {
+        "errors": 2,
+        "units": 67,
+        "insertions": 0,
+        "deletions": 0,
+        "substitutions": 2,
+        "rate": 0.029850746268656716
+      }
+    },
+    {
+      "language": "ar",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "ar",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 0,
+      "required_source_cases": 2,
+      "observed_first_cells": 0,
+      "completed_first_cells": 0,
+      "status_counts": {},
+      "cer": null,
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 3,
+        "substitutions": 7,
+        "rate": 0.2037037037037037
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 3,
+        "substitutions": 7,
+        "rate": 0.2037037037037037
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 8,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 1,
+        "substitutions": 6,
+        "rate": 0.14814814814814814
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 8,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 1,
+        "substitutions": 6,
+        "rate": 0.14814814814814814
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 3,
+        "substitutions": 7,
+        "rate": 0.2037037037037037
+      },
+      "wer": null
+    },
+    {
+      "language": "zh",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 11,
+        "units": 54,
+        "insertions": 1,
+        "deletions": 3,
+        "substitutions": 7,
+        "rate": 0.2037037037037037
+      },
+      "wer": null
+    },
+    {
+      "language": "es",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "es",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 19,
+        "units": 304,
+        "insertions": 15,
+        "deletions": 2,
+        "substitutions": 2,
+        "rate": 0.0625
+      },
+      "wer": {
+        "errors": 7,
+        "units": 60,
+        "insertions": 4,
+        "deletions": 1,
+        "substitutions": 2,
+        "rate": 0.11666666666666667
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 22,
+        "units": 129,
+        "insertions": 5,
+        "deletions": 3,
+        "substitutions": 14,
+        "rate": 0.17054263565891473
+      },
+      "wer": {
+        "errors": 11,
+        "units": 35,
+        "insertions": 1,
+        "deletions": 1,
+        "substitutions": 9,
+        "rate": 0.3142857142857143
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 40,
+        "units": 129,
+        "insertions": 5,
+        "deletions": 4,
+        "substitutions": 31,
+        "rate": 0.31007751937984496
+      },
+      "wer": {
+        "errors": 19,
+        "units": 35,
+        "insertions": 2,
+        "deletions": 0,
+        "substitutions": 17,
+        "rate": 0.5428571428571428
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-q4_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 22,
+        "units": 129,
+        "insertions": 5,
+        "deletions": 3,
+        "substitutions": 14,
+        "rate": 0.17054263565891473
+      },
+      "wer": {
+        "errors": 11,
+        "units": 35,
+        "insertions": 1,
+        "deletions": 1,
+        "substitutions": 9,
+        "rate": 0.3142857142857143
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-q4_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 39,
+        "units": 129,
+        "insertions": 3,
+        "deletions": 11,
+        "substitutions": 25,
+        "rate": 0.3023255813953488
+      },
+      "wer": {
+        "errors": 18,
+        "units": 35,
+        "insertions": 1,
+        "deletions": 2,
+        "substitutions": 15,
+        "rate": 0.5142857142857142
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "known",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 21,
+        "units": 129,
+        "insertions": 4,
+        "deletions": 3,
+        "substitutions": 14,
+        "rate": 0.16279069767441862
+      },
+      "wer": {
+        "errors": 11,
+        "units": 35,
+        "insertions": 1,
+        "deletions": 1,
+        "substitutions": 9,
+        "rate": 0.3142857142857143
+      }
+    },
+    {
+      "language": "pt",
+      "model": "large-v3-upstream-q5_0",
+      "language_mode": "auto",
+      "available_source_cases": 2,
+      "required_source_cases": 2,
+      "observed_first_cells": 2,
+      "completed_first_cells": 2,
+      "status_counts": {
+        "completed_with_review": 2
+      },
+      "cer": {
+        "errors": 38,
+        "units": 129,
+        "insertions": 2,
+        "deletions": 11,
+        "substitutions": 25,
+        "rate": 0.29457364341085274
+      },
+      "wer": {
+        "errors": 18,
+        "units": 35,
+        "insertions": 1,
+        "deletions": 2,
+        "substitutions": 15,
+        "rate": 0.5142857142857142
+      }
+    }
+  ],
+  "model_sizes": [
+    {
+      "id": "large-v3",
+      "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "bytes": 3095033483,
+      "reduction_from_f16": 0.0
+    },
+    {
+      "id": "large-v3-q4_0",
+      "sha256": "e002bafb9831c78dcee921e152611fb7e4d9c70d60f9eb46401783d3f861e7c3",
+      "bytes": 889340843,
+      "reduction_from_f16": 0.7126555018274094
+    },
+    {
+      "id": "large-v3-upstream-q5_0",
+      "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+      "bytes": 1081140203,
+      "reduction_from_f16": 0.6506854581902435
+    }
+  ],
+  "required_source_cases": {
+    "development": 18,
+    "held_out": 144,
+    "resource": 9
+  },
+  "available_source_cases": {
+    "development": 16,
+    "held_out": 128
+  },
+  "missing_arabic_quality": {
+    "development": 2,
+    "held_out": 16
+  },
+  "independent_intervals_checked": 60,
+  "measurement_scope": "accuracy_only",
+  "wall_time_scope": "UNCONTROLLED",
+  "rss_scope": "UNCONTROLLED",
+  "controlled_resources": false,
+  "resource_acceptance": false,
+  "quality_approval": false,
+  "reference_review": "NOT_ASSESSED",
+  "product_acceptance": "NOT_AUTHORIZED",
+  "source_report": {
+    "path": "/Users/moreaki/Library/Application Support/RecScribe/Benchmarks/Research/105/quantized-realworld-confirmation-20261111-v1/analysis/native-count-audit-measured-v1/report.json",
+    "sha256": "b4351f9a3491b599413dc8c3929ee25e84c62b2f80f5fbe19dd876bd729b4b90"
+  }
+}

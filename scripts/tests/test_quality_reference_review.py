@@ -5,11 +5,13 @@ No real corpora, recognition processes, playback, providers or UI are involved.
 import hashlib
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import stat
 import tempfile
 import unittest
+from unittest import mock
 import wave
 
 
@@ -136,6 +138,198 @@ def approve(fixture, split):
         gap.update(referenceText="", review=approval())
     write_json(fixture.packet, packet)
     return packet
+
+
+def frame_fixture(root, tag, overhang=0, lexical_overrun=False, reason="decoder_padding_beyond_source"):
+    """Construct original decoder EOF padding; no retained fixture is changed."""
+    f = Fixture(root, tag)
+    frames, rate = 63965, 16000  # 3997.8125ms, below the final 4000ms tick.
+    with wave.open(str(f.audio), "wb") as out:
+        out.setnchannels(1); out.setsampwidth(2); out.setframerate(rate)
+        sample = 1 + int(sha(tag.encode())[:4], 16) % 20000
+        out.writeframes(sample.to_bytes(2, "little") * frames)
+    corpus = json.loads(f.manifest.read_text())
+    corpus["cases"][0]["sha256"] = sha(f.audio.read_bytes())
+    write_json(f.manifest, corpus)
+    raw = json.loads(f.raw.read_text())
+    raw["transcription"][-1]["offsets"]["to"] = 4000 + overhang
+    for entry in raw["transcription"]:
+        start, end = entry["offsets"]["from"], entry["offsets"]["to"]
+        entry["tokens"][0]["offsets"] = {"from": start, "to": end if lexical_overrun else end - 10 - overhang}
+        entry["tokens"].append({"text": "[_TT_200]", "id": 50363, "p": 1.0,
+                                "offsets": {"from": end, "to": end}})
+    write_json(f.raw, raw)
+    canonical = json.loads((f.job / "transcript.json").read_text())
+    canonical["source"].update(sha256=sha(f.audio.read_bytes()), frames=frames, duration_ms=math.ceil(frames / 16))
+    canonical["segments"][-1].update(end_ms=math.ceil(frames / 16),
+        timing_adjustment={"original_end_ms": 4000 + overhang, "reason": reason})
+    write_json(f.job / "transcript.json", canonical)
+    index = json.loads((f.job / "transcript.raw.json").read_text())
+    index["outputs"][0]["sha256"] = sha(f.raw.read_bytes())
+    write_json(f.job / "transcript.raw.json", index)
+    lifecycle = json.loads((f.job / "manifest.json").read_text())
+    for p in f.job.iterdir():
+        if p.name != "manifest.json":
+            lifecycle["artifacts"][p.name] = {"sha256": sha(p.read_bytes()), "size_bytes": p.stat().st_size}
+    write_json(f.job / "manifest.json", lifecycle)
+    views = []
+    for number, (entry, segment) in enumerate(zip(raw["transcription"], canonical["segments"])):
+        start, end = entry["offsets"]["from"], entry["offsets"]["to"]
+        first, last = start * 16, min(end * 16, frames)
+        with wave.open(str(f.audio), "rb") as original:
+            original.setpos(first); pcm = original.readframes(last - first)
+        view = f.root / ("view-" + str(number) + ".wav")
+        with wave.open(str(view), "wb") as out:
+            out.setnchannels(1); out.setsampwidth(2); out.setframerate(rate); out.writeframes(pcm)
+        views.append({"segmentID": segment["id"], "rawIndex": number,
+            "rawEntrySHA256": sha(REVIEW.encoded(entry)), "rawOffsetsMs": entry["offsets"],
+            "canonicalOffsetsMs": {"from": segment["start_ms"], "to": segment["end_ms"]},
+            "startFrame": first, "endFrame": last, "sampleRate": rate, "startMs": first / 16, "endMs": last / 16,
+            "removedNonexistentTailMs": max(0, end - frames / 16), "path": str(view),
+            "sha256": sha(view.read_bytes()), "pcmSHA256": sha(pcm),
+            "tokenTimingReused": False, "tokenProbabilitiesAssignedToView": False,
+            "lexicalTokensWithinSource": 1, "outsideSourceSpecialTokens": int(end * 16 > frames)})
+    f.mapping = f.root / "mapping.json"
+    write_json(f.mapping, {"schema": "recscribe.frame-exact-review-mapping.v1", "caseID": f.case_id,
+        "source": str(f.audio), "sourceSHA256": sha(f.audio.read_bytes()), "sourceFrames": frames,
+        "sampleRate": rate, "sourceDurationMs": frames / 16, "job": str(f.job),
+        "rawSHA256": sha(f.raw.read_bytes()), "canonicalSHA256": sha((f.job / "transcript.json").read_bytes()),
+        "rawIndexSHA256": sha((f.job / "transcript.raw.json").read_bytes()),
+        "jobManifestSHA256": sha((f.job / "manifest.json").read_bytes()), "views": views})
+    f.originals = {p: p.read_bytes() for p in f.root.rglob("*") if p.is_file()}
+    return f
+
+
+class FrameMappingExportTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="reference-frame-tests-")
+        self.root = Path(self.temporary.name)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def prepare(self, f):
+        return REVIEW.prepare(f.manifest, f.case_id, f.job, POLICY, f.packet, f.mapping)
+
+    def test_opt_in_preserves_decoder_evidence_and_starts_all_approvals_pending(self):
+        f = frame_fixture(self.root, "pending-frame")
+        with self.assertRaises(ValueError):
+            f.prepare()  # The original strict path must still reject padding.
+        p = self.prepare(f)
+        self.assertEqual(p["version"], 2)
+        self.assertEqual(p["bindings"]["segments"][-1]["endMs"], 3997.8125)
+        for segment, raw in zip(p["bindings"]["segments"], json.loads(f.raw.read_text())["transcription"]):
+            self.assertEqual(segment["recognition"], raw)
+        for segment in p["review"]["segments"]:
+            self.assertEqual(segment["frameAlignment"]["status"], "pending")
+            self.assertEqual(segment["alignment"]["status"], "pending")
+        self.assertEqual(p["review"]["permission"]["status"], "pending")
+        self.assertEqual(p["review"]["speakerIDs"], [])
+        f.assert_originals_unchanged(self)
+
+    def test_export_requires_separate_bound_frame_approval_and_snapshots_mapping(self):
+        fixtures = [frame_fixture(self.root, x) for x in ("alpha", "beta", "gamma")]
+        for f, split in zip(fixtures, ("training", "calibration", "evaluation")):
+            self.prepare(f); approve(f, split)
+        for missing in ("pending", "evidence", "bounds", "mappingHash", "viewHash"):
+            with self.subTest(missing=missing):
+                for f in fixtures:
+                    p = json.loads(f.packet.read_text())
+                    for s in p["review"]["segments"]:
+                        s["frameAlignment"].update(approval())
+                    if missing == "pending": p["review"]["segments"][0]["frameAlignment"]["status"] = "pending"
+                    if missing == "evidence": p["review"]["segments"][0]["frameAlignment"]["evidence"] = ""
+                    if missing == "bounds": p["review"]["segments"][0]["frameAlignment"]["startFrame"] = 1
+                    if missing == "mappingHash": p["review"]["segments"][0]["frameAlignment"]["mappingSHA256"] = "0" * 64
+                    if missing == "viewHash": p["review"]["segments"][0]["frameAlignment"]["viewSHA256"] = "0" * 64
+                    write_json(f.packet, p)
+                with self.assertRaises(ValueError):
+                    REVIEW.export([f.packet for f in fixtures], self.root / missing)
+                self.assertFalse((self.root / missing).exists())
+        for f in fixtures:
+            p = json.loads(f.packet.read_text())
+            for segment, s in zip(p["bindings"]["segments"], p["review"]["segments"]):
+                s["frameAlignment"] = {**approval(), **REVIEW.frame_approval_binding(p["bindings"], segment)}
+            write_json(f.packet, p)
+        output = self.root / "approved"
+        result = REVIEW.export([f.packet for f in fixtures], output)
+        self.assertEqual(len(result["rows"]), 6)
+        for row in result["rows"]:
+            self.assertTrue(row["alignmentReviewed"])
+            self.assertFalse(row["sourceFrameEvidence"]["tokenTimingRewritten"])
+            self.assertEqual(row["recognition"]["offsets"], row["sourceFrameEvidence"]["rawOffsetsMs"])
+        for f, receipt in zip(fixtures, json.loads((output / "audit.json").read_text())["packets"]):
+            self.assertEqual((output / receipt["frameMapping"]["snapshot"]).read_bytes(), f.mapping.read_bytes())
+            self.assertEqual([r["recognition"] for r in result["rows"] if r["recordingID"] == "recording-" + f.tag],
+                             json.loads(f.raw.read_text())["transcription"])
+            f.assert_originals_unchanged(self)
+
+    def test_rejects_unproven_padding_and_lexical_tokens_outside_source(self):
+        for tag, options in (("large", {"overhang": 20}), ("lexical", {"lexical_overrun": True}),
+                             ("unproven", {"reason": "some_other_adjustment"})):
+            with self.subTest(tag=tag):
+                f = frame_fixture(self.root, tag, **options)
+                with self.assertRaises(ValueError): self.prepare(f)
+                self.assertFalse(f.packet.exists())
+
+    def test_rejects_tampered_mapping_bounds_pcm_and_evidence(self):
+        for tag in ("bounds", "rawHash", "coverage", "pcm", "rate", "marker", "nestedBool"):
+            with self.subTest(tag=tag):
+                f = frame_fixture(self.root, tag); m = json.loads(f.mapping.read_text())
+                if tag == "bounds": m["views"][-1]["endFrame"] -= 1
+                if tag == "rawHash": m["rawSHA256"] = "0" * 64
+                if tag == "coverage": m["views"].pop()
+                if tag == "rate": m["sampleRate"] = True
+                if tag == "marker": m["views"][-1]["outsideSourceSpecialTokens"] = 0
+                if tag == "nestedBool": m["views"][0]["rawOffsetsMs"]["from"] = False
+                if tag == "pcm":
+                    p = Path(m["views"][-1]["path"]); data = bytearray(p.read_bytes()); data[-1] ^= 1; p.write_bytes(data)
+                    m["views"][-1]["sha256"] = sha(data)  # Rehashing a forgery must not make it valid.
+                write_json(f.mapping, m)
+                with self.assertRaises(ValueError): self.prepare(f)
+
+    def test_audit_revalidates_mapping_and_wav_after_preparation(self):
+        for tag in ("map-stale", "wav-stale"):
+            f = frame_fixture(self.root, tag); self.prepare(f)
+            if tag == "map-stale": f.mapping.write_bytes(f.mapping.read_bytes() + b" ")
+            else:
+                view = Path(json.loads(f.mapping.read_text())["views"][-1]["path"])
+                view.write_bytes(view.read_bytes() + b" ")
+            with self.assertRaises(ValueError): REVIEW.audit_packet(f.packet, REVIEW.Budget())
+
+    def test_nonspeech_exclusion_cannot_skip_explicit_frame_approval(self):
+        f = frame_fixture(self.root, "non-speech-frame"); self.prepare(f)
+        p = approve(f, "training")
+        p["review"]["segments"][-1].update(disposition="non_speech", referenceText="")
+        write_json(f.packet, p)
+        _, rows, audit = REVIEW.audit_packet(f.packet, REVIEW.Budget())
+        self.assertTrue(any("explicit frame alignment" in b for b in audit["blocks"]))
+        self.assertFalse(rows[0]["alignmentReviewed"])
+
+    def test_view_changed_during_asset_verification_is_rejected_before_publication(self):
+        fixtures = [frame_fixture(self.root, x) for x in ("late-alpha", "late-beta", "late-gamma")]
+        for f, split in zip(fixtures, ("training", "calibration", "evaluation")):
+            self.prepare(f); p = approve(f, split)
+            for segment in p["review"]["segments"]:
+                segment["frameAlignment"].update(approval())
+            write_json(f.packet, p)
+        original = REVIEW.Budget.file
+        changed = False
+
+        def change_view(budget, path, *args, **kwargs):
+            nonlocal changed
+            result = original(budget, path, *args, **kwargs)
+            if Path(path) == fixtures[0].model and not changed:
+                changed = True
+                view = Path(json.loads(fixtures[0].mapping.read_text())["views"][-1]["path"])
+                view.write_bytes(view.read_bytes() + b" ")
+            return result
+
+        output = self.root / "late-mutation"
+        with mock.patch.object(REVIEW.Budget, "file", change_view), self.assertRaisesRegex(ValueError, "WAV changed during export"):
+            REVIEW.export([f.packet for f in fixtures], output)
+        self.assertTrue(changed)
+        self.assertFalse(output.exists())
 
 
 class ReferenceReviewTests(unittest.TestCase):

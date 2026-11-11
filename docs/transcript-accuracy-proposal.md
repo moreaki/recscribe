@@ -4,6 +4,82 @@ This is a design and calculation proposal, not a fitted model or a claim about
 today's transcripts. The example percentages below are illustrative. Existing
 model confidence stays separate until a calibrator has passed the release gates.
 
+## First implementation — 11 November 2026
+
+`PassageAccuracy` and `AccuracyCalibrationMath` now implement an offline research
+path: original Whisper token/hypothesis features → standardized logistic soft-target
+fit → disjoint isotonic calibration → untouched-partition MAE and ten-bin
+continuous-target calibration error. This is implementation scaffolding, with
+synthetic contract tests; no real corpus has been approved for fitting and no
+qualified calibration model or Studio percentage is shipped.
+
+Run the local CLI on an explicitly reviewed dataset:
+
+```sh
+core/.build/debug/recscribe-text fit-accuracy reviewed-passages.json --output NEW_RESEARCH_ARTIFACT.json
+```
+
+It accepts only that input/output pair, uses no inference/provider/credentials,
+rejects nonregular inputs and files over 16 MiB, and never overwrites an existing
+output. Original audio, references, ASR output and canonical transcripts are read-only
+inputs to preparation, not edited by fitting. Bounds are 2,000 total rows, 4,096
+tokens per passage, two minutes per passage, 400 fitting iterations and a 30-second
+cooperative fitting deadline. The core fitter checks cancellation during scoring,
+fitting and calibration. No UI tests or installation are part of this work.
+
+The camelCase JSON input contract is:
+
+- Dataset: `version: 1`, `scope`, `rows`.
+- Scope: lowercase 64-character `modelSHA256`, `runtimeSHA256`, `decodingSHA256`;
+  explicit `language` (not `auto`); versioned `scoringPolicy`; `referenceTask`
+  (`verbatim` or `standard_rendering`); `unit` (`utterance` or `studioSegment`).
+  Known/auto language policies and quantized artifacts must have distinct matching
+  identities. A whole-utterance artifact cannot predict under a Studio segment scope.
+- Each row: unique `id`, `split` (`training`, `calibration`, `evaluation`), known
+  `recordingID`, `sessionID`, `channel` (0–31), all `speakerIDs` and ancestral
+  `sourceIDs`, lowercase `audioSHA256`, exact UTF-8 `referenceSHA256`,
+  `lexicalReviewEvidence`, `permissionEvidence`, `alignmentReviewed: true`,
+  `reference` text and `recognition` (one original timed Whisper entry).
+  Evidence strings are pointers to actual review/permission records, not generated
+  approval. Do not manufacture group IDs for unknown people or sessions.
+- `recognition` uses `text`, millisecond `offsets.from/to`, and optional original
+  `tokens[].text/p`. `PassageAccuracy.utterance(from:durationMs:)` explicitly pools
+  nonoverlapping original segments for whole-utterance research. Its result does
+  not supply reference text or labels for any individual ASR segment.
+
+Features v1 are mean and lower-decile lexical-token log probability, log word
+count, log duration, repeated-word ratio and a missing-probability indicator.
+Control/timestamp tokens (`[_…]` or `<|…|>`) and whitespace are excluded. Missing
+or partial probability coverage disables both probability features; zero is an
+encoded missing value only when the indicator is set, never a claimed probability.
+These are exploratory features, not a validated quality signal. Character-based
+scoring uses the declared CER policy and is labelled bounded character accuracy;
+the whitespace word-count feature does not establish Chinese word segmentation.
+
+Fitting rejects absent review/permission/alignment evidence, altered reference
+hashes and any recording/session/speaker/source-ancestor/audio/reference-hash group
+that crosses partitions. Text targets are derived through `TranscriptAccuracy`,
+not from self-rated ASR text or a model vote. Empty references have no accuracy
+target and must go to separate hallucination tests. The fitted artifact records
+scope, feature version and dataset hash. Decoded model/map dimensions, finite
+parameters and evaluation counts/bin consistency are revalidated before research
+prediction. SHA values are canonical lowercase to prevent casing-based split bypasses.
+
+Admission validates declared metadata; it does not create human approval. The fitter
+checks the included reference's exact UTF-8 hash. Audio/model/runtime hashes and
+review/permission evidence pointers must be independently verified during dataset
+preparation; the fitter does not open those external assets or adjudication records.
+An existing benchmark's `reviewed: false` cannot be promoted by copying its reference
+into this format. That preparation/review stage is still pending.
+
+`researchPercentage` exists only for offline inspection under an identical scope.
+`studioPercentage` always returns unavailable in this first stage, even if a saved
+artifact is edited to claim otherwise. The output is **research only**: it has no
+release authorization or invented confidence interval. Independent risk-slice
+evaluation, cluster bootstrap uncertainty, qualification and app integration are
+remaining work, alongside data preparation/review detailed in the
+[reference reuse audit](accuracy-reference-audit.md).
+
 ## Mock
 
 ```text

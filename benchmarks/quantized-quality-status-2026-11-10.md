@@ -1,5 +1,9 @@
 # Quantized Whisper accuracy campaign status — 10 November 2026
 
+This historical snapshot is retained. See the
+[11 November target results](quantized-quality-results-2026-11-11.md) for the
+completed Small/Turbo/Large continuation, unchanged prior gaps and final audits.
+
 **Quality preservation for quantized Small, Turbo and full Large-v3 remains
 pending.** All six artifacts already pass the 30% same-F16-parent file-size
 gate: Q5_1 saves 61.02–61.97%, and Q4_0 saves 70.17–71.27%. Their held-out quality

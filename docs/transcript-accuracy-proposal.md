@@ -72,6 +72,11 @@ preparation; the fitter does not open those external assets or adjudication reco
 An existing benchmark's `reviewed: false` cannot be promoted by copying its reference
 into this format. That preparation/review stage is still pending.
 
+The first [reference-review/segment-alignment workflow](reference-review-workflow.md)
+now prepares pending sidecars, audits asset bindings and review gaps, and exports
+only explicitly reviewed, grouped rows. Human review and qualifying data collection
+remain pending; tool availability does not approve any reference.
+
 `researchPercentage` exists only for offline inspection under an identical scope.
 `studioPercentage` always returns unavailable in this first stage, even if a saved
 artifact is edited to claim otherwise. The output is **research only**: it has no

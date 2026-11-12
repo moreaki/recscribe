@@ -43,6 +43,11 @@ jobs:
           python3 scripts/work-artifacts.py run --label native-core test -- python3 scripts/run-native-core-tests.py
       - name: Offline Whisper quality tooling
         run: python3 -m unittest discover -s scripts/tests -p 'test_quality_*.py'
+      - name: Standalone native scoring contracts
+        run: |
+          mkdir -p Build/Products/RealworldScorerCI Build/DerivedData/ModuleCache.noindex
+          python3 scripts/work-artifacts.py run --label realworld-scorer-build test -- xcrun swiftc -parse-as-library -O -module-cache-path Build/DerivedData/ModuleCache.noindex core/Sources/RecScribeCore/JSONValue.swift core/Sources/RecScribeCore/TranscriptAccuracy.swift benchmarks/realworld/score-transcript.swift -o Build/Products/RealworldScorerCI/score-transcript
+          python3 scripts/work-artifacts.py run --label realworld-scorer-contracts test -- python3 benchmarks/realworld/test-score-transcript.py Build/Products/RealworldScorerCI/score-transcript
       - name: Verify PCM storage ownership and sanitizer evidence checks
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_sanitizer_results.py'

@@ -29,6 +29,15 @@ import RecScribeCore
 
     static func run(_ arguments: Arguments) async throws {
         let source = URL(fileURLWithPath: arguments.source)
+        if arguments.command == "capture-benchmark-host" {
+            let work = Task.detached(priority: .utility) {
+                try BenchmarkHostEvidence.capture(output: source) { try Task.checkCancellation() }
+            }
+            let snapshot = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            print(String(decoding: try encoder.encode(snapshot), as: UTF8.self))
+            return
+        }
         if arguments.command == "fit-accuracy" {
             guard let output = arguments.output else { throw CoreFailure("fit-accuracy requires --output NEW_ARTIFACT.json") }
             let work = Task.detached(priority: .utility) {
@@ -158,8 +167,16 @@ import RecScribeCore
         var mode: TextMode = .verbatim
         var summary = false, cloudConsent = false, keyStdin = false, dryRun = false
         init(_ args: [String]) throws {
-            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark", "inspect-sound", "fit-accuracy"].contains(args[0]) else { throw CoreFailure(usage) }
-            command = args[0]; source = args[1]
+            guard args.count >= 2, ["derive", "render", "transcribe", "benchmark", "inspect-sound", "fit-accuracy", "capture-benchmark-host"].contains(args[0]) else { throw CoreFailure(usage) }
+            command = args[0]
+            if command == "capture-benchmark-host" {
+                guard args.count == 3, args[1] == "--output", args[2].hasPrefix("/"), !args[2].contains("\0") else {
+                    throw CoreFailure("capture-benchmark-host accepts only --output /absolute/NEW_DIRECTORY; no model, recognition or cloud flags")
+                }
+                source = args[2]; output = args[2]
+                return
+            }
+            source = args[1]
             if command == "fit-accuracy" {
                 guard args.count == 4, args[2] == "--output", !args[3].isEmpty else {
                     throw CoreFailure("fit-accuracy accepts only DATASET.json --output NEW_ARTIFACT.json; no inference, credentials or upload")
@@ -242,6 +259,7 @@ import RecScribeCore
         }
     }
     static let usage = """
+    recscribe-text capture-benchmark-host --output /absolute/NEW_DIRECTORY
     recscribe-text fit-accuracy reviewed-passages.json --output NEW_RESEARCH_ARTIFACT.json
     recscribe-text inspect-sound passage.wav
     recscribe-text benchmark corpus.json --output NEW_DIRECTORY [--dry-run]

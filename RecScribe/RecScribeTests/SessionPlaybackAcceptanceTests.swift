@@ -165,8 +165,9 @@ struct SessionPlaybackAcceptanceTests {
             if capture { playback.setRecording(true) } else { playback.playFile(url) }
             staleCompletion(true)
             #expect(oldPlayer.currentItem == nil)
-            await waitForPause(oldPlayer)
-            #expect(!playback.isScrubbing && !playback.isPlaying && oldPlayer.rate == 0)
+            oldPlayer.play() // A late native acknowledgement cannot restore retired media.
+            await settle()
+            #expect(!playback.isScrubbing && !playback.isPlaying && oldPlayer.currentItem == nil)
             if capture {
                 #expect(playback.player == nil && playback.phase == .idle)
                 playback.playFile(url)
@@ -188,7 +189,9 @@ struct SessionPlaybackAcceptanceTests {
         playback = nil
         await waitUntil("playback owner released") { released == nil }
         #expect(player.currentItem == nil)
-        await waitForPause(player)
+        player.play()
+        await settle()
+        #expect(player.currentItem == nil)
     }
 
     @Test func runtimeFailureIsVisibleStickyAndOldItemNotificationsAreDetached() async throws {
@@ -206,8 +209,7 @@ struct SessionPlaybackAcceptanceTests {
                                         userInfo: [AVPlayerItemFailedToPlayToEndTimeErrorKey: error])
         #expect(playback.phase == .failed && playback.errorMessage == error.localizedDescription)
         #expect(player.currentItem == nil && !playback.hasAttachedPlayerObservers)
-        await waitForPause(player)
-        #expect(!playback.isPlaying && !playback.canSeek && player.rate == 0)
+        #expect(!playback.isPlaying && !playback.canSeek)
         gate.completions[0](true)
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
         playback.receiveTimeObservation(.zero, from: player)
@@ -262,13 +264,26 @@ struct SessionPlaybackAcceptanceTests {
         let url = try fixture(); defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let gate = SeekGate(), playback = try await load(url, gate: gate)
         defer { playback.stop() }
+        let player = try #require(playback.player), item = try #require(player.currentItem)
         playback.togglePlayback(); playback.setScrubbing(true); playback.seek(to: 12)
         playback.setScrubbing(false)
         gate.completions[0](false)
         await waitUntil("failed final seek") { playback.phase == .failed }
-        await waitForPause(try #require(playback.player))
-        #expect(!playback.isPlaying && playback.player?.rate == 0)
+        #expect(player.currentItem == nil && !playback.hasAttachedPlayerObservers)
+        #expect(!playback.isPlaying && !playback.canSeek && playback.position == 12)
         #expect(playback.errorMessage?.contains("requested position") == true)
+        let error = playback.errorMessage
+        // Failure retires the media. Late callbacks and a native play
+        // acknowledgement must leave it detached.
+        gate.completions[0](true)
+        NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
+        playback.receiveTimeObservation(.zero, from: player)
+        playback.togglePlayback(); playback.seek(to: 0)
+        player.play()
+        await settle()
+        #expect(player.currentItem == nil && !playback.hasAttachedPlayerObservers)
+        #expect(playback.phase == .failed && !playback.isPlaying && !playback.canSeek)
+        #expect(playback.errorMessage == error && playback.position == 12 && gate.targets == [12])
     }
 
     @Test func narrowTransportHasSpokenPositionAndKeyboardControlsWithoutDuplicateActions() async throws {

@@ -75,6 +75,44 @@ are bounded and cancellable. User assertions are recorded, not proof of continue
 idle status. Runtime comparisons also need stable power/thermal conditions and no
 competing heavy workload.
 
+## Reuse verified static host evidence
+
+For guarded microblocks, capture static hardware and toolchain evidence once
+with the candidate coordinator:
+
+```sh
+python3 scripts/work-artifacts.py run --label issue-105-host-evidence benchmark -- \
+  python3 scripts/quality/run-guard.py \
+  --output /absolute/protected/research/NEW-HOST-EVIDENCE \
+  --log /absolute/protected/research/NEW-HOST-EVIDENCE.guard.jsonl --timeout 120 -- \
+  /absolute/path/to/recscribe-text capture-benchmark-host \
+  --output /absolute/protected/research/NEW-HOST-EVIDENCE
+```
+
+This bounded, cancellable command runs no recognition or model initialization.
+It retains the fixed commands, raw output, exit evidence and hashes in a new
+directory, then returns the `path`, `sha256` and `bytes` of `snapshot.json`.
+Failed or cancelled captures retain their evidence without publishing a usable
+snapshot. Existing directories are never overwritten.
+
+Set the experiment's optional `host_evidence_snapshot` to the returned identity:
+
+```json
+"host_evidence_snapshot": {
+  "path": "/absolute/protected/research/NEW-HOST-EVIDENCE/snapshot.json",
+  "sha256": "<returned SHA-256>"
+}
+```
+
+The runner verifies the snapshot and its raw-file hashes, schema, bounds and
+same-machine fingerprint before model work. The snapshot must match the current
+OS, architecture, CPU, memory and hashed machine identity (`gethostuuid`). Each
+block still records fresh thermal and power-source observations and binds the snapshot identity in its
+matrix. Static evidence is labelled with its capture time; ASR wall/RSS timing
+keeps its existing scope. Without this option, the existing discovery path
+remains in use. Recording-priority admission and continuous cancellation remain
+required on both paths. Cached mode rejects failed or empty fresh power evidence.
+
 ## Experimental profiles and isolated comparisons
 
 A `candidate` profile names a private JSON settings file and exact declared source

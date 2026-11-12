@@ -75,4 +75,23 @@ import Testing
             #expect(throws: CoreFailure.self) { try RecScribeTextCLI.Arguments(["transcribe","source.wav"] + suffix) }
         }
     }
+
+    @Test func hostEvidenceCaptureAcceptsOnlyANewAbsoluteDestinationWithoutRecognitionFlags() throws {
+        let parsed = try RecScribeTextCLI.Arguments(["capture-benchmark-host", "--output", "/tmp/host evidence"])
+        #expect(parsed.command == "capture-benchmark-host")
+        #expect(parsed.source == "/tmp/host evidence")
+        #expect(parsed.model == nil && parsed.whisper == nil && parsed.provider == nil)
+        for arguments in [
+            ["capture-benchmark-host"], ["capture-benchmark-host", "/tmp/host"],
+            ["capture-benchmark-host", "--output", "relative"], ["capture-benchmark-host", "--model"],
+            ["capture-benchmark-host", "--output", "/tmp/invalid\0path"],
+            ["capture-benchmark-host", "--output", "/tmp/host", "--model", "model.bin"],
+            ["capture-benchmark-host", "--output", "/tmp/host", "--whisper-cli", "/tmp/whisper"],
+            ["capture-benchmark-host", "--output", "/tmp/host", "--provider", "openai"],
+            ["capture-benchmark-host", "--output", "/tmp/host", "--allow-cloud-text"],
+            ["capture-benchmark-host", "--output", "/tmp/host", "--output", "/tmp/other"]
+        ] {
+            #expect(throws: CoreFailure.self) { try RecScribeTextCLI.Arguments(arguments) }
+        }
+    }
 }

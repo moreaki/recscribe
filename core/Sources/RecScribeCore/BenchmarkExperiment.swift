@@ -125,6 +125,7 @@ public enum BenchmarkExperiment {
     /// Dry runs perform no engine calls. Unavailable cells stay explicit, without scores.
     public static func run(manifest: URL, configuration: URL, output: URL, cli: URL,
                            dryRun: Bool, resumeFrom: URL? = nil, resumeSHA256: String? = nil, coordinator: URL? = nil,
+                           hostSnapshot: BenchmarkHostEvidence.Snapshot? = nil,
                            check: @escaping @Sendable () throws -> Void = { try Task.checkCancellation() }) throws -> JSONValue {
         guard (resumeFrom == nil) == (resumeSHA256 == nil),
               resumeSHA256.map({ $0.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil }) ?? true,
@@ -132,6 +133,7 @@ public enum BenchmarkExperiment {
             throw CoreFailure("Resume requires a measured checkpoint directory and its explicit SHA-256")
         }
         let (configData, config) = try read(configuration)
+        let selectedHostSnapshot = try BenchmarkHostEvidence.selection(config: config, override: hostSnapshot)
         let (manifestData, corpus) = try read(manifest)
         let allCases = try CorpusManifest.validate(corpus)
         let scope = config["measurement_scope"].string ?? "quality_and_resources"
@@ -252,7 +254,7 @@ public enum BenchmarkExperiment {
         for (id, bytes) in profileSnapshots {
             try bytes.write(to: output.appendingPathComponent("profile-\(id).json"), options: .withoutOverwriting)
         }
-        let host = try hostEvidence(output: output, check: check)
+        let host = try hostEvidence(output: output, snapshot: selectedHostSnapshot, check: check)
         var rows: [JSONValue] = []
         var metadata: JSONValue = ["schema_version": "1.0", "baseline_revision": .string(revision),
             "source_revision_verification": "Declared revisions; bind binary hashes to the retained build record",
@@ -604,7 +606,8 @@ public enum BenchmarkExperiment {
         return .array(values)
     }
 
-    static func hostEvidence(output: URL, check: @Sendable () throws -> Void) throws -> JSONValue {
+    static func hostEvidence(output: URL, snapshot: BenchmarkHostEvidence.Snapshot? = nil, check: @escaping @Sendable () throws -> Void) throws -> JSONValue {
+        if let snapshot { return try BenchmarkHostEvidence.reuse(snapshot, output: output, check: check) }
         var evidence: JSONValue = ["os": .string(ProcessInfo.processInfo.operatingSystemVersionString),
             "cpu_count": .integer(Int64(ProcessInfo.processInfo.processorCount)), "physical_memory_bytes": .integer(Int64(ProcessInfo.processInfo.physicalMemory)),
             "thermal_state": .integer(Int64(ProcessInfo.processInfo.thermalState.rawValue))]
